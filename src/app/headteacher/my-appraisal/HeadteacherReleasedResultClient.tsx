@@ -41,6 +41,30 @@ type Props = {
   initialState: HeadteacherOwnAppraisalReadState | null;
 };
 
+type AppraisalStatusApiResponse =
+  | {
+      ok: true;
+      reqId: string;
+      state: HeadteacherOwnAppraisalReadState;
+    }
+  | {
+      ok: false;
+      reqId?: string;
+      error: string;
+    };
+
+type AppraisalRequestApiResponse =
+  | {
+      ok: true;
+      reqId: string;
+      state: HeadteacherOwnAppraisalReadState;
+    }
+  | {
+      ok: false;
+      reqId?: string;
+      error: string;
+    };
+
 function panelClass(extra = "") {
   return `rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] shadow-[0_18px_60px_rgba(0,0,0,0.18)] ${extra}`;
 }
@@ -128,26 +152,59 @@ function errorMessage(error: string) {
   return "The result could not be loaded. Check the network and try again.";
 }
 
+function requestErrorMessage(error: string) {
+  if (error === "UNAUTHORIZED") return "Your session has expired. Sign in again.";
+  if (error === "FORBIDDEN") return "Only the Headteacher can request this appraisal.";
+  if (error === "HEADTEACHER_FEEDBACK_ACTIVE_CYCLE_ALREADY_EXISTS") {
+    return "An appraisal request already exists. Refresh the status below.";
+  }
+  if (error.startsWith("HEADTEACHER_FEEDBACK_")) {
+    return "The appraisal request could not be opened. Review the status and try again.";
+  }
+  return "The appraisal request could not be completed. Check the network and try again.";
+}
+
+function newRequestKey() {
+  const randomPart =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  return `HEADTEACHER-APPRAISAL-${randomPart}`;
+}
+
+function lifecycleStep(
+  state: HeadteacherOwnAppraisalReadState | null,
+  acceptedStates: HeadteacherOwnAppraisalReadState["state"][],
+) {
+  return state ? acceptedStates.includes(state.state) : false;
+}
+
 export default function HeadteacherReleasedResultClient({ initialState }: Props) {
+  const [appraisalState, setAppraisalState] =
+    useState<HeadteacherOwnAppraisalReadState | null>(initialState);
   const [result, setResult] = useState<HeadteacherReleasedResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const [statusLoading, setStatusLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [requestNotice, setRequestNotice] = useState<string | null>(null);
 
-  const guidance = stateGuidance(initialState);
+  const guidance = stateGuidance(appraisalState);
   const released =
-    initialState?.canViewReleasedAppraisal === true &&
-    initialState.cycleStatus === "RELEASED" &&
-    Boolean(initialState.cycleId);
+    appraisalState?.canViewReleasedAppraisal === true &&
+    appraisalState.cycleStatus === "RELEASED" &&
+    Boolean(appraisalState.cycleId);
 
   async function loadReleasedResult() {
-    if (!released || !initialState?.cycleId || loading) return;
+    if (!released || !appraisalState?.cycleId || loading) return;
 
     setLoading(true);
     setError(null);
 
     try {
       const response = await fetch(
-        `/api/headteacher/headteacher-appraisal/${encodeURIComponent(initialState.cycleId)}/released-result`,
+        `/api/headteacher/headteacher-appraisal/${encodeURIComponent(appraisalState.cycleId)}/released-result`,
         {
           method: "GET",
           cache: "no-store",
@@ -179,6 +236,100 @@ export default function HeadteacherReleasedResultClient({ initialState }: Props)
     }
   }
 
+  async function refreshStatus() {
+    if (statusLoading) return;
+
+    setStatusLoading(true);
+    setError(null);
+    setRequestNotice(null);
+
+    try {
+      const response = await fetch("/api/headteacher/headteacher-appraisal", {
+        method: "GET",
+        cache: "no-store",
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | AppraisalStatusApiResponse
+        | null;
+
+      if (!response.ok || !payload?.ok) {
+        setError(
+          requestErrorMessage(
+            payload && !payload.ok ? payload.error : "STATUS_REFRESH_FAILED",
+          ),
+        );
+        return;
+      }
+
+      setAppraisalState(payload.state);
+      setRequestNotice("Appraisal status refreshed.");
+    } catch {
+      setError("The appraisal status could not load. Check the network and try again.");
+    } finally {
+      setStatusLoading(false);
+    }
+  }
+
+  async function requestAppraisal() {
+    if (!appraisalState?.canRequestNewCycle || requesting) return;
+
+    const confirmed = window.confirm(
+      "Request a Headteacher appraisal now? The Director must approve it before confidential staff feedback opens.",
+    );
+
+    if (!confirmed) return;
+
+    const requestKey = newRequestKey();
+    setRequesting(true);
+    setError(null);
+    setRequestNotice(null);
+
+    try {
+      const response = await fetch("/api/headteacher/headteacher-appraisal", {
+        method: "POST",
+        cache: "no-store",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "X-Idempotency-Key": requestKey,
+        },
+        body: JSON.stringify({
+          confirm: true,
+          requestKey,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | AppraisalRequestApiResponse
+        | null;
+
+      if (!response.ok || !payload?.ok) {
+        setError(
+          requestErrorMessage(
+            payload && !payload.ok ? payload.error : "REQUEST_FAILED",
+          ),
+        );
+        return;
+      }
+
+      setAppraisalState(payload.state);
+      setResult(null);
+      setRequestNotice(
+        "Request submitted. The Director will review it before staff feedback opens.",
+      );
+    } catch {
+      setError(
+        "The connection was interrupted. Refresh the status before trying again so the request is not duplicated.",
+      );
+    } finally {
+      setRequesting(false);
+    }
+  }
+
   return (
     <div className="space-y-5">
       <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(5,7,11,0.94),rgba(7,26,61,0.96),rgba(5,7,11,0.97))] p-5 shadow-[0_26px_90px_rgba(0,0,0,0.28)] sm:p-6">
@@ -197,14 +348,115 @@ export default function HeadteacherReleasedResultClient({ initialState }: Props)
 
           <div className="mt-4 flex flex-wrap gap-2">
             <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-[#F7F4ED]">
-              Status: {initialState?.label ?? "Unavailable"}
+              Status: {appraisalState?.label ?? "Unavailable"}
             </span>
-            {initialState?.releasedAt ? (
+            {appraisalState?.releasedAt ? (
               <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-[#F7F4ED]">
-                Released: {dateLabel(initialState.releasedAt)}
+                Released: {dateLabel(appraisalState.releasedAt)}
               </span>
             ) : null}
           </div>
+        </div>
+      </section>
+
+      <section className={panelClass("p-4 sm:p-5")}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-[#F7F4ED]">Appraisal action</h2>
+            <p className="mt-1 text-sm leading-6 text-[#C9CDD6]">
+              Request the appraisal here, then follow its progress without contacting staff individually.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {appraisalState?.canRequestNewCycle ? (
+              <button
+                type="button"
+                disabled={requesting}
+                onClick={() => void requestAppraisal()}
+                className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-5 py-3 text-sm font-extrabold text-[#071A3D] transition hover:brightness-105 disabled:cursor-wait disabled:opacity-70"
+              >
+                {requesting ? "Submitting request…" : "Request appraisal"}
+              </button>
+            ) : null}
+
+            <button
+              type="button"
+              disabled={statusLoading}
+              onClick={() => void refreshStatus()}
+              className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-bold text-[#F7F4ED] transition hover:bg-white/10 disabled:cursor-wait disabled:opacity-70"
+            >
+              {statusLoading ? "Refreshing…" : "Refresh status"}
+            </button>
+          </div>
+        </div>
+
+        {requestNotice ? (
+          <p className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-100">
+            {requestNotice}
+          </p>
+        ) : null}
+
+        {error ? (
+          <p className="mt-4 rounded-2xl border border-rose-300/20 bg-rose-400/10 p-4 text-sm leading-6 text-rose-100">
+            {error}
+          </p>
+        ) : null}
+      </section>
+
+      <section className={panelClass("p-4 sm:p-5")}>
+        <h2 className="text-lg font-bold text-[#F7F4ED]">Appraisal journey</h2>
+        <p className="mt-1 text-sm leading-6 text-[#C9CDD6]">
+          The current stage is highlighted. Staff identities and individual answers remain hidden throughout.
+        </p>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {[
+            {
+              label: "1. Request",
+              complete: Boolean(appraisalState?.requestedAt),
+              active: lifecycleStep(appraisalState, ["REQUEST_APPRAISAL", "REQUEST_PROCESSING"]),
+            },
+            {
+              label: "2. Director approval",
+              complete: Boolean(appraisalState?.approvedAt),
+              active: lifecycleStep(appraisalState, ["AWAITING_DIRECTOR_APPROVAL"]),
+            },
+            {
+              label: "3. Staff feedback",
+              complete: Boolean(appraisalState?.closedAt),
+              active: lifecycleStep(appraisalState, ["FEEDBACK_PERIOD_OPEN"]),
+            },
+            {
+              label: "4. Official review",
+              complete: Boolean(appraisalState?.releasedAt),
+              active: lifecycleStep(appraisalState, [
+                "RESPONSES_CLOSED_AWAITING_REVIEW",
+                "DIRECTOR_REVIEWING_APPRAISAL",
+              ]),
+            },
+            {
+              label: "5. Released result",
+              complete: Boolean(appraisalState?.releasedAt),
+              active: lifecycleStep(appraisalState, ["VIEW_RELEASED_APPRAISAL"]),
+            },
+          ].map((step) => (
+            <div
+              key={step.label}
+              className={
+                step.active
+                  ? "rounded-2xl border border-amber-300/30 bg-amber-400/10 p-3"
+                  : step.complete
+                    ? "rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-3"
+                    : "rounded-2xl border border-white/10 bg-[#0C1730] p-3"
+              }
+            >
+              <p className="text-sm font-bold text-[#F7F4ED]">{step.label}</p>
+              <p className="mt-1 text-xs text-[#C9CDD6]">
+                {step.active ? "Current stage" : step.complete ? "Completed" : "Not reached"}
+              </p>
+            </div>
+          ))}
         </div>
       </section>
 

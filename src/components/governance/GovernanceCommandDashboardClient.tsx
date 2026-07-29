@@ -2888,7 +2888,7 @@ const mockCommandTile = (
         One place for assessment, review, and governance feedback
       </h2>
       <p className="mt-1 max-w-4xl text-sm leading-6 text-fuchsia-100/80">
-        Teacher appraisal reports are available now. Other appraisal options open only when their controlled workflows are available.
+        Teacher appraisal reports and Headteacher appraisal workflows are available within each officer’s authorized scope.
       </p>
     </div>
 
@@ -2916,24 +2916,32 @@ const mockCommandTile = (
         </p>
       </button>
 
-      <div
-        aria-disabled="true"
-        className="rounded-2xl border border-white/10 bg-black/20 p-4 opacity-75"
+      <a
+        href={
+          isDistrictView
+            ? "/district/headteacher-appraisals/review"
+            : "/governance/appraisals/headteacher-supervisory"
+        }
+        className="rounded-2xl border border-indigo-300/25 bg-indigo-400/10 p-4 text-left transition hover:-translate-y-0.5 hover:bg-indigo-400/15"
       >
         <div className="flex items-start justify-between gap-3">
           <span className="text-xl">🏫</span>
-          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-slate-300">
-            Locked
+          <span className="rounded-full border border-indigo-300/25 bg-black/20 px-2.5 py-1 text-[11px] font-bold text-indigo-100">
+            Available
           </span>
         </div>
         <p className="mt-3 text-sm font-bold text-white">
           Headteacher Appraisal
         </p>
-        <p className="mt-1 text-xs leading-5 text-slate-300">
-          Governance assessment and confidential teacher feedback will open
-          here after the Director-approved workflow is implemented.
+        <p className="mt-1 text-xs leading-5 text-indigo-100/80">
+          {isDistrictView
+            ? "Approve requests and review completed Headteacher appraisals."
+            : "Complete authorized Headteacher supervisory assessments within your circuit."}
         </p>
-      </div>
+        <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-indigo-100">
+          Open workspace
+        </p>
+      </a>
 
       {canRequestDirectorFeedback ? (
         <div className="rounded-2xl border border-cyan-300/25 bg-cyan-400/10 p-4">

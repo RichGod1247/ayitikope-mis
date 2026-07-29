@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -43,6 +43,41 @@ type ReviewView = {
 };
 
 type DecisionMode = "RETURN" | "HOLD" | "RELEASE";
+
+type DirectorQueueItem = {
+  cycleId: string;
+  cycleStatus: string;
+  label: string;
+  targetHeadteacherName: string | null;
+  schoolName: string;
+  circuitName: string | null;
+  requestMode: "HEADTEACHER_REQUEST" | "DIRECT_OPEN" | "UNKNOWN";
+  requestedAt: string;
+  openedAt: string | null;
+  deadlineAt: string | null;
+  closedAt: string | null;
+  releasedAt: string | null;
+  participantCount: number;
+  finalizedResponseCount: number;
+};
+
+type DirectorQueue = {
+  pendingApprovalCount: number;
+  openCount: number;
+  items: DirectorQueueItem[];
+};
+
+type DirectorQueueApiResponse =
+  | {
+      ok: true;
+      reqId: string;
+      queue: DirectorQueue;
+    }
+  | {
+      ok: false;
+      reqId?: string;
+      error: string;
+    };
 
 const API_BASE = "/api/district/headteacher-appraisals";
 
@@ -486,6 +521,17 @@ function formatDifference(value: number | null) {
   return `${sign}${value.toFixed(1)} percentage points`;
 }
 
+function formatDate(value: string | null) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString(undefined, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 function errorMessage(value: unknown, fallback: string) {
   const root = record(value);
   const detail = text(root.detail);
@@ -504,6 +550,9 @@ export default function HeadteacherDirectorReviewClient({
   initialCycleId: string;
 }) {
   const [cycleId, setCycleId] = useState(initialCycleId);
+  const [queue, setQueue] = useState<DirectorQueue | null>(null);
+  const [queueLoading, setQueueLoading] = useState(false);
+  const [queueFailure, setQueueFailure] = useState("");
   const [reviewView, setReviewView] = useState<ReviewView | null>(null);
   const [rawPackage, setRawPackage] = useState<unknown>(null);
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
@@ -522,22 +571,77 @@ export default function HeadteacherDirectorReviewClient({
     return reviewView.sections;
   }, [reviewView]);
 
+  const pendingApprovalItems = useMemo(
+    () => queue?.items.filter((item) => item.cycleStatus === "PENDING_APPROVAL") ?? [],
+    [queue],
+  );
+
+  const reviewQueueItems = useMemo(
+    () =>
+      queue?.items.filter(
+        (item) => item.cycleStatus === "CLOSED" || item.cycleStatus === "UNDER_REVIEW",
+      ) ?? [],
+    [queue],
+  );
+
+  const openItems = useMemo(
+    () => queue?.items.filter((item) => item.cycleStatus === "OPEN") ?? [],
+    [queue],
+  );
+
   function clearMessages() {
     setNotice("");
     setFailure("");
   }
 
-  async function loadPackage() {
-    const cleanCycleId = cycleId.trim();
+  const loadQueue = useCallback(async () => {
+    setQueueLoading(true);
+    setQueueFailure("");
+
+    try {
+      const response = await fetch(API_BASE, {
+        method: "GET",
+        cache: "no-store",
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      const payload = (await readJson(response)) as DirectorQueueApiResponse;
+
+      if (!response.ok || !payload.ok) {
+        setQueue(null);
+        setQueueFailure(
+          errorMessage(payload, "The appraisal work queue could not load."),
+        );
+        return;
+      }
+
+      setQueue(payload.queue);
+    } catch {
+      setQueue(null);
+      setQueueFailure(
+        "The appraisal work queue could not load. Check the connection and refresh it manually.",
+      );
+    } finally {
+      setQueueLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadQueue();
+  }, [loadQueue]);
+
+  async function loadPackage(cycleIdOverride?: string) {
+    const cleanCycleId = (cycleIdOverride ?? cycleId).trim();
     clearMessages();
 
     if (!cleanCycleId) {
-      setFailure(
-        "Open this workspace from a Headteacher appraisal record.",
-      );
+      setFailure("Choose an appraisal from the work queue.");
       return;
     }
 
+    setCycleId(cleanCycleId);
     setBusy(true);
 
     try {
@@ -583,17 +687,16 @@ export default function HeadteacherDirectorReviewClient({
     }
   }
 
-  async function startReview() {
-    const cleanCycleId = cycleId.trim();
+  async function startReview(cycleIdOverride?: string) {
+    const cleanCycleId = (cycleIdOverride ?? cycleId).trim();
     clearMessages();
 
     if (!cleanCycleId) {
-      setFailure(
-        "Open this workspace from a Headteacher appraisal record.",
-      );
+      setFailure("Choose an appraisal from the work queue.");
       return;
     }
 
+    setCycleId(cleanCycleId);
     const confirmed = window.confirm(
       "Start the Director review now? This verifies both evidence streams and moves the appraisal into review.",
     );
@@ -625,11 +728,67 @@ export default function HeadteacherDirectorReviewClient({
         return;
       }
 
-      setNotice("Director review started. Load the evidence package.");
-      await loadPackage();
+      setNotice("Director review started. The evidence package is ready.");
+      await loadPackage(cleanCycleId);
+      await loadQueue();
     } catch {
       setFailure(
         "Network interrupted. The server will safely reject duplicate review starts. Load the package to confirm the current state.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function approveAndOpen(cycleIdToOpen: string) {
+    const cleanCycleId = cycleIdToOpen.trim();
+    clearMessages();
+
+    if (!cleanCycleId) {
+      setFailure("The selected request is missing its controlled reference.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Approve this request and open the seven-day confidential staff-feedback period?",
+    );
+
+    if (!confirmed) return;
+
+    setBusy(true);
+
+    try {
+      const response = await fetch(API_BASE, {
+        method: "POST",
+        cache: "no-store",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "APPROVE_AND_OPEN",
+          cycleId: cleanCycleId,
+          confirm: true,
+        }),
+      });
+
+      const data = await readJson(response);
+
+      if (!response.ok) {
+        setFailure(
+          errorMessage(data, "The request could not be approved and opened."),
+        );
+        return;
+      }
+
+      setCycleId(cleanCycleId);
+      setNotice(
+        "Request approved. Eligible Teachers can now complete confidential feedback.",
+      );
+      await loadQueue();
+    } catch {
+      setFailure(
+        "Network interrupted. Refresh the queue before repeating the approval so the cycle is not opened twice.",
       );
     } finally {
       setBusy(false);
@@ -739,11 +898,13 @@ export default function HeadteacherDirectorReviewClient({
       setReleaseNote("");
 
       if (decisionMode === "HOLD") {
-        await loadPackage();
+        await loadPackage(cleanCycleId);
       } else {
         setReviewView(null);
         setRawPackage(data);
       }
+
+      await loadQueue();
     } catch {
       setFailure(
         "Network interrupted. Do not repeat the decision blindly. Load the evidence package to confirm the server state.",
@@ -764,72 +925,199 @@ export default function HeadteacherDirectorReviewClient({
             Headteacher appraisal review
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-            Compare staff feedback with the governance assessment.
-            Review one item at a time. The Director cannot rewrite either
-            evidence stream.
+            Approve Headteacher requests, follow open feedback periods,
+            and review completed evidence. Review one item at a time.
           </p>
         </header>
 
-        {!initialCycleId ? (
-          <section className="rounded-3xl border border-amber-400/30 bg-amber-400/10 p-5">
-            <h2 className="text-lg font-black">Open from an appraisal record</h2>
-            <p className="mt-2 text-sm leading-6 text-amber-100">
-              This workspace requires a controlled Headteacher appraisal
-              link containing the cycle reference.
-            </p>
-          </section>
-        ) : null}
-
         <section className="rounded-3xl border border-white/10 bg-slate-900 p-5">
-          <label
-            htmlFor="cycle-id"
-            className="block text-sm font-bold text-slate-200"
-          >
-            Appraisal reference
-          </label>
-          <input
-            id="cycle-id"
-            value={cycleId}
-            onChange={(event: ChangeEvent<HTMLInputElement>) =>
-              setCycleId(event.target.value)
-            }
-            readOnly={Boolean(initialCycleId)}
-            className="mt-2 w-full rounded-2xl border border-white/15 bg-slate-950 px-4 py-3 text-base font-semibold outline-none focus:border-amber-300"
-          />
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-black">Appraisal work queue</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-300">
+                Choose a school from the lists below. No appraisal reference needs to be typed.
+              </p>
+            </div>
             <button
               type="button"
-              disabled={busy || !cycleId.trim()}
-              onClick={loadPackage}
-              className="min-h-14 rounded-2xl bg-white px-5 py-3 text-base font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={queueLoading}
+              onClick={() => void loadQueue()}
+              className="min-h-12 rounded-2xl border border-white/20 bg-slate-950 px-4 py-3 text-sm font-black disabled:cursor-wait disabled:opacity-50"
             >
-              {busy ? "Please wait…" : "Load review package"}
-            </button>
-            <button
-              type="button"
-              disabled={busy || !cycleId.trim()}
-              onClick={startReview}
-              className="min-h-14 rounded-2xl border border-amber-300 bg-amber-300/10 px-5 py-3 text-base font-black text-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Start Director review
+              {queueLoading ? "Refreshing queue…" : "Refresh work queue"}
             </button>
           </div>
 
           <p className="mt-3 text-xs leading-5 text-slate-400">
-            No background polling. Use “Load review package” after a
-            weak-network interruption.
+            No background polling. Refresh the queue only when new work is expected.
           </p>
+
+          {queueFailure ? (
+            <div className="mt-4 rounded-2xl border border-rose-400/30 bg-rose-400/10 p-4 text-sm leading-6 text-rose-100">
+              {queueFailure}
+            </div>
+          ) : null}
         </section>
 
-        {failure ? (
-          <div
-            role="alert"
-            className="rounded-3xl border border-rose-400/40 bg-rose-400/10 p-5 text-sm font-semibold leading-6 text-rose-100"
-          >
-            {failure}
+        <section className="rounded-3xl border border-amber-300/25 bg-amber-400/10 p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-black">Requests awaiting approval</h2>
+              <p className="mt-1 text-sm leading-6 text-amber-100">
+                Approving a request opens the confidential feedback period for eligible Teachers.
+              </p>
+            </div>
+            <span className="rounded-full border border-amber-300/30 bg-black/20 px-3 py-1 text-xs font-black text-amber-100">
+              {pendingApprovalItems.length}
+            </span>
           </div>
-        ) : null}
+
+          <div className="mt-4 space-y-3">
+            {pendingApprovalItems.length ? (
+              pendingApprovalItems.map((item) => (
+                <article
+                  key={item.cycleId}
+                  className="rounded-2xl border border-white/10 bg-slate-950 p-4"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h3 className="text-base font-black">{item.schoolName}</h3>
+                      <p className="mt-1 text-sm text-slate-300">
+                        {item.targetHeadteacherName || "Headteacher"}
+                        {item.circuitName ? ` · ${item.circuitName}` : ""}
+                      </p>
+                      <p className="mt-2 text-xs text-slate-400">
+                        Requested {formatDate(item.requestedAt)}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void approveAndOpen(item.cycleId)}
+                      className="min-h-12 rounded-2xl bg-amber-300 px-4 py-3 text-sm font-black text-slate-950 disabled:cursor-wait disabled:opacity-50"
+                    >
+                      Approve and open feedback
+                    </button>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <p className="rounded-2xl border border-white/10 bg-slate-950 p-4 text-sm text-slate-300">
+                No Headteacher request is awaiting approval.
+              </p>
+            )}
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-cyan-300/25 bg-cyan-400/10 p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-black">Ready for Director review</h2>
+              <p className="mt-1 text-sm leading-6 text-cyan-100">
+                Closed appraisals can enter review when both protected evidence streams are ready.
+              </p>
+            </div>
+            <span className="rounded-full border border-cyan-300/30 bg-black/20 px-3 py-1 text-xs font-black text-cyan-100">
+              {reviewQueueItems.length}
+            </span>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            {reviewQueueItems.length ? (
+              reviewQueueItems.map((item) => (
+                <article
+                  key={item.cycleId}
+                  className={
+                    item.cycleId === cycleId
+                      ? "rounded-2xl border border-amber-300/40 bg-slate-950 p-4"
+                      : "rounded-2xl border border-white/10 bg-slate-950 p-4"
+                  }
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h3 className="text-base font-black">{item.schoolName}</h3>
+                      <p className="mt-1 text-sm text-slate-300">
+                        {item.targetHeadteacherName || "Headteacher"}
+                        {item.circuitName ? ` · ${item.circuitName}` : ""}
+                      </p>
+                      <p className="mt-2 text-xs text-slate-400">
+                        {item.cycleStatus === "UNDER_REVIEW"
+                          ? "Director review already started"
+                          : `Responses closed ${formatDate(item.closedAt)}`}
+                      </p>
+                    </div>
+
+                    {item.cycleStatus === "UNDER_REVIEW" ? (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void loadPackage(item.cycleId)}
+                        className="min-h-12 rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-950 disabled:cursor-wait disabled:opacity-50"
+                      >
+                        Load review package
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void startReview(item.cycleId)}
+                        className="min-h-12 rounded-2xl border border-cyan-300/40 bg-cyan-300/10 px-4 py-3 text-sm font-black text-cyan-50 disabled:cursor-wait disabled:opacity-50"
+                      >
+                        Start Director review
+                      </button>
+                    )}
+                  </div>
+                </article>
+              ))
+            ) : (
+              <p className="rounded-2xl border border-white/10 bg-slate-950 p-4 text-sm text-slate-300">
+                No completed appraisal is waiting for Director review.
+              </p>
+            )}
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-emerald-300/20 bg-emerald-400/10 p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-black">Feedback in progress</h2>
+              <p className="mt-1 text-sm leading-6 text-emerald-100">
+                These cycles are open. Review becomes available only after the controlled closure stage.
+              </p>
+            </div>
+            <span className="rounded-full border border-emerald-300/30 bg-black/20 px-3 py-1 text-xs font-black text-emerald-100">
+              {openItems.length}
+            </span>
+          </div>
+
+          {openItems.length ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {openItems.map((item) => (
+                <article
+                  key={item.cycleId}
+                  className="rounded-2xl border border-white/10 bg-slate-950 p-4"
+                >
+                  <h3 className="text-sm font-black">{item.schoolName}</h3>
+                  <p className="mt-1 text-xs text-slate-300">
+                    Deadline {formatDate(item.deadlineAt)}
+                  </p>
+                  <p className="mt-2 text-xs text-slate-400">
+                    {item.finalizedResponseCount} finalized of {item.participantCount} assigned
+                  </p>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-4 rounded-2xl border border-white/10 bg-slate-950 p-4 text-sm text-slate-300">
+              No Headteacher feedback period is currently open.
+            </p>
+          )}
+        </section>
+
+        <span className="sr-only">
+          The controlled record is selected from the authorized work queue.
+          {initialCycleId ? "controlled-deep-link-present" : "queue-entry-mode"}
+        </span>
 
         {notice ? (
           <div
@@ -837,6 +1125,15 @@ export default function HeadteacherDirectorReviewClient({
             className="rounded-3xl border border-emerald-400/40 bg-emerald-400/10 p-5 text-sm font-semibold leading-6 text-emerald-100"
           >
             {notice}
+          </div>
+        ) : null}
+
+        {failure ? (
+          <div
+            role="alert"
+            className="rounded-3xl border border-rose-400/40 bg-rose-400/10 p-5 text-sm font-semibold leading-6 text-rose-100"
+          >
+            {failure}
           </div>
         ) : null}
 
