@@ -6,7 +6,7 @@ import { finalizeTeacherHeadteacherFeedbackResponse } from "@/lib/appraisals/hea
 import {
   clean,
   headteacherFeedbackApiError,
-  isLikelyIdentifier,
+  isUuidIdentifier,
   jsonNoStore,
   objectBody,
   requestIsJson,
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
   const params = await Promise.resolve(context.params);
   const cycleId = clean(params?.cycleId);
 
-  if (!isLikelyIdentifier(cycleId)) {
+  if (!isUuidIdentifier(cycleId)) {
     return jsonNoStore(400, {
       ok: false,
       reqId,

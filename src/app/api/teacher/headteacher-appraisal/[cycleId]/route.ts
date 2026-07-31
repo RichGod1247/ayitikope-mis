@@ -6,7 +6,7 @@ import { loadTeacherHeadteacherFeedbackResponse } from "@/lib/appraisals/headtea
 import {
   clean,
   headteacherFeedbackApiError,
-  isLikelyIdentifier,
+  isUuidIdentifier,
   jsonNoStore,
 } from "@/app/api/teacher/headteacher-appraisal/_shared";
 
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
   const params = await Promise.resolve(context.params);
   const cycleId = clean(params?.cycleId);
 
-  if (!isLikelyIdentifier(cycleId)) {
+  if (!isUuidIdentifier(cycleId)) {
     return jsonNoStore(400, {
       ok: false,
       reqId,

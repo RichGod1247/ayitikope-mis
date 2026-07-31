@@ -37,6 +37,12 @@ export function isLikelyIdentifier(value: unknown) {
   return /^[A-Za-z0-9_-]{5,180}$/.test(clean(value));
 }
 
+export function isUuidIdentifier(value: unknown) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    clean(value),
+  );
+}
+
 export function objectBody(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   return value as Record<string, unknown>;

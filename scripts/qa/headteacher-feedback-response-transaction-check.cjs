@@ -385,6 +385,50 @@ async function main() {
     "headteacherFeedbackResponse.ts",
   );
   const source = fs.readFileSync(modulePath, "utf8");
+  const sharedRoutePath = path.join(
+    repoRoot,
+    "src",
+    "app",
+    "api",
+    "teacher",
+    "headteacher-appraisal",
+    "_shared.ts",
+  );
+  const sharedRouteSource = fs.readFileSync(sharedRoutePath, "utf8");
+  const cycleRouteSources = [
+    path.join(
+      repoRoot,
+      "src",
+      "app",
+      "api",
+      "teacher",
+      "headteacher-appraisal",
+      "[cycleId]",
+      "route.ts",
+    ),
+    path.join(
+      repoRoot,
+      "src",
+      "app",
+      "api",
+      "teacher",
+      "headteacher-appraisal",
+      "[cycleId]",
+      "section",
+      "route.ts",
+    ),
+    path.join(
+      repoRoot,
+      "src",
+      "app",
+      "api",
+      "teacher",
+      "headteacher-appraisal",
+      "[cycleId]",
+      "finalize",
+      "route.ts",
+    ),
+  ].map((routePath) => fs.readFileSync(routePath, "utf8"));
   const responseModule = require(modulePath);
 
   const {
@@ -393,6 +437,32 @@ async function main() {
     saveTeacherHeadteacherFeedbackSection,
     finalizeTeacherHeadteacherFeedbackResponse,
   } = responseModule;
+
+  assertEqual(
+    HEADTEACHER_FEEDBACK_RESPONSE_POLICY.responseTransactionTimeoutMs,
+    60_000,
+    "Low-network response transaction timeout",
+  );
+
+  const strictCycleUuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  assert(
+    strictCycleUuid.test(
+      "33a81419-e0a2-4e7c-a062-d645cc720312",
+    ),
+    "Real G3A UUID must pass strict cycle validation",
+  );
+  assert(
+    strictCycleUuid.test(
+      "00000000-0000-4000-8000-000000000001",
+    ),
+    "Valid outsider UUID must pass syntax validation",
+  );
+  assert(
+    !strictCycleUuid.test("uat-cycle-outsider-v1"),
+    "Malformed cycle identifier must fail before Prisma",
+  );
 
   const fixture = makeFixture();
   const { database, state } = makeDatabase(fixture);
@@ -661,6 +731,23 @@ async function main() {
     state.transactionOptions,
   );
 
+  assert(
+    sharedRouteSource.includes("export function isUuidIdentifier") &&
+      sharedRouteSource.includes(
+        "/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i",
+      ),
+    "UUID-specific cycle identifier helper missing",
+  );
+  assert(
+    cycleRouteSources.every(
+      (routeSource) =>
+        routeSource.includes("isUuidIdentifier") &&
+        routeSource.includes("if (!isUuidIdentifier(cycleId))") &&
+        !routeSource.includes("isLikelyIdentifier(cycleId)"),
+    ),
+    "Teacher cycle routes must reject malformed UUIDs before Prisma",
+  );
+
   assertAuditSafe(state.audits);
   assert(
     state.audits.every(
@@ -713,7 +800,7 @@ async function main() {
   console.log("Director identity caveat       : authorized audited workflow only");
   console.log("Free-text comments             : rejected");
   console.log("Audit score/identity leakage   : absent");
-  console.log("Transaction                    : serializable, 15-second bound");
+  console.log("Transaction                    : serializable, 60-second low-network bound");
   console.log("Notifications/providers        : absent");
   console.log("Database accessed              : false");
   console.log("");

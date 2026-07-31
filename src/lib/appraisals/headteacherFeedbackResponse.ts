@@ -17,7 +17,7 @@ export const HEADTEACHER_FEEDBACK_RESPONSE_POLICY = {
   finalizedResponsesAreImmutable: true,
   repeatedIdenticalSectionSaveCreatesNoDuplicateAudit: true,
   responseTransactionMaxWaitMs: 5_000,
-  responseTransactionTimeoutMs: 15_000,
+  responseTransactionTimeoutMs: 60_000,
   responseTransactionIsolation: "Serializable",
 } as const;
 
