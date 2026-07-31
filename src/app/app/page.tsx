@@ -30,6 +30,8 @@ function isCircuitGovernance(role: string) {
 function isDistrictGovernance(role: string) {
   return (
     role === "DISTRICT_DIRECTOR" ||
+    role === "HEAD_OF_SUPERVISION" ||
+    role === "BASIC_SCHOOL_COORDINATOR" ||
     role === "DISTRICT_MIS_OFFICER" ||
     role === "DISTRICT_SHEP_OFFICER" ||
     role === "DISTRICT_ASSESSMENT_OFFICER"
@@ -50,6 +52,8 @@ function defaultRouteForRole(role: string) {
       return "/circuit/dashboard";
 
     case "DISTRICT_DIRECTOR":
+    case "HEAD_OF_SUPERVISION":
+    case "BASIC_SCHOOL_COORDINATOR":
     case "DISTRICT_MIS_OFFICER":
     case "DISTRICT_SHEP_OFFICER":
     case "DISTRICT_ASSESSMENT_OFFICER":
