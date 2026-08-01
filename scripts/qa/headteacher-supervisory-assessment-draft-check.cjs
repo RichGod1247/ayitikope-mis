@@ -397,7 +397,8 @@ async function main() {
   assertEqual(database.assessments[0].overallPercentage, null, "No aggregate score created");
   assertEqual(database.assessments[0].assessmentHash, null, "No final assessment hash created");
   assertEqual(database.transactionOptions[0].isolationLevel, "Serializable", "Serializable transaction");
-  assertEqual(database.transactionOptions[0].timeout, 15000, "Bounded transaction timeout");
+  assertEqual(database.transactionOptions[0].maxWait, 10000, "Bounded transaction max wait");
+  assertEqual(database.transactionOptions[0].timeout, 60000, "UAT latency transaction timeout");
 
   const snapshot = database.assessments[0].evidenceSnapshotJson;
   assertEqual(snapshot.schemaVersion, 1, "Snapshot schema version");

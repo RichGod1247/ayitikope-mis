@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { createReturnedHeadteacherSupervisoryAssessmentRevision } from "@/lib/appraisals/headteacherSupervisoryAssessmentRevision";
 import {
   clean,
-  isLikelyIdentifier,
+  isUuidIdentifier,
   jsonNoStore,
   objectBody,
   requestIsJson,
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
   const params = await Promise.resolve(context.params);
   const assessmentId = clean(params?.assessmentId);
   const body = objectBody(await req.json().catch(() => null));
-  if (!isLikelyIdentifier(assessmentId)) {
+  if (!isUuidIdentifier(assessmentId)) {
     return jsonNoStore(400, {
       ok: false,
       reqId: meta.reqId,

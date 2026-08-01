@@ -418,6 +418,9 @@ async function main() {
   assertEqual(partial.progress.answeredItems, 2, "Partial progress mismatch");
   assertEqual(partial.progress.notApplicableItems, 1, "N/A progress mismatch");
   assertEqual(database.audits.length, 1, "One changed save should create one audit");
+  assertEqual(database.transactionOptions[0].isolationLevel, "Serializable", "Serializable transaction");
+  assertEqual(database.transactionOptions[0].maxWait, 10000, "Bounded transaction max wait");
+  assertEqual(database.transactionOptions[0].timeout, 60000, "UAT latency transaction timeout");
 
   const unchanged = await saveHeadteacherSupervisoryAssessmentSection({
     actorUserId: "actor-001",

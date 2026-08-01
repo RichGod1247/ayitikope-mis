@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { loadHeadteacherSupervisoryAssessmentWorkspace } from "@/lib/appraisals/headteacherSupervisoryAssessmentWorkspace";
 import {
   clean,
-  isLikelyIdentifier,
+  isUuidIdentifier,
   jsonNoStore,
   requestMeta,
   requireSupervisoryGovernanceApiContext,
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
 
   const params = await Promise.resolve(context.params);
   const assessmentId = clean(params?.assessmentId);
-  if (!isLikelyIdentifier(assessmentId)) {
+  if (!isUuidIdentifier(assessmentId)) {
     return jsonNoStore(400, {
       ok: false,
       reqId: meta.reqId,

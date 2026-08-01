@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { saveHeadteacherSupervisoryAssessmentSection } from "@/lib/appraisals/headteacherSupervisoryAssessmentScoring";
 import {
   clean,
-  isLikelyIdentifier,
+  isUuidIdentifier,
   jsonNoStore,
   objectBody,
   requestIsJson,
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
   const sectionKey = clean(body?.sectionKey);
   const rawScores = Array.isArray(body?.scores) ? body?.scores : [];
 
-  if (!isLikelyIdentifier(assessmentId)) {
+  if (!isUuidIdentifier(assessmentId)) {
     return jsonNoStore(400, {
       ok: false,
       reqId: meta.reqId,

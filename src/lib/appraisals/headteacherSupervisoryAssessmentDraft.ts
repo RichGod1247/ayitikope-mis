@@ -22,7 +22,7 @@ export const HEADTEACHER_SUPERVISORY_DRAFT_POLICY = {
   commentsCreatedAtDraft: false,
   providerCallsAllowed: false,
   transactionIsolation: "SERIALIZABLE",
-  transactionTimeoutMs: 15_000,
+  transactionTimeoutMs: 60_000,
 } as const;
 
 const SUPERVISORY_DRAFT_AUDIT_ACTION =

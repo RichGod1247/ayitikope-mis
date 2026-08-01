@@ -29,7 +29,7 @@ export const HEADTEACHER_SUPERVISORY_SCORING_POLICY = {
   providerCallsAllowed: false,
   transactionIsolation: "SERIALIZABLE",
   transactionMaxWaitMs: 10_000,
-  transactionTimeoutMs: 15_000,
+  transactionTimeoutMs: 60_000,
 } as const;
 
 const SUPERVISORY_DRAFT_SAVED_AUDIT_ACTION =

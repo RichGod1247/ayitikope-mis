@@ -58,6 +58,11 @@ for (const routeKey of ["create", "load", "section", "finalize", "revision"]) {
 assert(source.shared.includes('"Cache-Control": "no-store, max-age=0"'), "No-store cache contract missing");
 assert(source.shared.includes('"X-Content-Type-Options": "nosniff"'), "Nosniff header missing");
 assert(source.shared.includes("operationalAssessorRoles"), "Assessor-role scope missing");
+assert(source.shared.includes("isUuidIdentifier"), "Strict UUID helper missing");
+for (const routeKey of ["create", "load", "section", "finalize", "revision"]) {
+  assert(source[routeKey].includes("isUuidIdentifier"), `${routeKey} lacks strict UUID validation`);
+  assert(!source[routeKey].includes("isLikelyIdentifier"), `${routeKey} still uses broad identifier validation`);
+}
 assert(source.create.includes("createHeadteacherSupervisoryAssessmentDraft"), "F2 draft transaction not wired");
 assert(source.section.includes("saveHeadteacherSupervisoryAssessmentSection"), "F3 section save not wired");
 assert(source.finalize.includes("finalizeHeadteacherSupervisoryAssessment"), "F3 finalization not wired");

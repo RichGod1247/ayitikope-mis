@@ -3,7 +3,7 @@ import { createHeadteacherSupervisoryAssessmentDraft } from "@/lib/appraisals/he
 import {
   clean,
   isIsoDate,
-  isLikelyIdentifier,
+  isUuidIdentifier,
   jsonNoStore,
   objectBody,
   requestIsJson,
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   const body = objectBody(await req.json().catch(() => null));
   const cycleId = clean(body?.cycleId);
   const dateObserved = clean(body?.dateObserved);
-  if (!isLikelyIdentifier(cycleId)) {
+  if (!isUuidIdentifier(cycleId)) {
     return jsonNoStore(400, {
       ok: false,
       reqId: meta.reqId,
