@@ -1,3 +1,4 @@
+// src/lib/appraisals/headteacherSupervisoryAssessmentWorkspace.ts
 import { prisma } from "@/lib/prisma";
 import {
   loadHeadteacherSupervisoryAssessment,
@@ -9,16 +10,23 @@ import {
   type HeadteacherSupervisoryAssessorReadState,
   type HeadteacherSupervisoryRevisionDatabase,
 } from "@/lib/appraisals/headteacherSupervisoryAssessmentRevision";
+import {
+  HEADTEACHER_SUPERVISORY_VISIT_DETAILS_POLICY,
+  visitDetailsFromEvidenceSnapshot,
+  type HeadteacherSupervisoryVisitDetailsSnapshot,
+} from "@/lib/appraisals/headteacherSupervisoryVisitDetails";
 
 export const HEADTEACHER_SUPERVISORY_WORKSPACE_POLICY = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   audience: "ORIGINAL_GOVERNANCE_ASSESSOR",
-  interaction: "ONE_QUESTION_AT_A_TIME",
-  saveMode: "EXPLICIT_SECTION",
+  interaction: "RESPONSIVE_SECTION_CARDS",
+  saveMode: "SERIALIZED_AUTOSAVE",
   pollingAllowed: false,
   persistentBrowserStorageAllowed: false,
   commentsAllowed: false,
   scoreValuesVisibleToAssessor: true,
+  officialVisitDetailsVisible: true,
+  legacyVisitContextReadable: true,
   staffFeedbackIncluded: false,
   respondentIdentitiesIncluded: false,
   reviewerIdentityIncluded: false,
@@ -45,18 +53,28 @@ export type HeadteacherSupervisoryWorkspaceSection = {
   items: HeadteacherSupervisoryWorkspaceItem[];
 };
 
+export type HeadteacherSupervisoryWorkspaceVisit = {
+  contextSchemaVersion: 1 | 2;
+  officialDetailsAvailable: boolean;
+  targetName: string | null;
+  schoolName: string;
+  circuitName: string;
+  districtName: string;
+  dateObserved: string;
+  assessorRole: string;
+  arrivalTime: string | null;
+  staffStrength: number | null;
+  totalEnrolment: number | null;
+  girls: number | null;
+  boys: number | null;
+  teachersPresentAtVisit: number | null;
+};
+
 export type HeadteacherSupervisoryWorkspace = {
   policy: typeof HEADTEACHER_SUPERVISORY_WORKSPACE_POLICY;
   assessment: HeadteacherSupervisoryAssessmentView;
   lifecycle: HeadteacherSupervisoryAssessorReadState;
-  visit: {
-    targetName: string | null;
-    schoolName: string;
-    circuitName: string;
-    districtName: string;
-    dateObserved: string;
-    assessorRole: string;
-  };
+  visit: HeadteacherSupervisoryWorkspaceVisit;
   sections: HeadteacherSupervisoryWorkspaceSection[];
   privacy: {
     staffFeedbackIncluded: false;
@@ -122,11 +140,14 @@ export type HeadteacherSupervisoryWorkspaceRecord = {
 
 export type HeadteacherSupervisoryWorkspaceDatabase = {
   appraisalAssessment: {
-    findUnique(args: unknown): Promise<HeadteacherSupervisoryWorkspaceRecord | null>;
+    findUnique(
+      args: unknown,
+    ): Promise<HeadteacherSupervisoryWorkspaceRecord | null>;
   };
 };
 
 type VisitContext = {
+  schemaVersion?: unknown;
   target?: {
     name?: unknown;
     schoolName?: unknown;
@@ -140,6 +161,7 @@ type VisitContext = {
   };
   observation?: {
     dateObserved?: unknown;
+    visitDetails?: unknown;
   };
 };
 
@@ -180,6 +202,78 @@ function fail(
 
 function visitContext(value: unknown): VisitContext {
   return objectValue(value) as VisitContext;
+}
+
+function contextSchemaVersion(value: unknown): 1 | 2 {
+  const version = Number(value);
+
+  if (version === 1 || version === 2) {
+    return version;
+  }
+
+  fail("HEADTEACHER_SUPERVISORY_WORKSPACE_CONTEXT_SCHEMA_UNSUPPORTED", 409, {
+    fieldName: "evidenceSnapshotJson.schemaVersion",
+  });
+}
+
+function buildWorkspaceVisit(input: {
+  evidenceSnapshotJson: unknown;
+  assessmentDateObserved: string;
+}): HeadteacherSupervisoryWorkspaceVisit {
+  const context = visitContext(input.evidenceSnapshotJson);
+  const schemaVersion = contextSchemaVersion(context.schemaVersion);
+  const targetName = clean(context.target?.name) || null;
+  const schoolName = clean(context.target?.schoolName);
+  const circuitName = clean(context.jurisdiction?.circuitName);
+  const districtName = clean(context.jurisdiction?.districtName);
+  const dateObserved = clean(context.observation?.dateObserved);
+  const assessorRole = clean(context.assessor?.role);
+
+  if (
+    !schoolName ||
+    !circuitName ||
+    !districtName ||
+    !dateObserved ||
+    !assessorRole
+  ) {
+    fail("HEADTEACHER_SUPERVISORY_WORKSPACE_VISIT_CONTEXT_INVALID", 409);
+  }
+
+  if (dateObserved !== input.assessmentDateObserved) {
+    fail("HEADTEACHER_SUPERVISORY_WORKSPACE_OBSERVATION_DATE_DRIFT", 409, {
+      fieldName: "dateObserved",
+    });
+  }
+
+  const visitDetails = visitDetailsFromEvidenceSnapshot(
+    input.evidenceSnapshotJson,
+  );
+
+  if (
+    schemaVersion ===
+      HEADTEACHER_SUPERVISORY_VISIT_DETAILS_POLICY.visitContextSchemaVersion &&
+    !visitDetails
+  ) {
+    fail("HEADTEACHER_SUPERVISORY_WORKSPACE_VISIT_DETAILS_MISSING", 409);
+  }
+
+  return {
+    contextSchemaVersion: schemaVersion,
+    officialDetailsAvailable: visitDetails !== null,
+    targetName,
+    schoolName,
+    circuitName,
+    districtName,
+    dateObserved,
+    assessorRole,
+    arrivalTime: visitDetails?.arrivalTime ?? null,
+    staffStrength: visitDetails?.staffStrength ?? null,
+    totalEnrolment: visitDetails?.totalEnrolment ?? null,
+    girls: visitDetails?.girls ?? null,
+    boys: visitDetails?.boys ?? null,
+    teachersPresentAtVisit:
+      visitDetails?.teachersPresentAtVisit ?? null,
+  };
 }
 
 const workspaceSelect = {
@@ -245,8 +339,10 @@ export function buildHeadteacherSupervisoryWorkspace(args: {
     record.cycleId !== lifecycle.cycleId ||
     record.revision !== assessment.revision ||
     record.revision !== lifecycle.revision ||
-    clean(record.status).toUpperCase() !== clean(assessment.status).toUpperCase() ||
-    clean(record.status).toUpperCase() !== clean(lifecycle.status).toUpperCase() ||
+    clean(record.status).toUpperCase() !==
+      clean(assessment.status).toUpperCase() ||
+    clean(record.status).toUpperCase() !==
+      clean(lifecycle.status).toUpperCase() ||
     record.assessorUserId !== assessment.assessorUserId ||
     !clean(record.instrumentVersion.id)
   ) {
@@ -278,18 +374,25 @@ export function buildHeadteacherSupervisoryWorkspace(args: {
         .sort((left, right) => left.order - right.order)
         .map((item) => {
           if (seenItemKeys.has(item.key)) {
-            fail("HEADTEACHER_SUPERVISORY_WORKSPACE_DUPLICATE_ITEM", 409, {
-              itemKey: item.key,
-            });
+            fail(
+              "HEADTEACHER_SUPERVISORY_WORKSPACE_DUPLICATE_ITEM",
+              409,
+              {
+                itemKey: item.key,
+              },
+            );
           }
+
           seenItemKeys.add(item.key);
           itemCount += 1;
+
           const saved = scoreByItemId.get(item.id);
           if (saved && saved.itemKey !== item.key) {
             fail("HEADTEACHER_SUPERVISORY_WORKSPACE_SCORE_DRIFT", 409, {
               itemKey: item.key,
             });
           }
+
           return {
             itemKey: item.key,
             label: item.label,
@@ -298,42 +401,33 @@ export function buildHeadteacherSupervisoryWorkspace(args: {
             score: saved?.score ?? null,
             notApplicable: saved?.notApplicable === true,
             answered:
-              saved?.notApplicable === true || Number.isInteger(saved?.score),
+              saved?.notApplicable === true ||
+              Number.isInteger(saved?.score),
           };
         }),
     }));
 
   if (sections.length !== 4 || itemCount !== 34) {
-    fail("HEADTEACHER_SUPERVISORY_WORKSPACE_FORM_STRUCTURE_DRIFT", 409, {
-      sectionCount: sections.length,
-      itemCount,
-    });
+    fail(
+      "HEADTEACHER_SUPERVISORY_WORKSPACE_FORM_STRUCTURE_DRIFT",
+      409,
+      {
+        sectionCount: sections.length,
+        itemCount,
+      },
+    );
   }
 
-  const context = visitContext(record.evidenceSnapshotJson);
-  const targetName = clean(context.target?.name) || null;
-  const schoolName = clean(context.target?.schoolName);
-  const circuitName = clean(context.jurisdiction?.circuitName);
-  const districtName = clean(context.jurisdiction?.districtName);
-  const dateObserved = clean(context.observation?.dateObserved);
-  const assessorRole = clean(context.assessor?.role);
-
-  if (!schoolName || !circuitName || !districtName || !dateObserved || !assessorRole) {
-    fail("HEADTEACHER_SUPERVISORY_WORKSPACE_VISIT_CONTEXT_INVALID", 409);
-  }
+  const visit = buildWorkspaceVisit({
+    evidenceSnapshotJson: record.evidenceSnapshotJson,
+    assessmentDateObserved: assessment.dateObserved,
+  });
 
   return {
     policy: HEADTEACHER_SUPERVISORY_WORKSPACE_POLICY,
     assessment,
     lifecycle,
-    visit: {
-      targetName,
-      schoolName,
-      circuitName,
-      districtName,
-      dateObserved,
-      assessorRole,
-    },
+    visit,
     sections,
     privacy: {
       staffFeedbackIncluded: false,
@@ -347,8 +441,14 @@ export function buildHeadteacherSupervisoryWorkspace(args: {
 export async function loadHeadteacherSupervisoryAssessmentWorkspace(
   input: LoadHeadteacherSupervisoryWorkspaceInput,
 ): Promise<HeadteacherSupervisoryWorkspace> {
-  const actorUserId = requireIdentifier(input.actorUserId, "actorUserId");
-  const assessmentId = requireIdentifier(input.assessmentId, "assessmentId");
+  const actorUserId = requireIdentifier(
+    input.actorUserId,
+    "actorUserId",
+  );
+  const assessmentId = requireIdentifier(
+    input.assessmentId,
+    "assessmentId",
+  );
   const workspaceDatabase =
     input.workspaceDatabase ??
     (prisma as unknown as HeadteacherSupervisoryWorkspaceDatabase);
@@ -381,6 +481,7 @@ export async function loadHeadteacherSupervisoryAssessmentWorkspace(
   if (!record) {
     fail("HEADTEACHER_SUPERVISORY_WORKSPACE_NOT_FOUND", 404);
   }
+
   if (record.assessorUserId !== actorUserId) {
     fail("HEADTEACHER_SUPERVISORY_WORKSPACE_ASSESSOR_ONLY", 403);
   }

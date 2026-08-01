@@ -1,7 +1,13 @@
+//src/lib/appraisals/headteacherSupervisoryAssessmentScoring.ts
 import { createHash, randomUUID } from "crypto";
 import { Prisma, type AppraisalAssessmentStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { calculateAppraisalScores } from "@/lib/appraisals/scoring";
+import {
+  HEADTEACHER_SUPERVISORY_VISIT_DETAILS_POLICY,
+  visitDetailsFromEvidenceSnapshot,
+  type HeadteacherSupervisoryVisitDetailsSnapshot,
+} from "@/lib/appraisals/headteacherSupervisoryVisitDetails";
 import {
   HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY,
   decideHeadteacherSupervisoryAssessmentAuthority,
@@ -328,7 +334,7 @@ export type HeadteacherSupervisoryScoringDatabase = {
 };
 
 type VisitContextSnapshot = {
-  schemaVersion: number;
+  schemaVersion: 1 | 2;
   workflow: string;
   evidenceStream: string;
   cycle: {
@@ -372,6 +378,7 @@ type VisitContextSnapshot = {
   };
   observation: {
     dateObserved: string;
+    visitDetails?: HeadteacherSupervisoryVisitDetailsSnapshot;
   };
 };
 
@@ -698,9 +705,14 @@ function parseVisitContext(record: AssessmentContextRecord): VisitContextSnapsho
   }
 
   const typed = context as unknown as VisitContextSnapshot;
+  const schemaVersion = Number(typed.schemaVersion);
+  const supportedSchemaVersion =
+    schemaVersion === 1 ||
+    schemaVersion ===
+      HEADTEACHER_SUPERVISORY_VISIT_DETAILS_POLICY.visitContextSchemaVersion;
   const instrumentHash = clean(record.instrumentVersion.contentHash).toLowerCase();
   if (
-    typed.schemaVersion !== 1 ||
+    !supportedSchemaVersion ||
     typed.workflow !== HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.workflow ||
     typed.evidenceStream !== "GOVERNANCE_SUPERVISORY_ASSESSMENT" ||
     typed.cycle?.id !== record.cycleId ||
@@ -720,6 +732,31 @@ function parseVisitContext(record: AssessmentContextRecord): VisitContextSnapsho
     typed.observation?.dateObserved !== isoDateOnly(record.dateObserved)
   ) {
     fail("HEADTEACHER_SUPERVISORY_VISIT_CONTEXT_DRIFT", 409);
+  }
+
+  const visitDetails = visitDetailsFromEvidenceSnapshot(
+    record.evidenceSnapshotJson,
+  );
+
+  if (
+    schemaVersion ===
+      HEADTEACHER_SUPERVISORY_VISIT_DETAILS_POLICY.visitContextSchemaVersion
+  ) {
+    const metadataSchemaVersion = Number(metadata.visitContextSchemaVersion);
+    const visitDetailsSchemaVersion = Number(
+      metadata.visitDetailsSchemaVersion,
+    );
+
+    if (
+      !visitDetails ||
+      metadataSchemaVersion !==
+        HEADTEACHER_SUPERVISORY_VISIT_DETAILS_POLICY.visitContextSchemaVersion ||
+      visitDetailsSchemaVersion !==
+        HEADTEACHER_SUPERVISORY_VISIT_DETAILS_POLICY.schemaVersion ||
+      metadata.officialVisitDetailsIncluded !== true
+    ) {
+      fail("HEADTEACHER_SUPERVISORY_VISIT_DETAILS_INVALID", 409);
+    }
   }
 
   return typed;

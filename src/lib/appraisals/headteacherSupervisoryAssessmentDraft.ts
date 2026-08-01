@@ -1,3 +1,4 @@
+//src/lib/appraisals/headteacherSupervisoryAssessmentDraft.ts
 import { createHash, randomUUID } from "crypto";
 import { Prisma, type AppraisalAssessmentStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -9,10 +10,16 @@ import {
   type HeadteacherSupervisoryGovernanceAssignment,
   type HeadteacherSupervisoryTarget,
 } from "@/lib/appraisals/headteacherSupervisoryAssessment";
+import {
+  HEADTEACHER_SUPERVISORY_VISIT_DETAILS_POLICY,
+  buildHeadteacherSupervisoryVisitDetailsSnapshot,
+  type HeadteacherSupervisoryVisitDetailsSnapshot,
+} from "@/lib/appraisals/headteacherSupervisoryVisitDetails";
 
 export const HEADTEACHER_SUPERVISORY_DRAFT_POLICY = {
-  schemaVersion: 1,
-  visitContextSchemaVersion: 1,
+  schemaVersion: 2,
+  visitContextSchemaVersion:
+    HEADTEACHER_SUPERVISORY_VISIT_DETAILS_POLICY.visitContextSchemaVersion,
   initialRevision: 1,
   initialStatus: "DRAFT",
   eligibleCycleStatuses: ["OPEN", "CLOSED"] as const,
@@ -36,6 +43,12 @@ export type CreateHeadteacherSupervisoryDraftInput = {
   actorRoleName: unknown;
   cycleId: string;
   dateObserved: Date | string;
+  arrivalTime?: unknown;
+  staffStrength?: unknown;
+  totalEnrolment?: unknown;
+  girls?: unknown;
+  boys?: unknown;
+  teachersPresentAtVisit?: unknown;
   reqId?: string | null;
   ip?: string | null;
   userAgent?: string | null;
@@ -53,6 +66,7 @@ export type HeadteacherSupervisoryDraftSummary = {
   targetUserId: string;
   targetTenantId: string;
   dateObserved: string;
+  visitDetails: HeadteacherSupervisoryVisitDetailsSnapshot;
   instrumentVersionId: string;
   instrumentCode: string;
   instrumentVersion: number;
@@ -243,7 +257,7 @@ export type HeadteacherSupervisoryDraftDatabase = {
 };
 
 type VisitContextSnapshot = {
-  schemaVersion: 1;
+  schemaVersion: 2;
   workflow: string;
   evidenceStream: "GOVERNANCE_SUPERVISORY_ASSESSMENT";
   cycle: {
@@ -287,6 +301,7 @@ type VisitContextSnapshot = {
   };
   observation: {
     dateObserved: string;
+    visitDetails: HeadteacherSupervisoryVisitDetailsSnapshot;
   };
 };
 
@@ -440,6 +455,7 @@ function draftKey(input: {
   assessorAssignmentId: string;
   instrumentVersionId: string;
   dateObserved: string;
+  visitContextHash: string;
 }) {
   return `headteacher-supervisory-draft:${createHash("sha256")
     .update(
@@ -449,6 +465,7 @@ function draftKey(input: {
         input.assessorAssignmentId,
         input.instrumentVersionId,
         input.dateObserved,
+        input.visitContextHash,
       ].join(":"),
       "utf8",
     )
@@ -647,10 +664,12 @@ function buildVisitContext(input: {
   scopeLevel: "DISTRICT" | "CIRCUIT";
   instrumentVersion: SupervisoryInstrumentVersionRecord & { contentHash: string };
   dateObserved: Date;
+  visitDetails: HeadteacherSupervisoryVisitDetailsSnapshot;
 }): VisitContextSnapshot {
   const assignmentParent = input.assignment.zone.parentZone;
   return {
-    schemaVersion: 1,
+    schemaVersion:
+      HEADTEACHER_SUPERVISORY_DRAFT_POLICY.visitContextSchemaVersion,
     workflow: HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.workflow,
     evidenceStream: "GOVERNANCE_SUPERVISORY_ASSESSMENT",
     cycle: {
@@ -695,6 +714,7 @@ function buildVisitContext(input: {
     },
     observation: {
       dateObserved: isoDateOnly(input.dateObserved),
+      visitDetails: input.visitDetails,
     },
   };
 }
@@ -753,6 +773,7 @@ function existingSummary(input: {
     targetUserId: input.cycle.targetUserId,
     targetTenantId: input.targetTenantId,
     dateObserved: observed,
+    visitDetails: input.expectedContext.observation.visitDetails,
     instrumentVersionId: input.instrumentVersion.id,
     instrumentCode: input.instrumentVersion.instrument.code,
     instrumentVersion: input.instrumentVersion.version,
@@ -772,6 +793,7 @@ async function performDraftTransaction(input: {
   actorRoleName: string;
   cycleId: string;
   dateObserved: Date;
+  visitDetails: HeadteacherSupervisoryVisitDetailsSnapshot;
   reqId: string;
   ip: string | null;
   userAgent: string | null;
@@ -946,6 +968,7 @@ async function performDraftTransaction(input: {
         scopeLevel: authority.scopeLevel,
         instrumentVersion,
         dateObserved: input.dateObserved,
+        visitDetails: input.visitDetails,
       });
       const visitContextHash = hashJson(context);
       const idempotencyKey = draftKey({
@@ -954,6 +977,7 @@ async function performDraftTransaction(input: {
         assessorAssignmentId: assignment.id,
         instrumentVersionId: instrumentVersion.id,
         dateObserved: isoDateOnly(input.dateObserved),
+        visitContextHash,
       });
 
       const existing = await tx.appraisalAssessment.findUnique({
@@ -1008,6 +1032,8 @@ async function performDraftTransaction(input: {
               HEADTEACHER_SUPERVISORY_DRAFT_POLICY.visitContextSchemaVersion,
             visitContextHash,
             visitContextImmutable: true,
+            visitDetailsSchemaVersion: input.visitDetails.schemaVersion,
+            officialVisitDetailsIncluded: true,
             targetMembershipId: target.membershipId,
             separateFromStaffFeedback: true,
             combinedWeightingDefined: false,
@@ -1047,6 +1073,8 @@ async function performDraftTransaction(input: {
             instrumentVersion: instrumentVersion.version,
             dateObserved: isoDateOnly(input.dateObserved),
             visitContextHash,
+            visitDetailsSchemaVersion: input.visitDetails.schemaVersion,
+            officialVisitDetailsIncluded: true,
             scoreCount: 0,
             contactFieldsIncluded: false,
             providerCalled: false,
@@ -1092,6 +1120,14 @@ export async function createHeadteacherSupervisoryAssessmentDraft(
     fail("HEADTEACHER_SUPERVISORY_INVALID_CURRENT_TIME", 400);
   }
   const dateObserved = normalizeObservationDate(input.dateObserved, now);
+  const visitDetails = buildHeadteacherSupervisoryVisitDetailsSnapshot({
+    arrivalTime: input.arrivalTime,
+    staffStrength: input.staffStrength,
+    totalEnrolment: input.totalEnrolment,
+    girls: input.girls,
+    boys: input.boys,
+    teachersPresentAtVisit: input.teachersPresentAtVisit,
+  });
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
@@ -1101,6 +1137,7 @@ export async function createHeadteacherSupervisoryAssessmentDraft(
         actorRoleName,
         cycleId,
         dateObserved,
+        visitDetails,
         reqId,
         ip: input.ip ?? null,
         userAgent: input.userAgent ?? null,

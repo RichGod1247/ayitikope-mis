@@ -1,3 +1,4 @@
+//src/app/api/governance/appraisals/headteacher-supervisory/[assessmentId]/finalize/route.ts
 import { NextRequest } from "next/server";
 import { finalizeHeadteacherSupervisoryAssessment } from "@/lib/appraisals/headteacherSupervisoryAssessmentScoring";
 import {

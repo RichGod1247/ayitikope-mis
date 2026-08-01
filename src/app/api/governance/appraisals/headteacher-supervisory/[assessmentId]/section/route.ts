@@ -1,3 +1,4 @@
+//src/app/api/governance/appraisals/headteacher-supervisory/[assessmentId]/section/route.ts
 import { NextRequest } from "next/server";
 import { saveHeadteacherSupervisoryAssessmentSection } from "@/lib/appraisals/headteacherSupervisoryAssessmentScoring";
 import {
