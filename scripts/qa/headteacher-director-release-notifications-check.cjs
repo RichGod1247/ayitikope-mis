@@ -378,11 +378,11 @@ async function main() {
   excludes(routeSource, "sendEmail", "route has no email provider call");
 
   for (const marker of [
-    "notificationSeedingIncluded: true",
     "providerDeliveryIncluded: false",
     "HEADTEACHER_RELEASE_NOTIFICATION_SEEDING_RETRY_REQUIRED",
-    "The appraisal was released, but the Headteacher notification was not queued.",
-    "The release will not be duplicated.",
+    "payload.releaseCommitted === true",
+    "The appraisal was released, but the Headteacher notification still needs retrying.",
+    "Repeating release will not duplicate the official result.",
     "The Headteacher notification was queued safely.",
   ]) {
     includes(clientSource, marker, `truthful BBC retry contract: ${marker}`);
