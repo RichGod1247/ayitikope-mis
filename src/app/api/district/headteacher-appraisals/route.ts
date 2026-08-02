@@ -1,6 +1,9 @@
+//src/app/api/district/headteacher-appraisals/route.ts
 import { NextRequest } from "next/server";
 import { readDirectorHeadteacherAppraisalStates } from "@/lib/appraisals/headteacherFeedbackReadStates";
 import { approveAndOpenHeadteacherFeedbackCycleWithNotifications } from "@/lib/appraisals/headteacherFeedbackNotifications";
+import { closeCompletedHeadteacherFeedbackCycleEarly } from "@/lib/appraisals/headteacherFeedbackDeadlineClosure";
+import { sealHeadteacherFeedbackAggregateSnapshot } from "@/lib/appraisals/headteacherFeedbackAggregateSnapshot";
 import {
   clean,
   directorReviewApiError,
@@ -24,6 +27,13 @@ export const HEADTEACHER_APPRAISAL_DIRECTOR_QUEUE_API_POLICY = {
   approvalRequiresConfirmation: true,
   participantFreezeAtOpen: true,
   notificationRowsSeededAtOpen: true,
+  earlyCompletionDetectedFromFrozenParticipantCounts: true,
+  earlyClosureRequiresAllEligibleResponsesFinalized: true,
+  earlyClosureRequiresDirectorConfirmation: true,
+  earlyClosureExpiresParticipants: false,
+  earlyClosureSealsAggregateSnapshot: true,
+  governanceAssessmentRequiredForStaffClosure: false,
+  reviewStartedByEarlyClosure: false,
   providerCallsAllowed: false,
   respondentIdentitiesReturned: false,
   individualStaffResponsesReturned: false,
@@ -96,7 +106,10 @@ export async function POST(req: NextRequest) {
   const action = clean(parsed.body.action).toUpperCase();
   const cycleId = clean(parsed.body.cycleId);
 
-  if (action !== "APPROVE_AND_OPEN") {
+  if (
+    action !== "APPROVE_AND_OPEN" &&
+    action !== "CLOSE_COMPLETED_EARLY"
+  ) {
     return jsonNoStore(400, {
       ok: false,
       reqId: meta.reqId,
@@ -121,17 +134,62 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const result = await approveAndOpenHeadteacherFeedbackCycleWithNotifications({
+    if (action === "APPROVE_AND_OPEN") {
+      const result =
+        await approveAndOpenHeadteacherFeedbackCycleWithNotifications({
+          actorUserId: auth.ctx.userId,
+          actorRoleName: auth.ctx.roleName,
+          governanceScope: reviewGovernanceScope(auth.scope),
+          cycleId,
+          approvalNote: null,
+          requestedRespondentUserIds: undefined,
+          reqId: meta.reqId,
+          ip: meta.ip,
+          userAgent: meta.userAgent,
+        });
+
+      const queue = await readQueue({
+        actorUserId: auth.ctx.userId,
+        actorRoleName: auth.ctx.roleName,
+        scope: auth.scope,
+      });
+
+      return jsonNoStore(
+        result.outcome === "APPROVED_AND_OPENED" ? 201 : 200,
+        {
+          ok: true,
+          reqId: meta.reqId,
+          result,
+          queue,
+          providerCalled: false,
+        },
+      );
+    }
+
+    const closure = await closeCompletedHeadteacherFeedbackCycleEarly({
       actorUserId: auth.ctx.userId,
       actorRoleName: auth.ctx.roleName,
       governanceScope: reviewGovernanceScope(auth.scope),
       cycleId,
-      approvalNote: null,
-      requestedRespondentUserIds: undefined,
+      confirm: true,
       reqId: meta.reqId,
       ip: meta.ip,
       userAgent: meta.userAgent,
     });
+
+    const aggregate = await sealHeadteacherFeedbackAggregateSnapshot({
+      cycleId,
+      reqId: meta.reqId,
+    });
+
+    if (!aggregate.snapshot) {
+      return jsonNoStore(409, {
+        ok: false,
+        reqId: meta.reqId,
+        error: "HEADTEACHER_FEEDBACK_EARLY_CLOSURE_AGGREGATE_NOT_READY",
+        closureCommitted: closure.status === "CLOSED",
+      });
+    }
 
     const queue = await readQueue({
       actorUserId: auth.ctx.userId,
@@ -139,16 +197,21 @@ export async function POST(req: NextRequest) {
       scope: auth.scope,
     });
 
-    return jsonNoStore(
-      result.outcome === "APPROVED_AND_OPENED" ? 201 : 200,
-      {
-        ok: true,
-        reqId: meta.reqId,
-        result,
-        queue,
+    return jsonNoStore(closure.outcome === "CLOSED" ? 201 : 200, {
+      ok: true,
+      reqId: meta.reqId,
+      result: {
+        action: "CLOSE_COMPLETED_EARLY",
+        closure,
+        aggregate,
+        staffFeedbackClosed: true,
+        governanceAssessmentRequiredForClosure: false,
+        reviewStarted: false,
         providerCalled: false,
       },
-    );
+      queue,
+      providerCalled: false,
+    });
   } catch (error) {
     return directorReviewApiError({
       error,

@@ -238,6 +238,18 @@ async function main() {
     "System deadline mode missing",
   );
   assert(
+    source.includes('earlyClosureMode: "DIRECTOR_ALL_RESPONSES_FINALIZED"'),
+    "Director early-completion closure mode missing",
+  );
+  assert(
+    source.includes("staffFeedbackIndependentOfGovernanceAssessment: true"),
+    "Staff closure must remain independent of governance assessment",
+  );
+  assert(
+    source.includes("closeCompletedHeadteacherFeedbackCycleEarly"),
+    "Director early closure service missing",
+  );
+  assert(
     source.includes(
       "prisma as unknown as HeadteacherFeedbackDeadlineClosureDatabase",
     ),
@@ -263,6 +275,8 @@ async function main() {
 
   const moduleUnderTest = require(sourcePath);
   const close = moduleUnderTest.closeExpiredHeadteacherFeedbackCycle;
+  const closeCompletedEarly =
+    moduleUnderTest.closeCompletedHeadteacherFeedbackCycleEarly;
 
   const now = new Date("2026-07-27T12:00:00.000Z");
   const fixture = makeDatabase(makeCycle());
@@ -345,6 +359,189 @@ async function main() {
   );
   assertEqual(tooEarly.state.cycle.status, "OPEN", "Early cycle unchanged");
   assertEqual(tooEarly.state.audits.length, 0, "Early closure has no audit");
+
+  const earlyNow = new Date("2026-07-26T12:00:00.000Z");
+  const earlyCycle = makeCycle({
+    participants: [
+      {
+        id: "participant-early-one",
+        status: "FINALIZED",
+        finalizedAt: new Date("2026-07-26T10:00:00.000Z"),
+        expiredAt: null,
+        response: {
+          id: "response-early-one",
+          status: "FINALIZED",
+          finalizedAt: new Date("2026-07-26T10:00:00.000Z"),
+          responseHash: "c".repeat(64),
+        },
+      },
+      {
+        id: "participant-early-two",
+        status: "FINALIZED",
+        finalizedAt: new Date("2026-07-26T11:00:00.000Z"),
+        expiredAt: null,
+        response: {
+          id: "response-early-two",
+          status: "FINALIZED",
+          finalizedAt: new Date("2026-07-26T11:00:00.000Z"),
+          responseHash: "d".repeat(64),
+        },
+      },
+      {
+        id: "participant-early-revoked",
+        status: "REVOKED",
+        finalizedAt: null,
+        expiredAt: null,
+        response: null,
+      },
+    ],
+  });
+  const early = makeDatabase(earlyCycle);
+  const earlyResult = await closeCompletedEarly({
+    actorUserId: "director-user-one",
+    actorRoleName: "DISTRICT_DIRECTOR",
+    governanceScope: {
+      isSuperAdmin: false,
+      tenantIds: ["school-one"],
+    },
+    cycleId: early.state.cycle.id,
+    confirm: true,
+    now: earlyNow,
+    reqId: "early-close-run-1",
+    ip: "127.0.0.1",
+    userAgent: "qa",
+    database: early.database,
+  });
+  assertEqual(earlyResult.outcome, "CLOSED", "Early closure outcome");
+  assertEqual(earlyResult.status, "CLOSED", "Early closed status");
+  assertEqual(
+    earlyResult.finalizedResponseCount,
+    2,
+    "All eligible responses finalized",
+  );
+  assertEqual(
+    earlyResult.expiredParticipantCount,
+    0,
+    "Early closure expires nobody",
+  );
+  assertEqual(
+    early.state.cycle.closedByUserId,
+    "director-user-one",
+    "Director recorded as early closer",
+  );
+  assertEqual(
+    early.state.participantUpdateManyCalls,
+    0,
+    "Early closure must not expire participants",
+  );
+  assertEqual(early.state.audits.length, 1, "One early closure audit");
+  assertEqual(
+    early.state.audits[0].metadata.closureMode,
+    "DIRECTOR_ALL_RESPONSES_FINALIZED",
+    "Early closure mode",
+  );
+  assertEqual(
+    early.state.audits[0].metadata.governanceAssessmentRequiredForClosure,
+    false,
+    "Governance assessment must not block staff closure",
+  );
+  assert(
+    !JSON.stringify(early.state.audits[0]).includes("participant-early-one"),
+    "Early closure audit leaked participant IDs",
+  );
+
+  const earlyRetry = await closeCompletedEarly({
+    actorUserId: "director-user-one",
+    actorRoleName: "DISTRICT_DIRECTOR",
+    governanceScope: {
+      isSuperAdmin: false,
+      tenantIds: ["school-one"],
+    },
+    cycleId: early.state.cycle.id,
+    confirm: true,
+    now: new Date("2026-07-26T13:00:00.000Z"),
+    database: early.database,
+  });
+  assertEqual(
+    earlyRetry.outcome,
+    "EXISTING_CLOSED",
+    "Early closure retry idempotency",
+  );
+  assertEqual(early.state.audits.length, 1, "Early retry creates no audit");
+
+  const incompleteEarly = makeDatabase(makeCycle());
+  await expectError(
+    "HEADTEACHER_FEEDBACK_EARLY_CLOSURE_ALL_RESPONSES_REQUIRED",
+    () =>
+      closeCompletedEarly({
+        actorUserId: "director-user-one",
+        actorRoleName: "DISTRICT_DIRECTOR",
+        governanceScope: {
+          isSuperAdmin: false,
+          tenantIds: ["school-one"],
+        },
+        cycleId: incompleteEarly.state.cycle.id,
+        confirm: true,
+        now: earlyNow,
+        database: incompleteEarly.database,
+      }),
+  );
+  assertEqual(
+    incompleteEarly.state.cycle.status,
+    "OPEN",
+    "Incomplete early cycle remains open",
+  );
+
+  await expectError(
+    "HEADTEACHER_FEEDBACK_EARLY_CLOSURE_CONFIRMATION_REQUIRED",
+    () =>
+      closeCompletedEarly({
+        actorUserId: "director-user-one",
+        actorRoleName: "DISTRICT_DIRECTOR",
+        governanceScope: {
+          isSuperAdmin: false,
+          tenantIds: ["school-one"],
+        },
+        cycleId: makeCycle().id,
+        confirm: false,
+        now: earlyNow,
+        database: makeDatabase(earlyCycle).database,
+      }),
+  );
+
+  await expectError(
+    "HEADTEACHER_FEEDBACK_EARLY_CLOSURE_DIRECTOR_ONLY",
+    () =>
+      closeCompletedEarly({
+        actorUserId: "teacher-user-one",
+        actorRoleName: "TEACHER",
+        governanceScope: {
+          isSuperAdmin: false,
+          tenantIds: ["school-one"],
+        },
+        cycleId: earlyCycle.id,
+        confirm: true,
+        now: earlyNow,
+        database: makeDatabase(earlyCycle).database,
+      }),
+  );
+
+  await expectError(
+    "HEADTEACHER_FEEDBACK_TARGET_OUTSIDE_GOVERNANCE_SCOPE",
+    () =>
+      closeCompletedEarly({
+        actorUserId: "director-user-one",
+        actorRoleName: "DISTRICT_DIRECTOR",
+        governanceScope: {
+          isSuperAdmin: false,
+          tenantIds: ["school-two"],
+        },
+        cycleId: earlyCycle.id,
+        confirm: true,
+        now: earlyNow,
+        database: makeDatabase(earlyCycle).database,
+      }),
+  );
 
   const zeroFinalizedCycle = makeCycle({
     participants: [
@@ -450,10 +647,14 @@ async function main() {
   console.log("");
   console.log("=== D3.4E1 HEADTEACHER FEEDBACK DEADLINE CLOSURE ===");
   console.log("");
-  console.log("Closure trigger                 : deadline reached or passed");
+  console.log("Deadline closure trigger        : deadline reached or passed");
+  console.log("Early closure trigger           : all eligible respondents finalized");
+  console.log("Early closure authority         : scoped District Director only");
+  console.log("Early closure confirmation      : explicit");
   console.log("Eligible lifecycle state        : OPEN only");
   console.log("Finalized responses             : preserved");
-  console.log("Not-started/in-progress teachers: expired atomically");
+  console.log("Deadline unfinished teachers    : expired atomically");
+  console.log("Early closure expirations       : none");
   console.log("Revoked participants            : preserved");
   console.log("Minimum-response readiness      : READY / INSUFFICIENT_RESPONSES");
   console.log("Zero-response deadline          : closes truthfully");
@@ -464,7 +665,8 @@ async function main() {
   console.log("Respondent identities/scores    : absent");
   console.log("Transaction                     : serializable and bounded");
   console.log("Notifications/providers         : absent");
-  console.log("Aggregate/review start          : absent");
+  console.log("Governance assessment dependency: absent");
+  console.log("Aggregate/review start          : absent from closure service");
   console.log("Database accessed               : false");
   console.log("");
   console.log("RESULT: D3.4E1 HEADTEACHER FEEDBACK DEADLINE CLOSURE GREEN");

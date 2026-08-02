@@ -58,9 +58,15 @@ function main() {
     "src/app/district/headteacher-appraisals/review/page.tsx";
   const clientPath =
     "src/app/district/headteacher-appraisals/review/HeadteacherDirectorReviewClient.tsx";
+  const queueRoutePath =
+    "src/app/api/district/headteacher-appraisals/route.ts";
+  const sharedRoutePath =
+    "src/app/api/district/headteacher-appraisals/_shared.ts";
 
   const page = read(pagePath);
   const client = read(clientPath);
+  const queueRoute = read(queueRoutePath);
+  const sharedRoute = read(sharedRoutePath);
 
   contains(page, 'export const dynamic = "force-dynamic"', "dynamic page");
   contains(page, "initialCycleId={cycleId}", "controlled cycle reference");
@@ -180,8 +186,132 @@ function main() {
   contains(client, 'cache: "no-store"', "no-store fetches");
   contains(client, "window.confirm", "explicit confirmation");
   contains(client, "Load review package", "explicit package load");
-  contains(client, "Start Director review", "explicit review start");
+  contains(
+    client,
+    "Start full decision review",
+    "explicit full decision review start",
+  );
+  contains(
+    client,
+    "Review staff feedback",
+    "independent staff-evidence review action",
+  );
+  contains(
+    client,
+    '"COMPLETE"',
+    "all-responses-received queue panel",
+  );
+  contains(
+    client,
+    "All responses received",
+    "early-completion attention state",
+  );
+  contains(
+    client,
+    "Close and prepare review",
+    "Director early-close action",
+  );
+  contains(
+    client,
+    "Wait until deadline",
+    "Director wait action",
+  );
+  contains(
+    client,
+    'action: "CLOSE_COMPLETED_EARLY"',
+    "early-close API action",
+  );
+  contains(
+    client,
+    "allResponsesFinalized",
+    "early-completion item detection",
+  );
+  contains(
+    client,
+    "No data was changed.",
+    "non-mutating wait guidance",
+  );
+  contains(
+    client,
+    "The separate governance assessment was not changed.",
+    "independent governance-stream guidance",
+  );
+  contains(
+    client,
+    "Staff evidence review only",
+    "staff-only review boundary",
+  );
+  contains(
+    client,
+    "The separate governance assessment is not required for this inspection.",
+    "independent staff-review notice",
+  );
+  contains(
+    client,
+    "Return, Hold and Release remain unavailable until the separate",
+    "decision controls remain full-review-only",
+  );
+  contains(
+    client,
+    "HEADTEACHER_DIRECTOR_REVIEW_SUPERVISORY_ASSESSMENT_REQUIRED",
+    "friendly supervisory-readiness mapping",
+  );
+  contains(
+    client,
+    "The staff feedback is ready, but the separate governance assessment",
+    "BBC-friendly governance-pending guidance",
+  );
+  contains(
+    client,
+    "anonymousResponses?.cycle.id",
+    "closed-cycle anonymous evidence selection",
+  );
+  contains(
+    client,
+    "h-12 min-w-12",
+    "large notification-style attention badge",
+  );
+  contains(
+    client,
+    "h-11 min-w-11",
+    "large readable queue badges",
+  );
 
+  contains(
+    queueRoute,
+    "closeCompletedHeadteacherFeedbackCycleEarly",
+    "early-close service wiring",
+  );
+  contains(
+    queueRoute,
+    "sealHeadteacherFeedbackAggregateSnapshot",
+    "aggregate sealing after early closure",
+  );
+  contains(
+    queueRoute,
+    'action !== "CLOSE_COMPLETED_EARLY"',
+    "early-close action allowlist",
+  );
+  contains(
+    queueRoute,
+    "governanceAssessmentRequiredForClosure: false",
+    "independent governance-stream API result",
+  );
+  contains(
+    queueRoute,
+    "reviewStarted: false",
+    "early closure must not silently start Director review",
+  );
+  contains(
+    sharedRoute,
+    "earlyCompletedStaffFeedbackCanCloseIndependently: true",
+    "shared early-close API policy",
+  );
+  contains(
+    sharedRoute,
+    "governanceAssessmentRequiredForStaffClosure: false",
+    "shared independent-stream policy",
+  );
   contains(
     client,
     "function StaffNativeForm",
@@ -313,6 +443,8 @@ function main() {
 
   transpile(page, pagePath);
   transpile(client, clientPath);
+  transpile(queueRoute, queueRoutePath);
+  transpile(sharedRoute, sharedRoutePath);
 
   console.log("");
   console.log(
@@ -327,6 +459,21 @@ function main() {
   );
   console.log(
     "Network behavior               : explicit load, no polling",
+  );
+  console.log(
+    "Queue counters                 : large notification-style badges",
+  );
+  console.log(
+    "Early completion               : all responses received attention state",
+  );
+  console.log(
+    "Director early-close choice    : close and prepare review / wait",
+  );
+  console.log(
+    "Wait action                    : no database mutation",
+  );
+  console.log(
+    "Governance assessment          : independent of staff closure",
   );
   console.log(
     "Evidence presentation          : native evidence first",
@@ -357,6 +504,15 @@ function main() {
   );
   console.log(
     "Combined appraisal score       : absent",
+  );
+  console.log(
+    "Closed-cycle staff review       : independent, anonymous, read-only",
+  );
+  console.log(
+    "Governance assessment dependency: absent from staff inspection",
+  );
+  console.log(
+    "Decision controls               : full review only",
   );
   console.log(
     "Review start                   : explicit confirmation",

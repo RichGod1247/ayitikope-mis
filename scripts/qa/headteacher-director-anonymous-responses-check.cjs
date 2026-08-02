@@ -336,12 +336,16 @@ function responseHashPayload({
   };
 }
 
-function makeCycle(cycleId = "cycle-anonymous-one") {
+function makeCycle(
+  cycleId = "cycle-anonymous-one",
+  status = "UNDER_REVIEW",
+) {
   const sections = buildSections();
+  const normalizedStatus = clean(status).toUpperCase();
 
   return {
     id: cycleId,
-    status: "UNDER_REVIEW",
+    status: normalizedStatus,
     scopeZoneId: "district-zone-one",
     targetUserId: "headteacher-user-one",
     targetTenantId: "school-tenant-one",
@@ -351,7 +355,10 @@ function makeCycle(cycleId = "cycle-anonymous-one") {
     targetZoneNameSnapshot: "UAT Circuit",
     targetRoleSnapshot: "HEADTEACHER",
     minimumResponses: 1,
-    reviewStartedAt: new Date("2026-08-01T10:00:00.000Z"),
+    reviewStartedAt:
+      normalizedStatus === "UNDER_REVIEW"
+        ? new Date("2026-08-01T10:00:00.000Z")
+        : null,
     releasedAt: null,
     cancelledAt: null,
     metadata: {
@@ -647,6 +654,25 @@ async function main() {
     "Anonymous-response audience",
   );
   assertEqual(
+    JSON.stringify(
+      HEADTEACHER_DIRECTOR_ANONYMOUS_RESPONSES_POLICY.allowedCycleStatuses,
+    ),
+    JSON.stringify(["CLOSED", "UNDER_REVIEW"]),
+    "Closed and under-review staff evidence lifecycles",
+  );
+  assertEqual(
+    HEADTEACHER_DIRECTOR_ANONYMOUS_RESPONSES_POLICY
+      .staffEvidenceReviewAllowedBeforeSupervisoryAssessment,
+    true,
+    "Staff evidence must be independently reviewable",
+  );
+  assertEqual(
+    HEADTEACHER_DIRECTOR_ANONYMOUS_RESPONSES_POLICY
+      .fullDecisionReviewRequiredForDecisions,
+    true,
+    "Director decisions remain in the full review workflow",
+  );
+  assertEqual(
     HEADTEACHER_DIRECTOR_ANONYMOUS_RESPONSES_POLICY
       .respondentLabelsAreCycleScoped,
     true,
@@ -715,6 +741,54 @@ async function main() {
     "List request does not select an individual response",
   );
   assertNoIdentityLeak(listView);
+
+  const closedCycle = makeCycle(
+    "cycle-anonymous-closed",
+    "CLOSED",
+  );
+  const closedFixture = makeDatabase({
+    cycle: closedCycle,
+    responses: [
+      makeResponse({
+        cycle: closedCycle,
+        ordinal: 1,
+        scoreValue: 4,
+      }),
+      makeResponse({
+        cycle: closedCycle,
+        ordinal: 2,
+        scoreValue: 5,
+      }),
+    ],
+  });
+  const closedListView =
+    await readHeadteacherDirectorAnonymousResponses({
+      actorUserId: "director-user-one",
+      actorRoleName: "DISTRICT_DIRECTOR",
+      cycleId: closedCycle.id,
+      governanceScope: {
+        isSuperAdmin: false,
+        tenantIds: ["school-tenant-one"],
+      },
+      database: closedFixture.database,
+    });
+
+  assertEqual(
+    closedListView.cycle.status,
+    "CLOSED",
+    "Closed staff evidence remains inspectable before full review",
+  );
+  assertEqual(
+    closedListView.respondents.length,
+    2,
+    "Closed cycle exposes only finalized anonymous respondents",
+  );
+  assertEqual(
+    closedCycle.reviewStartedAt,
+    null,
+    "Closed staff-only review does not start Director review",
+  );
+  assertNoIdentityLeak(closedListView);
 
   const selectedView =
     await readHeadteacherDirectorAnonymousResponses({
@@ -852,6 +926,35 @@ async function main() {
     "HEADTEACHER_DIRECTOR_ANONYMOUS_RESPONSE_NOT_FOUND",
   );
 
+  const openCycle = makeCycle(
+    "cycle-anonymous-open",
+    "OPEN",
+  );
+  const openFixture = makeDatabase({
+    cycle: openCycle,
+    responses: [
+      makeResponse({
+        cycle: openCycle,
+        ordinal: 1,
+        scoreValue: 4,
+      }),
+    ],
+  });
+  await expectFailure(
+    () =>
+      readHeadteacherDirectorAnonymousResponses({
+        actorUserId: "director-user-one",
+        actorRoleName: "DISTRICT_DIRECTOR",
+        cycleId: openCycle.id,
+        governanceScope: {
+          isSuperAdmin: false,
+          tenantIds: ["school-tenant-one"],
+        },
+        database: openFixture.database,
+      }),
+    "HEADTEACHER_DIRECTOR_ANONYMOUS_RESPONSE_CYCLE_INVALID",
+  );
+
   const countDrift = makeDatabase({
     snapshotFinalizedResponses: 3,
   });
@@ -920,6 +1023,18 @@ async function main() {
     );
   }
 
+  for (const forbidden of [
+    "appraisalAssessment",
+    "supervisoryAssessment",
+    "HEADTEACHER_DIRECTOR_REVIEW_SUPERVISORY_ASSESSMENT_REQUIRED",
+  ]) {
+    assert(
+      !serviceSource.includes(forbidden),
+      "Anonymous staff review must not depend on governance assessment",
+      { forbidden },
+    );
+  }
+
   assert(
     serviceSource.includes('createHash("sha256")') &&
       serviceSource.includes(
@@ -929,6 +1044,11 @@ async function main() {
   );
 
   for (const marker of [
+    'allowedCycleStatuses: ["CLOSED", "UNDER_REVIEW"]',
+    "staffEvidenceReviewAllowedBeforeSupervisoryAssessment: true",
+    "fullDecisionReviewRequiredForDecisions: true",
+    'cycleStatus === "CLOSED"',
+    'cycleStatus === "UNDER_REVIEW"',
     "responseHash.localeCompare",
     "respondentLabelsAreCycleScoped: true",
     "respondentLabelsAreNotCrossCycleIdentifiers: true",
@@ -963,6 +1083,10 @@ async function main() {
   for (const marker of [
     "anonymousContractSafe",
     "StaffNativeForm",
+    "Review staff feedback",
+    "Start full decision review",
+    "The staff feedback is ready, but the separate governance assessment",
+    "Staff evidence review only",
     "cycle-scoped anonymous label",
     "not available to the District Director",
     "Native Monitoring and Inspection Sheet",
@@ -984,6 +1108,15 @@ async function main() {
   );
   console.log(
     "Governance scope                 : exact school tenant",
+  );
+  console.log(
+    "Allowed cycle states             : CLOSED / UNDER_REVIEW",
+  );
+  console.log(
+    "Staff-only review                : available before governance finalization",
+  );
+  console.log(
+    "Director decision controls       : full review only",
   );
   console.log(
     "Response eligibility             : finalized response + participant",

@@ -1,13 +1,24 @@
+//src/lib/appraisals/headteacherFeedbackDeadlineClosure.ts
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { assertAppraisalAuthority } from "@/lib/appraisals/authority";
 import {
   HEADTEACHER_FEEDBACK_POLICY,
   assertHeadteacherFeedbackInstrumentReady,
   headteacherFeedbackDeadline,
+  assertHeadteacherFeedbackTargetInGovernanceScope,
+  type HeadteacherFeedbackGovernanceScope,
 } from "@/lib/appraisals/headteacherFeedback";
+import { HEADTEACHER_DIRECTOR_REVIEW_POLICY } from "@/lib/appraisals/headteacherDirectorReview";
+import { effectiveRole } from "@/lib/roleRouting";
 
 export const HEADTEACHER_FEEDBACK_DEADLINE_CLOSURE_POLICY = {
   closureMode: "SYSTEM_DEADLINE",
+  earlyClosureMode: "DIRECTOR_ALL_RESPONSES_FINALIZED",
+  earlyClosureRequiresExplicitConfirmation: true,
+  earlyClosureRequiresAllEligibleFinalized: true,
+  earlyClosureExpiresParticipants: false,
+  staffFeedbackIndependentOfGovernanceAssessment: true,
   closesOnlyOpenCycles: true,
   deadlineInclusive: true,
   expiresOnlyUnfinalizedParticipants: true,
@@ -29,6 +40,19 @@ export type CloseExpiredHeadteacherFeedbackCycleInput = {
   cycleId: string;
   now?: Date;
   reqId?: string | null;
+  database?: HeadteacherFeedbackDeadlineClosureDatabase;
+};
+
+export type CloseCompletedHeadteacherFeedbackCycleEarlyInput = {
+  actorUserId: string;
+  actorRoleName: unknown;
+  governanceScope: HeadteacherFeedbackGovernanceScope;
+  cycleId: string;
+  confirm: boolean;
+  now?: Date;
+  reqId?: string | null;
+  ip?: string | null;
+  userAgent?: string | null;
   database?: HeadteacherFeedbackDeadlineClosureDatabase;
 };
 
@@ -349,6 +373,254 @@ function resultFromCycle(
     minimumResponses: cycle.minimumResponses,
     reviewReadiness: summary.reviewReadiness,
   };
+}
+
+
+function requireDirectorEarlyClosureAuthority(input: {
+  actorUserId: string;
+  actorRoleName: unknown;
+}) {
+  const actorUserId = requireIdentifier(input.actorUserId, "actorUserId");
+  const actorRole = effectiveRole(input.actorRoleName);
+
+  if (actorRole !== "DISTRICT_DIRECTOR") {
+    fail("HEADTEACHER_FEEDBACK_EARLY_CLOSURE_DIRECTOR_ONLY", 403, {
+      actorRole,
+    });
+  }
+
+  assertAppraisalAuthority(
+    {
+      actorUserId,
+      roleName: actorRole,
+    },
+    HEADTEACHER_DIRECTOR_REVIEW_POLICY.requiredCapability,
+  );
+
+  return {
+    actorUserId,
+    actorRole: "DISTRICT_DIRECTOR" as const,
+  };
+}
+
+function eligibleParticipants(cycle: CycleRecord) {
+  return cycle.participants.filter(
+    (participant) => participant.status !== "REVOKED",
+  );
+}
+
+function allEligibleParticipantsFinalized(cycle: CycleRecord) {
+  const eligible = eligibleParticipants(cycle);
+  return (
+    eligible.length > 0 &&
+    eligible.every((participant) => participant.status === "FINALIZED")
+  );
+}
+
+export async function closeCompletedHeadteacherFeedbackCycleEarly(
+  input: CloseCompletedHeadteacherFeedbackCycleEarlyInput,
+): Promise<CloseExpiredHeadteacherFeedbackCycleResult> {
+  if (input.confirm !== true) {
+    fail("HEADTEACHER_FEEDBACK_EARLY_CLOSURE_CONFIRMATION_REQUIRED", 400);
+  }
+
+  const authority = requireDirectorEarlyClosureAuthority(input);
+  const cycleId = requireIdentifier(input.cycleId, "cycleId");
+  const now = requireValidDate(input.now);
+  const reqId = clean(input.reqId).slice(0, 180) || null;
+  const database =
+    input.database ??
+    (prisma as unknown as HeadteacherFeedbackDeadlineClosureDatabase);
+
+  return database.$transaction(
+    async (
+      tx: HeadteacherFeedbackDeadlineClosureTransactionClient,
+    ) => {
+      const cycle = await tx.appraisalCycle.findUnique({
+        where: { id: cycleId },
+        select: cycleSelect,
+      });
+
+      if (!cycle) {
+        fail("HEADTEACHER_FEEDBACK_CLOSURE_CYCLE_NOT_FOUND", 404, {
+          cycleId,
+        });
+      }
+
+      assertCycleContract(cycle);
+
+      const targetTenantId = requireIdentifier(
+        cycle.targetTenantId,
+        "targetTenantId",
+      );
+      assertHeadteacherFeedbackTargetInGovernanceScope({
+        governanceScope: input.governanceScope,
+        targetTenantId,
+      });
+
+      if (cycle.status === "CLOSED") {
+        return resultFromCycle(cycle, "EXISTING_CLOSED");
+      }
+
+      if (cycle.status === "UNDER_REVIEW" || cycle.status === "RELEASED") {
+        return resultFromCycle(cycle, "ALREADY_ADVANCED");
+      }
+
+      if (cycle.status !== "OPEN") {
+        fail("HEADTEACHER_FEEDBACK_CLOSURE_OPEN_CYCLE_REQUIRED", 409, {
+          cycleId,
+          status: cycle.status,
+        });
+      }
+
+      if (!cycle.openedAt || !cycle.deadlineAt) {
+        fail("HEADTEACHER_FEEDBACK_CLOSURE_OPEN_TIMESTAMPS_INVALID", 409, {
+          cycleId,
+        });
+      }
+
+      const expectedDeadline = headteacherFeedbackDeadline(cycle.openedAt);
+      if (expectedDeadline.getTime() !== cycle.deadlineAt.getTime()) {
+        fail("HEADTEACHER_FEEDBACK_CLOSURE_DEADLINE_CONTRACT_INVALID", 409, {
+          cycleId,
+        });
+      }
+
+      if (now.getTime() >= cycle.deadlineAt.getTime()) {
+        fail(
+          "HEADTEACHER_FEEDBACK_EARLY_CLOSURE_DEADLINE_REACHED_USE_SYSTEM_CLOSURE",
+          409,
+          {
+            cycleId,
+            deadlineAt: cycle.deadlineAt.toISOString(),
+          },
+        );
+      }
+
+      assertParticipantResponseConsistency(cycle);
+
+      const eligible = eligibleParticipants(cycle);
+      const finalizedResponseCount = eligible.filter(
+        (participant) => participant.status === "FINALIZED",
+      ).length;
+
+      if (!allEligibleParticipantsFinalized(cycle)) {
+        fail(
+          "HEADTEACHER_FEEDBACK_EARLY_CLOSURE_ALL_RESPONSES_REQUIRED",
+          409,
+          {
+            cycleId,
+            eligibleParticipantCount: eligible.length,
+            finalizedResponseCount,
+          },
+        );
+      }
+
+      const revokedParticipantCount = cycle.participants.filter(
+        (participant) => participant.status === "REVOKED",
+      ).length;
+      const priorMetadata = objectValue(cycle.metadata);
+
+      const updated = await tx.appraisalCycle.update({
+        where: {
+          id: cycleId,
+          status: "OPEN",
+        },
+        data: {
+          status: "CLOSED",
+          closedAt: now,
+          closedByUserId: authority.actorUserId,
+          metadata: {
+            ...priorMetadata,
+            workflow: HEADTEACHER_FEEDBACK_POLICY.workflow,
+            closureMode:
+              HEADTEACHER_FEEDBACK_DEADLINE_CLOSURE_POLICY.earlyClosureMode,
+            deadlineAt: cycle.deadlineAt.toISOString(),
+            closedAt: now.toISOString(),
+            participantCount: cycle.participants.length,
+            eligibleParticipantCount: eligible.length,
+            finalizedResponseCount,
+            expiredParticipantCount: 0,
+            revokedParticipantCount,
+            minimumResponses: cycle.minimumResponses,
+            reviewReadiness: "READY",
+            allEligibleResponsesFinalized: true,
+            directorEarlyClosure: true,
+            governanceAssessmentRequiredForClosure: false,
+            identitiesIncluded: false,
+            scoreValuesIncluded: false,
+            aggregateSnapshotCreated: false,
+            reviewStarted: false,
+            notificationsSeeded: false,
+          },
+        },
+        select: {
+          id: true,
+          status: true,
+          closedAt: true,
+          deadlineAt: true,
+          minimumResponses: true,
+          metadata: true,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          tenantId: targetTenantId,
+          userId: authority.actorUserId,
+          action: HEADTEACHER_FEEDBACK_CLOSURE_AUDIT_ACTION,
+          resource: "AppraisalCycle",
+          resourceId: cycleId,
+          ip: input.ip ?? null,
+          userAgent: input.userAgent ?? null,
+          metadata: {
+            reqId,
+            action: HEADTEACHER_FEEDBACK_CLOSURE_AUDIT_ACTION,
+            workflow: HEADTEACHER_FEEDBACK_POLICY.workflow,
+            closureMode:
+              HEADTEACHER_FEEDBACK_DEADLINE_CLOSURE_POLICY.earlyClosureMode,
+            actorRole: authority.actorRole,
+            priorStatus: "OPEN",
+            nextStatus: "CLOSED",
+            deadlineAt: cycle.deadlineAt.toISOString(),
+            closedAt: now.toISOString(),
+            participantCount: cycle.participants.length,
+            eligibleParticipantCount: eligible.length,
+            finalizedResponseCount,
+            expiredParticipantCount: 0,
+            revokedParticipantCount,
+            minimumResponses: cycle.minimumResponses,
+            reviewReadiness: "READY",
+            allEligibleResponsesFinalized: true,
+            governanceAssessmentRequiredForClosure: false,
+            respondentIdentityCopiedIntoAudit: false,
+            participantIdentifiersCopiedIntoAudit: false,
+            scoreValuesRecordedInAudit: false,
+            aggregateScoreRecordedInAudit: false,
+            notificationsSeeded: false,
+          },
+        },
+      });
+
+      return resultFromCycle(
+        {
+          ...cycle,
+          status: updated.status,
+          closedAt: updated.closedAt,
+          closedByUserId: authority.actorUserId,
+          metadata: updated.metadata,
+        },
+        "CLOSED",
+      );
+    },
+    {
+      maxWait:
+        HEADTEACHER_FEEDBACK_DEADLINE_CLOSURE_POLICY.transactionMaxWaitMs,
+      timeout:
+        HEADTEACHER_FEEDBACK_DEADLINE_CLOSURE_POLICY.transactionTimeoutMs,
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+    },
+  );
 }
 
 export async function closeExpiredHeadteacherFeedbackCycle(

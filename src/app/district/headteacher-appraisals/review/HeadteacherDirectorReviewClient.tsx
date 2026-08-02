@@ -13,7 +13,7 @@ import type { HeadteacherDirectorReviewPackage } from "@/lib/appraisals/headteac
 import type { HeadteacherDirectorAnonymousResponsesView } from "@/lib/appraisals/headteacherDirectorAnonymousResponses";
 
 type DecisionMode = "RETURN" | "HOLD" | "RELEASE";
-type QueuePanel = "ALL" | "APPROVAL" | "READY" | "OPEN";
+type QueuePanel = "ALL" | "APPROVAL" | "COMPLETE" | "READY" | "OPEN";
 type ReviewMode = "HOME" | "STAFF" | "SUPERVISORY" | "ANALYTICS";
 type StaffLevel = "CIRCUIT" | "SCHOOL" | "RESPONDENTS" | "FORM";
 
@@ -66,6 +66,7 @@ type ApiFailure = {
   message?: string;
   detail?: string;
   releaseCommitted?: boolean;
+  closureCommitted?: boolean;
 };
 
 type SupervisorySection = {
@@ -141,6 +142,21 @@ function errorText(value: unknown, fallback: string) {
   );
 }
 
+function fullReviewFailureText(value: unknown, fallback: string) {
+  const candidate = value as ApiFailure | null;
+  if (
+    candidate?.error ===
+    "HEADTEACHER_DIRECTOR_REVIEW_SUPERVISORY_ASSESSMENT_REQUIRED"
+  ) {
+    return (
+      "The staff feedback is ready, but the separate governance assessment " +
+      "has not yet been finalized. Review the anonymous staff forms now, or " +
+      "start the full decision review after the governance assessment is finalized."
+    );
+  }
+  return errorText(value, fallback);
+}
+
 async function readJson<T>(response: Response): Promise<T | null> {
   return response.json().catch(() => null) as Promise<T | null>;
 }
@@ -203,27 +219,41 @@ function SummaryCard(props: {
   value: number;
   description: string;
   active: boolean;
+  attention?: boolean;
   onClick: () => void;
 }) {
+  const hasAttention = props.attention === true && props.value > 0;
+
   return (
     <button
       type="button"
       onClick={props.onClick}
       className={
         props.active
-          ? "min-h-[128px] rounded-[22px] border border-amber-300/45 bg-amber-300/12 p-4 text-left shadow-[0_14px_35px_rgba(245,196,69,0.10)]"
-          : "min-h-[128px] rounded-[22px] border border-white/10 bg-slate-900/85 p-4 text-left transition hover:border-white/20 hover:bg-slate-900"
+          ? "min-h-[144px] rounded-[22px] border border-amber-300/45 bg-amber-300/12 p-4 text-left shadow-[0_14px_35px_rgba(245,196,69,0.10)]"
+          : hasAttention
+            ? "min-h-[144px] rounded-[22px] border border-amber-300/40 bg-[linear-gradient(145deg,rgba(245,196,69,0.15),rgba(15,23,42,0.94))] p-4 text-left shadow-[0_16px_40px_rgba(245,196,69,0.12)] transition hover:border-amber-200/60"
+            : "min-h-[144px] rounded-[22px] border border-white/10 bg-slate-900/85 p-4 text-left transition hover:border-white/20 hover:bg-slate-900"
       }
     >
       <div className="flex items-start justify-between gap-3">
         <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
           {props.label}
         </p>
-        <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-xs font-black text-slate-100">
+        <span
+          className={
+            hasAttention
+              ? "flex h-12 min-w-12 items-center justify-center rounded-2xl border border-amber-100/70 bg-amber-300 px-3 text-xl font-black text-slate-950 shadow-[0_0_0_5px_rgba(245,196,69,0.12),0_10px_28px_rgba(245,196,69,0.24)]"
+              : props.value > 0
+                ? "flex h-11 min-w-11 items-center justify-center rounded-2xl border border-cyan-200/30 bg-cyan-300/15 px-3 text-lg font-black text-cyan-50 shadow-[0_8px_24px_rgba(34,211,238,0.10)]"
+                : "flex h-11 min-w-11 items-center justify-center rounded-2xl border border-white/10 bg-black/20 px-3 text-lg font-black text-slate-300"
+          }
+          aria-label={`${props.value} ${props.label}`}
+        >
           {props.value}
         </span>
       </div>
-      <p className="mt-3 text-sm font-semibold leading-5 text-slate-200">
+      <p className="mt-4 text-sm font-semibold leading-5 text-slate-200">
         {props.description}
       </p>
     </button>
@@ -257,10 +287,17 @@ function QueueRecord(props: {
   selected: boolean;
   busy: boolean;
   onApprove: () => void;
+  onCloseEarly: () => void;
+  onWait: () => void;
+  onReviewStaff: () => void;
   onStart: () => void;
   onLoad: () => void;
 }) {
   const { item } = props;
+  const allResponsesFinalized =
+    item.cycleStatus === "OPEN" &&
+    item.participantCount > 0 &&
+    item.finalizedResponseCount === item.participantCount;
   return (
     <article
       className={
@@ -287,7 +324,9 @@ function QueueRecord(props: {
             {item.cycleStatus === "PENDING_APPROVAL"
               ? `Requested ${formatDate(item.requestedAt)}`
               : item.cycleStatus === "OPEN"
-                ? `${item.finalizedResponseCount} of ${item.participantCount} responses finalized · deadline ${formatDate(item.deadlineAt)}`
+                ? allResponsesFinalized
+                  ? `All ${item.finalizedResponseCount} responses finalized · deadline ${formatDate(item.deadlineAt)}`
+                  : `${item.finalizedResponseCount} of ${item.participantCount} responses finalized · deadline ${formatDate(item.deadlineAt)}`
                 : item.cycleStatus === "CLOSED"
                   ? `Responses closed ${formatDate(item.closedAt)}`
                   : item.cycleStatus === "UNDER_REVIEW"
@@ -308,14 +347,39 @@ function QueueRecord(props: {
               Approve and open
             </ActionButton>
           ) : null}
+          {allResponsesFinalized ? (
+            <>
+              <ActionButton
+                primary
+                disabled={props.busy}
+                onClick={props.onCloseEarly}
+              >
+                Close and prepare review
+              </ActionButton>
+              <ActionButton
+                disabled={props.busy}
+                onClick={props.onWait}
+              >
+                Wait until deadline
+              </ActionButton>
+            </>
+          ) : null}
           {item.cycleStatus === "CLOSED" ? (
-            <ActionButton
-              primary
-              disabled={props.busy}
-              onClick={props.onStart}
-            >
-              Start Director review
-            </ActionButton>
+            <>
+              <ActionButton
+                primary
+                disabled={props.busy}
+                onClick={props.onReviewStaff}
+              >
+                Review staff feedback
+              </ActionButton>
+              <ActionButton
+                disabled={props.busy}
+                onClick={props.onStart}
+              >
+                Start full decision review
+              </ActionButton>
+            </>
           ) : null}
           {item.cycleStatus === "UNDER_REVIEW" ? (
             <ActionButton
@@ -1176,6 +1240,7 @@ function StaffEvidence(props: {
   onLevel: (level: StaffLevel) => void;
   onRespondent: (key: string) => void;
   onBackHome: () => void;
+  staffOnly?: boolean;
 }) {
   const selected = props.data.selectedResponse;
 
@@ -1195,9 +1260,23 @@ function StaffEvidence(props: {
               Teacher identities are not available to the District Director.
             </p>
           </div>
-          <ActionButton onClick={props.onBackHome}>Back to evidence</ActionButton>
+          <ActionButton onClick={props.onBackHome}>
+            {props.staffOnly ? "Back to work queue" : "Back to evidence"}
+          </ActionButton>
         </div>
       </div>
+
+      {props.staffOnly ? (
+        <div className="rounded-2xl border border-violet-300/25 bg-violet-400/10 p-4 text-sm leading-6 text-violet-50">
+          <p className="font-black">Staff evidence review only</p>
+          <p className="mt-1">
+            The anonymous staff-feedback stream is complete and may be inspected
+            now. Return, Hold and Release remain unavailable until the separate
+            governance assessment is finalized and the full decision review is
+            started.
+          </p>
+        </div>
+      ) : null}
 
       {props.level === "CIRCUIT" ? (
         <div className={panel("p-5")}>
@@ -1484,7 +1563,9 @@ export default function HeadteacherDirectorReviewClient({
   const readyItems = useMemo(
     () =>
       queue?.items.filter(
-        (item) => item.cycleStatus === "CLOSED" || item.cycleStatus === "UNDER_REVIEW",
+        (item) =>
+          item.cycleStatus === "CLOSED" ||
+          item.cycleStatus === "UNDER_REVIEW",
       ) ?? [],
     [queue],
   );
@@ -1492,13 +1573,39 @@ export default function HeadteacherDirectorReviewClient({
     () => queue?.items.filter((item) => item.cycleStatus === "OPEN") ?? [],
     [queue],
   );
+  const completedOpenItems = useMemo(
+    () =>
+      openItems.filter(
+        (item) =>
+          item.participantCount > 0 &&
+          item.finalizedResponseCount === item.participantCount,
+      ),
+    [openItems],
+  );
+  const collectingOpenItems = useMemo(
+    () =>
+      openItems.filter(
+        (item) =>
+          item.participantCount < 1 ||
+          item.finalizedResponseCount !== item.participantCount,
+      ),
+    [openItems],
+  );
   const visibleQueueItems = useMemo(() => {
     if (!queue) return [];
     if (queuePanel === "APPROVAL") return pendingApprovalItems;
+    if (queuePanel === "COMPLETE") return completedOpenItems;
     if (queuePanel === "READY") return readyItems;
-    if (queuePanel === "OPEN") return openItems;
+    if (queuePanel === "OPEN") return collectingOpenItems;
     return queue.items;
-  }, [openItems, pendingApprovalItems, queue, queuePanel, readyItems]);
+  }, [
+    collectingOpenItems,
+    completedOpenItems,
+    pendingApprovalItems,
+    queue,
+    queuePanel,
+    readyItems,
+  ]);
   const supervisorySections = useMemo(
     () => buildSupervisorySections(reviewPackage),
     [reviewPackage],
@@ -1568,7 +1675,10 @@ export default function HeadteacherDirectorReviewClient({
         setReviewPackage(null);
         setAnonymousResponses(null);
         setFailure(
-          errorText(payload, "The review package is not ready. Start the review or try again."),
+          fullReviewFailureText(
+            payload,
+            "The review package is not ready. Start the review or try again.",
+          ),
         );
         return;
       }
@@ -1597,7 +1707,7 @@ export default function HeadteacherDirectorReviewClient({
     if (!selectedCycleId) return;
     if (
       !window.confirm(
-        "Start the Director review now? This verifies both evidence streams and moves the appraisal into review.",
+        "Start the full Director decision review now? This requires both the sealed staff-feedback evidence and the finalized governance assessment.",
       )
     ) {
       return;
@@ -1617,7 +1727,12 @@ export default function HeadteacherDirectorReviewClient({
       );
       const payload = await readJson<ApiFailure>(response);
       if (!response.ok) {
-        setFailure(errorText(payload, "The review could not be started."));
+        setFailure(
+          fullReviewFailureText(
+            payload,
+            "The full Director decision review could not be started.",
+          ),
+        );
         return;
       }
       await loadPackage(selectedCycleId);
@@ -1674,16 +1789,96 @@ export default function HeadteacherDirectorReviewClient({
     }
   }
 
-  async function loadAnonymousResponses(respondentKey?: string) {
-    if (!reviewPackage) return;
+  async function closeCompletedEarly(cycleIdToClose: string) {
+    const selectedCycleId = clean(cycleIdToClose);
     clearMessages();
+    if (!selectedCycleId) return;
+
+    if (
+      !window.confirm(
+        "All eligible Teachers have finalized. Close staff feedback now and seal the anonymous aggregate for review? The separate governance assessment will not be changed.",
+      )
+    ) {
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const response = await fetch(API_BASE, {
+        method: "POST",
+        cache: "no-store",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "CLOSE_COMPLETED_EARLY",
+          cycleId: selectedCycleId,
+          confirm: true,
+        }),
+      });
+      const payload = await readJson<ApiFailure>(response);
+      if (!response.ok) {
+        if (payload?.closureCommitted === true) {
+          setFailure(
+            "Staff feedback closed safely, but the aggregate still needs retrying. Refresh the queue before repeating the action.",
+          );
+          return;
+        }
+        setFailure(
+          errorText(
+            payload,
+            "The completed staff-feedback period could not be closed.",
+          ),
+        );
+        return;
+      }
+
+      setNotice(
+        "Staff feedback closed and the anonymous aggregate was sealed. The separate governance assessment was not changed.",
+      );
+      setQueuePanel("READY");
+      await loadQueue();
+    } catch {
+      setFailure(
+        "Network interrupted. Refresh the queue to confirm the current state before repeating early closure.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function waitUntilDeadline(item: DirectorQueueItem) {
+    clearMessages();
+    setNotice(
+      `No data was changed. This feedback period remains open until ${formatDate(item.deadlineAt)}.`,
+    );
+  }
+
+  async function loadAnonymousResponses(
+    respondentKey?: string,
+    cycleIdOverride?: string,
+  ) {
+    const selectedCycleId = clean(
+      cycleIdOverride ??
+        anonymousResponses?.cycle.id ??
+        reviewPackage?.cycle.id ??
+        cycleId,
+    );
+    clearMessages();
+    if (!selectedCycleId) {
+      setFailure("Choose a closed or under-review appraisal from the work queue.");
+      return;
+    }
+
     setBusy(true);
     try {
       const query = respondentKey
         ? `?respondentKey=${encodeURIComponent(respondentKey)}`
         : "";
       const response = await fetch(
-        `${API_BASE}/${encodeURIComponent(reviewPackage.cycle.id)}/anonymous-responses${query}`,
+        `${API_BASE}/${encodeURIComponent(selectedCycleId)}/anonymous-responses${query}`,
         {
           method: "GET",
           cache: "no-store",
@@ -1704,9 +1899,17 @@ export default function HeadteacherDirectorReviewClient({
         );
         return;
       }
+
+      setCycleId(selectedCycleId);
       setAnonymousResponses(payload.anonymousResponses);
       setReviewMode("STAFF");
       setStaffLevel(respondentKey ? "FORM" : "CIRCUIT");
+      if (payload.anonymousResponses.cycle.status === "CLOSED") {
+        setReviewPackage(null);
+        setNotice(
+          "Staff feedback loaded read-only. The separate governance assessment is not required for this inspection.",
+        );
+      }
     } catch {
       setFailure(
         "Network interrupted. No identity or response data was cached. Try loading the anonymous forms again.",
@@ -1830,11 +2033,13 @@ export default function HeadteacherDirectorReviewClient({
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-2 text-center">
-                <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+              <div className="rounded-2xl border border-emerald-200/25 bg-emerald-300/10 px-4 py-2 text-center shadow-[0_10px_30px_rgba(16,185,129,0.10)]">
+                <p className="text-[10px] font-black uppercase tracking-[0.12em] text-emerald-100/75">
                   Ready now
                 </p>
-                <p className="mt-0.5 text-xl font-black text-white">{readyItems.length}</p>
+                <p className="mt-0.5 text-2xl font-black text-emerald-50">
+                  {readyItems.length}
+                </p>
               </div>
               <ActionButton disabled={queueLoading} onClick={() => void loadQueue()}>
                 {queueLoading ? "Refreshing…" : "Refresh"}
@@ -1843,7 +2048,7 @@ export default function HeadteacherDirectorReviewClient({
           </div>
         </header>
 
-        <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <SummaryCard
             label="Appraisal work queue"
             value={queue?.items.length ?? 0}
@@ -1856,19 +2061,29 @@ export default function HeadteacherDirectorReviewClient({
             value={pendingApprovalItems.length}
             description="Requests that can open the confidential feedback period."
             active={queuePanel === "APPROVAL"}
+            attention
             onClick={() => setQueuePanel("APPROVAL")}
+          />
+          <SummaryCard
+            label="All responses received"
+            value={completedOpenItems.length}
+            description="Every frozen respondent has finalized before the deadline."
+            active={queuePanel === "COMPLETE"}
+            attention
+            onClick={() => setQueuePanel("COMPLETE")}
           />
           <SummaryCard
             label="Ready for Director review"
             value={readyItems.length}
             description="Closed or under-review packages requiring attention."
             active={queuePanel === "READY"}
+            attention
             onClick={() => setQueuePanel("READY")}
           />
           <SummaryCard
             label="Feedback in progress"
-            value={openItems.length}
-            description="Open cycles still collecting confidential responses."
+            value={collectingOpenItems.length}
+            description="Open cycles still waiting for one or more responses."
             active={queuePanel === "OPEN"}
             onClick={() => setQueuePanel("OPEN")}
           />
@@ -1882,9 +2097,11 @@ export default function HeadteacherDirectorReviewClient({
                   ? "Appraisal work queue"
                   : queuePanel === "APPROVAL"
                     ? "Requests awaiting approval"
-                    : queuePanel === "READY"
-                      ? "Ready for Director review"
-                      : "Feedback in progress"}
+                    : queuePanel === "COMPLETE"
+                      ? "All responses received"
+                      : queuePanel === "READY"
+                        ? "Ready for Director review"
+                        : "Feedback in progress"}
               </p>
               <p className="mt-1 text-sm text-slate-300">
                 Select the institutional record below. No reference number is typed manually.
@@ -1910,6 +2127,11 @@ export default function HeadteacherDirectorReviewClient({
                   selected={item.cycleId === cycleId}
                   busy={busy}
                   onApprove={() => void approveAndOpen(item.cycleId)}
+                  onCloseEarly={() => void closeCompletedEarly(item.cycleId)}
+                  onWait={() => waitUntilDeadline(item)}
+                  onReviewStaff={() =>
+                    void loadAnonymousResponses(undefined, item.cycleId)
+                  }
                   onStart={() => void startReview(item.cycleId)}
                   onLoad={() => void loadPackage(item.cycleId)}
                 />
@@ -1933,7 +2155,24 @@ export default function HeadteacherDirectorReviewClient({
           </div>
         ) : null}
 
-        {reviewPackage ? (
+        {reviewMode === "STAFF" && anonymousResponses ? (
+          <StaffEvidence
+            data={anonymousResponses}
+            level={staffLevel}
+            busy={busy}
+            staffOnly={!reviewPackage}
+            onLevel={setStaffLevel}
+            onRespondent={(key) =>
+              void loadAnonymousResponses(key, anonymousResponses.cycle.id)
+            }
+            onBackHome={() => {
+              setReviewMode("HOME");
+              if (!reviewPackage) setAnonymousResponses(null);
+            }}
+          />
+        ) : null}
+
+        {reviewPackage && reviewMode !== "STAFF" ? (
           <>
             <section className={panel("p-4 sm:p-5")}>
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -1979,17 +2218,6 @@ export default function HeadteacherDirectorReviewClient({
                 reviewPackage={reviewPackage}
                 onStaff={() => void loadAnonymousResponses()}
                 onSupervisory={() => setReviewMode("SUPERVISORY")}
-              />
-            ) : null}
-
-            {reviewMode === "STAFF" && anonymousResponses ? (
-              <StaffEvidence
-                data={anonymousResponses}
-                level={staffLevel}
-                busy={busy}
-                onLevel={setStaffLevel}
-                onRespondent={(key) => void loadAnonymousResponses(key)}
-                onBackHome={() => setReviewMode("HOME")}
               />
             ) : null}
 

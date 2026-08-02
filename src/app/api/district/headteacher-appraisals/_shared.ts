@@ -1,3 +1,4 @@
+//src/app/api/district/headteacher-appraisals/_shared.ts
 import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { requireGovernanceApiContext } from "@/lib/governance/scope";
@@ -11,6 +12,8 @@ export const HEADTEACHER_DIRECTOR_REVIEW_API_POLICY = {
   respondentIdentitiesReturned: false,
   individualStaffResponsesReturned: false,
   reviewerScoreMutationAllowed: false,
+  earlyCompletedStaffFeedbackCanCloseIndependently: true,
+  governanceAssessmentRequiredForStaffClosure: false,
   notificationSeedingMode: "RELEASE_ONLY_POST_TRANSACTION",
   providerCallsAllowed: false,
 } as const;
@@ -30,6 +33,9 @@ const SAFE_DETAIL_KEYS = new Set([
   "stage",
   "decision",
   "reason",
+  "deadlineAt",
+  "eligibleParticipantCount",
+  "finalizedResponseCount",
 ]);
 
 export function jsonNoStore(status: number, payload: unknown) {

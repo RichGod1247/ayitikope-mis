@@ -16,7 +16,9 @@ export const HEADTEACHER_DIRECTOR_ANONYMOUS_RESPONSES_POLICY = {
   schemaVersion: 1,
   audience: "DISTRICT_DIRECTOR",
   requiredCapability: HEADTEACHER_DIRECTOR_REVIEW_POLICY.requiredCapability,
-  requiredCycleStatus: "UNDER_REVIEW",
+  allowedCycleStatuses: ["CLOSED", "UNDER_REVIEW"] as const,
+  staffEvidenceReviewAllowedBeforeSupervisoryAssessment: true,
+  fullDecisionReviewRequiredForDecisions: true,
   requiredResponseStatus: "FINALIZED",
   respondentLabelsAreCycleScoped: true,
   respondentLabelsAreNotCrossCycleIdentifiers: true,
@@ -87,7 +89,7 @@ export type HeadteacherDirectorAnonymousResponsesView = {
   audience: "DISTRICT_DIRECTOR";
   cycle: {
     id: string;
-    status: "UNDER_REVIEW";
+    status: "CLOSED" | "UNDER_REVIEW";
     schoolId: string;
     schoolName: string;
     circuitId: string;
@@ -500,12 +502,18 @@ function calculationRows(
   );
 }
 
-function assertCycleContract(cycle: CycleRecord) {
+function assertCycleContract(
+  cycle: CycleRecord,
+): "CLOSED" | "UNDER_REVIEW" {
   const metadata = objectValue(cycle.metadata);
+  const cycleStatus = normalized(cycle.status);
+  const allowedLifecycle =
+    (cycleStatus === "CLOSED" && cycle.reviewStartedAt === null) ||
+    (cycleStatus === "UNDER_REVIEW" && cycle.reviewStartedAt instanceof Date);
+
   if (
     clean(metadata.workflow) !== HEADTEACHER_FEEDBACK_POLICY.workflow ||
-    normalized(cycle.status) !==
-      HEADTEACHER_DIRECTOR_ANONYMOUS_RESPONSES_POLICY.requiredCycleStatus ||
+    !allowedLifecycle ||
     normalized(cycle.targetRoleSnapshot) !== HEADTEACHER_FEEDBACK_POLICY.targetRole ||
     !clean(cycle.targetTenantId) ||
     !clean(cycle.targetZoneId) ||
@@ -513,7 +521,6 @@ function assertCycleContract(cycle: CycleRecord) {
     !clean(cycle.targetSchoolNameSnapshot) ||
     !clean(cycle.targetZoneNameSnapshot) ||
     cycle.minimumResponses !== 1 ||
-    !cycle.reviewStartedAt ||
     cycle.releasedAt ||
     cycle.cancelledAt ||
     cycle.scopeZone.id !== cycle.scopeZoneId ||
@@ -529,6 +536,7 @@ function assertCycleContract(cycle: CycleRecord) {
   ) {
     fail("HEADTEACHER_DIRECTOR_ANONYMOUS_RESPONSE_CYCLE_INVALID", 409, {
       cycleId: cycle.id,
+      status: cycle.status,
     });
   }
 
@@ -539,6 +547,8 @@ function assertCycleContract(cycle: CycleRecord) {
   if (cycle.instrumentVersion.sections.length < 1 || itemCount < 1) {
     fail("HEADTEACHER_DIRECTOR_ANONYMOUS_RESPONSE_INSTRUMENT_EMPTY", 409);
   }
+
+  return cycleStatus === "CLOSED" ? "CLOSED" : "UNDER_REVIEW";
 }
 
 function verifyResponse(input: { response: ResponseRecord; cycle: CycleRecord }) {
@@ -769,7 +779,7 @@ export async function readHeadteacherDirectorAnonymousResponses(
     fail("HEADTEACHER_DIRECTOR_ANONYMOUS_RESPONSE_CYCLE_NOT_FOUND", 404);
   }
 
-  assertCycleContract(cycle);
+  const cycleStatus = assertCycleContract(cycle);
 
   const targetTenantId = requireIdentifier(
     cycle.targetTenantId,
@@ -846,7 +856,7 @@ export async function readHeadteacherDirectorAnonymousResponses(
     audience: "DISTRICT_DIRECTOR",
     cycle: {
       id: cycle.id,
-      status: "UNDER_REVIEW",
+      status: cycleStatus,
       schoolId: targetTenantId,
       schoolName: clean(cycle.targetSchoolNameSnapshot),
       circuitId: requireIdentifier(cycle.targetZoneId, "targetZoneId"),
