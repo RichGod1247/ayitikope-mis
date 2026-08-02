@@ -10,7 +10,8 @@ const ts = require("typescript");
 const repoRoot = path.resolve(__dirname, "..", "..");
 
 function fail(message, detail) {
-  const suffix = detail === undefined ? "" : `\n${JSON.stringify(detail, null, 2)}`;
+  const suffix =
+    detail === undefined ? "" : `\n${JSON.stringify(detail, null, 2)}`;
   throw new Error(`${message}${suffix}`);
 }
 
@@ -20,16 +21,21 @@ function assert(condition, message, detail) {
 
 function read(relativePath) {
   const absolutePath = path.join(repoRoot, relativePath);
-  if (!fs.existsSync(absolutePath)) fail("Required file missing", relativePath);
+  if (!fs.existsSync(absolutePath)) {
+    fail("Required file missing", relativePath);
+  }
   return fs.readFileSync(absolutePath, "utf8");
 }
 
 const pagePath = "src/app/headteacher/my-appraisal/page.tsx";
-const clientPath = "src/app/headteacher/my-appraisal/HeadteacherReleasedResultClient.tsx";
+const clientPath =
+  "src/app/headteacher/my-appraisal/HeadteacherReleasedResultClient.tsx";
 const dashboardPath = "src/app/headteacher/dashboard/ui.tsx";
-const h2RoutePath = "src/app/api/headteacher/headteacher-appraisal/[cycleId]/released-result/route.ts";
+const h2RoutePath =
+  "src/app/api/headteacher/headteacher-appraisal/[cycleId]/released-result/route.ts";
 const h1ServicePath = "src/lib/appraisals/headteacherReleasedResult.ts";
-const readStatePath = "src/lib/appraisals/headteacherFeedbackReadStates.ts";
+const readStatePath =
+  "src/lib/appraisals/headteacherFeedbackReadStates.ts";
 
 const page = read(pagePath);
 const client = read(clientPath);
@@ -53,7 +59,11 @@ for (const [name, text, fileName] of [
     reportDiagnostics: true,
   });
   const diagnostics = transpiled.diagnostics || [];
-  assert(diagnostics.length === 0, `${name} has TypeScript syntax diagnostics`, diagnostics);
+  assert(
+    diagnostics.length === 0,
+    `${name} has TypeScript syntax diagnostics`,
+    diagnostics,
+  );
 }
 
 for (const marker of [
@@ -77,26 +87,45 @@ for (const marker of [
 for (const marker of [
   "HEADTEACHER_RELEASED_RESULT_UI_POLICY",
   "expectedSections: 4",
-  'presentation: "OVERALL_THEN_FOUR_SECTIONS"',
+  "expectedSupervisoryItems: 34",
+  'presentation: "AGGREGATE_STAFF_AND_NATIVE_SUPERVISORY"',
   'loadingMode: "EXPLICIT_BUTTON_ONLY"',
   "backgroundPollingAllowed: false",
   "persistentBrowserStorageAllowed: false",
   "combinedScoreIncluded: false",
   "responseCountsIncluded: false",
-  "itemLevelValuesIncluded: false",
+  "staffItemAveragesIncluded: false",
+  "supervisoryItemScoresIncluded: true",
+  "supervisoryItemScoresReadOnly: true",
   "respondentIdentitiesIncluded: false",
+  "individualStaffResponsesIncluded: false",
   "reviewerIdentityIncluded: false",
   "assessorIdentityIncluded: false",
+  "releasedResultContractSafe",
+  "item.comparison.combinedOverallPercentage === null",
   "Load my released result",
   "/released-result",
   'cache: "no-store"',
-  "No combined appraisal score is created.",
-  "Four-section comparison",
+  "Staff feedback aggregate",
+  "Native assessment sheet",
+  "Compare without combining",
+  "Open aggregate",
+  "Open official form",
+  "Open comparison",
+  "function StaffAggregateView",
+  "function SupervisoryNativeForm",
+  "function ComparisonView",
+  "Official supervisory evidence · read-only",
+  "Released supervisory evidence · verified read-only copy",
+  "No combined appraisal score or performance threshold is created.",
   "Director’s release note",
   "Release record verified",
-  "Difference means supervisory percentage minus staff-feedback percentage.",
+  "Difference means supervisory percentage minus staff-feedback",
+  "percentage. A positive value means the supervisory percentage is",
+  "overflow-x-auto",
+  "min-w-[1040px]",
 ]) {
-  assert(client.includes(marker), "H3 BBC client contract missing", marker);
+  assert(client.includes(marker), "H3 native client contract missing", marker);
 }
 
 for (const forbidden of [
@@ -113,27 +142,43 @@ for (const forbidden of [
   "participantUserId",
   "reviewerUserId",
   "assessorUserId",
-  "combinedOverallPercentage",
-  ".staffFeedback.sections",
-  ".supervisoryAssessment.sections",
+  "Respondent 1",
+  "respondentKey",
 ]) {
-  assert(!client.includes(forbidden), "H3 BBC client contains forbidden marker", forbidden);
+  assert(
+    !client.includes(forbidden),
+    "H3 native client contains forbidden marker",
+    forbidden,
+  );
 }
 
 const myAppraisalStart = dashboard.indexOf('title="My Appraisal"');
 const directorFeedbackStart = dashboard.indexOf('title="Director Feedback"');
 assert(myAppraisalStart >= 0, "Existing My Appraisal dashboard tile missing");
-assert(directorFeedbackStart > myAppraisalStart, "Dashboard order changed around My Appraisal");
-const myAppraisalBlock = dashboard.slice(myAppraisalStart, directorFeedbackStart);
+assert(
+  directorFeedbackStart > myAppraisalStart,
+  "Dashboard order changed around My Appraisal",
+);
+const myAppraisalBlock = dashboard.slice(
+  myAppraisalStart,
+  directorFeedbackStart,
+);
 for (const marker of [
   'cta="Open my appraisal"',
   'badge="Open"',
   'router.push("/headteacher/my-appraisal")',
   "Check your appraisal status and view the official released result when available.",
 ]) {
-  assert(myAppraisalBlock.includes(marker), "Controlled dashboard entry missing", marker);
+  assert(
+    myAppraisalBlock.includes(marker),
+    "Controlled dashboard entry missing",
+    marker,
+  );
 }
-assert(!myAppraisalBlock.includes("disabled"), "My Appraisal dashboard entry must not remain disabled");
+assert(
+  !myAppraisalBlock.includes("disabled"),
+  "My Appraisal dashboard entry must not remain disabled",
+);
 
 const tileGridStart = dashboard.indexOf(
   '<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">',
@@ -169,6 +214,9 @@ for (const marker of [
   'method: "GET"',
   "readHeadteacherReleasedResult",
   '"Cache-Control": "no-store, max-age=0"',
+  'itemLevelValuesIncluded: "SUPERVISORY_ONLY"',
+  "supervisoryItemScoresIncluded: true",
+  "supervisoryItemScoresReadOnly: true",
   "databaseWritesAllowed: false",
 ]) {
   assert(h2Route.includes(marker), "H2 no-store API contract missing", marker);
@@ -180,7 +228,9 @@ for (const marker of [
   "releaseProofHashVerified: true",
   "responseCountsIncluded: false",
   "staffItemAveragesIncluded: false",
-  "supervisoryItemScoresIncluded: false",
+  "supervisoryItemScoresIncluded: true",
+  "supervisoryItemScoresReadOnly: true",
+  "supervisoryItemScoresVerified: true",
   "respondentIdentitiesIncluded: false",
   "combinedOverallPercentage: null",
 ]) {
@@ -189,8 +239,8 @@ for (const marker of [
 
 for (const marker of [
   "readHeadteacherOwnAppraisalState",
-  'futureRouteTarget: string',
-  'canViewReleasedAppraisal: boolean',
+  "futureRouteTarget: string",
+  "canViewReleasedAppraisal: boolean",
   'case "RELEASED"',
   'return "VIEW_RELEASED_APPRAISAL"',
 ]) {
@@ -198,7 +248,7 @@ for (const marker of [
 }
 
 console.log("");
-console.log("=== D3.4H3 BBC-FRIENDLY HEADTEACHER RELEASED-RESULT WORKSPACE ===");
+console.log("=== HEADTEACHER RELEASED-RESULT NATIVE WORKSPACE ===");
 console.log("");
 console.log("Audience scope                 : exact Headteacher page session");
 console.log("Dashboard entry                : existing My Appraisal tile only");
@@ -206,14 +256,18 @@ console.log("Dashboard order                : unchanged");
 console.log("State source                   : C5 read-only state contract");
 console.log("Result source                  : H2 GET no-store API");
 console.log("Network behavior               : explicit load, no polling");
-console.log("Visible result                 : overall + four sections + release note");
+console.log("Staff evidence                 : aggregate overall + four sections");
+console.log("Supervisory evidence           : native 4-section / 34-item sheet");
+console.log("Supervisory scores             : verified and read-only");
 console.log("Comparison direction           : supervisory minus staff");
 console.log("Thresholds/combined score      : absent");
-console.log("Response counts/item values    : absent");
+console.log("Response counts                : absent");
+console.log("Staff item averages            : absent");
 console.log("Respondent identities/forms    : absent");
 console.log("Reviewer/assessor identities   : absent");
+console.log("Mobile native-form access      : horizontal paper-form scrolling");
 console.log("Persistent browser storage     : absent");
 console.log("Writes/notifications/providers : absent");
 console.log("Database accessed              : false");
 console.log("");
-console.log("RESULT: D3.4H3 HEADTEACHER RELEASED RESULT UI GREEN");
+console.log("RESULT: HEADTEACHER RELEASED RESULT UI GREEN");

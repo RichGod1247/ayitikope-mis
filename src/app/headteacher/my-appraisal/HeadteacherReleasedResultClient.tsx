@@ -1,13 +1,15 @@
+//src/app/headteacher/my-appraisal/HeadteacherReleasedResultClient.tsx
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import type { HeadteacherReleasedResult } from "@/lib/appraisals/headteacherReleasedResult";
 import type { HeadteacherOwnAppraisalReadState } from "@/lib/appraisals/headteacherFeedbackReadStates";
 
 export const HEADTEACHER_RELEASED_RESULT_UI_POLICY = {
   audience: "HEADTEACHER",
   expectedSections: 4,
-  presentation: "OVERALL_THEN_FOUR_SECTIONS",
+  expectedSupervisoryItems: 34,
+  presentation: "AGGREGATE_STAFF_AND_NATIVE_SUPERVISORY",
   loadingMode: "EXPLICIT_BUTTON_ONLY",
   backgroundPollingAllowed: false,
   persistentBrowserStorageAllowed: false,
@@ -15,7 +17,9 @@ export const HEADTEACHER_RELEASED_RESULT_UI_POLICY = {
   comparisonThresholdsDefined: false,
   combinedScoreIncluded: false,
   responseCountsIncluded: false,
-  itemLevelValuesIncluded: false,
+  staffItemAveragesIncluded: false,
+  supervisoryItemScoresIncluded: true,
+  supervisoryItemScoresReadOnly: true,
   respondentIdentitiesIncluded: false,
   individualStaffResponsesIncluded: false,
   reviewerIdentityIncluded: false,
@@ -40,6 +44,12 @@ type ReleasedResultApiResponse =
 type Props = {
   initialState: HeadteacherOwnAppraisalReadState | null;
 };
+
+type ReleasedResultView =
+  | "OVERVIEW"
+  | "STAFF"
+  | "SUPERVISORY"
+  | "COMPARISON";
 
 type AppraisalStatusApiResponse =
   | {
@@ -132,7 +142,8 @@ function stateGuidance(state: HeadteacherOwnAppraisalReadState | null) {
     case "VIEW_RELEASED_APPRAISAL":
       return {
         title: "Released result ready",
-        message: "Load the verified result below. It contains overall and section evidence only.",
+        message:
+          "Load the verified result below. It contains aggregate staff evidence and the finalized native supervisory form.",
       };
     case "REQUEST_CLOSED":
       return {
@@ -180,10 +191,758 @@ function lifecycleStep(
   return state ? acceptedStates.includes(state.state) : false;
 }
 
+function releasedResultContractSafe(item: HeadteacherReleasedResult) {
+  return (
+    item.audience === "RELEASED_HEADTEACHER" &&
+    item.lifecycleState === "RELEASED" &&
+    item.privacy.responseCountsIncluded === false &&
+    item.privacy.staffItemAveragesIncluded === false &&
+    item.privacy.supervisoryItemScoresIncluded === true &&
+    item.privacy.respondentIdentitiesIncluded === false &&
+    item.privacy.individualStaffResponsesIncluded === false &&
+    item.privacy.participantListIncluded === false &&
+    item.privacy.responseHashesIncluded === false &&
+    item.privacy.reviewerIdentityIncluded === false &&
+    item.privacy.assessorIdentityIncluded === false &&
+    item.privacy.contactDetailsIncluded === false &&
+    item.integrity.separateEvidenceStreams === true &&
+    item.integrity.combinedWeightingDefined === false &&
+    item.integrity.scoreMutationAllowed === false &&
+    item.comparison.combinedOverallPercentage === null &&
+    item.staffFeedback.sections.length === 4 &&
+    item.supervisoryAssessment.sections.length === 4 &&
+    item.supervisoryAssessment.sections.reduce(
+      (sum, section) => sum + section.items.length,
+      0,
+    ) === 34
+  );
+}
+
+function paperScoreCellTone(input: {
+  selected: boolean;
+  score: number | null;
+  notApplicable: boolean;
+}) {
+  if (!input.selected) return "bg-white text-slate-300";
+  if (input.notApplicable) return "bg-sky-100 text-sky-900";
+
+  switch (input.score) {
+    case 1:
+      return "bg-rose-100 text-rose-900";
+    case 2:
+      return "bg-orange-100 text-orange-900";
+    case 3:
+      return "bg-amber-100 text-amber-950";
+    case 4:
+      return "bg-teal-100 text-teal-950";
+    case 5:
+      return "bg-emerald-100 text-emerald-950";
+    default:
+      return "bg-slate-100 text-slate-900";
+  }
+}
+
+function paperValue(value: string | null | undefined) {
+  return String(value ?? "").trim() || "Not included in this released record";
+}
+
+function ResultBackButton(props: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={props.onClick}
+      className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/15 bg-slate-950 px-4 py-2.5 text-sm font-black text-slate-100"
+    >
+      Back to evidence
+    </button>
+  );
+}
+
+function ReleasedEvidenceGateway(props: {
+  result: HeadteacherReleasedResult;
+  onView: (view: ReleasedResultView) => void;
+}) {
+  return (
+    <section className="grid gap-4 lg:grid-cols-3">
+      <button
+        type="button"
+        onClick={() => props.onView("STAFF")}
+        className="group rounded-[26px] border border-cyan-300/20 bg-[linear-gradient(145deg,rgba(8,145,178,0.20),rgba(15,23,42,0.96))] p-5 text-left transition hover:border-cyan-300/40"
+      >
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-200">
+          Confidential evidence
+        </p>
+        <h2 className="mt-2 text-xl font-black text-white">
+          Staff feedback aggregate
+        </h2>
+        <p className="mt-3 text-sm leading-6 text-cyan-50/80">
+          View only the official overall and four-section staff averages. No
+          respondent, response count or individual form is included.
+        </p>
+        <div className="mt-5 flex items-end justify-between gap-3">
+          <p className="text-3xl font-black text-white">
+            {percentage(props.result.staffFeedback.overallPercentage)}
+          </p>
+          <span className="text-sm font-black text-cyan-100 group-hover:translate-x-1">
+            Open aggregate →
+          </span>
+        </div>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => props.onView("SUPERVISORY")}
+        className="group rounded-[26px] border border-indigo-300/20 bg-[linear-gradient(145deg,rgba(79,70,229,0.20),rgba(15,23,42,0.96))] p-5 text-left transition hover:border-indigo-300/40"
+      >
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-indigo-200">
+          Official supervisory evidence
+        </p>
+        <h2 className="mt-2 text-xl font-black text-white">
+          Native assessment sheet
+        </h2>
+        <p className="mt-3 text-sm leading-6 text-indigo-50/80">
+          Open the finalized four-section, 34-indicator Monitoring and
+          Inspection Sheet. Scores are read-only.
+        </p>
+        <div className="mt-5 flex items-end justify-between gap-3">
+          <p className="text-3xl font-black text-white">
+            {percentage(
+              props.result.supervisoryAssessment.overallPercentage,
+            )}
+          </p>
+          <span className="text-sm font-black text-indigo-100 group-hover:translate-x-1">
+            Open official form →
+          </span>
+        </div>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => props.onView("COMPARISON")}
+        className="group rounded-[26px] border border-amber-300/20 bg-[linear-gradient(145deg,rgba(180,83,9,0.20),rgba(15,23,42,0.96))] p-5 text-left transition hover:border-amber-300/40"
+      >
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-200">
+          Evidence comparison
+        </p>
+        <h2 className="mt-2 text-xl font-black text-white">
+          Compare without combining
+        </h2>
+        <p className="mt-3 text-sm leading-6 text-amber-50/80">
+          Compare the two evidence streams overall and by section. No combined
+          appraisal score or performance threshold is created.
+        </p>
+        <div className="mt-5 flex items-end justify-between gap-3">
+          <p className="text-lg font-black text-white">
+            {difference(
+              props.result.comparison.overall
+                .supervisoryMinusStaffPercentagePoints,
+            )}
+          </p>
+          <span className="text-sm font-black text-amber-100 group-hover:translate-x-1">
+            Open comparison →
+          </span>
+        </div>
+      </button>
+    </section>
+  );
+}
+
+function StaffAggregateView(props: {
+  result: HeadteacherReleasedResult;
+  onBack: () => void;
+}) {
+  return (
+    <section className="space-y-4">
+      <div className={panelClass("p-4 sm:p-5")}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-200">
+              Confidential staff evidence · aggregate only
+            </p>
+            <h2 className="mt-2 text-xl font-black text-white">
+              Staff feedback summary
+            </h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-[#C9CDD6]">
+              This released view contains the verified overall and four-section
+              averages only. It does not contain respondent labels, identities,
+              response counts, individual forms or staff item-level averages.
+            </p>
+          </div>
+          <ResultBackButton onClick={props.onBack} />
+        </div>
+      </div>
+
+      <div className={panelClass("p-4 sm:p-5")}>
+        <div className="rounded-[24px] border border-cyan-300/20 bg-cyan-400/10 p-5">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-cyan-100">
+            Overall staff-feedback average
+          </p>
+          <p className="mt-2 text-4xl font-black text-white">
+            {percentage(props.result.staffFeedback.overallPercentage)}
+          </p>
+        </div>
+
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+          {props.result.staffFeedback.sections.map((section) => (
+            <article
+              key={section.sectionKey}
+              className="rounded-[24px] border border-white/10 bg-[#0C1730] p-4"
+            >
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-cyan-200">
+                Section {section.sectionOrder}
+              </p>
+              <h3 className="mt-2 text-base font-black leading-6 text-white">
+                {section.sectionTitle}
+              </h3>
+              <div className="mt-4 flex items-end justify-between gap-3">
+                <div>
+                  <p className="text-xs text-[#8F98A8]">
+                    Aggregate section average
+                  </p>
+                  <p className="mt-1 text-2xl font-black text-white">
+                    {percentage(section.averagePercentage)}
+                  </p>
+                </div>
+                <p className="text-xs font-semibold text-[#8F98A8]">
+                  Official maximum {section.sectionMaxScore}
+                </p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SupervisoryNativeForm(props: {
+  result: HeadteacherReleasedResult;
+  onBack: () => void;
+}) {
+  const sections = props.result.supervisoryAssessment.sections;
+  const officialMaximum = sections.reduce(
+    (sum, section) => sum + section.sectionMaxScore,
+    0,
+  );
+  const applicableMaximum = sections.reduce(
+    (sum, section) =>
+      sum +
+      section.items.reduce(
+        (sectionSum, item) =>
+          sectionSum + (item.notApplicable ? 0 : item.itemMaxScore),
+        0,
+      ),
+    0,
+  );
+  const rawTotal = sections.reduce(
+    (sum, section) =>
+      sum +
+      section.items.reduce(
+        (sectionSum, item) =>
+          sectionSum + (item.notApplicable ? 0 : item.score ?? 0),
+        0,
+      ),
+    0,
+  );
+  const totalNotApplicable = sections.reduce(
+    (sum, section) =>
+      sum + section.items.filter((item) => item.notApplicable).length,
+    0,
+  );
+
+  return (
+    <section className="space-y-4">
+      <div className={panelClass("p-4 sm:p-5")}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-indigo-200">
+              Official supervisory evidence · read-only
+            </p>
+            <h2 className="mt-2 text-xl font-black text-white">
+              Native Monitoring and Inspection Sheet
+            </h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-[#C9CDD6]">
+              This is the finalized supervisory form included in your released
+              result. The scores are immutable, and no assessor identity or
+              contact detail is included.
+            </p>
+          </div>
+          <ResultBackButton onClick={props.onBack} />
+        </div>
+      </div>
+
+      <div className="overflow-x-auto rounded-[24px] border border-white/10 bg-slate-950/60 p-2 shadow-[0_22px_70px_rgba(0,0,0,0.30)] sm:p-4">
+        <div className="min-w-[1040px] overflow-hidden rounded-[20px] bg-white text-slate-950 shadow-[0_16px_55px_rgba(0,0,0,0.30)]">
+          <div className="border-b-2 border-slate-900 px-6 py-5 text-center">
+            <p className="text-[13px] font-black uppercase tracking-[0.12em]">
+              {props.result.cycle.districtName}
+            </p>
+            <h3 className="mt-1 text-[16px] font-black uppercase">
+              Monitoring and Inspection Sheet (Headteachers)
+            </h3>
+            <p className="mt-2 text-[11px] font-black uppercase tracking-[0.10em] text-indigo-800">
+              Released supervisory evidence · verified read-only copy
+            </p>
+          </div>
+
+          <table className="w-full border-collapse text-[12px] leading-5">
+            <tbody>
+              {[
+                [
+                  "Name of School",
+                  props.result.cycle.schoolName,
+                  "Staff Strength",
+                  null,
+                ],
+                [
+                  "Name of Circuit",
+                  props.result.cycle.circuitName,
+                  "Total Enrolment",
+                  null,
+                ],
+                [
+                  "Name of Head",
+                  props.result.cycle.headteacherName,
+                  "Girls",
+                  null,
+                ],
+                [
+                  "Date of Visit",
+                  dateLabel(
+                    props.result.supervisoryAssessment.dateObserved,
+                  ),
+                  "Boys",
+                  null,
+                ],
+                [
+                  "Arrival Time",
+                  null,
+                  "Teachers Present at the Time of Visit",
+                  null,
+                ],
+              ].map((row) => (
+                <tr key={String(row[0])}>
+                  <th className="w-[16%] border border-slate-300 bg-slate-100 px-3 py-2 text-left text-[11px] font-black uppercase">
+                    {row[0]}
+                  </th>
+                  <td className="w-[34%] border border-slate-300 px-3 py-2 font-semibold">
+                    {paperValue(row[1])}
+                  </td>
+                  <th className="w-[24%] border border-slate-300 bg-slate-100 px-3 py-2 text-left text-[11px] font-black uppercase">
+                    {row[2]}
+                  </th>
+                  <td className="w-[26%] border border-slate-300 px-3 py-2 font-semibold text-slate-600">
+                    {paperValue(row[3])}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="border-x border-b border-slate-300 bg-indigo-50 px-4 py-3 text-[11px] leading-5 text-indigo-950">
+            This released-result payload contains the verified observation date
+            and score evidence. Other visit-header values are not included and
+            are shown as not captured rather than reconstructed.
+          </div>
+
+          <table className="w-full border-collapse text-[11px] leading-4">
+            <colgroup>
+              <col className="w-[6%]" />
+              <col className="w-[58%]" />
+              <col className="w-[5%]" />
+              <col className="w-[5%]" />
+              <col className="w-[5%]" />
+              <col className="w-[5%]" />
+              <col className="w-[5%]" />
+              <col className="w-[5%]" />
+              <col className="w-[6%]" />
+            </colgroup>
+            <thead>
+              <tr className="bg-slate-100">
+                <th className="border border-slate-300 px-2 py-3 text-center font-black">
+                  S/N
+                </th>
+                <th className="border border-slate-300 px-3 py-3 text-left">
+                  <div className="text-[15px] font-black uppercase tracking-[0.04em]">
+                    Behavioural Competence
+                  </div>
+                  <div className="mt-1 text-[10px] font-semibold normal-case">
+                    [1—Very Poor] [2—Poor] [3—Acceptable] [4—Good]
+                    [5—Very Good]
+                  </div>
+                </th>
+                <th className="border border-slate-300 px-1 py-3 text-center font-black">
+                  N/A
+                </th>
+                {[1, 2, 3, 4, 5].map((score) => (
+                  <th
+                    key={score}
+                    className="border border-slate-300 px-1 py-3 text-center font-black"
+                  >
+                    {score}
+                  </th>
+                ))}
+                <th className="border border-slate-300 px-2 py-3 text-center font-black">
+                  Final Score
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {sections.map((section) => {
+                const rawScore = section.items.reduce(
+                  (sum, item) =>
+                    sum + (item.notApplicable ? 0 : item.score ?? 0),
+                  0,
+                );
+                const sectionApplicableMaximum = section.items.reduce(
+                  (sum, item) =>
+                    sum +
+                    (item.notApplicable ? 0 : item.itemMaxScore),
+                  0,
+                );
+                const notApplicableItems = section.items.filter(
+                  (item) => item.notApplicable,
+                ).length;
+
+                return (
+                  <Fragment key={section.sectionKey}>
+                    <tr className="bg-[#344A67] text-white">
+                      <td className="border border-slate-300 px-2 py-2 text-center font-black">
+                        {section.sectionOrder}.0
+                      </td>
+                      <td
+                        colSpan={8}
+                        className="border border-slate-300 px-3 py-2 font-black uppercase tracking-[0.03em]"
+                      >
+                        {section.sectionTitle}
+                      </td>
+                    </tr>
+
+                    {section.items.map((item) => {
+                      const options: Array<{
+                        score: number | null;
+                        notApplicable: boolean;
+                        label: string;
+                      }> = [
+                        {
+                          score: null,
+                          notApplicable: true,
+                          label: "N/A",
+                        },
+                        ...[1, 2, 3, 4, 5].map((score) => ({
+                          score,
+                          notApplicable: false,
+                          label: String(score),
+                        })),
+                      ];
+
+                      return (
+                        <tr key={item.itemKey} className="align-middle">
+                          <td className="border border-slate-300 px-2 py-2 text-center font-semibold">
+                            {item.itemKey}
+                          </td>
+                          <td className="border border-slate-300 px-3 py-2 text-[12px] font-medium leading-5">
+                            {item.itemLabel}
+                          </td>
+                          {options.map((option) => {
+                            const selected = option.notApplicable
+                              ? item.notApplicable
+                              : !item.notApplicable &&
+                                item.score === option.score;
+
+                            return (
+                              <td
+                                key={option.label}
+                                className={`border border-slate-300 px-1 py-2 text-center text-[15px] font-black ${paperScoreCellTone(
+                                  {
+                                    selected,
+                                    score: option.score,
+                                    notApplicable:
+                                      option.notApplicable,
+                                  },
+                                )}`}
+                                aria-label={
+                                  selected
+                                    ? `Selected ${option.label}`
+                                    : undefined
+                                }
+                              >
+                                {selected ? "✓" : ""}
+                              </td>
+                            );
+                          })}
+                          <td
+                            className={`border border-slate-300 px-2 py-2 text-center text-[13px] font-black ${paperScoreCellTone(
+                              {
+                                selected: true,
+                                score: item.score,
+                                notApplicable: item.notApplicable,
+                              },
+                            )}`}
+                            aria-label={
+                              item.notApplicable
+                                ? "Final score: Not applicable"
+                                : `Final score: ${
+                                    item.score ?? "Not scored"
+                                  }`
+                            }
+                          >
+                            {item.notApplicable
+                              ? "N/A"
+                              : item.score ?? "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                    <tr className="bg-slate-50">
+                      <td
+                        colSpan={8}
+                        className="border border-slate-300 px-3 py-2 text-right font-black uppercase"
+                      >
+                        Total score
+                      </td>
+                      <td className="border border-slate-300 px-2 py-2 text-center text-[12px] font-black">
+                        {rawScore} / {sectionApplicableMaximum}
+                      </td>
+                    </tr>
+                    <tr className="bg-slate-50">
+                      <td
+                        colSpan={8}
+                        className="border border-slate-300 px-3 py-2 text-right font-black uppercase"
+                      >
+                        Percentage score
+                      </td>
+                      <td className="border border-slate-300 px-2 py-2 text-center text-[12px] font-black">
+                        {percentage(section.percentage)}
+                      </td>
+                    </tr>
+                    <tr className="bg-indigo-50 text-indigo-950">
+                      <td
+                        colSpan={9}
+                        className="border border-slate-300 px-3 py-2 text-right text-[10px] font-semibold"
+                      >
+                        Official section maximum:{" "}
+                        {section.sectionMaxScore}. Applicable maximum after{" "}
+                        {notApplicableItems} N/A exclusion
+                        {notApplicableItems === 1 ? "" : "s"}:{" "}
+                        {sectionApplicableMaximum}.
+                      </td>
+                    </tr>
+                  </Fragment>
+                );
+              })}
+
+              <tr className="bg-[#22344F] text-white">
+                <td
+                  colSpan={8}
+                  className="border border-slate-300 px-3 py-3 text-right text-[12px] font-black uppercase"
+                >
+                  Overall percentage — average of the four official section
+                  percentages
+                </td>
+                <td className="border border-slate-300 px-2 py-3 text-center text-[14px] font-black">
+                  {percentage(
+                    props.result.supervisoryAssessment.overallPercentage,
+                  )}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div className="grid grid-cols-4 border-x border-b border-slate-300 bg-slate-50 text-[11px]">
+            <div className="border-r border-slate-300 px-3 py-3">
+              <p className="font-black uppercase text-slate-500">
+                Raw total
+              </p>
+              <p className="mt-1 text-base font-black">
+                {rawTotal} / {applicableMaximum}
+              </p>
+            </div>
+            <div className="border-r border-slate-300 px-3 py-3">
+              <p className="font-black uppercase text-slate-500">
+                Official maximum
+              </p>
+              <p className="mt-1 text-base font-black">
+                {officialMaximum}
+              </p>
+            </div>
+            <div className="border-r border-slate-300 px-3 py-3">
+              <p className="font-black uppercase text-slate-500">
+                N/A exclusions
+              </p>
+              <p className="mt-1 text-base font-black">
+                {totalNotApplicable}
+              </p>
+            </div>
+            <div className="px-3 py-3">
+              <p className="font-black uppercase text-slate-500">
+                Final result
+              </p>
+              <p className="mt-1 text-base font-black">
+                {percentage(
+                  props.result.supervisoryAssessment.overallPercentage,
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className={panelClass("grid gap-3 p-4 sm:grid-cols-4 sm:p-5")}>
+        <div className="rounded-2xl border border-white/10 bg-[#0C1730] p-3">
+          <p className="text-xs text-[#8F98A8]">Revision</p>
+          <p className="mt-1 text-sm font-black text-white">
+            {props.result.supervisoryAssessment.revision}
+          </p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-[#0C1730] p-3">
+          <p className="text-xs text-[#8F98A8]">Status</p>
+          <p className="mt-1 text-sm font-black text-white">
+            Finalized and locked
+          </p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-[#0C1730] p-3">
+          <p className="text-xs text-[#8F98A8]">Finalized</p>
+          <p className="mt-1 text-sm font-black text-white">
+            {dateLabel(
+              props.result.supervisoryAssessment.finalizedAt,
+            )}
+          </p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-[#0C1730] p-3">
+          <p className="text-xs text-[#8F98A8]">Final result</p>
+          <p className="mt-1 text-sm font-black text-white">
+            {percentage(
+              props.result.supervisoryAssessment.overallPercentage,
+            )}
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ComparisonView(props: {
+  result: HeadteacherReleasedResult;
+  onBack: () => void;
+}) {
+  return (
+    <section className="space-y-4">
+      <div className={panelClass("p-4 sm:p-5")}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-200">
+              Evidence comparison
+            </p>
+            <h2 className="mt-2 text-xl font-black text-white">
+              Compare without combining
+            </h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-[#C9CDD6]">
+              The staff aggregate and supervisory assessment remain separate.
+              No combined appraisal score or performance threshold is created.
+            </p>
+          </div>
+          <ResultBackButton onClick={props.onBack} />
+        </div>
+      </div>
+
+      <div className={panelClass("p-4 sm:p-5")}>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-cyan-300/20 bg-cyan-400/10 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-cyan-100">
+              Staff feedback
+            </p>
+            <p className="mt-2 text-3xl font-extrabold text-white">
+              {percentage(
+                props.result.comparison.overall.staffFeedbackPercentage,
+              )}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-indigo-300/20 bg-indigo-400/10 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-100">
+              Supervisory assessment
+            </p>
+            <p className="mt-2 text-3xl font-extrabold text-white">
+              {percentage(
+                props.result.comparison.overall.supervisoryPercentage,
+              )}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#C9CDD6]">
+              Difference
+            </p>
+            <p className="mt-2 text-xl font-extrabold text-white">
+              {difference(
+                props.result.comparison.overall
+                  .supervisoryMinusStaffPercentagePoints,
+              )}
+            </p>
+          </div>
+        </div>
+
+        <p className="mt-4 rounded-2xl border border-white/10 bg-[#0C1730] p-4 text-sm leading-7 text-[#C9CDD6]">
+          Difference means supervisory percentage minus staff-feedback
+          percentage. A positive value means the supervisory percentage is
+          higher; a negative value means the staff-feedback percentage is
+          higher.
+        </p>
+
+        <div className="mt-4 space-y-3">
+          {props.result.comparison.sections.map((section) => (
+            <article
+              key={section.sectionKey}
+              className="rounded-[24px] border border-white/10 bg-[#0C1730] p-4"
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8F98A8]">
+                Section {section.sectionOrder}
+              </p>
+              <h3 className="mt-1 text-base font-bold text-white">
+                {section.sectionTitle}
+              </h3>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-cyan-300/15 bg-cyan-400/8 p-3">
+                  <p className="text-xs text-cyan-100">
+                    Staff feedback
+                  </p>
+                  <p className="mt-1 text-xl font-extrabold text-white">
+                    {percentage(section.staffFeedbackPercentage)}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-indigo-300/15 bg-indigo-400/8 p-3">
+                  <p className="text-xs text-indigo-100">
+                    Supervisory
+                  </p>
+                  <p className="mt-1 text-xl font-extrabold text-white">
+                    {percentage(section.supervisoryPercentage)}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <p className="text-xs text-[#C9CDD6]">Difference</p>
+                  <p className="mt-1 text-sm font-extrabold text-white">
+                    {difference(
+                      section.supervisoryMinusStaffPercentagePoints,
+                    )}
+                  </p>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function HeadteacherReleasedResultClient({ initialState }: Props) {
   const [appraisalState, setAppraisalState] =
     useState<HeadteacherOwnAppraisalReadState | null>(initialState);
   const [result, setResult] = useState<HeadteacherReleasedResult | null>(null);
+  const [resultView, setResultView] =
+    useState<ReleasedResultView>("OVERVIEW");
   const [loading, setLoading] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [statusLoading, setStatusLoading] = useState(false);
@@ -227,7 +986,16 @@ export default function HeadteacherReleasedResultClient({ initialState }: Props)
         return;
       }
 
+      if (!releasedResultContractSafe(payload.item)) {
+        setResult(null);
+        setError(
+          "The released-result privacy or integrity contract could not be verified. No evidence was displayed.",
+        );
+        return;
+      }
+
       setResult(payload.item);
+      setResultView("OVERVIEW");
     } catch {
       setResult(null);
       setError("The result could not be loaded. Check the network and try again.");
@@ -318,6 +1086,7 @@ export default function HeadteacherReleasedResultClient({ initialState }: Props)
 
       setAppraisalState(payload.state);
       setResult(null);
+      setResultView("OVERVIEW");
       setRequestNotice(
         "Request submitted. The Director will review it before staff feedback opens.",
       );
@@ -463,7 +1232,11 @@ export default function HeadteacherReleasedResultClient({ initialState }: Props)
       <section className={panelClass("p-4 sm:p-5")}>
         <h2 className="text-base font-bold text-[#F7F4ED]">Privacy boundary</h2>
         <p className="mt-2 text-sm leading-7 text-[#C9CDD6]">
-          This screen does not show individual staff responses, respondent identities, response counts, reviewer identity, assessor identity, or item-level ratings.
+          This screen does not show individual staff responses, respondent
+          identities, response counts, staff item-level averages, reviewer
+          identity, assessor identity, or contact details. The native
+          supervisory sheet shows only the finalized official assessment scores
+          in read-only form.
         </p>
       </section>
 
@@ -506,7 +1279,9 @@ export default function HeadteacherReleasedResultClient({ initialState }: Props)
                 <h2 className="mt-2 text-xl font-extrabold text-[#F7F4ED]">
                   {result.cycle.schoolName}
                 </h2>
-                <p className="mt-1 text-sm text-[#C9CDD6]">{result.cycle.districtName}</p>
+                <p className="mt-1 text-sm text-[#C9CDD6]">
+                  {result.cycle.circuitName} · {result.cycle.districtName}
+                </p>
               </div>
               <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-100">
                 Release record verified
@@ -516,14 +1291,24 @@ export default function HeadteacherReleasedResultClient({ initialState }: Props)
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <div className="rounded-2xl border border-white/10 bg-[#0C1730] p-4">
                 <p className="text-xs text-[#8F98A8]">Released</p>
-                <p className="mt-2 text-sm font-bold text-[#F7F4ED]">{dateLabel(result.cycle.releasedAt)}</p>
+                <p className="mt-2 text-sm font-bold text-[#F7F4ED]">
+                  {dateLabel(result.cycle.releasedAt)}
+                </p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-[#0C1730] p-4">
-                <p className="text-xs text-[#8F98A8]">Observation date</p>
-                <p className="mt-2 text-sm font-bold text-[#F7F4ED]">{dateLabel(result.supervisoryAssessment.dateObserved)}</p>
+                <p className="text-xs text-[#8F98A8]">
+                  Observation date
+                </p>
+                <p className="mt-2 text-sm font-bold text-[#F7F4ED]">
+                  {dateLabel(
+                    result.supervisoryAssessment.dateObserved,
+                  )}
+                </p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-[#0C1730] p-4">
-                <p className="text-xs text-[#8F98A8]">Proof reference</p>
+                <p className="text-xs text-[#8F98A8]">
+                  Proof reference
+                </p>
                 <p className="mt-2 font-mono text-sm font-bold text-[#F7F4ED]">
                   {result.release.releaseProofHash.slice(0, 12)}…
                 </p>
@@ -531,90 +1316,52 @@ export default function HeadteacherReleasedResultClient({ initialState }: Props)
             </div>
           </section>
 
-          <section className={panelClass("p-4 sm:p-5")}>
-            <h2 className="text-lg font-bold text-[#F7F4ED]">Overall evidence</h2>
-            <p className="mt-1 text-sm leading-6 text-[#C9CDD6]">
-              The two evidence streams remain separate. No combined appraisal score is created.
-            </p>
+          <ReleasedEvidenceGateway
+            result={result}
+            onView={setResultView}
+          />
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-cyan-300/20 bg-cyan-400/10 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-cyan-100">Staff feedback</p>
-                <p className="mt-2 text-3xl font-extrabold text-[#F7F4ED]">
-                  {percentage(result.comparison.overall.staffFeedbackPercentage)}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-indigo-300/20 bg-indigo-400/10 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-100">Supervisory assessment</p>
-                <p className="mt-2 text-3xl font-extrabold text-[#F7F4ED]">
-                  {percentage(result.comparison.overall.supervisoryPercentage)}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#C9CDD6]">Difference</p>
-                <p className="mt-2 text-xl font-extrabold text-[#F7F4ED]">
-                  {difference(result.comparison.overall.supervisoryMinusStaffPercentagePoints)}
-                </p>
-              </div>
-            </div>
+          {resultView === "OVERVIEW" ? (
+            <section className={panelClass("p-4 sm:p-5")}>
+              <h2 className="text-lg font-bold text-[#F7F4ED]">
+                Choose the evidence to review
+              </h2>
+              <p className="mt-2 max-w-3xl text-sm leading-7 text-[#C9CDD6]">
+                Open the staff aggregate, the official supervisory form or the
+                comparison. The evidence streams remain separate, and no
+                combined appraisal score is created.
+              </p>
+            </section>
+          ) : null}
 
-            <p className="mt-4 rounded-2xl border border-white/10 bg-[#0C1730] p-4 text-sm leading-7 text-[#C9CDD6]">
-              Difference means supervisory percentage minus staff-feedback percentage. A positive value means the supervisory percentage is higher; a negative value means the staff-feedback percentage is higher. No performance threshold is applied.
-            </p>
-          </section>
+          {resultView === "STAFF" ? (
+            <StaffAggregateView
+              result={result}
+              onBack={() => setResultView("OVERVIEW")}
+            />
+          ) : null}
 
-          <section className={panelClass("p-4 sm:p-5")}>
-            <h2 className="text-lg font-bold text-[#F7F4ED]">Four-section comparison</h2>
-            <p className="mt-1 text-sm leading-6 text-[#C9CDD6]">
-              Read each section calmly. The figures describe two separate evidence sources.
-            </p>
+          {resultView === "SUPERVISORY" ? (
+            <SupervisoryNativeForm
+              result={result}
+              onBack={() => setResultView("OVERVIEW")}
+            />
+          ) : null}
 
-            <div className="mt-4 space-y-3">
-              {result.comparison.sections.map((section) => (
-                <article
-                  key={section.sectionKey}
-                  className="rounded-[24px] border border-white/10 bg-[#0C1730] p-4"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8F98A8]">
-                        Section {section.sectionOrder}
-                      </p>
-                      <h3 className="mt-1 text-base font-bold text-[#F7F4ED]">
-                        {section.sectionTitle}
-                      </h3>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-2xl border border-cyan-300/15 bg-cyan-400/8 p-3">
-                      <p className="text-xs text-cyan-100">Staff feedback</p>
-                      <p className="mt-1 text-xl font-extrabold text-[#F7F4ED]">
-                        {percentage(section.staffFeedbackPercentage)}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl border border-indigo-300/15 bg-indigo-400/8 p-3">
-                      <p className="text-xs text-indigo-100">Supervisory</p>
-                      <p className="mt-1 text-xl font-extrabold text-[#F7F4ED]">
-                        {percentage(section.supervisoryPercentage)}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                      <p className="text-xs text-[#C9CDD6]">Difference</p>
-                      <p className="mt-1 text-sm font-extrabold text-[#F7F4ED]">
-                        {difference(section.supervisoryMinusStaffPercentagePoints)}
-                      </p>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
+          {resultView === "COMPARISON" ? (
+            <ComparisonView
+              result={result}
+              onBack={() => setResultView("OVERVIEW")}
+            />
+          ) : null}
 
           <section className={panelClass("p-4 sm:p-5")}>
-            <h2 className="text-lg font-bold text-[#F7F4ED]">Director’s release note</h2>
+            <h2 className="text-lg font-bold text-[#F7F4ED]">
+              Director’s release note
+            </h2>
             <p className="mt-3 whitespace-pre-wrap rounded-2xl border border-white/10 bg-[#0C1730] p-4 text-sm leading-7 text-[#F7F4ED]">
-              {result.release.releaseNote || "No release note was included."}
+              {result.release.releaseNote ||
+                "No release note was included."}
             </p>
           </section>
         </div>

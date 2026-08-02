@@ -1,3 +1,4 @@
+//src/app/api/headteacher/headteacher-appraisal/[cycleId]/released-result/route.ts
 import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { requireApiUserContext } from "@/lib/serverAuth";
@@ -16,7 +17,11 @@ export const HEADTEACHER_RELEASED_RESULT_API_POLICY = {
   respondentIdentitiesIncluded: false,
   individualStaffResponsesIncluded: false,
   participantListIncluded: false,
-  itemLevelValuesIncluded: false,
+  responseCountsIncluded: false,
+  staffItemAveragesIncluded: false,
+  itemLevelValuesIncluded: "SUPERVISORY_ONLY",
+  supervisoryItemScoresIncluded: true,
+  supervisoryItemScoresReadOnly: true,
   reviewerIdentityIncluded: false,
   assessorIdentityIncluded: false,
   scoreMutationAllowed: false,

@@ -1,3 +1,4 @@
+//src/lib/appraisals/headteacherReleasedResult.ts
 import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { HEADTEACHER_FEEDBACK_POLICY } from "@/lib/appraisals/headteacherFeedback";
@@ -23,7 +24,8 @@ export const HEADTEACHER_RELEASED_RESULT_POLICY = {
   releaseNoteIncluded: true,
   responseCountsIncluded: false,
   staffItemAveragesIncluded: false,
-  supervisoryItemScoresIncluded: false,
+  supervisoryItemScoresIncluded: true,
+  supervisoryItemScoresReadOnly: true,
   respondentIdentitiesIncluded: false,
   individualStaffResponsesIncluded: false,
   participantListIncluded: false,
@@ -70,7 +72,9 @@ export type HeadteacherReleasedResult = {
   cycle: {
     id: string;
     schoolName: string;
+    circuitName: string;
     districtName: string;
+    headteacherName: string;
     releasedAt: string;
   };
   release: {
@@ -102,6 +106,14 @@ export type HeadteacherReleasedResult = {
       sectionOrder: number;
       sectionMaxScore: number;
       percentage: number;
+      items: Array<{
+        itemKey: string;
+        itemLabel: string;
+        itemOrder: number;
+        itemMaxScore: number;
+        score: number | null;
+        notApplicable: boolean;
+      }>;
     }>;
   };
   comparison: {
@@ -118,7 +130,7 @@ export type HeadteacherReleasedResult = {
   privacy: {
     responseCountsIncluded: false;
     staffItemAveragesIncluded: false;
-    supervisoryItemScoresIncluded: false;
+    supervisoryItemScoresIncluded: true;
     respondentIdentitiesIncluded: false;
     individualStaffResponsesIncluded: false;
     participantListIncluded: false;
@@ -135,6 +147,7 @@ export type HeadteacherReleasedResult = {
     reviewEvidenceHashVerified: true;
     staffSnapshotProofAnchored: true;
     supervisoryAssessmentHashRecomputed: true;
+    supervisoryItemScoresVerified: true;
     separateEvidenceStreams: true;
     combinedWeightingDefined: false;
     scoreMutationAllowed: false;
@@ -479,6 +492,16 @@ function clean(value: unknown) {
 
 function normalized(value: unknown) {
   return clean(value).toUpperCase().replace(/[\s-]+/g, "_");
+}
+
+function personName(user: TargetMembershipRecord["user"]) {
+  const preferred = clean(user.name);
+  if (preferred) return preferred;
+
+  return (
+    [clean(user.firstName), clean(user.lastName)].filter(Boolean).join(" ") ||
+    "Headteacher"
+  );
 }
 
 function objectValue(value: unknown): Record<string, unknown> {
@@ -1196,6 +1219,9 @@ export async function readHeadteacherReleasedResult(
     sectionMaxScore: Number(row.sectionMaxScore),
     averagePercentage: Number(row.averagePercentage),
   }));
+  const supervisoryScoreByItemId = new Map(
+    assessment.scores.map((score) => [score.instrumentItemId, score]),
+  );
   const supervisorySections = verifiedAssessment.sections.map((section) => {
     const percentage = verifiedAssessment.sectionPercentages[section.key];
     if (typeof percentage !== "number") {
@@ -1203,12 +1229,30 @@ export async function readHeadteacherReleasedResult(
         sectionKey: section.key,
       });
     }
+
     return {
       sectionKey: section.key,
       sectionTitle: section.title,
       sectionOrder: section.order,
       sectionMaxScore: section.maxScore,
       percentage,
+      items: section.items.map((item) => {
+        const saved = supervisoryScoreByItemId.get(item.id);
+        if (!saved) {
+          fail("HEADTEACHER_RELEASED_RESULT_SUPERVISORY_ITEM_MISSING", 409, {
+            itemKey: item.key,
+          });
+        }
+
+        return {
+          itemKey: item.key,
+          itemLabel: item.label,
+          itemOrder: item.order,
+          itemMaxScore: item.maxScore,
+          score: saved.score,
+          notApplicable: saved.notApplicable,
+        };
+      }),
     };
   });
   const comparisonSections = staffSections.map((staff, index) => {
@@ -1233,7 +1277,9 @@ export async function readHeadteacherReleasedResult(
     cycle: {
       id: cycle.id,
       schoolName: membership.tenant.name,
+      circuitName: zone.name,
       districtName: zone.parentZone.name,
+      headteacherName: personName(membership.user),
       releasedAt: cycle.releasedAt.toISOString(),
     },
     release: {
@@ -1271,7 +1317,7 @@ export async function readHeadteacherReleasedResult(
     privacy: {
       responseCountsIncluded: false,
       staffItemAveragesIncluded: false,
-      supervisoryItemScoresIncluded: false,
+      supervisoryItemScoresIncluded: true,
       respondentIdentitiesIncluded: false,
       individualStaffResponsesIncluded: false,
       participantListIncluded: false,
@@ -1288,6 +1334,7 @@ export async function readHeadteacherReleasedResult(
       reviewEvidenceHashVerified: true,
       staffSnapshotProofAnchored: true,
       supervisoryAssessmentHashRecomputed: true,
+      supervisoryItemScoresVerified: true,
       separateEvidenceStreams: true,
       combinedWeightingDefined: false,
       scoreMutationAllowed: false,

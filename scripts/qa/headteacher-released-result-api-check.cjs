@@ -10,7 +10,8 @@ const ts = require("typescript");
 const repoRoot = path.resolve(__dirname, "..", "..");
 
 function fail(message, detail) {
-  const suffix = detail === undefined ? "" : `\n${JSON.stringify(detail, null, 2)}`;
+  const suffix =
+    detail === undefined ? "" : `\n${JSON.stringify(detail, null, 2)}`;
   throw new Error(`${message}${suffix}`);
 }
 
@@ -20,7 +21,9 @@ function assert(condition, message, detail) {
 
 function read(relativePath) {
   const absolutePath = path.join(repoRoot, relativePath);
-  if (!fs.existsSync(absolutePath)) fail("Required file missing", relativePath);
+  if (!fs.existsSync(absolutePath)) {
+    fail("Required file missing", relativePath);
+  }
   return fs.readFileSync(absolutePath, "utf8");
 }
 
@@ -44,7 +47,11 @@ for (const [name, text, fileName] of [
     reportDiagnostics: true,
   });
   const diagnostics = transpiled.diagnostics || [];
-  assert(diagnostics.length === 0, `${name} has TypeScript syntax diagnostics`, diagnostics);
+  assert(
+    diagnostics.length === 0,
+    `${name} has TypeScript syntax diagnostics`,
+    diagnostics,
+  );
 }
 
 for (const marker of [
@@ -67,6 +74,16 @@ for (const marker of [
   "HEADTEACHER_RELEASED_RESULT_REQUEST_FAILED",
   "INVALID_CYCLE_ID",
   "export async function GET",
+  "responseCountsIncluded: false",
+  "staffItemAveragesIncluded: false",
+  'itemLevelValuesIncluded: "SUPERVISORY_ONLY"',
+  "supervisoryItemScoresIncluded: true",
+  "supervisoryItemScoresReadOnly: true",
+  "respondentIdentitiesIncluded: false",
+  "individualStaffResponsesIncluded: false",
+  "reviewerIdentityIncluded: false",
+  "assessorIdentityIncluded: false",
+  "scoreMutationAllowed: false",
   "databaseWritesAllowed: false",
   "notificationsSeeded: false",
   "providerCallsAllowed: false",
@@ -82,7 +99,9 @@ for (const marker of [
   "releaseProofHashVerified: true",
   "respondentIdentitiesIncluded: false",
   "staffItemAveragesIncluded: false",
-  "supervisoryItemScoresIncluded: false",
+  "supervisoryItemScoresIncluded: true",
+  "supervisoryItemScoresReadOnly: true",
+  "supervisoryItemScoresVerified: true",
   "combinedOverallPercentage: null",
   "databaseWritesAllowed: false",
 ]) {
@@ -108,7 +127,11 @@ for (const forbidden of [
   "sessionStorage",
   "setInterval(",
 ]) {
-  assert(!route.includes(forbidden), "Released-result API contains forbidden marker", forbidden);
+  assert(
+    !route.includes(forbidden),
+    "Released-result API contains forbidden marker",
+    forbidden,
+  );
 }
 
 assert(
@@ -121,7 +144,7 @@ assert(
 );
 
 console.log("");
-console.log("=== D3.4H2 HEADTEACHER RELEASED-RESULT NO-STORE API ===");
+console.log("=== HEADTEACHER RELEASED-RESULT NO-STORE API + NATIVE PARITY ===");
 console.log("");
 console.log("Audience scope                 : exact Headteacher session");
 console.log("Tenant binding                 : authenticated tenant required");
@@ -130,7 +153,9 @@ console.log("HTTP method                    : GET only");
 console.log("Identifier validation          : bounded cycle ID");
 console.log("No-store security headers      : complete");
 console.log("Safe service errors            : allowlisted prefix, no details");
-console.log("Response counts/item values    : hidden by H1 projection");
+console.log("Response counts                : hidden");
+console.log("Staff item averages            : hidden");
+console.log("Supervisory item scores        : included, verified, read-only");
 console.log("Respondent identities/forms    : absent");
 console.log("Reviewer/assessor identities   : absent from route");
 console.log("Combined appraisal score       : absent");
@@ -139,4 +164,4 @@ console.log("Notifications/providers        : absent");
 console.log("UI/dashboard changes           : absent");
 console.log("Database accessed              : false");
 console.log("");
-console.log("RESULT: D3.4H2 HEADTEACHER RELEASED RESULT API GREEN");
+console.log("RESULT: HEADTEACHER RELEASED RESULT API GREEN");

@@ -539,7 +539,16 @@ async function main() {
   assertEqual(HEADTEACHER_RELEASED_RESULT_POLICY.audience, "RELEASED_HEADTEACHER", "Audience drift");
   assertEqual(HEADTEACHER_RELEASED_RESULT_POLICY.responseCountsIncluded, false, "Response counts must remain hidden");
   assertEqual(HEADTEACHER_RELEASED_RESULT_POLICY.staffItemAveragesIncluded, false, "Staff item averages must remain hidden");
-  assertEqual(HEADTEACHER_RELEASED_RESULT_POLICY.supervisoryItemScoresIncluded, false, "Supervisory item scores must remain hidden");
+  assertEqual(
+    HEADTEACHER_RELEASED_RESULT_POLICY.supervisoryItemScoresIncluded,
+    true,
+    "Verified supervisory item scores must be included",
+  );
+  assertEqual(
+    HEADTEACHER_RELEASED_RESULT_POLICY.supervisoryItemScoresReadOnly,
+    true,
+    "Supervisory item scores must remain read-only",
+  );
   assertEqual(HEADTEACHER_RELEASED_RESULT_POLICY.combinedWeightingDefined, false, "Combined weighting must remain undefined");
 
   const state = makeState();
@@ -547,6 +556,8 @@ async function main() {
   const result = await readHeadteacherReleasedResult(input(database));
   assertEqual(result.lifecycleState, "RELEASED", "Released lifecycle missing");
   assertEqual(result.cycle.schoolName, "Example Basic School", "School projection drift");
+  assertEqual(result.cycle.circuitName, "Example Circuit", "Circuit projection drift");
+  assertEqual(result.cycle.headteacherName, "Headteacher One", "Headteacher projection drift");
   assertEqual(result.release.integrityVerified, true, "Release proof not verified");
   assertEqual(result.staffFeedback.sections.length, 4, "Staff section count drift");
   assertEqual(result.supervisoryAssessment.sections.length, 4, "Supervisory section count drift");
@@ -554,8 +565,34 @@ async function main() {
   assertEqual(result.comparison.overall.supervisoryMinusStaffPercentagePoints, 5, "Comparison direction drift");
   assertEqual(result.comparison.combinedOverallPercentage, null, "Combined score must remain absent");
   assertEqual(result.privacy.responseCountsIncluded, false, "Response counts leaked");
-  assert(!("items" in result.staffFeedback), "Staff item evidence leaked");
-  assert(!("items" in result.supervisoryAssessment), "Supervisory item scores leaked");
+  assertEqual(result.privacy.staffItemAveragesIncluded, false, "Staff item averages leaked");
+  assertEqual(
+    result.privacy.supervisoryItemScoresIncluded,
+    true,
+    "Verified supervisory item scores missing",
+  );
+  assert(
+    result.staffFeedback.sections.every((section) => !("items" in section)),
+    "Staff item evidence leaked",
+  );
+  const supervisoryItems = result.supervisoryAssessment.sections.flatMap(
+    (section) => section.items,
+  );
+  assertEqual(supervisoryItems.length, 34, "Supervisory item count drift");
+  assert(
+    supervisoryItems.every(
+      (item) =>
+        item.score === 4 &&
+        item.notApplicable === false &&
+        item.itemMaxScore === 5,
+    ),
+    "Verified supervisory item projection drift",
+  );
+  assertEqual(
+    result.integrity.supervisoryItemScoresVerified,
+    true,
+    "Supervisory item integrity proof missing",
+  );
   assert(!JSON.stringify(result).includes(REVIEWER_USER), "Reviewer identity leaked");
   assert(!JSON.stringify(result).includes("sisso-user-001"), "Assessor identity leaked");
   assertEqual(database.reads.length, 6, "Unexpected read shape");
@@ -637,10 +674,11 @@ async function main() {
   console.log("Release note hash                : verified");
   console.log("Staff snapshot                   : immutable V1 proof-anchored");
   console.log("Supervisory assessment           : calculations/hash recomputed");
-  console.log("Visible evidence                 : overall + four sections only");
+  console.log("Visible staff evidence           : aggregate overall + four sections");
+  console.log("Visible supervisory evidence     : native 4-section / 34-item sheet");
   console.log("Response counts                  : hidden");
   console.log("Staff item averages              : hidden");
-  console.log("Supervisory item scores          : hidden");
+  console.log("Supervisory item scores          : verified, included read-only");
   console.log("Respondent identities/forms      : absent");
   console.log("Reviewer/assessor identities     : absent");
   console.log("Comparison direction             : supervisory minus staff");
