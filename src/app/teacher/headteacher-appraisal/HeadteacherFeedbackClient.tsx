@@ -292,7 +292,10 @@ function ConfidentialityCard(props: {
   const contract = props.confidentiality;
   const safe =
     contract.headteacherCanSeeIdentity === false &&
-    contract.directorIdentityAccessRequiresAuthorizedAudit === true &&
+    contract.directorCanSeeIdentity === false &&
+    contract.directorReceivesCycleScopedAnonymousLabelsOnly === true &&
+    contract.realIdentityAudience === "SUPERADMIN_ONLY" &&
+    contract.superadminIdentityAccessRequiresSeparateAuthorizedAudit === true &&
     contract.freeTextCommentsAllowed === false;
 
   if (!safe) {
@@ -315,10 +318,6 @@ function ConfidentialityCard(props: {
       </div>
       <p className="mt-2 text-[13px] leading-6 text-[#D9F4EA]">
         {contract.notice}
-      </p>
-      <p className="mt-2 text-[13px] leading-6 text-[#D9F4EA]">
-        The Headteacher cannot see your individual scores, name, or submission time.
-        Do not include identifying comments; comments are disabled.
       </p>
     </div>
   );

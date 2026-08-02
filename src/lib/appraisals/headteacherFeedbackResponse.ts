@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { APPRAISAL_AUDIT_ACTIONS } from "@/lib/appraisals/audit";
 import {
   HEADTEACHER_FEEDBACK_POLICY,
+  HEADTEACHER_FEEDBACK_PRIVACY_POLICY,
   assertHeadteacherFeedbackInstrumentReady,
 } from "@/lib/appraisals/headteacherFeedback";
 import { HEADTEACHER_FEEDBACK_ANONYMITY_NOTICE } from "@/lib/appraisals/headteacherFeedbackReadStates";
@@ -13,7 +14,8 @@ import { effectiveRole } from "@/lib/roleRouting";
 
 export const HEADTEACHER_FEEDBACK_RESPONSE_POLICY = {
   saveUnit: "SECTION",
-  commentsAllowed: false,
+  commentsAllowed:
+    HEADTEACHER_FEEDBACK_PRIVACY_POLICY.freeTextCommentsAllowed,
   partialSectionSaveAllowed: true,
   finalizedResponsesAreImmutable: true,
   repeatedIdenticalSectionSaveCreatesNoDuplicateAudit: true,
@@ -21,6 +23,12 @@ export const HEADTEACHER_FEEDBACK_RESPONSE_POLICY = {
   responseTransactionTimeoutMs: 60_000,
   responseTransactionIsolation: "Serializable",
 } as const;
+
+export const HEADTEACHER_FEEDBACK_TEACHER_RUNTIME_INSTRUCTIONS = [
+  "Score each item from 1 to 5 or select N/A where you do not have direct knowledge.",
+  "Do not provide free-text comments.",
+  HEADTEACHER_FEEDBACK_ANONYMITY_NOTICE,
+].join(" ");
 
 export type HeadteacherFeedbackResponseMeta = {
   reqId?: string | null;
@@ -120,7 +128,10 @@ export type TeacherHeadteacherFeedbackResponseView = {
   canFinalize: boolean;
   confidentiality: {
     headteacherCanSeeIdentity: false;
-    directorIdentityAccessRequiresAuthorizedAudit: true;
+    directorCanSeeIdentity: false;
+    directorReceivesCycleScopedAnonymousLabelsOnly: true;
+    realIdentityAudience: "SUPERADMIN_ONLY";
+    superadminIdentityAccessRequiresSeparateAuthorizedAudit: true;
     freeTextCommentsAllowed: false;
     notice: string;
   };
@@ -749,9 +760,22 @@ function buildView(
     canEdit: editable,
     canFinalize: editable && progress.missingItemKeys.length === 0,
     confidentiality: {
-      headteacherCanSeeIdentity: false,
-      directorIdentityAccessRequiresAuthorizedAudit: true,
-      freeTextCommentsAllowed: false,
+      headteacherCanSeeIdentity:
+        HEADTEACHER_FEEDBACK_PRIVACY_POLICY
+          .headteacherCanSeeRespondentIdentity,
+      directorCanSeeIdentity:
+        HEADTEACHER_FEEDBACK_PRIVACY_POLICY
+          .districtDirectorCanSeeRespondentIdentity,
+      directorReceivesCycleScopedAnonymousLabelsOnly:
+        HEADTEACHER_FEEDBACK_PRIVACY_POLICY
+          .districtDirectorReceivesCycleScopedAnonymousLabelsOnly,
+      realIdentityAudience:
+        HEADTEACHER_FEEDBACK_PRIVACY_POLICY.realRespondentIdentityAudience,
+      superadminIdentityAccessRequiresSeparateAuthorizedAudit:
+        HEADTEACHER_FEEDBACK_PRIVACY_POLICY
+          .superadminIdentityAccessRequiresSeparateAuthorizedAudit,
+      freeTextCommentsAllowed:
+        HEADTEACHER_FEEDBACK_PRIVACY_POLICY.freeTextCommentsAllowed,
       notice: HEADTEACHER_FEEDBACK_ANONYMITY_NOTICE,
     },
     progress,
@@ -761,7 +785,7 @@ function buildView(
         participant.cycle.targetSchoolNameSnapshot ?? "School snapshot",
       circuitName: participant.cycle.targetZoneNameSnapshot,
       headteacherName: participant.cycle.targetNameSnapshot,
-      instructions: participant.cycle.instrumentVersion.instructions,
+      instructions: HEADTEACHER_FEEDBACK_TEACHER_RUNTIME_INSTRUCTIONS,
       scale: {
         minimum: participant.cycle.instrumentVersion.scaleMin,
         maximum: participant.cycle.instrumentVersion.scaleMax,

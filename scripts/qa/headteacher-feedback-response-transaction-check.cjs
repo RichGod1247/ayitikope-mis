@@ -482,14 +482,46 @@ async function main() {
     "Headteacher identity visibility",
   );
   assertEqual(
-    initial.confidentiality.directorIdentityAccessRequiresAuthorizedAudit,
+    initial.confidentiality.directorCanSeeIdentity,
+    false,
+    "District Director identity visibility",
+  );
+  assertEqual(
+    initial.confidentiality.directorReceivesCycleScopedAnonymousLabelsOnly,
     true,
-    "Director identity access caveat",
+    "Director anonymous-label contract",
+  );
+  assertEqual(
+    initial.confidentiality.realIdentityAudience,
+    "SUPERADMIN_ONLY",
+    "Real identity audience",
+  );
+  assertEqual(
+    initial.confidentiality
+      .superadminIdentityAccessRequiresSeparateAuthorizedAudit,
+    true,
+    "Superadmin identity access boundary",
   );
   assertEqual(
     initial.confidentiality.freeTextCommentsAllowed,
     false,
     "Comments disabled",
+  );
+  assert(
+    initial.officialForm.instructions.includes(
+      "hidden from the Headteacher and District Director",
+    ),
+    "Runtime instructions must explain Headteacher and Director masking",
+  );
+  assert(
+    initial.officialForm.instructions.includes("Respondent 1"),
+    "Runtime instructions must explain cycle-scoped anonymous labels",
+  );
+  assert(
+    !initial.officialForm.instructions.includes(
+      "authorized Director-level reviewer",
+    ),
+    "Runtime instructions must not expose stale Director identity wording",
   );
   assert(
     !Object.prototype.hasOwnProperty.call(initial, "respondentUserId"),
@@ -780,6 +812,16 @@ async function main() {
     "Comment rejection contract missing",
   );
   assert(
+    source.includes("HEADTEACHER_FEEDBACK_TEACHER_RUNTIME_INSTRUCTIONS"),
+    "Teacher runtime privacy instructions must be explicit",
+  );
+  assert(
+    !source.includes(
+      "instructions: participant.cycle.instrumentVersion.instructions",
+    ),
+    "Teacher view must not expose stale published privacy wording",
+  );
+  assert(
     source.includes("calculateAppraisalScores"),
     "Shared N/A-aware scoring must be reused",
   );
@@ -797,7 +839,10 @@ async function main() {
   console.log("Finalized response             : immutable + SHA-256 proof");
   console.log("Finalization retry             : EXISTING_FINALIZED");
   console.log("Headteacher identity access    : forbidden");
-  console.log("Director identity caveat       : authorized audited workflow only");
+  console.log("District Director identity     : forbidden");
+  console.log("Director individual forms      : Respondent 1…N labels only");
+  console.log("Real identity audience         : SUPERADMIN_ONLY");
+  console.log("Superadmin identity access     : separate authorized audit");
   console.log("Free-text comments             : rejected");
   console.log("Audit score/identity leakage   : absent");
   console.log("Transaction                    : serializable, 60-second low-network bound");

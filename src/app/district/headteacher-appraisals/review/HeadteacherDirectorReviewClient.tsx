@@ -80,6 +80,10 @@ type SupervisorySection = {
   items: HeadteacherDirectorReviewPackage["supervisoryAssessment"]["items"];
 };
 
+type AnonymousSelectedResponse = NonNullable<
+  HeadteacherDirectorAnonymousResponsesView["selectedResponse"]
+>;
+
 const API_BASE = "/api/district/headteacher-appraisals";
 
 const DIRECTOR_REVIEW_UI_POLICY = Object.freeze({
@@ -94,14 +98,6 @@ const DIRECTOR_REVIEW_UI_POLICY = Object.freeze({
   combinedScoreIncluded: false,
   providerDeliveryIncluded: false,
 });
-
-const ratingLabels: Record<number, string> = {
-  1: "Very Poor",
-  2: "Poor",
-  3: "Acceptable",
-  4: "Good",
-  5: "Very Good",
-};
 
 function panel(extra = "") {
   return `rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(7,18,34,0.98))] shadow-[0_18px_55px_rgba(0,0,0,0.22)] ${extra}`;
@@ -147,32 +143,6 @@ function errorText(value: unknown, fallback: string) {
 
 async function readJson<T>(response: Response): Promise<T | null> {
   return response.json().catch(() => null) as Promise<T | null>;
-}
-
-function scoreTone(score: number | null, notApplicable: boolean) {
-  if (notApplicable) {
-    return "border-sky-300/30 bg-sky-400/12 text-sky-100";
-  }
-  switch (score) {
-    case 1:
-      return "border-rose-300/30 bg-rose-400/12 text-rose-100";
-    case 2:
-      return "border-orange-300/30 bg-orange-400/12 text-orange-100";
-    case 3:
-      return "border-amber-300/30 bg-amber-400/12 text-amber-100";
-    case 4:
-      return "border-teal-300/30 bg-teal-400/12 text-teal-100";
-    case 5:
-      return "border-emerald-300/30 bg-emerald-400/12 text-emerald-100";
-    default:
-      return "border-white/10 bg-white/5 text-slate-300";
-  }
-}
-
-function scoreLabel(score: number | null, notApplicable: boolean) {
-  if (notApplicable) return "N/A";
-  if (score == null) return "Not scored";
-  return `${score} · ${ratingLabels[score] ?? "Rated"}`;
 }
 
 function anonymousContractSafe(value: HeadteacherDirectorAnonymousResponsesView) {
@@ -855,6 +825,350 @@ function SupervisoryForm(props: {
   );
 }
 
+function StaffNativeForm(props: {
+  data: HeadteacherDirectorAnonymousResponsesView;
+  selected: AnonymousSelectedResponse;
+  onBack: () => void;
+}) {
+  const sections = props.selected.officialForm.sections;
+  const officialMaximum = sections.reduce(
+    (sum, section) => sum + section.sectionMaxScore,
+    0,
+  );
+  const applicableMaximum = sections.reduce(
+    (sum, section) =>
+      sum +
+      section.items.reduce(
+        (sectionSum, item) =>
+          sectionSum + (item.notApplicable ? 0 : item.itemMaxScore),
+        0,
+      ),
+    0,
+  );
+  const rawTotal = sections.reduce(
+    (sum, section) =>
+      sum +
+      section.items.reduce(
+        (sectionSum, item) =>
+          sectionSum + (item.notApplicable ? 0 : item.score ?? 0),
+        0,
+      ),
+    0,
+  );
+  const totalNotApplicable = sections.reduce(
+    (sum, section) =>
+      sum + section.items.filter((item) => item.notApplicable).length,
+    0,
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className={panel("p-4 sm:p-5")}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-300">
+              {props.selected.label} · finalized and locked
+            </p>
+            <h3 className="mt-2 text-xl font-black text-white">
+              Native Monitoring and Inspection Sheet
+            </h3>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
+              This finalized staff-feedback form is displayed under a
+              cycle-scoped anonymous label. The respondent&apos;s real identity
+              is not available to the District Director.
+            </p>
+          </div>
+          <ActionButton onClick={props.onBack}>Back to respondents</ActionButton>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto rounded-[24px] border border-white/10 bg-slate-950/60 p-2 shadow-[0_22px_70px_rgba(0,0,0,0.30)] sm:p-4">
+        <div className="min-w-[1040px] overflow-hidden rounded-[20px] bg-white text-slate-950 shadow-[0_16px_55px_rgba(0,0,0,0.30)]">
+          <div className="border-b-2 border-slate-900 px-6 py-5 text-center">
+            <p className="text-[13px] font-black uppercase tracking-[0.12em]">
+              {props.data.cycle.districtName ||
+                "District Education Directorate"}
+            </p>
+            <h3 className="mt-1 text-[16px] font-black uppercase">
+              {props.selected.officialForm.documentTitle}
+            </h3>
+            <p className="mt-2 text-[11px] font-black uppercase tracking-[0.10em] text-violet-800">
+              Confidential staff feedback · anonymous read-only copy
+            </p>
+          </div>
+
+          <table className="w-full border-collapse text-[12px] leading-5">
+            <tbody>
+              {[
+                [
+                  "Name of School",
+                  props.selected.officialForm.schoolName,
+                  "Anonymous Respondent",
+                  props.selected.label,
+                ],
+                [
+                  "Name of Circuit",
+                  props.selected.officialForm.circuitName,
+                  "Status",
+                  "Finalized and locked",
+                ],
+                [
+                  "Name of Head",
+                  props.selected.officialForm.headteacherName,
+                  "Overall Response",
+                  wholePercentage(
+                    props.selected.officialForm.overallPercentage,
+                  ),
+                ],
+              ].map((row) => (
+                <tr key={String(row[0])}>
+                  <th className="w-[16%] border border-slate-300 bg-slate-100 px-3 py-2 text-left text-[11px] font-black uppercase">
+                    {row[0]}
+                  </th>
+                  <td className="w-[34%] border border-slate-300 px-3 py-2 font-semibold">
+                    {paperValue(row[1])}
+                  </td>
+                  <th className="w-[24%] border border-slate-300 bg-slate-100 px-3 py-2 text-left text-[11px] font-black uppercase">
+                    {row[2]}
+                  </th>
+                  <td className="w-[26%] border border-slate-300 px-3 py-2 font-semibold">
+                    {paperValue(row[3])}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="border-x border-b border-slate-300 bg-violet-50 px-4 py-3 text-[11px] leading-5 text-violet-950">
+            This form is presented under a cycle-scoped anonymous respondent
+            label. No Teacher identity, respondent identifier, response hash or
+            submission timestamp is available in this Director view.
+          </div>
+
+          <table className="w-full border-collapse text-[11px] leading-4">
+            <colgroup>
+              <col className="w-[6%]" />
+              <col className="w-[58%]" />
+              <col className="w-[5%]" />
+              <col className="w-[5%]" />
+              <col className="w-[5%]" />
+              <col className="w-[5%]" />
+              <col className="w-[5%]" />
+              <col className="w-[5%]" />
+              <col className="w-[6%]" />
+            </colgroup>
+            <thead>
+              <tr className="bg-slate-100">
+                <th className="border border-slate-300 px-2 py-3 text-center font-black">
+                  S/N
+                </th>
+                <th className="border border-slate-300 px-3 py-3 text-left">
+                  <div className="text-[15px] font-black uppercase tracking-[0.04em]">
+                    Behavioural Competence
+                  </div>
+                  <div className="mt-1 text-[10px] font-semibold normal-case">
+                    [1—Very Poor] [2—Poor] [3—Acceptable] [4—Good]
+                    [5—Very Good]
+                  </div>
+                </th>
+                <th className="border border-slate-300 px-1 py-3 text-center font-black">
+                  N/A
+                </th>
+                {[1, 2, 3, 4, 5].map((score) => (
+                  <th
+                    key={score}
+                    className="border border-slate-300 px-1 py-3 text-center font-black"
+                  >
+                    {score}
+                  </th>
+                ))}
+                <th className="border border-slate-300 px-2 py-3 text-center font-black">
+                  Final Score
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {sections.map((section) => {
+                const rawScore = section.items.reduce(
+                  (sum, item) =>
+                    sum + (item.notApplicable ? 0 : item.score ?? 0),
+                  0,
+                );
+                const sectionApplicableMaximum = section.items.reduce(
+                  (sum, item) =>
+                    sum + (item.notApplicable ? 0 : item.itemMaxScore),
+                  0,
+                );
+                const notApplicableItems = section.items.filter(
+                  (item) => item.notApplicable,
+                ).length;
+
+                return (
+                  <Fragment key={section.sectionKey}>
+                    <tr className="bg-[#344A67] text-white">
+                      <td className="border border-slate-300 px-2 py-2 text-center font-black">
+                        {section.sectionOrder}.0
+                      </td>
+                      <td
+                        colSpan={8}
+                        className="border border-slate-300 px-3 py-2 font-black uppercase tracking-[0.03em]"
+                      >
+                        {section.sectionTitle}
+                      </td>
+                    </tr>
+                    {section.items.map((item) => {
+                      const options: Array<{
+                        score: number | null;
+                        notApplicable: boolean;
+                        label: string;
+                      }> = [
+                        { score: null, notApplicable: true, label: "N/A" },
+                        ...[1, 2, 3, 4, 5].map((score) => ({
+                          score,
+                          notApplicable: false,
+                          label: String(score),
+                        })),
+                      ];
+
+                      return (
+                        <tr key={item.itemKey} className="align-middle">
+                          <td className="border border-slate-300 px-2 py-2 text-center font-semibold">
+                            {item.itemKey}
+                          </td>
+                          <td className="border border-slate-300 px-3 py-2 text-[12px] font-medium leading-5">
+                            {item.itemLabel}
+                          </td>
+                          {options.map((option) => {
+                            const selected = option.notApplicable
+                              ? item.notApplicable
+                              : !item.notApplicable &&
+                                item.score === option.score;
+                            return (
+                              <td
+                                key={option.label}
+                                className={`border border-slate-300 px-1 py-2 text-center text-[15px] font-black ${paperScoreCellTone({
+                                  selected,
+                                  score: option.score,
+                                  notApplicable: option.notApplicable,
+                                })}`}
+                                aria-label={
+                                  selected
+                                    ? `Selected ${option.label}`
+                                    : undefined
+                                }
+                              >
+                                {selected ? "✓" : ""}
+                              </td>
+                            );
+                          })}
+                          <td
+                            className={`border border-slate-300 px-2 py-2 text-center text-[13px] font-black ${paperScoreCellTone({
+                              selected: true,
+                              score: item.score,
+                              notApplicable: item.notApplicable,
+                            })}`}
+                            aria-label={
+                              item.notApplicable
+                                ? "Final score: Not applicable"
+                                : `Final score: ${item.score ?? "Not scored"}`
+                            }
+                          >
+                            {item.notApplicable ? "N/A" : item.score ?? "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    <tr className="bg-slate-50">
+                      <td
+                        colSpan={8}
+                        className="border border-slate-300 px-3 py-2 text-right font-black uppercase"
+                      >
+                        Total score
+                      </td>
+                      <td className="border border-slate-300 px-2 py-2 text-center text-[12px] font-black">
+                        {rawScore} / {sectionApplicableMaximum}
+                      </td>
+                    </tr>
+                    <tr className="bg-slate-50">
+                      <td
+                        colSpan={8}
+                        className="border border-slate-300 px-3 py-2 text-right font-black uppercase"
+                      >
+                        Percentage score
+                      </td>
+                      <td className="border border-slate-300 px-2 py-2 text-center text-[12px] font-black">
+                        {wholePercentage(section.percentage)}
+                      </td>
+                    </tr>
+                    <tr className="bg-violet-50 text-violet-950">
+                      <td
+                        colSpan={9}
+                        className="border border-slate-300 px-3 py-2 text-right text-[10px] font-semibold"
+                      >
+                        Official section maximum: {section.sectionMaxScore}.
+                        Applicable maximum after {notApplicableItems} N/A
+                        exclusion{notApplicableItems === 1 ? "" : "s"}:{" "}
+                        {sectionApplicableMaximum}.
+                      </td>
+                    </tr>
+                  </Fragment>
+                );
+              })}
+              <tr className="bg-[#22344F] text-white">
+                <td
+                  colSpan={8}
+                  className="border border-slate-300 px-3 py-3 text-right text-[12px] font-black uppercase"
+                >
+                  Overall percentage — average of the four official section
+                  percentages
+                </td>
+                <td className="border border-slate-300 px-2 py-3 text-center text-[14px] font-black">
+                  {wholePercentage(
+                    props.selected.officialForm.overallPercentage,
+                  )}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div className="grid grid-cols-4 border-x border-b border-slate-300 bg-slate-50 text-[11px]">
+            <div className="border-r border-slate-300 px-3 py-3">
+              <p className="font-black uppercase text-slate-500">Raw total</p>
+              <p className="mt-1 text-base font-black">
+                {rawTotal} / {applicableMaximum}
+              </p>
+            </div>
+            <div className="border-r border-slate-300 px-3 py-3">
+              <p className="font-black uppercase text-slate-500">
+                Official maximum
+              </p>
+              <p className="mt-1 text-base font-black">{officialMaximum}</p>
+            </div>
+            <div className="border-r border-slate-300 px-3 py-3">
+              <p className="font-black uppercase text-slate-500">
+                N/A exclusions
+              </p>
+              <p className="mt-1 text-base font-black">
+                {totalNotApplicable}
+              </p>
+            </div>
+            <div className="px-3 py-3">
+              <p className="font-black uppercase text-slate-500">
+                Final result
+              </p>
+              <p className="mt-1 text-base font-black">
+                {wholePercentage(
+                  props.selected.officialForm.overallPercentage,
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StaffEvidence(props: {
   data: HeadteacherDirectorAnonymousResponsesView;
   level: StaffLevel;
@@ -877,7 +1191,8 @@ function StaffEvidence(props: {
               Headteacher staff-feedback forms
             </h2>
             <p className="mt-2 text-sm leading-6 text-slate-300">
-              Only cycle-scoped labels such as Respondent 1 are visible. Real Teacher identities are restricted to the separate Superadmin authority path.
+              Only cycle-scoped labels such as Respondent 1 are visible. Real
+              Teacher identities are not available to the District Director.
             </p>
           </div>
           <ActionButton onClick={props.onBackHome}>Back to evidence</ActionButton>
@@ -894,7 +1209,9 @@ function StaffEvidence(props: {
             onClick={() => props.onLevel("SCHOOL")}
             className="mt-4 w-full rounded-2xl border border-violet-300/25 bg-violet-400/10 p-5 text-left"
           >
-            <p className="text-lg font-black text-white">{props.data.cycle.circuitName}</p>
+            <p className="text-lg font-black text-white">
+              {props.data.cycle.circuitName}
+            </p>
             <p className="mt-2 text-sm text-violet-100">
               1 school · {props.data.respondents.length} finalized respondent
               {props.data.respondents.length === 1 ? "" : "s"}
@@ -922,8 +1239,12 @@ function StaffEvidence(props: {
             onClick={() => props.onLevel("RESPONDENTS")}
             className="mt-4 w-full rounded-2xl border border-violet-300/25 bg-violet-400/10 p-5 text-left"
           >
-            <p className="text-lg font-black text-white">{props.data.cycle.schoolName}</p>
-            <p className="mt-1 text-sm text-slate-300">{props.data.cycle.headteacherName}</p>
+            <p className="text-lg font-black text-white">
+              {props.data.cycle.schoolName}
+            </p>
+            <p className="mt-1 text-sm text-slate-300">
+              {props.data.cycle.headteacherName}
+            </p>
             <p className="mt-3 text-xs font-black text-violet-100">
               {props.data.respondents.length} anonymous finalized form
               {props.data.respondents.length === 1 ? "" : "s"}
@@ -939,7 +1260,9 @@ function StaffEvidence(props: {
               <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
                 {props.data.cycle.schoolName}
               </p>
-              <h3 className="mt-1 text-lg font-black text-white">Anonymous respondents</h3>
+              <h3 className="mt-1 text-lg font-black text-white">
+                Anonymous respondents
+              </h3>
             </div>
             <button
               type="button"
@@ -958,8 +1281,12 @@ function StaffEvidence(props: {
                 onClick={() => props.onRespondent(respondent.respondentKey)}
                 className="rounded-2xl border border-white/10 bg-slate-950 p-4 text-left transition hover:border-violet-300/35 disabled:opacity-50"
               >
-                <p className="text-base font-black text-white">{respondent.label}</p>
-                <p className="mt-2 text-xs text-slate-400">Finalized · open native form</p>
+                <p className="text-base font-black text-white">
+                  {respondent.label}
+                </p>
+                <p className="mt-2 text-xs text-slate-400">
+                  Finalized · open native form
+                </p>
               </button>
             ))}
           </div>
@@ -967,99 +1294,11 @@ function StaffEvidence(props: {
       ) : null}
 
       {props.level === "FORM" && selected ? (
-        <div className="space-y-4">
-          <div className={panel("p-4 sm:p-5")}>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-violet-300">
-                  {selected.label} · finalized and locked
-                </p>
-                <h3 className="mt-2 text-xl font-black text-white">
-                  {selected.officialForm.documentTitle}
-                </h3>
-              </div>
-              <ActionButton onClick={() => props.onLevel("RESPONDENTS")}>
-                Back to respondents
-              </ActionButton>
-            </div>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <EvidenceField label="Anonymous respondent" value={selected.label} />
-              <EvidenceField label="School" value={selected.officialForm.schoolName} />
-              <EvidenceField label="Circuit" value={selected.officialForm.circuitName} />
-              <EvidenceField label="Headteacher" value={selected.officialForm.headteacherName} />
-              <EvidenceField label="Status" value="Finalized and locked" />
-              <EvidenceField
-                label="Overall response"
-                value={wholePercentage(selected.officialForm.overallPercentage)}
-              />
-            </div>
-            {selected.officialForm.instructions ? (
-              <p className="mt-4 rounded-2xl border border-white/10 bg-white/[0.025] p-4 text-sm leading-6 text-slate-300">
-                {selected.officialForm.instructions}
-              </p>
-            ) : null}
-          </div>
-
-          {selected.officialForm.sections.map((section) => {
-            const rawScore = section.items.reduce(
-              (sum, item) => sum + (item.notApplicable ? 0 : item.score ?? 0),
-              0,
-            );
-            const applicableMaximum = section.items.reduce(
-              (sum, item) => sum + (item.notApplicable ? 0 : item.itemMaxScore),
-              0,
-            );
-            const naCount = section.items.filter((item) => item.notApplicable).length;
-
-            return (
-              <article key={section.sectionKey} className={panel("overflow-hidden")}>
-                <div className="border-b border-white/10 bg-white/[0.025] p-4 sm:p-5">
-                  <p className="text-xs font-black uppercase tracking-[0.14em] text-violet-300">
-                    Section {section.sectionOrder}
-                  </p>
-                  <h4 className="mt-1 text-lg font-black text-white">
-                    {section.sectionTitle}
-                  </h4>
-                  {section.description ? (
-                    <p className="mt-2 text-sm leading-6 text-slate-400">
-                      {section.description}
-                    </p>
-                  ) : null}
-                </div>
-
-                <div className="space-y-3 p-3 sm:p-5">
-                  {section.items.map((item) => (
-                    <div
-                      key={item.itemKey}
-                      className="grid gap-3 rounded-2xl border border-white/10 bg-slate-950/75 p-4 sm:grid-cols-[1fr_auto] sm:items-center"
-                    >
-                      <div>
-                        <p className="text-xs font-black text-violet-300">{item.itemKey}</p>
-                        <p className="mt-1 text-sm font-semibold leading-6 text-slate-100">
-                          {item.itemLabel}
-                        </p>
-                      </div>
-                      <span
-                        className={`min-w-[118px] rounded-xl border px-3 py-2 text-center text-xs font-black ${scoreTone(item.score, item.notApplicable)}`}
-                      >
-                        {scoreLabel(item.score, item.notApplicable)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="grid gap-3 border-t border-white/10 bg-slate-950 p-4 sm:grid-cols-3 sm:p-5">
-                  <EvidenceField label="Total score" value={`${rawScore} / ${applicableMaximum}`} />
-                  <EvidenceField
-                    label="Section percentage"
-                    value={wholePercentage(section.percentage)}
-                  />
-                  <EvidenceField label="N/A excluded" value={String(naCount)} />
-                </div>
-              </article>
-            );
-          })}
-        </div>
+        <StaffNativeForm
+          data={props.data}
+          selected={selected}
+          onBack={() => props.onLevel("RESPONDENTS")}
+        />
       ) : null}
     </section>
   );
@@ -1778,7 +2017,7 @@ export default function HeadteacherDirectorReviewClient({
         ) : null}
 
         <footer className={panel("p-4 text-xs leading-5 text-slate-400")}>
-          No background polling. No combined appraisal score. Anonymous individual staff forms use cycle-scoped Respondent 1…N labels; only the separate Superadmin pathway may access real Teacher identities.
+          No background polling. No combined appraisal score. Anonymous individual staff forms use cycle-scoped Respondent 1…N labels; real Teacher identities are not available to the District Director.
           <span className="sr-only">{JSON.stringify(DIRECTOR_REVIEW_UI_POLICY)}</span>
         </footer>
       </div>

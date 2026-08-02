@@ -1,3 +1,4 @@
+//src/lib/appraisals/headteacherFeedback.ts
 import type { AppraisalCycleStatus } from "@prisma/client";
 import { assertAppraisalAuthority } from "@/lib/appraisals/authority";
 import {
@@ -6,6 +7,18 @@ import {
   instrumentActivationIsBlocked,
 } from "@/lib/appraisals/instruments";
 import { effectiveRole } from "@/lib/roleRouting";
+
+export const HEADTEACHER_FEEDBACK_PRIVACY_POLICY = {
+  schemaVersion: 1,
+  legacyStorageCompatibilityValue: "DIRECTOR_ONLY",
+  legacyStorageValueGrantsRuntimeIdentityAccess: false,
+  headteacherCanSeeRespondentIdentity: false,
+  districtDirectorCanSeeRespondentIdentity: false,
+  districtDirectorReceivesCycleScopedAnonymousLabelsOnly: true,
+  realRespondentIdentityAudience: "SUPERADMIN_ONLY",
+  superadminIdentityAccessRequiresSeparateAuthorizedAudit: true,
+  freeTextCommentsAllowed: false,
+} as const;
 
 export const HEADTEACHER_FEEDBACK_POLICY = {
   workflow: "HEADTEACHER_CONFIDENTIAL_STAFF_FEEDBACK",
@@ -16,8 +29,10 @@ export const HEADTEACHER_FEEDBACK_POLICY = {
   respondentRole: "TEACHER",
   responseWindowDays: 7,
   minimumFinalizedResponses: 1,
-  commentsAllowed: false,
-  identityVisibilityStorageValue: "DIRECTOR_ONLY",
+  commentsAllowed:
+    HEADTEACHER_FEEDBACK_PRIVACY_POLICY.freeTextCommentsAllowed,
+  identityVisibilityStorageValue:
+    HEADTEACHER_FEEDBACK_PRIVACY_POLICY.legacyStorageCompatibilityValue,
   participantSelection: "ACTIVE_TEACHERS_FROZEN_AT_OPEN",
   participantFreezeStatus: "OPEN",
   headteacherMayRequestOwnCycle: true,

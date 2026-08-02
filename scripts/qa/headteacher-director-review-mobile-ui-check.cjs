@@ -72,21 +72,19 @@ function main() {
 
   contains(
     client,
-    "const BBC_REVIEW_POLICY",
-    "BBC interface policy",
+    "const DIRECTOR_REVIEW_UI_POLICY",
+    "current Director interface policy",
   );
   contains(
     client,
-    'presentation: "ONE_COMPARISON_AT_A_TIME"',
-    "one-comparison-at-a-time mode",
+    'presentation: "NATIVE_EVIDENCE_FIRST"',
+    "native-evidence-first presentation",
   );
-  contains(client, "expectedSections: 4", "four sections");
-  contains(client, "expectedItems: 34", "34 items");
   contains(client, "backgroundPollingAllowed: false", "no polling");
   contains(
     client,
     "persistentBrowserStorageAllowed: false",
-    "no persistent storage",
+    "no persistent browser storage",
   );
   contains(
     client,
@@ -95,8 +93,13 @@ function main() {
   );
   contains(
     client,
-    "individualStaffResponsesIncluded: false",
-    "no individual forms",
+    "anonymousIndividualFormsIncluded: true",
+    "anonymous individual forms enabled",
+  );
+  contains(
+    client,
+    'realIdentityAudience: "SUPERADMIN_ONLY"',
+    "separate real-identity audience",
   );
   contains(
     client,
@@ -105,33 +108,157 @@ function main() {
   );
   contains(
     client,
-    "notificationSeedingIncluded: true",
+    "combinedScoreIncluded: false",
+    "no combined score",
+  );
+  contains(
+    client,
     "providerDeliveryIncluded: false",
-    "notification deferral",
+    "no provider delivery",
   );
 
   contains(
     client,
-    "/review-package",
-    "review-package API",
+    "function anonymousContractSafe",
+    "fail-closed anonymous-response contract",
   );
+  contains(
+    client,
+    "privacy.realRespondentIdentitiesIncluded === false",
+    "real identities excluded from anonymous payload",
+  );
+  contains(
+    client,
+    "privacy.respondentUserIdsIncluded === false",
+    "respondent user IDs excluded",
+  );
+  contains(
+    client,
+    "privacy.participantIdsIncluded === false",
+    "participant IDs excluded",
+  );
+  contains(
+    client,
+    "privacy.responseIdsIncluded === false",
+    "response IDs excluded",
+  );
+  contains(
+    client,
+    "privacy.responseHashesIncluded === false",
+    "response hashes excluded",
+  );
+  contains(
+    client,
+    "privacy.submissionTimestampsIncluded === false",
+    "submission timestamps excluded",
+  );
+  contains(
+    client,
+    "privacy.freeTextCommentsIncluded === false",
+    "free-text comments excluded",
+  );
+  contains(
+    client,
+    "privacy.anonymousLabelsAreCycleScoped === true",
+    "cycle-scoped anonymous labels",
+  );
+  contains(
+    client,
+    "privacy.superadminIdentityPathSeparate === true",
+    "separate Superadmin identity path",
+  );
+
+  contains(client, "/review-package", "review-package API");
   contains(client, "/review-start", "review-start API");
+  contains(
+    client,
+    "/anonymous-responses",
+    "anonymous-response API",
+  );
   contains(client, '"return-hold"', "return-hold API");
   contains(client, '"release"', "release API");
   contains(client, 'cache: "no-store"', "no-store fetches");
   contains(client, "window.confirm", "explicit confirmation");
   contains(client, "Load review package", "explicit package load");
   contains(client, "Start Director review", "explicit review start");
-  contains(client, "Review one item at a time", "BBC guidance");
-  contains(client, "Previous", "previous item control");
-  contains(client, "Next", "next item control");
-  contains(client, "Confirm return for correction", "return action");
-  contains(client, "Confirm hold", "hold action");
-  contains(client, "Confirm official release", "release action");
+
+  contains(
+    client,
+    "function StaffNativeForm",
+    "native anonymous staff form",
+  );
+  contains(
+    client,
+    "Native Monitoring and Inspection Sheet",
+    "native paper-form heading",
+  );
+  contains(
+    client,
+    "Confidential staff feedback · anonymous read-only copy",
+    "anonymous paper-copy label",
+  );
+  contains(
+    client,
+    "cycle-scoped anonymous label",
+    "cycle-scoped identity guidance",
+  );
+  contains(
+    client,
+    "not available to the District Director",
+    "Director identity boundary",
+  );
+  contains(
+    client,
+    "No Teacher identity, respondent identifier, response hash or",
+    "native-form privacy statement",
+  );
+  contains(
+    client,
+    "Overall percentage — average of the four official section",
+    "four-section overall formula",
+  );
+  contains(client, "34 indicators", "34-indicator supervisory evidence");
+  contains(
+    client,
+    "four-section Monitoring and Inspection Sheet",
+    "four-section supervisory evidence",
+  );
+  contains(client, "Back to respondents", "anonymous-form navigation");
+  contains(client, "Previous", "previous comparison control");
+  contains(client, "Next", "next comparison control");
+  contains(
+    client,
+    "currentItemIndex",
+    "one-comparison-at-a-time state",
+  );
+  contains(
+    client,
+    "overflow-x-auto",
+    "small-screen horizontal form access",
+  );
+  contains(
+    client,
+    "min-w-[1040px]",
+    "official paper-form width preservation",
+  );
+  contains(
+    client,
+    "md:hidden",
+    "mobile Director decision controls",
+  );
+
+  contains(client, "Return for correction", "return decision");
+  contains(client, "Hold Director review", "hold decision");
+  contains(client, "Release official result", "release decision");
+  contains(
+    client,
+    "Confirm ${title.toLowerCase()}",
+    "decision confirmation control",
+  );
   contains(
     client,
     "No combined appraisal score",
-    "no combined score message",
+    "no combined-score message",
   );
   contains(
     client,
@@ -150,54 +277,115 @@ function main() {
   );
   contains(
     client,
-    "The release will not be duplicated.",
+    "Repeating release will not duplicate the official result.",
     "safe notification retry guidance",
   );
   contains(
     client,
     "The Headteacher notification was queued safely.",
-    "successful queue confirmation",
+    "successful notification queue confirmation",
   );
 
   excludes(client, "localStorage", "local storage");
   excludes(client, "sessionStorage", "session storage");
   excludes(client, "setInterval(", "polling interval");
   excludes(client, "setTimeout(", "background retry");
-  excludes(client, "respondents", "respondent endpoint");
   excludes(client, "appraisalNotification", "notification mutation");
   excludes(client, "sendSms", "SMS provider");
   excludes(client, "sendEmail", "email provider");
-  excludes(client, "combinedOverallPercentage", "combined score field");
+  excludes(
+    client,
+    "combinedOverallPercentage",
+    "combined score field",
+  );
   excludes(client, "district/dashboard", "dashboard modification");
   excludes(client, "prisma.", "direct database use");
+  excludes(
+    client,
+    "authorized Director-level reviewer",
+    "obsolete Director identity-access wording",
+  );
+  excludes(
+    client,
+    "authorized, audited Director workflow",
+    "obsolete Director identity-access caveat",
+  );
 
   transpile(page, pagePath);
   transpile(client, clientPath);
 
   console.log("");
-  console.log("=== D3.4G4B BBC-FRIENDLY DIRECTOR REVIEW INTERFACE ===");
+  console.log(
+    "=== DIRECTOR NATIVE EVIDENCE + ANONYMOUS MOBILE INTERFACE ===",
+  );
   console.log("");
-  console.log("Audience scope                 : District Director workspace");
-  console.log("Entry                          : controlled cycleId link");
-  console.log("Network behavior               : explicit load, no polling");
-  console.log("Evidence view                  : overall / four sections / 34 items");
-  console.log("Mobile interaction             : one comparison item at a time");
-  console.log("Navigation                     : large Previous / Next controls");
-  console.log("N/A handling                   : explicit");
-  console.log("Combined appraisal score       : absent");
-  console.log("Review start                   : explicit confirmation");
-  console.log("Return                         : reason + explicit confirmation");
-  console.log("Hold                           : reason + explicit confirmation");
-  console.log("Release                        : optional note + confirmation");
-  console.log("Reviewer score rewriting       : absent");
-  console.log("Respondent identities/forms    : absent");
-  console.log("Persistent browser storage     : absent");
-  console.log("Notification seeding           : release-only, idempotent");
-  console.log("Provider delivery               : absent");
-  console.log("Dashboard modification         : absent");
-  console.log("Database accessed              : false");
+  console.log(
+    "Audience scope                 : District Director workspace",
+  );
+  console.log(
+    "Entry                          : controlled cycleId link",
+  );
+  console.log(
+    "Network behavior               : explicit load, no polling",
+  );
+  console.log(
+    "Evidence presentation          : native evidence first",
+  );
+  console.log(
+    "Supervisory evidence           : native 4-section / 34-item sheet",
+  );
+  console.log(
+    "Staff evidence                 : anonymous native 4-section / 34-item forms",
+  );
+  console.log(
+    "Anonymous navigation           : circuit → school → Respondent 1…N",
+  );
+  console.log(
+    "Real Teacher identities        : unavailable to Director",
+  );
+  console.log(
+    "Respondent-linked identifiers  : absent",
+  );
+  console.log(
+    "Mobile form access             : horizontal paper-form scrolling",
+  );
+  console.log(
+    "Analytics interaction          : one comparison item at a time",
+  );
+  console.log(
+    "Navigation                     : Previous / Next controls",
+  );
+  console.log(
+    "Combined appraisal score       : absent",
+  );
+  console.log(
+    "Review start                   : explicit confirmation",
+  );
+  console.log(
+    "Return / Hold / Release        : controlled and confirmed",
+  );
+  console.log(
+    "Reviewer score rewriting       : absent",
+  );
+  console.log(
+    "Persistent browser storage     : absent",
+  );
+  console.log(
+    "Notification seeding           : release-only service path",
+  );
+  console.log(
+    "Provider delivery              : absent",
+  );
+  console.log(
+    "Dashboard modification         : absent",
+  );
+  console.log(
+    "Database accessed              : false",
+  );
   console.log("");
-  console.log("RESULT: D3.4G4B DIRECTOR REVIEW UI GREEN");
+  console.log(
+    "RESULT: DIRECTOR NATIVE EVIDENCE UI GREEN",
+  );
 }
 
 main();

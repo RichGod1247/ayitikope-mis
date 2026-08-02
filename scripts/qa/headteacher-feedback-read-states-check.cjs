@@ -368,12 +368,14 @@ async function main() {
     assertEqual(state.assignmentActive, active, "Teacher assignment active");
     assertEqual(state.readOnly, readOnly, "Teacher assignment read-only");
     assert(
-      state.anonymityNotice.includes("hidden from the Headteacher"),
-      "Anonymity notice must explain Headteacher masking",
+      state.anonymityNotice.includes(
+        "hidden from the Headteacher and District Director",
+      ),
+      "Anonymity notice must explain Headteacher and Director masking",
     );
     assert(
-      state.anonymityNotice.includes("authorized, audited Director workflow"),
-      "Anonymity notice must avoid promising anonymity from the Director",
+      state.anonymityNotice.includes("Respondent 1"),
+      "Anonymity notice must explain cycle-scoped anonymous labels",
     );
   }
 
@@ -595,7 +597,9 @@ async function main() {
   console.log("Teacher in progress           : Continue");
   console.log("Teacher finalized             : Submitted / read-only");
   console.log("Teacher expired/closed        : Closed");
-  console.log("Teacher anonymity notice      : Director-access caveat preserved");
+  console.log("Teacher anonymity notice      : Headteacher and Director masked");
+  console.log("Director individual forms     : Respondent 1…N labels only");
+  console.log("Real identity audience        : SUPERADMIN_ONLY");
   console.log("Director pending/open counts  : aggregate only");
   console.log("Director teacher identities   : absent");
   console.log("Tenant and role scope         : exact");

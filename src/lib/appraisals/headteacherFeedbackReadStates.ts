@@ -1,3 +1,4 @@
+//src/lib/appraisals/headteacherFeedbackReadStates.ts
 import type {
   AppraisalCycleStatus,
   AppraisalParticipantStatus,
@@ -50,7 +51,7 @@ export const DIRECTOR_HEADTEACHER_APPRAISAL_STATE_LABELS = {
 } as const;
 
 export const HEADTEACHER_FEEDBACK_ANONYMITY_NOTICE =
-  "Your identity is hidden from the Headteacher. It may be accessed only through an authorized, audited Director workflow.";
+  "Your identity is hidden from the Headteacher and District Director. The Director sees finalized forms only as Respondent 1, Respondent 2, and so on.";
 
 export type HeadteacherOwnAppraisalStateCode =
   keyof typeof HEADTEACHER_OWN_APPRAISAL_STATE_LABELS;
