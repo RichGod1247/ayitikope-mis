@@ -23,6 +23,10 @@ export const HEADTEACHER_SUPERVISORY_SCORING_POLICY = {
   partialSectionSaveAllowed: true,
   commentsAllowed: false,
   eligibleDraftCycleStatuses: ["OPEN", "CLOSED"] as const,
+  correctionDraftCycleStatus: "UNDER_REVIEW",
+  correctionRevisionMinimum: 2,
+  correctionRevisionSchemaVersion: 1,
+  correctionRevisionMetadataRequired: true,
   expectedSectionCount: 4,
   expectedItemCount: 34,
   expectedSectionMaximums: [55, 45, 40, 30] as const,
@@ -557,18 +561,10 @@ function assertCommentsAbsent(value: unknown) {
   }
 }
 
-function assertDraftCycleBoundary(record: AssessmentContextRecord) {
-  const status = normalized(record.cycle.status);
-  if (
-    !HEADTEACHER_SUPERVISORY_SCORING_POLICY.eligibleDraftCycleStatuses.includes(
-      status as EligibleDraftCycleStatus,
-    )
-  ) {
-    fail("HEADTEACHER_SUPERVISORY_SCORING_CYCLE_NOT_EDITABLE", 409, {
-      cycleId: record.cycle.id,
-      status,
-    });
-  }
+function assertInitialDraftCycleBoundary(
+  record: AssessmentContextRecord,
+  status: EligibleDraftCycleStatus,
+) {
   if (!record.cycle.openedAt) {
     fail("HEADTEACHER_SUPERVISORY_SCORING_CYCLE_NOT_OPENED", 409);
   }
@@ -582,6 +578,109 @@ function assertDraftCycleBoundary(record: AssessmentContextRecord) {
   if (status === "CLOSED" && !record.cycle.closedAt) {
     fail("HEADTEACHER_SUPERVISORY_SCORING_CLOSED_TIMESTAMP_MISSING", 409);
   }
+}
+
+function assertCorrectionRevisionBoundary(record: AssessmentContextRecord) {
+  const metadata = objectValue(record.metadata);
+  const priorAssessmentId = clean(record.priorAssessmentId);
+  const sourceAssessmentId = clean(metadata.sourceAssessmentId);
+  const returnReason = clean(metadata.returnReason);
+  const returnReviewId = clean(metadata.returnReviewId);
+  const returnReviewStage = Number(metadata.returnReviewStage);
+  const revisionSchemaVersion = Number(metadata.revisionSchemaVersion);
+  const copiedScoreCount = Number(metadata.copiedScoreCount);
+  const revisionKey = clean(metadata.revisionKey).toLowerCase();
+  const sourceAssessmentHash = clean(
+    metadata.sourceAssessmentHash,
+  ).toLowerCase();
+  const returnEvidenceHash = clean(
+    metadata.returnEvidenceHash,
+  ).toLowerCase();
+  const visitContextHash = clean(metadata.visitContextHash).toLowerCase();
+  const validHash = (value: string) => /^[a-f0-9]{64}$/.test(value);
+
+  const valid =
+    normalized(record.status) === "DRAFT" &&
+    record.revision >=
+      HEADTEACHER_SUPERVISORY_SCORING_POLICY.correctionRevisionMinimum &&
+    Boolean(priorAssessmentId) &&
+    sourceAssessmentId === priorAssessmentId &&
+    revisionSchemaVersion ===
+      HEADTEACHER_SUPERVISORY_SCORING_POLICY.correctionRevisionSchemaVersion &&
+    Boolean(returnReviewId) &&
+    Number.isInteger(returnReviewStage) &&
+    returnReviewStage >= 1 &&
+    returnReason.length >= 3 &&
+    validHash(revisionKey) &&
+    validHash(sourceAssessmentHash) &&
+    validHash(returnEvidenceHash) &&
+    validHash(visitContextHash) &&
+    metadata.preserveVisitContext === true &&
+    copiedScoreCount ===
+      HEADTEACHER_SUPERVISORY_SCORING_POLICY.expectedItemCount &&
+    record.scores.length === copiedScoreCount &&
+    metadata.reviewerMayRewriteScores === false &&
+    metadata.returnedAssessmentRequiresRevision === true &&
+    metadata.separateFromStaffFeedback === true &&
+    metadata.combinedWeightingDefined === false &&
+    metadata.providerCalled === false &&
+    record.overallPercentage === null &&
+    Object.keys(objectValue(record.sectionPercentagesJson)).length === 0 &&
+    !clean(record.generalComment) &&
+    record.assessmentHash === null &&
+    record.finalizedByUserId === null &&
+    record.finalizedAt === null &&
+    Boolean(record.cycle.openedAt) &&
+    Boolean(record.cycle.closedAt) &&
+    Boolean(record.cycle.reviewStartedAt) &&
+    record.cycle.releasedAt === null &&
+    record.cycle.cancelledAt === null &&
+    Boolean(
+      record.cycle.reviewStartedAt &&
+        record.createdAt.getTime() >= record.cycle.reviewStartedAt.getTime(),
+    );
+
+  if (!valid) {
+    fail(
+      "HEADTEACHER_SUPERVISORY_SCORING_CORRECTION_REVISION_INVALID",
+      409,
+      {
+        cycleId: record.cycle.id,
+        assessmentId: record.id,
+        status: normalized(record.cycle.status),
+        reason: "VERIFIED_RETURNED_REVISION_REQUIRED",
+      },
+    );
+  }
+}
+
+function assertDraftCycleBoundary(record: AssessmentContextRecord) {
+  const status = normalized(record.cycle.status);
+
+  if (
+    HEADTEACHER_SUPERVISORY_SCORING_POLICY.eligibleDraftCycleStatuses.includes(
+      status as EligibleDraftCycleStatus,
+    )
+  ) {
+    assertInitialDraftCycleBoundary(
+      record,
+      status as EligibleDraftCycleStatus,
+    );
+    return;
+  }
+
+  if (
+    status ===
+    HEADTEACHER_SUPERVISORY_SCORING_POLICY.correctionDraftCycleStatus
+  ) {
+    assertCorrectionRevisionBoundary(record);
+    return;
+  }
+
+  fail("HEADTEACHER_SUPERVISORY_SCORING_CYCLE_NOT_EDITABLE", 409, {
+    cycleId: record.cycle.id,
+    status,
+  });
 }
 
 function assertOwner(record: AssessmentContextRecord, actorUserId: string) {

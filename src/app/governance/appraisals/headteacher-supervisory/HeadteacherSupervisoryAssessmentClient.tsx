@@ -485,6 +485,30 @@ export default function HeadteacherSupervisoryAssessmentClient({
   const autosaveRunningRef = useRef(false);
   const nativeReviewRef = useRef<HTMLElement | null>(null);
 
+  const clearWorkspaceForAssessmentChange = useCallback(() => {
+    if (autosaveTimerRef.current !== null) {
+      window.clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+    if (retryTimerRef.current !== null) {
+      window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+
+    autosaveRunningRef.current = false;
+    pendingSectionSavesRef.current.clear();
+    savedSectionSignaturesRef.current.clear();
+    workspaceRef.current = null;
+    answersRef.current = {};
+
+    setWorkspace(null);
+    setAnswers({});
+    setAutosaveState("idle");
+    setReviewMode(false);
+    setSectionIndex(0);
+    setItemIndex(0);
+  }, []);
+
   const loadQueue = useCallback(async () => {
     setQueueLoading(true);
     setError("");
@@ -516,6 +540,10 @@ export default function HeadteacherSupervisoryAssessmentClient({
       id: string,
       preservePosition?: { sectionIndex: number; itemIndex: number },
     ) => {
+      if (workspaceRef.current?.assessment.assessmentId !== id) {
+        clearWorkspaceForAssessmentChange();
+      }
+
       setBusy(true);
       setError("");
       try {
@@ -596,7 +624,7 @@ export default function HeadteacherSupervisoryAssessmentClient({
         setBusy(false);
       }
     },
-    [],
+    [clearWorkspaceForAssessmentChange],
   );
 
   useEffect(() => {
@@ -1060,6 +1088,7 @@ export default function HeadteacherSupervisoryAssessmentClient({
         throw new Error(messageFromFailure(body, response.status));
       }
       const nextId = body.result.assessment.id;
+      clearWorkspaceForAssessmentChange();
       setAssessmentId(nextId);
       router.replace(
         `/governance/appraisals/headteacher-supervisory?assessmentId=${encodeURIComponent(nextId)}`,
@@ -1143,6 +1172,7 @@ export default function HeadteacherSupervisoryAssessmentClient({
         throw new Error(messageFromFailure(body, response.status));
       }
       const nextId = body.result.revision.id;
+      clearWorkspaceForAssessmentChange();
       setAssessmentId(nextId);
       router.replace(
         `/governance/appraisals/headteacher-supervisory?assessmentId=${encodeURIComponent(nextId)}`,

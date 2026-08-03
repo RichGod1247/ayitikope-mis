@@ -123,7 +123,7 @@ function auditText(db){return JSON.stringify(db.audits);}
 async function main(){
   const sourcePath=path.join(repoRoot,"src/lib/appraisals/headteacherSupervisoryAssessmentRevision.ts");
   const source=fs.readFileSync(sourcePath,"utf8");
-  for(const marker of ["createReturnedHeadteacherSupervisoryAssessmentRevision","readHeadteacherSupervisoryAssessorState","planReturnedHeadteacherSupervisoryRevision","visitDetailsFromEvidenceSnapshot","preserveVisitDetailsMetadata: true","Prisma.TransactionIsolationLevel.Serializable","reviewerMayRewriteScores: false","providerCalled: false"]){assert(source.includes(marker),`Missing source marker: ${marker}`);}
+  for(const marker of ["createReturnedHeadteacherSupervisoryAssessmentRevision","readHeadteacherSupervisoryAssessorState","planReturnedHeadteacherSupervisoryRevision","visitDetailsFromEvidenceSnapshot","preserveVisitDetailsMetadata: true","inheritedReturnReason","Prisma.TransactionIsolationLevel.Serializable","reviewerMayRewriteScores: false","providerCalled: false"]){assert(source.includes(marker),`Missing source marker: ${marker}`);}
   for(const forbidden of ["sendSms","sendEmail","appraisalReview.create","appraisalAggregateSnapshot.create"]){assert(!source.includes(forbidden),`Forbidden source marker: ${forbidden}`);}
   const revisionModule=require(sourcePath);
   const {createReturnedHeadteacherSupervisoryAssessmentRevision,readHeadteacherSupervisoryAssessorState,HEADTEACHER_SUPERVISORY_REVISION_POLICY}=revisionModule;
@@ -158,6 +158,7 @@ async function main(){
   assertEqual(revisionState.state,"REVISION_DRAFT","Revision draft state should be truthful");
   assertEqual(revisionState.canEdit,true,"Revision draft should be editable");
   assertEqual(revisionState.canFinalize,false,"Score-free state must not claim finalization readiness");
+  assertEqual(revisionState.returnReason,"Clarify the evidence for two indicators.","Correction instruction must remain visible on revision draft");
   assertEqual(revisionState.finalizationReadinessIncluded,false,"Finalization readiness must remain in scoring view");
   assertEqual(revisionState.scoresIncluded,false,"Read state must omit scores");
   assert(!JSON.stringify(revisionState).includes("overallPercentage"),"Read state must omit percentages");
@@ -215,6 +216,7 @@ async function main(){
   console.log("Scores                          : copied, still assessor-editable in new revision");
   console.log("Same-evidence retry             : EXISTING_MATCH");
   console.log("Assessor lifecycle states       : draft/finalized/returned/superseded/released");
+  console.log("Correction instruction          : retained on revision draft");
   console.log("Read-state scores/percentages   : absent");
   console.log("Audit score/name leakage        : absent");
   console.log("Transaction                     : serializable and bounded");

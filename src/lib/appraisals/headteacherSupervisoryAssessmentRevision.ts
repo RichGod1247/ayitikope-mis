@@ -1072,6 +1072,10 @@ function deriveState(record: AssessmentRecord): HeadteacherSupervisoryAssessorRe
   const status = normalized(record.status) as AppraisalAssessmentStatus;
   const cycleStatus = normalized(record.cycle.status);
   const returnReview = status === "RETURNED" ? latestReturnedReview(record) : null;
+  const inheritedReturnReason =
+    record.revision > 1
+      ? clean(objectValue(record.metadata).returnReason)
+      : "";
   let state: AssessorLifecycleStateCode;
   let label: string;
   let description: string;
@@ -1122,7 +1126,10 @@ function deriveState(record: AssessmentRecord): HeadteacherSupervisoryAssessorRe
     finalizationReadinessIncluded: false,
     priorAssessmentId: record.priorAssessmentId,
     successorAssessmentId: successorId(record),
-    returnReason: returnReview ? clean(returnReview.note) : null,
+    returnReason:
+      returnReview
+        ? clean(returnReview.note)
+        : inheritedReturnReason || null,
     scoresIncluded: false,
     percentagesIncluded: false,
     reviewerIdentityIncluded: false,

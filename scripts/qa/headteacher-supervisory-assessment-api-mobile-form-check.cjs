@@ -127,6 +127,23 @@ assert(source.service.includes("respondentIdentitiesIncluded: false"), "Responde
 assert(source.service.includes("reviewerIdentityIncluded: false"), "Reviewer identity exclusion missing");
 assert(source.service.includes("contactDetailsIncluded: false"), "Contact exclusion missing");
 assert(source.service.includes("sections.length !== 4 || itemCount !== 34"), "Official form structure gate missing");
+assert(
+  source.client.includes("clearWorkspaceForAssessmentChange"),
+  "Assessment-change stale workspace reset missing",
+);
+assert(
+  source.client.includes("workspaceRef.current?.assessment.assessmentId !== id"),
+  "Workspace identity switch guard missing",
+);
+const createRevisionStart = source.client.indexOf("async function createRevision()");
+const createRevisionEnd = source.client.indexOf("if (!assessmentId && !cycleId)", createRevisionStart);
+const createRevisionSource = source.client.slice(createRevisionStart, createRevisionEnd);
+assert(
+  createRevisionSource.indexOf("clearWorkspaceForAssessmentChange();") >= 0 &&
+    createRevisionSource.indexOf("clearWorkspaceForAssessmentChange();") <
+      createRevisionSource.indexOf("setAssessmentId(nextId);"),
+  "Correction revision must clear stale workspace before switching IDs",
+);
 
 const originalLoader = Module._load;
 const originalTsExtension = Module._extensions[".ts"];
@@ -310,6 +327,7 @@ console.log("Assessment load                : owner-bound workspace");
 console.log("Section save                   : F3 transaction wired");
 console.log("Finalization                   : explicit confirmation + F3");
 console.log("Returned revision              : explicit confirmation + F4");
+console.log("Revision workspace switch      : stale prior revision cleared");
 console.log("Official form                  : 4 sections / 34 items");
 console.log("Section navigation             : exact anchored section targets");
 console.log("Previous / next navigation     : continues at the next section");
