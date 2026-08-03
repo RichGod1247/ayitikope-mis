@@ -190,7 +190,9 @@ function makeState() {
     reviews: [makeReview()],
     audits: [],
     transactionOptions: [],
+    transactionDepth: 0,
     readPackageCalls: 0,
+    packageReadsInsideTransaction: 0,
     planCalls: 0,
   };
 }
@@ -425,9 +427,15 @@ function createDatabase(state) {
     },
   };
   return {
+    appraisalReview: tx.appraisalReview,
     async $transaction(operation, options) {
       state.transactionOptions.push(deepClone(options));
-      return operation(tx);
+      state.transactionDepth += 1;
+      try {
+        return await operation(tx);
+      } finally {
+        state.transactionDepth -= 1;
+      }
     },
   };
 }
@@ -436,6 +444,14 @@ function dependencies(state) {
   return {
     async readReviewPackage() {
       state.readPackageCalls += 1;
+      if (state.transactionDepth !== 0) {
+        state.packageReadsInsideTransaction += 1;
+      }
+      assertEqual(
+        state.transactionDepth,
+        0,
+        "Review package must be rebuilt outside the write transaction",
+      );
       return makeReviewPackage(state);
     },
     planDecision({ reviewPackage, decision, note, confirm }) {
@@ -479,6 +495,11 @@ async function main() {
     3,
     "Return reasons must satisfy the revision contract",
   );
+  assertEqual(
+    HEADTEACHER_DIRECTOR_RETURN_HOLD_POLICY.reviewPackageReadMode,
+    "OUTSIDE_WRITE_TRANSACTION",
+    "The expensive review package must not run inside the write transaction",
+  );
 
   const returnState = makeState();
   const returned = await executeHeadteacherDirectorReturnOrHold(input(returnState));
@@ -496,6 +517,12 @@ async function main() {
   assertEqual(returned.releasePerformed, false, "Return must not release");
   assertEqual(returned.scoreMutationPerformed, false, "Return cannot rewrite scores");
   assertEqual(returnState.transactionOptions[0].isolationLevel, "Serializable", "Serializable transaction required");
+  assertEqual(
+    returnState.packageReadsInsideTransaction,
+    0,
+    "Return package read must remain outside the write transaction",
+  );
+  assertEqual(returnState.transactionDepth, 0, "Transaction depth must return to zero");
 
   const returnRetry = await executeHeadteacherDirectorReturnOrHold(input(returnState));
   assertEqual(returnRetry.outcome, "EXISTING_RETURNED", "Return retry mismatch");
@@ -517,6 +544,12 @@ async function main() {
   assertEqual(holdState.reviews[1].decision, "PENDING", "Next stage must be pending");
   assertEqual(holdState.reviews[1].metadata.continuedFromReviewId, "review-001", "Hold chain missing");
   assertEqual(holdState.audits.length, 1, "Hold must write one audit");
+  assertEqual(
+    holdState.packageReadsInsideTransaction,
+    0,
+    "Hold package read must remain outside the write transaction",
+  );
+  assertEqual(holdState.transactionDepth, 0, "Hold transaction depth must return to zero");
 
   const holdRetry = await executeHeadteacherDirectorReturnOrHold(
     input(holdState, {
@@ -575,6 +608,8 @@ async function main() {
     "reviewerMayRewriteScores: false",
     "respondentIdentitiesAccessed: false",
     "providerCalled: false",
+    'reviewPackageReadMode: "OUTSIDE_WRITE_TRANSACTION"',
+    "database as unknown as HeadteacherDirectorReviewPackageDatabase",
   ]) {
     assert(serviceSource.includes(required), `Required G3A marker missing: ${required}`);
   }
@@ -584,6 +619,7 @@ async function main() {
     "appraisalIdentityAccess.create",
     'status: "RELEASED"',
     'decision: "ACCEPTED"',
+    "database: tx",
   ]) {
     assert(!serviceSource.includes(forbidden), `Forbidden G3A marker found: ${forbidden}`);
   }
@@ -610,7 +646,7 @@ async function main() {
   console.log("");
   console.log("Decision authority              : District Director only");
   console.log("Eligible current state          : UNDER_REVIEW + latest PENDING stage");
-  console.log("Evidence package                : G2 recalculated package reused");
+  console.log("Evidence package                : G2 recalculated before write transaction");
   console.log("Return reason                   : required, 3-2000 characters");
   console.log("Return transition               : review RETURNED + assessment RETURNED");
   console.log("Return revision requirement     : true");
@@ -623,7 +659,7 @@ async function main() {
   console.log("Reviewer score rewriting        : forbidden");
   console.log("Respondent identities/forms     : not accessed");
   console.log("Audit reason/score leakage      : absent");
-  console.log("Transaction                     : serializable and bounded");
+  console.log("Write transaction               : short, serializable and bounded");
   console.log("Notifications/providers         : absent");
   console.log("Database accessed               : false");
   console.log("");

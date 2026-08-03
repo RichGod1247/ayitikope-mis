@@ -1,3 +1,4 @@
+//src/lib/appraisals/headteacherDirectorReviewDecision.ts
 import { createHash, randomUUID } from "crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -15,6 +16,7 @@ import {
   planHeadteacherDirectorReviewDecision,
   readHeadteacherDirectorReviewPackage,
   type HeadteacherDirectorReviewDecisionPlan,
+  type HeadteacherDirectorReviewPackage,
   type HeadteacherDirectorReviewPackageDatabase,
 } from "@/lib/appraisals/headteacherDirectorReviewPackage";
 import { effectiveRole } from "@/lib/roleRouting";
@@ -46,6 +48,7 @@ export const HEADTEACHER_DIRECTOR_RETURN_HOLD_POLICY = {
   respondentIdentitiesAccessed: false,
   individualStaffResponsesAccessed: false,
   providerCallsAllowed: false,
+  reviewPackageReadMode: "OUTSIDE_WRITE_TRANSACTION",
   transactionIsolation: "SERIALIZABLE",
   transactionMaxWaitMs: 10_000,
   transactionTimeoutMs: 20_000,
@@ -199,6 +202,9 @@ export type HeadteacherDirectorReturnHoldTransactionClient =
   };
 
 export type HeadteacherDirectorReturnHoldDatabase = {
+  appraisalReview: {
+    findUnique(args: unknown): Promise<Pick<ReviewRecord, "id" | "decision"> | null>;
+  };
   $transaction<T>(
     operation: (
       tx: HeadteacherDirectorReturnHoldTransactionClient,
@@ -710,12 +716,27 @@ function isUniqueViolation(error: unknown) {
   return clean((error as { code?: unknown })?.code) === "P2002";
 }
 
-async function runDecision(
+function isReviewPackageRequired(error: unknown) {
+  return (
+    clean((error as { code?: unknown })?.code || (error as Error)?.message) ===
+    "HEADTEACHER_DIRECTOR_RETURN_HOLD_REVIEW_PACKAGE_REQUIRED"
+  );
+}
+
+type PreparedReturnHoldRequest = {
+  actorUserId: string;
+  cycleId: string;
+  reviewId: string;
+  actorRole: string;
+  decision: HeadteacherDirectorReturnHoldDecision;
+  note: string;
+  now: Date;
+  reqId: string;
+};
+
+function prepareReturnHoldRequest(
   input: ExecuteHeadteacherDirectorReturnHoldInput,
-  database: HeadteacherDirectorReturnHoldDatabase,
-  dependencies: HeadteacherDirectorReturnHoldDependencies,
-  allowWrite: boolean,
-): Promise<ExecuteHeadteacherDirectorReturnHoldResult> {
+): PreparedReturnHoldRequest {
   const actorUserId = requireIdentifier(input.actorUserId, "actorUserId");
   const cycleId = requireIdentifier(input.cycleId, "cycleId");
   const reviewId = requireIdentifier(input.reviewId, "reviewId");
@@ -737,6 +758,36 @@ async function runDecision(
     { actorUserId, roleName: actorRole },
     HEADTEACHER_DIRECTOR_RETURN_HOLD_POLICY.requiredCapability,
   );
+
+  return {
+    actorUserId,
+    cycleId,
+    reviewId,
+    actorRole,
+    decision,
+    note,
+    now,
+    reqId,
+  };
+}
+
+async function runDecision(
+  input: ExecuteHeadteacherDirectorReturnHoldInput,
+  database: HeadteacherDirectorReturnHoldDatabase,
+  dependencies: HeadteacherDirectorReturnHoldDependencies,
+  prepared: PreparedReturnHoldRequest,
+  reviewPackage: HeadteacherDirectorReviewPackage | null,
+  allowWrite: boolean,
+): Promise<ExecuteHeadteacherDirectorReturnHoldResult> {
+  const {
+    actorUserId,
+    cycleId,
+    reviewId,
+    decision,
+    note,
+    now,
+    reqId,
+  } = prepared;
 
   return database.$transaction(
     async (tx) => {
@@ -834,14 +885,12 @@ async function runDecision(
         fail("HEADTEACHER_DIRECTOR_RETURN_HOLD_PENDING_STATE_DRIFT", 409);
       }
 
-      const reviewPackage = await dependencies.readReviewPackage({
-        actorUserId,
-        actorRoleName: actorRole,
-        cycleId,
-        governanceScope: input.governanceScope,
-        now,
-        database: tx,
-      });
+      if (!reviewPackage) {
+        fail(
+          "HEADTEACHER_DIRECTOR_RETURN_HOLD_REVIEW_PACKAGE_REQUIRED",
+          409,
+        );
+      }
       if (
         reviewPackage.review.id !== review.id ||
         reviewPackage.review.stage !== review.stage ||
@@ -1105,10 +1154,63 @@ export async function executeHeadteacherDirectorReturnOrHold(
     readReviewPackage: readHeadteacherDirectorReviewPackage,
     planDecision: planHeadteacherDirectorReviewDecision,
   };
+  const prepared = prepareReturnHoldRequest(input);
+
+  const sourceReview = await database.appraisalReview.findUnique({
+    where: { id: prepared.reviewId },
+    select: { id: true, decision: true },
+  });
+
+  let reviewPackage: HeadteacherDirectorReviewPackage | null = null;
+
+  if (sourceReview && normalized(sourceReview.decision) === "PENDING") {
+    try {
+      reviewPackage = await dependencies.readReviewPackage({
+        actorUserId: prepared.actorUserId,
+        actorRoleName: prepared.actorRole,
+        cycleId: prepared.cycleId,
+        governanceScope: input.governanceScope,
+        now: prepared.now,
+        database:
+          database as unknown as HeadteacherDirectorReviewPackageDatabase,
+      });
+    } catch (packageError) {
+      try {
+        return await runDecision(
+          input,
+          database,
+          dependencies,
+          prepared,
+          null,
+          false,
+        );
+      } catch (stateError) {
+        if (isReviewPackageRequired(stateError)) {
+          throw packageError;
+        }
+        throw stateError;
+      }
+    }
+  }
+
   try {
-    return await runDecision(input, database, dependencies, true);
+    return await runDecision(
+      input,
+      database,
+      dependencies,
+      prepared,
+      reviewPackage,
+      true,
+    );
   } catch (error) {
     if (!isUniqueViolation(error)) throw error;
-    return runDecision(input, database, dependencies, false);
+    return runDecision(
+      input,
+      database,
+      dependencies,
+      prepared,
+      reviewPackage,
+      false,
+    );
   }
 }

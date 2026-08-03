@@ -195,7 +195,9 @@ function makeState({ heldStage = false } = {}) {
     reviews,
     audits: [],
     transactionOptions: [],
+    transactionDepth: 0,
     readPackageCalls: 0,
+    packageReadsInsideTransaction: 0,
     planCalls: 0,
   };
 }
@@ -304,6 +306,14 @@ function makeDependencies(state, overrides = {}) {
   return {
     readReviewPackage: async () => {
       state.readPackageCalls += 1;
+      if (state.transactionDepth !== 0) {
+        state.packageReadsInsideTransaction += 1;
+      }
+      assertEqual(
+        state.transactionDepth,
+        0,
+        "Release review package must be rebuilt outside the write transaction",
+      );
       return overrides.reviewPackage ?? makeReviewPackage(state);
     },
     planDecision: () => {
@@ -336,73 +346,89 @@ function makeDependencies(state, overrides = {}) {
 }
 
 function makeDatabase(state) {
+  const tx = {
+    membership: {
+      async findFirst() {
+        return clone(state.membership);
+      },
+    },
+    appraisalCycle: {
+      async findUnique() {
+        return clone(state.cycle);
+      },
+      async updateMany(args) {
+        const where = args.where ?? {};
+        if (
+          state.cycle.id !== where.id ||
+          state.cycle.status !== where.status ||
+          state.cycle.releasedAt !== null
+        ) {
+          return { count: 0 };
+        }
+        Object.assign(state.cycle, clone(args.data));
+        return { count: 1 };
+      },
+    },
+    governanceOfficerAssignment: {
+      async findMany() {
+        return clone(state.assignments);
+      },
+    },
+    appraisalAggregateSnapshot: {
+      async findMany() {
+        return [];
+      },
+    },
+    appraisalAssessment: {
+      async findUnique() {
+        return clone(state.assessment);
+      },
+      async findMany() {
+        return [clone(state.assessment)];
+      },
+    },
+    appraisalReview: {
+      async findUnique(args) {
+        return clone(
+          state.reviews.find((review) => review.id === args.where.id) ?? null,
+        );
+      },
+      async findMany() {
+        return clone(state.reviews);
+      },
+      async updateMany(args) {
+        const review = state.reviews.find(
+          (candidate) => candidate.id === args.where.id,
+        );
+        if (
+          !review ||
+          review.decision !== "PENDING" ||
+          review.decidedAt !== null
+        ) {
+          return { count: 0 };
+        }
+        Object.assign(review, clone(args.data));
+        return { count: 1 };
+      },
+    },
+    auditLog: {
+      async create(args) {
+        state.audits.push(clone(args.data));
+        return clone(args.data);
+      },
+    },
+  };
+
   return {
+    appraisalReview: tx.appraisalReview,
     async $transaction(operation, options) {
       state.transactionOptions.push(clone(options));
-      return operation({
-        membership: {
-          async findFirst() {
-            return clone(state.membership);
-          },
-        },
-        appraisalCycle: {
-          async findUnique() {
-            return clone(state.cycle);
-          },
-          async updateMany(args) {
-            const where = args.where ?? {};
-            if (
-              state.cycle.id !== where.id ||
-              state.cycle.status !== where.status ||
-              state.cycle.releasedAt !== null
-            ) {
-              return { count: 0 };
-            }
-            Object.assign(state.cycle, clone(args.data));
-            return { count: 1 };
-          },
-        },
-        governanceOfficerAssignment: {
-          async findMany() {
-            return clone(state.assignments);
-          },
-        },
-        appraisalAggregateSnapshot: {
-          async findMany() {
-            return [];
-          },
-        },
-        appraisalAssessment: {
-          async findUnique() {
-            return clone(state.assessment);
-          },
-          async findMany() {
-            return [clone(state.assessment)];
-          },
-        },
-        appraisalReview: {
-          async findUnique(args) {
-            return clone(state.reviews.find((review) => review.id === args.where.id) ?? null);
-          },
-          async findMany() {
-            return clone(state.reviews);
-          },
-          async updateMany(args) {
-            const review = state.reviews.find((candidate) => candidate.id === args.where.id);
-            if (!review || review.decision !== "PENDING" || review.decidedAt !== null) {
-              return { count: 0 };
-            }
-            Object.assign(review, clone(args.data));
-            return { count: 1 };
-          },
-        },
-        auditLog: {
-          async create(args) {
-            state.audits.push(clone(args.data));
-            return clone(args.data);
-          },
-        },
-      });
+      state.transactionDepth += 1;
+      try {
+        return await operation(tx);
+      } finally {
+        state.transactionDepth -= 1;
+      }
     },
   };
 }
@@ -428,6 +454,11 @@ async function main() {
   assertEqual(HEADTEACHER_DIRECTOR_RELEASE_POLICY.releasedReviewDecision, "ACCEPTED", "Release decision must be ACCEPTED");
   assertEqual(HEADTEACHER_DIRECTOR_RELEASE_POLICY.assessmentMutationAllowed, false, "Assessment must remain immutable");
   assertEqual(HEADTEACHER_DIRECTOR_RELEASE_POLICY.notificationsSeeded, false, "G3B must not seed notifications");
+  assertEqual(
+    HEADTEACHER_DIRECTOR_RELEASE_POLICY.reviewPackageReadMode,
+    "OUTSIDE_WRITE_TRANSACTION",
+    "The expensive review package must not run inside the release transaction",
+  );
 
   const state = makeState();
   const beforeAssessment = clone(state.assessment);
@@ -451,6 +482,12 @@ async function main() {
   assertEqual(auditMetadata.respondentIdentitiesAccessed, false, "Audit must not include respondent identity access");
   assertEqual(auditMetadata.notificationsSeeded, false, "Audit must prove no notification seeding");
   assertEqual(state.transactionOptions[0].isolationLevel, "Serializable", "Transaction must be serializable");
+  assertEqual(
+    state.packageReadsInsideTransaction,
+    0,
+    "Release package read must remain outside the write transaction",
+  );
+  assertEqual(state.transactionDepth, 0, "Release transaction depth must return to zero");
 
   const retry = await executeHeadteacherDirectorRelease(baseInput(state));
   assertEqual(retry.outcome, "EXISTING_RELEASED", "Exact retry must be idempotent");
@@ -495,11 +532,35 @@ async function main() {
     "Release plan drift must fail closed",
   );
 
+  const serviceSource = fs.readFileSync(
+    path.join(repoRoot, "src/lib/appraisals/headteacherDirectorReviewRelease.ts"),
+    "utf8",
+  );
+  for (const required of [
+    'reviewPackageReadMode: "OUTSIDE_WRITE_TRANSACTION"',
+    "database as unknown as HeadteacherDirectorReviewPackageDatabase",
+    "Prisma.TransactionIsolationLevel.Serializable",
+    "HEADTEACHER_APPRAISAL_DIRECTOR_RELEASED",
+    "assessmentMutationAllowed: false",
+    "reviewerMayRewriteScores: false",
+    "providerCalled: false",
+  ]) {
+    assert(serviceSource.includes(required), `Required G3B marker missing: ${required}`);
+  }
+  for (const forbidden of [
+    "database: tx",
+    "sendSms",
+    "sendEmail",
+    "appraisalIdentityAccess.create",
+  ]) {
+    assert(!serviceSource.includes(forbidden), `Forbidden G3B marker found: ${forbidden}`);
+  }
+
   console.log("=== D3.4G3B DIRECTOR RELEASE + IMMUTABLE RELEASE PROOF ===");
   console.log("");
   console.log("Release authority               : District Director only");
   console.log("Eligible current state          : UNDER_REVIEW + latest PENDING stage");
-  console.log("Evidence package                : G2 recalculated package reused");
+  console.log("Evidence package                : G2 recalculated before write transaction");
   console.log("Evidence hashes                 : review/staff/supervisory reverified");
   console.log("Release transition              : review ACCEPTED + cycle RELEASED");
   console.log("Assessment status               : remains FINALIZED");
@@ -513,7 +574,7 @@ async function main() {
   console.log("Audit note/score leakage        : absent");
   console.log("Notification readiness          : post-release seeding ready");
   console.log("Notifications/providers         : absent");
-  console.log("Transaction                     : serializable and bounded");
+  console.log("Write transaction               : short, serializable and bounded");
   console.log("Database accessed               : false");
   console.log("");
   console.log("RESULT: D3.4G3B DIRECTOR RELEASE GREEN");
