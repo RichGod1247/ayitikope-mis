@@ -1,3 +1,4 @@
+//src/app/api/district/headteacher-appraisals/[cycleId]/release/route.ts
 import { NextRequest } from "next/server";
 import { executeHeadteacherDirectorRelease } from "@/lib/appraisals/headteacherDirectorReviewRelease";
 import { ensureHeadteacherDirectorReleaseNotifications } from "@/lib/appraisals/headteacherDirectorReleaseNotifications";

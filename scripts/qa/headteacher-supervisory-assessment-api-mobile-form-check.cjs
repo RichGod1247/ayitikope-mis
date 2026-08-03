@@ -72,10 +72,54 @@ assert(source.revision.includes("confirmRevision"), "Explicit revision confirmat
 assert(source.load.includes("loadHeadteacherSupervisoryAssessmentWorkspace"), "Workspace read not wired");
 assert(source.page.includes("requireGovernancePageContext"), "Page governance gate missing");
 assert(source.page.includes("operationalAssessorRoles"), "Page assessor roles missing");
-assert(source.client.includes("Save this section"), "Explicit section save UI missing");
-assert(source.client.includes("Question {itemIndex + 1}"), "One-question navigation missing");
+assert(source.client.includes("queueSectionAutosave"), "Serialized autosave queue missing");
+assert(source.client.includes("scrollIntoView"), "Anchored section navigation missing");
+assert(
+  source.client.includes("supervisory-section-"),
+  "Stable section scroll targets missing",
+);
+assert(
+  !source.client.includes("window.scrollTo"),
+  "Section navigation must not jump to the beginning of the page",
+);
+assert(
+  source.client.includes('aria-label="Overall completion"'),
+  "Desktop completion progress bar missing",
+);
+assert(
+  source.client.includes("Review Before you Submit"),
+  "Native review entry missing",
+);
+assert(
+  source.client.includes("Final review · read-only preview"),
+  "Native review state missing",
+);
+assert(
+  source.client.includes("Monitoring and Inspection Sheet (Headteachers)"),
+  "Native official form heading missing",
+);
+assert(
+  source.client.includes("Supervisory assessment · native final review copy"),
+  "Native review-copy label missing",
+);
+assert(
+  source.client.includes("min-w-[1120px]"),
+  "Mobile horizontal native-form canvas missing",
+);
+assert(
+  source.client.includes("Return to assessment"),
+  "Native review return action missing",
+);
 assert(source.client.includes("window.confirm"), "Explicit irreversible-action confirmation missing");
 assert(source.client.includes('cache: "no-store"'), "Client load cache policy missing");
+assert(
+  source.client.includes("Submit and lock assessment"),
+  "Final submission action missing from native review",
+);
+assert(
+  !source.client.includes("Save this section"),
+  "Manual section-save control must remain absent",
+);
 assert(!source.client.includes("<textarea"), "Comments control must remain absent");
 assert(source.client.includes("background polling"), "Low-network explanation missing");
 assert(source.service.includes("staffFeedbackIncluded: false"), "Staff feedback separation missing");
@@ -108,6 +152,21 @@ Module._load = function load(request, parent, isMain) {
   if (request === "@/lib/appraisals/headteacherSupervisoryAssessmentRevision") {
     return { readHeadteacherSupervisoryAssessorState: async () => { throw new Error("not used"); } };
   }
+
+  if (request.startsWith("@/")) {
+    const absoluteAliasPath = path.join(
+      repoRoot,
+      "src",
+      request.slice(2),
+    );
+    return originalLoader.call(
+      this,
+      absoluteAliasPath,
+      parent,
+      isMain,
+    );
+  }
+
   return originalLoader.call(this, request, parent, isMain);
 };
 
@@ -140,6 +199,7 @@ try {
     status: "DRAFT",
     revision: 1,
     evidenceSnapshotJson: {
+      schemaVersion: 1,
       target: { name: "Headteacher", schoolName: "Example Basic School" },
       assessor: { role: "SISSO" },
       jurisdiction: { circuitName: "Example Circuit", districtName: "Example District" },
@@ -242,7 +302,7 @@ try {
 }
 
 console.log("");
-console.log("=== D3.4F5 GOVERNANCE SUPERVISORY API + BBC MOBILE WORKSPACE ===");
+console.log("=== GOVERNANCE SUPERVISORY NAVIGATION + NATIVE FINAL REVIEW ===");
 console.log("");
 console.log("Audience scope                 : original authorized governance assessor");
 console.log("Draft creation                 : F2 transaction wired");
@@ -251,8 +311,12 @@ console.log("Section save                   : F3 transaction wired");
 console.log("Finalization                   : explicit confirmation + F3");
 console.log("Returned revision              : explicit confirmation + F4");
 console.log("Official form                  : 4 sections / 34 items");
-console.log("Mobile interaction             : one question at a time");
-console.log("Low-network behavior           : explicit section saves, no polling");
+console.log("Section navigation             : exact anchored section targets");
+console.log("Previous / next navigation     : continues at the next section");
+console.log("Desktop progress               : responsive completion bar visible");
+console.log("Mobile progress                : compact responsive completion bar");
+console.log("Low-network behavior           : serialized autosave, no polling");
+console.log("Native final review            : full 4-section / 34-item paper form");
 console.log("Rating controls                : 1-5 plus N/A");
 console.log("Lifecycle states               : draft/finalized/returned/superseded/released");
 console.log("Free-text comments             : absent");
@@ -263,4 +327,4 @@ console.log("Reviewer/contact identity      : absent");
 console.log("Provider calls                 : absent");
 console.log("Database accessed              : false");
 console.log("");
-console.log("RESULT: D3.4F5 GOVERNANCE SUPERVISORY WORKSPACE GREEN");
+console.log("RESULT: GOVERNANCE SUPERVISORY NATIVE REVIEW GREEN");

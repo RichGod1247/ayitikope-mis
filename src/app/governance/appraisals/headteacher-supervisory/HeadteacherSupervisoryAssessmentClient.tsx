@@ -421,6 +421,27 @@ function queueStateTone(state: SupervisoryQueueState) {
   }
 }
 
+function nativeScoreTone(
+  score: number | null | undefined,
+  notApplicable: boolean,
+) {
+  if (notApplicable) return "bg-slate-200 text-slate-900";
+  switch (score) {
+    case 1:
+      return "bg-rose-100 text-rose-950";
+    case 2:
+      return "bg-orange-100 text-orange-950";
+    case 3:
+      return "bg-amber-100 text-amber-950";
+    case 4:
+      return "bg-cyan-100 text-cyan-950";
+    case 5:
+      return "bg-emerald-100 text-emerald-950";
+    default:
+      return "bg-white text-slate-700";
+  }
+}
+
 export default function HeadteacherSupervisoryAssessmentClient({
   initialAssessmentId,
   initialCycleId,
@@ -451,6 +472,7 @@ export default function HeadteacherSupervisoryAssessmentClient({
   const [showSavedRecords, setShowSavedRecords] = useState(false);
   const [autosaveState, setAutosaveState] =
     useState<AutosaveState>("idle");
+  const [reviewMode, setReviewMode] = useState(false);
 
   const answersRef = useRef<Record<string, ScoreDraft>>({});
   const workspaceRef = useRef<Workspace | null>(null);
@@ -461,6 +483,7 @@ export default function HeadteacherSupervisoryAssessmentClient({
   const autosaveTimerRef = useRef<number | null>(null);
   const retryTimerRef = useRef<number | null>(null);
   const autosaveRunningRef = useRef(false);
+  const nativeReviewRef = useRef<HTMLElement | null>(null);
 
   const loadQueue = useCallback(async () => {
     setQueueLoading(true);
@@ -597,13 +620,6 @@ export default function HeadteacherSupervisoryAssessmentClient({
   }, [answers]);
 
   const currentSection = workspace?.sections[sectionIndex] ?? null;
-
-  const answeredInCurrentSection = useMemo(() => {
-    if (!currentSection) return 0;
-    return currentSection.items.filter(
-      (item) => answers[answerKey(currentSection.sectionKey, item.itemKey)],
-    ).length;
-  }, [answers, currentSection]);
 
   const localAnsweredItems = useMemo(() => Object.keys(answers).length, [answers]);
   const localCompletionPercentage = workspace
@@ -960,6 +976,7 @@ export default function HeadteacherSupervisoryAssessmentClient({
   ) {
     if (workspace?.assessment.canEdit !== true) return;
 
+    setReviewMode(false);
     const nextAnswers = {
       ...answersRef.current,
       [answerKey(sectionKey, itemKey)]: {
@@ -996,7 +1013,19 @@ export default function HeadteacherSupervisoryAssessmentClient({
     }
 
     await loadWorkspace(assessmentId, { sectionIndex, itemIndex });
-    setNotice("All answers are saved. Review the completed assessment before submitting.");
+    setReviewMode(true);
+    setNotice(
+      "All answers are saved. Review the complete native form before submitting.",
+    );
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        nativeReviewRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+    });
   }
 
   async function createDraft() {
@@ -1040,67 +1069,6 @@ export default function HeadteacherSupervisoryAssessmentClient({
         createError instanceof Error
           ? createError.message
           : "The assessment draft could not be created.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function saveCurrentSection() {
-    if (!workspace || !currentSection || !assessmentId) return;
-    const scores = currentSection.items.flatMap((item) => {
-      const answer = answers[answerKey(currentSection.sectionKey, item.itemKey)];
-      return answer
-        ? [
-            {
-              itemKey: item.itemKey,
-              score: answer.notApplicable ? null : answer.score,
-              notApplicable: answer.notApplicable,
-            },
-          ]
-        : [];
-    });
-    if (scores.length === 0) {
-      setError("Answer at least one question in this section before saving.");
-      return;
-    }
-
-    setBusy(true);
-    setError("");
-    setNotice("");
-    try {
-      const response = await fetch(
-        `/api/governance/appraisals/headteacher-supervisory/${encodeURIComponent(assessmentId)}/section`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sectionKey: currentSection.sectionKey,
-            scores,
-          }),
-        },
-      );
-      const body = (await readApiBody(response)) as
-        | { ok: true; result: { outcome: string } }
-        | ApiFailure;
-      if (!response.ok || body.ok !== true) {
-        throw new Error(messageFromFailure(body, response.status));
-      }
-      setNotice(
-        body.result.outcome === "UNCHANGED"
-          ? "This section was already saved."
-          : "Section saved on the server.",
-      );
-      const savedSectionIndex = sectionIndex;
-      const savedItemIndex = itemIndex;
-      await loadWorkspace(assessmentId);
-      setSectionIndex(savedSectionIndex);
-      setItemIndex(savedItemIndex);
-    } catch (saveError) {
-      setError(
-        saveError instanceof Error
-          ? saveError.message
-          : "The section could not be saved. Your answers remain on this screen.",
       );
     } finally {
       setBusy(false);
@@ -1704,19 +1672,58 @@ export default function HeadteacherSupervisoryAssessmentClient({
     );
   }
 
-  const editable = workspace.assessment.canEdit === true;
-  const safeSectionIndex = Math.min(sectionIndex, workspace.sections.length - 1);
-  const mobileSection = workspace.sections[safeSectionIndex];
+  const renderedWorkspace = workspace;
+  const editable = renderedWorkspace.assessment.canEdit === true;
+  const safeSectionIndex = Math.min(
+    sectionIndex,
+    renderedWorkspace.sections.length - 1,
+  );
+  const mobileSection = renderedWorkspace.sections[safeSectionIndex];
+
+  function scrollToRenderedSection(section: WorkspaceSection) {
+    const desktop = window.matchMedia("(min-width: 768px)").matches;
+    const targetId = `supervisory-section-${
+      desktop ? "desktop" : "mobile"
+    }-${section.sectionKey}`;
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        document.getElementById(targetId)?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+    });
+  }
 
   function goToSection(nextIndex: number) {
     if (!workspace) return;
-    const bounded = Math.max(0, Math.min(workspace.sections.length - 1, nextIndex));
+
+    const bounded = Math.max(
+      0,
+      Math.min(workspace.sections.length - 1, nextIndex),
+    );
+    const nextSection = workspace.sections[bounded];
+    if (!nextSection) return;
+
     if (currentSection) {
       queueSectionAutosave(currentSection.sectionKey, answersRef.current, 0);
     }
+
+    setReviewMode(false);
     setSectionIndex(bounded);
     setItemIndex(0);
-    window.setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 40);
+    scrollToRenderedSection(nextSection);
+  }
+
+  function returnToAssessment() {
+    setReviewMode(false);
+    setNotice("You can continue checking or changing the assessment.");
+
+    const section =
+      renderedWorkspace.sections[safeSectionIndex] ??
+      renderedWorkspace.sections[0];
+    if (section) scrollToRenderedSection(section);
   }
 
   function renderSection(section: WorkspaceSection, mobileOnly = false) {
@@ -1734,9 +1741,12 @@ export default function HeadteacherSupervisoryAssessmentClient({
 
     return (
       <section
-        key={section.sectionKey}
+        id={`supervisory-section-${
+          mobileOnly ? "mobile" : "desktop"
+        }-${section.sectionKey}`}
+        key={`${mobileOnly ? "mobile" : "desktop"}:${section.sectionKey}`}
         className={cx(
-          "rounded-[28px] border border-white/10 bg-white/[0.04] p-4 md:p-5",
+          "scroll-mt-28 rounded-[28px] border border-white/10 bg-white/[0.04] p-4 md:scroll-mt-32 md:p-5",
           mobileOnly ? "md:hidden" : "hidden md:block",
         )}
       >
@@ -1999,6 +2009,22 @@ export default function HeadteacherSupervisoryAssessmentClient({
                   </div>
                 </div>
               </div>
+              <div
+                className="mt-4 flex items-center gap-3"
+                aria-label="Overall completion"
+              >
+                <div className="h-3 flex-1 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-[linear-gradient(90deg,#D4AF37,#E879F9,#34D399)] transition-all duration-300"
+                    style={{ width: `${localCompletionPercentage}%` }}
+                  />
+                </div>
+                <span className="shrink-0 text-sm font-bold text-white">
+                  {localAnsweredItems}/{workspace.assessment.progress.totalItems}
+                  {" · "}
+                  {localCompletionPercentage}%
+                </span>
+              </div>
               <p className="mt-3 text-[11px] leading-5 text-slate-400">
                 Live score is provisional until all four sections are complete. Final overall score is the average of the four official section percentages.
               </p>
@@ -2032,26 +2058,24 @@ export default function HeadteacherSupervisoryAssessmentClient({
                 </div>
               </div>
 
-              {editable && localAnsweredItems === workspace.assessment.progress.totalItems && workspace.assessment.canFinalize !== true ? (
+              {editable &&
+              localAnsweredItems === workspace.assessment.progress.totalItems &&
+              !reviewMode ? (
                 <button
                   type="button"
                   disabled={busy || autosaveState === "saving"}
                   onClick={() => void reviewCompletedAssessment()}
                   className="mt-5 min-h-14 w-full rounded-2xl border border-white/10 bg-white/[0.06] px-5 text-base font-bold text-white hover:bg-white/[0.1] disabled:opacity-50"
                 >
-                  Review completed assessment
+                  Review Before you Submit
                 </button>
               ) : null}
 
-              {workspace.assessment.canFinalize ? (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void finalizeAssessment()}
-                  className="mt-5 min-h-14 w-full rounded-2xl border border-emerald-300/25 bg-emerald-400/15 px-5 text-base font-bold text-emerald-50 hover:bg-emerald-400/20 disabled:opacity-50"
-                >
-                  Submit and lock assessment
-                </button>
+              {workspace.assessment.canFinalize && reviewMode ? (
+                <p className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-100">
+                  The complete native form is open below. Check every selected score,
+                  section total and visit detail before locking the assessment.
+                </p>
               ) : null}
 
               {workspace.lifecycle.canCreateRevision ? (
@@ -2093,6 +2117,248 @@ export default function HeadteacherSupervisoryAssessmentClient({
             </button>
           </div>
         </section>
+
+        {reviewMode ? (
+          <section
+            ref={nativeReviewRef}
+            className="scroll-mt-24 rounded-[30px] border border-white/10 bg-white/[0.03] p-3 md:scroll-mt-28 md:p-5"
+          >
+            <div className="mb-4 flex flex-col gap-3 rounded-[24px] border border-emerald-300/20 bg-emerald-400/10 p-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-200">
+                  Final review · read-only preview
+                </p>
+                <h2 className="mt-1 text-xl font-bold text-white">
+                  Review Before you Submit
+                </h2>
+                <p className="mt-1 text-sm leading-6 text-emerald-50/90">
+                  This is the complete native Monitoring and Inspection Sheet.
+                  Scroll sideways on a small screen to inspect every score column.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={returnToAssessment}
+                className="min-h-12 rounded-2xl border border-white/15 bg-black/20 px-5 text-sm font-bold text-white hover:bg-black/30"
+              >
+                Return to assessment
+              </button>
+            </div>
+
+            <div className="overflow-x-auto rounded-[24px] border border-slate-300 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.28)]">
+              <div className="min-w-[1120px] bg-white text-slate-950">
+                <header className="border-b-2 border-slate-900 px-8 py-7 text-center">
+                  <p className="text-sm font-black uppercase tracking-[0.18em]">
+                    {workspace.visit.districtName}
+                  </p>
+                  <h3 className="mt-2 text-xl font-black uppercase">
+                    Monitoring and Inspection Sheet (Headteachers)
+                  </h3>
+                  <p className="mt-2 text-xs font-black uppercase tracking-[0.14em] text-indigo-700">
+                    Supervisory assessment · native final review copy
+                  </p>
+                </header>
+
+                <div className="grid grid-cols-[180px_1fr_220px_1fr] border-b border-slate-300 text-sm">
+                  {[
+                    ["Name of school", workspace.visit.schoolName],
+                    [
+                      "Staff strength",
+                      workspace.visit.staffStrength == null
+                        ? "Not captured in this historical record"
+                        : String(workspace.visit.staffStrength),
+                    ],
+                    ["Name of circuit", workspace.visit.circuitName],
+                    [
+                      "Total enrolment",
+                      workspace.visit.totalEnrolment == null
+                        ? "Not captured in this historical record"
+                        : String(workspace.visit.totalEnrolment),
+                    ],
+                    ["Name of Head", workspace.visit.targetName || "Headteacher"],
+                    [
+                      "Girls",
+                      workspace.visit.girls == null
+                        ? "Not captured in this historical record"
+                        : String(workspace.visit.girls),
+                    ],
+                    ["Date of visit", workspace.visit.dateObserved],
+                    [
+                      "Boys",
+                      workspace.visit.boys == null
+                        ? "Not captured in this historical record"
+                        : String(workspace.visit.boys),
+                    ],
+                    [
+                      "Arrival time",
+                      workspace.visit.arrivalTime ??
+                        "Not captured in this historical record",
+                    ],
+                    [
+                      "Teachers present at the time of visit",
+                      workspace.visit.teachersPresentAtVisit == null
+                        ? "Not captured in this historical record"
+                        : String(workspace.visit.teachersPresentAtVisit),
+                    ],
+                  ].map(([label, value], index) => (
+                    <div
+                      key={`${String(label)}:${index}`}
+                      className={cx(
+                        "contents",
+                        index % 2 === 0 ? "" : "",
+                      )}
+                    >
+                      <div className="border-b border-r border-slate-300 bg-slate-100 px-4 py-3 text-xs font-black uppercase">
+                        {label}
+                      </div>
+                      <div className="border-b border-r border-slate-300 px-4 py-3 font-semibold">
+                        {value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-[68px_1fr_62px_repeat(5,62px)_78px] border-b-2 border-slate-900 bg-slate-100 text-center text-sm font-black">
+                  <div className="border-r border-slate-300 px-2 py-4">S/N</div>
+                  <div className="border-r border-slate-300 px-4 py-4 text-left">
+                    Behavioural competence
+                    <span className="mt-1 block text-[11px] font-semibold">
+                      1—Very Poor · 2—Poor · 3—Acceptable · 4—Good · 5—Very Good
+                    </span>
+                  </div>
+                  {["N/A", "1", "2", "3", "4", "5", "Final score"].map(
+                    (label) => (
+                      <div
+                        key={label}
+                        className="border-r border-slate-300 px-2 py-4 last:border-r-0"
+                      >
+                        {label}
+                      </div>
+                    ),
+                  )}
+                </div>
+
+                {workspace.sections.map((section) => {
+                  const sectionScore = liveSectionScores.get(section.sectionKey);
+                  return (
+                    <div key={`native:${section.sectionKey}`}>
+                      <div className="grid grid-cols-[68px_1fr_62px_repeat(5,62px)_78px] bg-[#304C6E] text-sm font-black text-white">
+                        <div className="border-r border-white/20 px-3 py-3 text-center">
+                          {section.order}.0
+                        </div>
+                        <div className="col-span-8 px-4 py-3 uppercase">
+                          {section.title}
+                        </div>
+                      </div>
+
+                      {section.items.map((item) => {
+                        const answer =
+                          answers[
+                            answerKey(section.sectionKey, item.itemKey)
+                          ];
+                        return (
+                          <div
+                            key={`native:${section.sectionKey}:${item.itemKey}`}
+                            className="grid grid-cols-[68px_1fr_62px_repeat(5,62px)_78px] border-b border-slate-300 text-sm"
+                          >
+                            <div className="border-r border-slate-300 px-3 py-3 text-center font-bold">
+                              {item.itemKey}
+                            </div>
+                            <div className="border-r border-slate-300 px-4 py-3 font-medium">
+                              {item.label}
+                            </div>
+                            {[null, 1, 2, 3, 4, 5].map((score) => {
+                              const selected =
+                                score == null
+                                  ? answer?.notApplicable === true
+                                  : answer?.notApplicable !== true &&
+                                    answer?.score === score;
+                              return (
+                                <div
+                                  key={`${item.itemKey}:${score ?? "NA"}`}
+                                  className={cx(
+                                    "border-r border-slate-300 px-2 py-3 text-center text-xl font-black",
+                                    selected
+                                      ? nativeScoreTone(
+                                          answer?.score,
+                                          answer?.notApplicable === true,
+                                        )
+                                      : "bg-white text-slate-300",
+                                  )}
+                                >
+                                  {selected ? "✓" : ""}
+                                </div>
+                              );
+                            })}
+                            <div
+                              className={cx(
+                                "px-2 py-3 text-center text-base font-black",
+                                nativeScoreTone(
+                                  answer?.score,
+                                  answer?.notApplicable === true,
+                                ),
+                              )}
+                            >
+                              {answer?.notApplicable
+                                ? "N/A"
+                                : answer?.score ?? "—"}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      <div className="grid grid-cols-[1fr_260px] border-b-2 border-slate-900 bg-slate-50 text-sm">
+                        <div className="px-4 py-3 text-right font-black uppercase">
+                          Section {section.order} total
+                        </div>
+                        <div className="grid grid-cols-2">
+                          <div className="border-l border-slate-300 px-4 py-3 text-center font-black">
+                            {sectionScore?.rawScore ?? 0}/
+                            {sectionScore?.applicableMaximum ?? section.maxScore}
+                          </div>
+                          <div className="border-l border-slate-300 px-4 py-3 text-center font-black">
+                            {formatScorePercent(sectionScore?.percentage)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <footer className="grid grid-cols-[1fr_320px] border-t-2 border-slate-900 bg-indigo-50">
+                  <div className="px-6 py-5 text-right text-base font-black uppercase">
+                    Overall supervisory result
+                  </div>
+                  <div className="border-l-2 border-slate-900 px-6 py-5 text-center text-2xl font-black text-indigo-900">
+                    {formatScorePercent(liveScoreSummary.overallPercentage)}
+                  </div>
+                </footer>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={returnToAssessment}
+                className="min-h-14 rounded-2xl border border-white/15 bg-white/[0.06] px-5 text-base font-bold text-white hover:bg-white/[0.1]"
+              >
+                Return to assessment
+              </button>
+              <button
+                type="button"
+                disabled={
+                  busy ||
+                  workspace.assessment.canFinalize !== true ||
+                  pendingSectionSavesRef.current.size > 0
+                }
+                onClick={() => void finalizeAssessment()}
+                className="min-h-14 rounded-2xl border border-emerald-300/25 bg-emerald-400/15 px-5 text-base font-bold text-emerald-50 hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Submit and lock assessment
+              </button>
+            </div>
+          </section>
+        ) : null}
       </div>
     </div>
   );
