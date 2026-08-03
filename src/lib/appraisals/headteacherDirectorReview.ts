@@ -47,8 +47,26 @@ export const HEADTEACHER_DIRECTOR_REVIEW_POLICY = {
   transactionTimeoutMs: 20_000,
 } as const;
 
+export const HEADTEACHER_DIRECTOR_CORRECTION_CONTINUATION_POLICY = {
+  schemaVersion: 1,
+  requiredCycleStatus: "UNDER_REVIEW",
+  requiredAssessmentStatus: "FINALIZED",
+  requiredSourceAssessmentStatus: "SUPERSEDED",
+  minimumCorrectionRevision: 2,
+  reviewStage: 1,
+  reviewDecision: "PENDING",
+  sourceReviewDecision: "RETURNED",
+  preserveOriginalReviewer: true,
+  precomputeAggregateOutsideTransaction: true,
+  reviewerMayRewriteScores: false,
+  scoreMutationAllowed: false,
+  providerCallsAllowed: false,
+} as const;
+
 const REVIEW_STARTED_AUDIT_ACTION =
   "HEADTEACHER_APPRAISAL_DIRECTOR_REVIEW_STARTED";
+const CORRECTION_REVIEW_CONTINUED_AUDIT_ACTION =
+  "HEADTEACHER_APPRAISAL_DIRECTOR_CORRECTION_REVIEW_CONTINUED";
 
 export type HeadteacherDirectorReviewRequestMeta = {
   reqId?: string | null;
@@ -104,6 +122,42 @@ export type StartHeadteacherDirectorReviewResult = {
   reviewStartedAt: string;
   reviewEvidenceHash: string;
   evidence: HeadteacherDirectorReviewEvidenceReadiness;
+};
+
+
+export type HeadteacherDirectorCorrectionContinuationDependencies = {
+  readAggregateReadiness: typeof readHeadteacherFeedbackAggregateReadiness;
+};
+
+export type EnsureHeadteacherDirectorCorrectionReviewContinuationInput =
+  HeadteacherDirectorReviewRequestMeta & {
+    actorUserId: string;
+    actorRoleName: unknown;
+    assessmentId: string;
+    now?: Date;
+    database?: HeadteacherDirectorReviewDatabase;
+    dependencies?: HeadteacherDirectorCorrectionContinuationDependencies;
+  };
+
+export type EnsureHeadteacherDirectorCorrectionReviewContinuationResult = {
+  outcome: "NOT_REQUIRED" | "CREATED" | "EXISTING_REVIEW";
+  continuationRequired: boolean;
+  cycleId: string;
+  assessmentId: string;
+  assessmentRevision: number;
+  assessmentStatus: "FINALIZED";
+  sourceAssessmentId: string | null;
+  sourceReviewId: string | null;
+  sourceReviewStage: number | null;
+  reviewId: string | null;
+  reviewStage: 1 | null;
+  reviewDecision: "PENDING" | null;
+  reviewerUserId: string | null;
+  reviewerAssignmentId: string | null;
+  reviewEvidenceHash: string | null;
+  reviewCreated: boolean;
+  scoreMutationPerformed: false;
+  providerCalled: false;
 };
 
 type CycleRecord = {
@@ -271,6 +325,7 @@ type ReviewRecord = {
 
 type AppraisalReviewDelegate = {
   findUnique(args: unknown): Promise<ReviewRecord | null>;
+  findMany(args: unknown): Promise<ReviewRecord[]>;
   create(args: unknown): Promise<ReviewRecord>;
 };
 
@@ -294,6 +349,7 @@ export type HeadteacherDirectorReviewTransactionClient = {
     findMany(args: unknown): Promise<unknown[]>;
   };
   appraisalAssessment: {
+    findUnique(args: unknown): Promise<AssessmentRecord | null>;
     findMany(args: unknown): Promise<AssessmentRecord[]>;
   };
   appraisalReview: AppraisalReviewDelegate;
@@ -303,7 +359,13 @@ export type HeadteacherDirectorReviewTransactionClient = {
 };
 
 export type HeadteacherDirectorReviewDatabase = {
+  appraisalCycle: HeadteacherDirectorReviewTransactionClient["appraisalCycle"];
+  membership: HeadteacherDirectorReviewTransactionClient["membership"];
+  governanceOfficerAssignment: HeadteacherDirectorReviewTransactionClient["governanceOfficerAssignment"];
+  appraisalAggregateSnapshot: HeadteacherDirectorReviewTransactionClient["appraisalAggregateSnapshot"];
+  appraisalAssessment: HeadteacherDirectorReviewTransactionClient["appraisalAssessment"];
   appraisalReview: AppraisalReviewDelegate;
+  auditLog: HeadteacherDirectorReviewTransactionClient["auditLog"];
   $transaction<T>(
     operation: (tx: HeadteacherDirectorReviewTransactionClient) => Promise<T>,
     options?: {
@@ -1081,6 +1143,376 @@ function existingReviewResult(input: {
   };
 }
 
+
+type HeadteacherDirectorRunStartOptions = {
+  allowUnderReviewCreate?: boolean;
+  requiredAssessmentId?: string;
+  requiredReviewerAssignmentId?: string;
+  auditActorUserId?: string;
+  precomputedReadiness?: DirectorAggregateReadinessView;
+  continuation?: {
+    sourceAssessmentId: string;
+    sourceAssessmentRevision: number;
+    sourceReviewId: string;
+    sourceReviewStage: number;
+    returnEvidenceHash: string;
+  };
+};
+
+type HeadteacherDirectorCorrectionContinuationContext =
+  | {
+      kind: "NOT_REQUIRED";
+      assessment: AssessmentRecord;
+    }
+  | {
+      kind: "REQUIRED";
+      assessment: AssessmentRecord;
+      sourceAssessment: AssessmentRecord;
+      sourceReview: ReviewRecord;
+      readiness: DirectorAggregateReadinessView;
+      governanceScope: HeadteacherFeedbackGovernanceScope;
+      returnEvidenceHash: string;
+    };
+
+function isSha256(value: unknown) {
+  return /^[a-f0-9]{64}$/.test(clean(value).toLowerCase());
+}
+
+function assignmentWindowIsActive(
+  assignment: DirectorAssignmentRecord,
+  now: Date,
+) {
+  if (
+    normalized(assignment.status) !== "ACTIVE" ||
+    assignment.revokedAt ||
+    assignment.zone.isActive !== true
+  ) {
+    return false;
+  }
+  if (assignment.startsAt && assignment.startsAt.getTime() > now.getTime()) {
+    return false;
+  }
+  if (assignment.endsAt && assignment.endsAt.getTime() <= now.getTime()) {
+    return false;
+  }
+  return true;
+}
+
+function reviewScoreEditsPresent(value: unknown) {
+  const record = objectValue(value);
+  return ["scoreEdits", "scores", "itemScores", "sectionScores"].some(
+    (key) => {
+      const candidate = record[key];
+      if (Array.isArray(candidate)) return candidate.length > 0;
+      if (candidate && typeof candidate === "object") {
+        return Object.keys(candidate as Record<string, unknown>).length > 0;
+      }
+      return candidate != null && clean(candidate) !== "";
+    },
+  );
+}
+
+function correctionReturnEvidenceHash(
+  assessment: AssessmentRecord,
+  review: ReviewRecord,
+) {
+  return hashJson({
+    schemaVersion: 1,
+    workflow: HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.workflow,
+    assessmentId: assessment.id,
+    assessmentHash: clean(assessment.assessmentHash).toLowerCase(),
+    review: {
+      id: review.id,
+      stage: review.stage,
+      decision: normalized(review.decision),
+      note: clean(review.note),
+      reviewerUserId: review.reviewerUserId,
+      reviewerAssignmentId: review.reviewerAssignmentId,
+      decidedAt: review.decidedAt?.toISOString() ?? null,
+    },
+    reviewerScoreEditsIncluded: false,
+  });
+}
+
+function correctionRevisionKey(input: {
+  sourceAssessmentId: string;
+  revision: number;
+  sourceAssessmentHash: string;
+  returnEvidenceHash: string;
+  visitContextHash: string;
+}) {
+  return hashJson({
+    schemaVersion: 1,
+    originalAssessmentId: input.sourceAssessmentId,
+    nextRevision: input.revision,
+    sourceAssessmentHash: input.sourceAssessmentHash,
+    returnEvidenceHash: input.returnEvidenceHash,
+    visitContextHash: input.visitContextHash,
+  });
+}
+
+function assertContinuationMetadata(input: {
+  metadata: unknown;
+  sourceAssessment: AssessmentRecord;
+  sourceReview: ReviewRecord;
+  assessmentRevision: number;
+}) {
+  const metadata = objectValue(input.metadata);
+  const sourceHash = clean(input.sourceAssessment.assessmentHash).toLowerCase();
+  const returnHash = correctionReturnEvidenceHash(
+    input.sourceAssessment,
+    input.sourceReview,
+  );
+  const visitContextHash = clean(metadata.visitContextHash).toLowerCase();
+  const expectedRevisionKey = correctionRevisionKey({
+    sourceAssessmentId: input.sourceAssessment.id,
+    revision: input.assessmentRevision,
+    sourceAssessmentHash: sourceHash,
+    returnEvidenceHash: returnHash,
+    visitContextHash,
+  });
+  const sourceReviewMetadata = objectValue(input.sourceReview.metadata);
+
+  if (
+    clean(metadata.sourceAssessmentId) !== input.sourceAssessment.id ||
+    clean(metadata.sourceAssessmentHash).toLowerCase() !== sourceHash ||
+    clean(metadata.returnReviewId) !== input.sourceReview.id ||
+    Number(metadata.returnReviewStage) !== input.sourceReview.stage ||
+    clean(metadata.returnEvidenceHash).toLowerCase() !== returnHash ||
+    clean(metadata.returnReason) !== clean(input.sourceReview.note) ||
+    clean(metadata.revisionKey).toLowerCase() !== expectedRevisionKey ||
+    Number(metadata.revisionSchemaVersion) !== 1 ||
+    Number(metadata.copiedScoreCount) !==
+      HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.expectedItemCount ||
+    !isSha256(visitContextHash) ||
+    metadata.preserveVisitContext !== true ||
+    metadata.returnedAssessmentRequiresRevision !== true ||
+    metadata.reviewerMayRewriteScores !== false ||
+    metadata.separateFromStaffFeedback !== true ||
+    metadata.combinedWeightingDefined !== false ||
+    metadata.providerCalled !== false ||
+    sourceReviewMetadata.reviewerMayRewriteScores !== false ||
+    sourceReviewMetadata.scoreMutationPerformed !== false ||
+    reviewScoreEditsPresent(input.sourceReview.metadata)
+  ) {
+    fail("HEADTEACHER_DIRECTOR_REVIEW_CONTINUATION_REVISION_CHAIN_INVALID", 409, {
+      assessmentId: clean(metadata.sourceAssessmentId),
+    });
+  }
+
+  return returnHash;
+}
+
+function assertExistingContinuationMetadata(
+  review: ReviewRecord,
+  continuation: NonNullable<HeadteacherDirectorRunStartOptions["continuation"]>,
+) {
+  const metadata = objectValue(review.metadata);
+  if (
+    metadata.continuationType !== "CORRECTED_ASSESSMENT" ||
+    clean(metadata.continuedFromAssessmentId) !==
+      continuation.sourceAssessmentId ||
+    Number(metadata.continuedFromAssessmentRevision) !==
+      continuation.sourceAssessmentRevision ||
+    clean(metadata.continuedFromReviewId) !== continuation.sourceReviewId ||
+    Number(metadata.continuedFromReviewStage) !==
+      continuation.sourceReviewStage ||
+    clean(metadata.returnEvidenceHash).toLowerCase() !==
+      continuation.returnEvidenceHash ||
+    metadata.scoreMutationPerformed !== false
+  ) {
+    fail("HEADTEACHER_DIRECTOR_REVIEW_CONTINUATION_EXISTING_DRIFT", 409);
+  }
+}
+
+async function readCorrectionContinuationContext(
+  input: EnsureHeadteacherDirectorCorrectionReviewContinuationInput,
+  database: HeadteacherDirectorReviewDatabase,
+): Promise<HeadteacherDirectorCorrectionContinuationContext> {
+  const actorUserId = requireIdentifier(input.actorUserId, "actorUserId");
+  const assessmentId = requireIdentifier(input.assessmentId, "assessmentId");
+  const actorRole = effectiveRole(input.actorRoleName);
+  const operationalRoles =
+    HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.operationalAssessorRoles.map(
+      normalized,
+    );
+  if (!operationalRoles.includes(actorRole)) {
+    fail("HEADTEACHER_DIRECTOR_REVIEW_CONTINUATION_ASSESSOR_ROLE_FORBIDDEN", 403, {
+      actorRole,
+    });
+  }
+
+  const assessment = await database.appraisalAssessment.findUnique({
+    where: { id: assessmentId },
+    select: assessmentSelect,
+  });
+  if (!assessment) {
+    fail("HEADTEACHER_DIRECTOR_REVIEW_CONTINUATION_ASSESSMENT_NOT_FOUND", 404);
+  }
+  if (
+    assessment.assessorUserId !== actorUserId ||
+    normalized(assessment.status) !==
+      HEADTEACHER_DIRECTOR_CORRECTION_CONTINUATION_POLICY.requiredAssessmentStatus
+  ) {
+    fail("HEADTEACHER_DIRECTOR_REVIEW_CONTINUATION_FINALIZED_OWNER_REQUIRED", 409, {
+      assessmentId,
+      status: normalized(assessment.status),
+    });
+  }
+  if (assessment.revision === 1 && !assessment.priorAssessmentId) {
+    return { kind: "NOT_REQUIRED", assessment };
+  }
+
+  const now = input.now ?? new Date();
+  const assessorAssignments =
+    await database.governanceOfficerAssignment.findMany({
+      where: { userId: actorUserId },
+      select: assignmentSelect,
+    });
+  const exactAssessorAssignments = assessorAssignments.filter(
+    (assignment) =>
+      assignment.id === assessment.assessorAssignmentId &&
+      assignment.userId === actorUserId &&
+      effectiveRole(assignment.role) === actorRole &&
+      assignmentWindowIsActive(assignment, now),
+  );
+  if (exactAssessorAssignments.length !== 1) {
+    fail(
+      "HEADTEACHER_DIRECTOR_REVIEW_CONTINUATION_ASSESSOR_ASSIGNMENT_INVALID",
+      403,
+      { activeAssignments: exactAssessorAssignments.length },
+    );
+  }
+
+  if (
+    assessment.revision <
+      HEADTEACHER_DIRECTOR_CORRECTION_CONTINUATION_POLICY.minimumCorrectionRevision ||
+    !assessment.priorAssessmentId
+  ) {
+    fail("HEADTEACHER_DIRECTOR_REVIEW_CONTINUATION_REVISION_CHAIN_INVALID", 409);
+  }
+
+  const sourceAssessment = await database.appraisalAssessment.findUnique({
+    where: { id: assessment.priorAssessmentId },
+    select: assessmentSelect,
+  });
+  if (
+    !sourceAssessment ||
+    normalized(sourceAssessment.status) !==
+      HEADTEACHER_DIRECTOR_CORRECTION_CONTINUATION_POLICY.requiredSourceAssessmentStatus ||
+    sourceAssessment.cycleId !== assessment.cycleId ||
+    sourceAssessment.revision + 1 !== assessment.revision ||
+    sourceAssessment.assessorUserId !== assessment.assessorUserId ||
+    sourceAssessment.assessorAssignmentId !== assessment.assessorAssignmentId ||
+    sourceAssessment.instrumentVersionId !== assessment.instrumentVersionId ||
+    !isSha256(sourceAssessment.assessmentHash)
+  ) {
+    fail("HEADTEACHER_DIRECTOR_REVIEW_CONTINUATION_SOURCE_ASSESSMENT_INVALID", 409);
+  }
+
+  const metadata = objectValue(assessment.metadata);
+  const returnReviewId = requireIdentifier(metadata.returnReviewId, "returnReviewId");
+  const sourceReview = await database.appraisalReview.findUnique({
+    where: { id: returnReviewId },
+    select: reviewSelect,
+  });
+  const sourceReviews = await database.appraisalReview.findMany({
+    where: { assessmentId: sourceAssessment.id },
+    select: reviewSelect,
+    orderBy: [{ stage: "asc" }, { createdAt: "asc" }],
+  });
+  const latestSourceReview = [...sourceReviews]
+    .sort(
+      (left, right) =>
+        left.stage - right.stage ||
+        left.createdAt.getTime() - right.createdAt.getTime(),
+    )
+    .at(-1);
+  if (
+    !sourceReview ||
+    !latestSourceReview ||
+    sourceReview.cycleId !== assessment.cycleId ||
+    sourceReview.assessmentId !== sourceAssessment.id ||
+    normalized(sourceReview.decision) !==
+      HEADTEACHER_DIRECTOR_CORRECTION_CONTINUATION_POLICY.sourceReviewDecision ||
+    !sourceReview.decidedAt ||
+    !sourceReview.reviewerAssignmentId ||
+    clean(sourceReview.note).length < 3
+  ) {
+    fail("HEADTEACHER_DIRECTOR_REVIEW_CONTINUATION_SOURCE_REVIEW_INVALID", 409);
+  }
+  if (latestSourceReview.id !== sourceReview.id) {
+    fail(
+      "HEADTEACHER_DIRECTOR_REVIEW_CONTINUATION_SOURCE_REVIEW_NOT_LATEST",
+      409,
+      {
+        sourceReviewId: sourceReview.id,
+        latestReviewId: latestSourceReview.id,
+      },
+    );
+  }
+
+  const returnEvidenceHash = assertContinuationMetadata({
+    metadata: assessment.metadata,
+    sourceAssessment,
+    sourceReview,
+    assessmentRevision: assessment.revision,
+  });
+
+  const cycle = await database.appraisalCycle.findUnique({
+    where: { id: assessment.cycleId },
+    select: cycleSelect,
+  });
+  if (!cycle) {
+    fail("HEADTEACHER_DIRECTOR_REVIEW_CONTINUATION_CYCLE_NOT_FOUND", 404);
+  }
+  assertCycleContract(cycle);
+  if (
+    normalized(cycle.status) !==
+      HEADTEACHER_DIRECTOR_CORRECTION_CONTINUATION_POLICY.requiredCycleStatus ||
+    !cycle.reviewStartedAt
+  ) {
+    fail(
+      "HEADTEACHER_DIRECTOR_REVIEW_CONTINUATION_CYCLE_NOT_UNDER_REVIEW",
+      409,
+      { cycleStatus: normalized(cycle.status) },
+    );
+  }
+  const targetTenantId = requireIdentifier(
+    cycle.targetTenantId,
+    "targetTenantId",
+  );
+  const governanceScope: HeadteacherFeedbackGovernanceScope = {
+    isSuperAdmin: false,
+    tenantIds: [targetTenantId],
+  };
+
+  const dependencies = input.dependencies ?? {
+    readAggregateReadiness: readHeadteacherFeedbackAggregateReadiness,
+  };
+  const readiness = directorReadiness(
+    await dependencies.readAggregateReadiness({
+      actorUserId: sourceReview.reviewerUserId,
+      actorRoleName: HEADTEACHER_DIRECTOR_REVIEW_POLICY.reviewerRole,
+      cycleId: assessment.cycleId,
+      governanceScope,
+      database:
+        database as unknown as HeadteacherFeedbackAggregateReadinessDatabase,
+    }),
+    "UNDER_REVIEW",
+  );
+
+  return {
+    kind: "REQUIRED",
+    assessment,
+    sourceAssessment,
+    sourceReview,
+    readiness,
+    governanceScope,
+    returnEvidenceHash,
+  };
+}
+
 function isUniqueViolation(error: unknown) {
   const candidate = error as { code?: unknown };
   return clean(candidate?.code) === "P2002";
@@ -1090,6 +1522,7 @@ async function runStart(
   input: StartHeadteacherDirectorReviewInput,
   database: HeadteacherDirectorReviewDatabase,
   allowCreate: boolean,
+  options: HeadteacherDirectorRunStartOptions = {},
 ): Promise<StartHeadteacherDirectorReviewResult> {
   const actorUserId = requireIdentifier(input.actorUserId, "actorUserId");
   const cycleId = requireIdentifier(input.cycleId, "cycleId");
@@ -1167,16 +1600,26 @@ async function runStart(
         scopeZoneId: cycle.scopeZoneId,
         now,
       });
+      if (
+        options.requiredReviewerAssignmentId &&
+        assignment.id !== options.requiredReviewerAssignmentId
+      ) {
+        fail(
+          "HEADTEACHER_DIRECTOR_REVIEW_CONTINUATION_REVIEWER_ASSIGNMENT_DRIFT",
+          409,
+        );
+      }
 
       const readiness = directorReadiness(
-        await readHeadteacherFeedbackAggregateReadiness({
-          actorUserId,
-          actorRoleName: actorRole,
-          cycleId,
-          governanceScope: input.governanceScope,
-          database:
-            tx as unknown as HeadteacherFeedbackAggregateReadinessDatabase,
-        }),
+        options.precomputedReadiness ??
+          (await readHeadteacherFeedbackAggregateReadiness({
+            actorUserId,
+            actorRoleName: actorRole,
+            cycleId,
+            governanceScope: input.governanceScope,
+            database:
+              tx as unknown as HeadteacherFeedbackAggregateReadinessDatabase,
+          })),
         cycleStatus === "CLOSED" ? "READY_FOR_REVIEW" : "UNDER_REVIEW",
       );
 
@@ -1188,6 +1631,15 @@ async function runStart(
       const assessment = currentFinalizedAssessment(assessments);
       if (assessment.cycleId !== cycle.id) {
         fail("HEADTEACHER_DIRECTOR_REVIEW_ASSESSMENT_CYCLE_DRIFT", 409);
+      }
+      if (
+        options.requiredAssessmentId &&
+        assessment.id !== options.requiredAssessmentId
+      ) {
+        fail("HEADTEACHER_DIRECTOR_REVIEW_CONTINUATION_CURRENT_ASSESSMENT_DRIFT", 409, {
+          expectedAssessmentId: options.requiredAssessmentId,
+          currentAssessmentId: assessment.id,
+        });
       }
       const verified = verifySupervisoryAssessment(assessment);
       const evidence = reviewEvidence({
@@ -1213,11 +1665,8 @@ async function runStart(
         select: reviewSelect,
       });
 
-      if (cycleStatus === "UNDER_REVIEW") {
-        if (!existing) {
-          fail("HEADTEACHER_DIRECTOR_REVIEW_RECORD_MISSING", 409);
-        }
-        return existingReviewResult({
+      if (cycleStatus === "UNDER_REVIEW" && existing) {
+        const result = existingReviewResult({
           cycle,
           review: existing,
           actorUserId,
@@ -1225,19 +1674,47 @@ async function runStart(
           evidence,
           expectedEvidenceHash: evidenceHash,
         });
+        if (options.continuation) {
+          assertExistingContinuationMetadata(existing, options.continuation);
+        }
+        return result;
       }
 
-      if (existing) {
+      if (
+        cycleStatus === "UNDER_REVIEW" &&
+        !options.allowUnderReviewCreate
+      ) {
+        fail("HEADTEACHER_DIRECTOR_REVIEW_RECORD_MISSING", 409);
+      }
+      if (cycleStatus === "CLOSED" && existing) {
         fail("HEADTEACHER_DIRECTOR_REVIEW_PREMATURE_RECORD", 409);
       }
       if (!allowCreate) {
         fail("HEADTEACHER_DIRECTOR_REVIEW_CONCURRENT_STATE_NOT_VISIBLE", 409);
       }
 
-      const metadata = reviewMetadata({
-        evidence,
-        reviewEvidenceHash: evidenceHash,
-      });
+      const metadata = {
+        ...reviewMetadata({
+          evidence,
+          reviewEvidenceHash: evidenceHash,
+        }),
+        ...(options.continuation
+          ? {
+              continuationSchemaVersion:
+                HEADTEACHER_DIRECTOR_CORRECTION_CONTINUATION_POLICY.schemaVersion,
+              continuationType: "CORRECTED_ASSESSMENT",
+              continuedFromAssessmentId:
+                options.continuation.sourceAssessmentId,
+              continuedFromAssessmentRevision:
+                options.continuation.sourceAssessmentRevision,
+              continuedFromReviewId: options.continuation.sourceReviewId,
+              continuedFromReviewStage:
+                options.continuation.sourceReviewStage,
+              returnEvidenceHash: options.continuation.returnEvidenceHash,
+              scoreMutationPerformed: false,
+            }
+          : {}),
+      };
       const review = await tx.appraisalReview.create({
         data: {
           cycleId,
@@ -1253,11 +1730,13 @@ async function runStart(
         select: reviewSelect,
       });
 
+      const effectiveReviewStartedAt =
+        cycleStatus === "UNDER_REVIEW" ? cycle.reviewStartedAt! : now;
       const updatedCycle = await tx.appraisalCycle.update({
         where: { id: cycleId },
         data: {
           status: "UNDER_REVIEW",
-          reviewStartedAt: now,
+          reviewStartedAt: effectiveReviewStartedAt,
           metadata: {
             ...objectValue(cycle.metadata),
             directorReview: {
@@ -1275,6 +1754,25 @@ async function runStart(
               combinedWeightingDefined: false,
               respondentIdentitiesAccessed: false,
               reviewerMayRewriteScores: false,
+              ...(options.continuation
+                ? {
+                    continuationSchemaVersion:
+                      HEADTEACHER_DIRECTOR_CORRECTION_CONTINUATION_POLICY.schemaVersion,
+                    continuationType: "CORRECTED_ASSESSMENT",
+                    continuedFromAssessmentId:
+                      options.continuation.sourceAssessmentId,
+                    continuedFromAssessmentRevision:
+                      options.continuation.sourceAssessmentRevision,
+                    continuedFromReviewId:
+                      options.continuation.sourceReviewId,
+                    continuedFromReviewStage:
+                      options.continuation.sourceReviewStage,
+                    returnEvidenceHash:
+                      options.continuation.returnEvidenceHash,
+                    scoreMutationPerformed: false,
+                    providerCalled: false,
+                  }
+                : {}),
             },
           },
         },
@@ -1292,18 +1790,21 @@ async function runStart(
         fail("HEADTEACHER_DIRECTOR_REVIEW_CYCLE_UPDATE_FAILED", 409);
       }
 
+      const auditAction = options.continuation
+        ? CORRECTION_REVIEW_CONTINUED_AUDIT_ACTION
+        : REVIEW_STARTED_AUDIT_ACTION;
       await tx.auditLog.create({
         data: {
           tenantId: targetTenantId,
-          userId: actorUserId,
-          action: REVIEW_STARTED_AUDIT_ACTION,
-          resource: "AppraisalCycle",
-          resourceId: cycleId,
+          userId: options.auditActorUserId ?? actorUserId,
+          action: auditAction,
+          resource: options.continuation ? "AppraisalReview" : "AppraisalCycle",
+          resourceId: options.continuation ? review.id : cycleId,
           ip: input.ip ?? undefined,
           userAgent: input.userAgent ?? undefined,
           metadata: {
             reqId,
-            action: REVIEW_STARTED_AUDIT_ACTION,
+            action: auditAction,
             workflow: HEADTEACHER_DIRECTOR_REVIEW_POLICY.workflow,
             cycleId,
             reviewId: review.id,
@@ -1322,6 +1823,22 @@ async function runStart(
             directorAuthoredAssessment:
               evidence.supervisoryAssessment.directorAuthored,
             reviewEvidenceHash: evidenceHash,
+            ...(options.continuation
+              ? {
+                  continuationType: "CORRECTED_ASSESSMENT",
+                  sourceAssessmentId:
+                    options.continuation.sourceAssessmentId,
+                  sourceAssessmentRevision:
+                    options.continuation.sourceAssessmentRevision,
+                  sourceReturnReviewId:
+                    options.continuation.sourceReviewId,
+                  sourceReturnReviewStage:
+                    options.continuation.sourceReviewStage,
+                  returnEvidenceHash:
+                    options.continuation.returnEvidenceHash,
+                  scoreMutationPerformed: false,
+                }
+              : {}),
             separateEvidenceStreams: true,
             combinedWeightingDefined: false,
             scoreValuesIncluded: false,
@@ -1366,4 +1883,95 @@ export async function startHeadteacherDirectorReview(
     if (!isUniqueViolation(error)) throw error;
     return runStart(input, database, false);
   }
+}
+
+export async function ensureHeadteacherDirectorCorrectionReviewContinuation(
+  input: EnsureHeadteacherDirectorCorrectionReviewContinuationInput,
+): Promise<EnsureHeadteacherDirectorCorrectionReviewContinuationResult> {
+  const database =
+    input.database ?? (prisma as unknown as HeadteacherDirectorReviewDatabase);
+  const context = await readCorrectionContinuationContext(input, database);
+
+  if (context.kind === "NOT_REQUIRED") {
+    return {
+      outcome: "NOT_REQUIRED",
+      continuationRequired: false,
+      cycleId: context.assessment.cycleId,
+      assessmentId: context.assessment.id,
+      assessmentRevision: context.assessment.revision,
+      assessmentStatus: "FINALIZED",
+      sourceAssessmentId: null,
+      sourceReviewId: null,
+      sourceReviewStage: null,
+      reviewId: null,
+      reviewStage: null,
+      reviewDecision: null,
+      reviewerUserId: null,
+      reviewerAssignmentId: null,
+      reviewEvidenceHash: null,
+      reviewCreated: false,
+      scoreMutationPerformed: false,
+      providerCalled: false,
+    };
+  }
+
+  const sourceReviewAssignmentId = requireIdentifier(
+    context.sourceReview.reviewerAssignmentId,
+    "reviewerAssignmentId",
+  );
+  const startInput: StartHeadteacherDirectorReviewInput = {
+    actorUserId: context.sourceReview.reviewerUserId,
+    actorRoleName: HEADTEACHER_DIRECTOR_REVIEW_POLICY.reviewerRole,
+    cycleId: context.assessment.cycleId,
+    confirm: true,
+    governanceScope: context.governanceScope,
+    reqId: input.reqId,
+    ip: input.ip,
+    userAgent: input.userAgent,
+    now: input.now,
+    database,
+  };
+  const options: HeadteacherDirectorRunStartOptions = {
+    allowUnderReviewCreate: true,
+    requiredAssessmentId: context.assessment.id,
+    requiredReviewerAssignmentId: sourceReviewAssignmentId,
+    auditActorUserId: input.actorUserId,
+    precomputedReadiness: context.readiness,
+    continuation: {
+      sourceAssessmentId: context.sourceAssessment.id,
+      sourceAssessmentRevision: context.sourceAssessment.revision,
+      sourceReviewId: context.sourceReview.id,
+      sourceReviewStage: context.sourceReview.stage,
+      returnEvidenceHash: context.returnEvidenceHash,
+    },
+  };
+
+  let result: StartHeadteacherDirectorReviewResult;
+  try {
+    result = await runStart(startInput, database, true, options);
+  } catch (error) {
+    if (!isUniqueViolation(error)) throw error;
+    result = await runStart(startInput, database, false, options);
+  }
+
+  return {
+    outcome: result.outcome === "STARTED" ? "CREATED" : "EXISTING_REVIEW",
+    continuationRequired: true,
+    cycleId: result.cycleId,
+    assessmentId: context.assessment.id,
+    assessmentRevision: context.assessment.revision,
+    assessmentStatus: "FINALIZED",
+    sourceAssessmentId: context.sourceAssessment.id,
+    sourceReviewId: context.sourceReview.id,
+    sourceReviewStage: context.sourceReview.stage,
+    reviewId: result.reviewId,
+    reviewStage: result.reviewStage,
+    reviewDecision: result.reviewDecision,
+    reviewerUserId: result.reviewerUserId,
+    reviewerAssignmentId: result.reviewerAssignmentId,
+    reviewEvidenceHash: result.reviewEvidenceHash,
+    reviewCreated: result.outcome === "STARTED",
+    scoreMutationPerformed: false,
+    providerCalled: false,
+  };
 }

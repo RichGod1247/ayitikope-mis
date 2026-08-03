@@ -1,5 +1,6 @@
 //src/app/api/governance/appraisals/headteacher-supervisory/[assessmentId]/finalize/route.ts
 import { NextRequest } from "next/server";
+import { ensureHeadteacherDirectorCorrectionReviewContinuation } from "@/lib/appraisals/headteacherDirectorReview";
 import { finalizeHeadteacherSupervisoryAssessment } from "@/lib/appraisals/headteacherSupervisoryAssessmentScoring";
 import {
   clean,
@@ -66,11 +67,56 @@ export async function POST(req: NextRequest, context: RouteContext) {
       ip: meta.ip,
       userAgent: meta.userAgent,
     });
-    return jsonNoStore(200, {
-      ok: true,
-      reqId: meta.reqId,
-      result,
-    });
+
+    try {
+      const continuation =
+        await ensureHeadteacherDirectorCorrectionReviewContinuation({
+          actorUserId: auth.ctx.userId,
+          actorRoleName: auth.ctx.roleName,
+          assessmentId,
+          reqId: meta.reqId,
+          ip: meta.ip,
+          userAgent: meta.userAgent,
+        });
+
+      return jsonNoStore(200, {
+        ok: true,
+        reqId: meta.reqId,
+        result,
+        continuation,
+      });
+    } catch (continuationError) {
+      const failure = continuationError as Error & {
+        code?: unknown;
+        status?: unknown;
+      };
+      console.error(
+        "[HEADTEACHER_SUPERVISORY_FINALIZATION_CONTINUATION_ERROR]",
+        {
+          reqId: meta.reqId,
+          assessmentId,
+          finalizationOutcome: result.outcome,
+          assessmentHash: result.assessmentHash,
+          error: clean(failure.code || failure.message),
+          status: Number(failure.status) || null,
+        },
+      );
+
+      return jsonNoStore(503, {
+        ok: false,
+        reqId: meta.reqId,
+        error:
+          "HEADTEACHER_SUPERVISORY_FINALIZATION_CONTINUATION_RETRY_REQUIRED",
+        finalizationCommitted: true,
+        retrySafe: true,
+        result,
+        continuation: {
+          outcome: "RETRY_REQUIRED",
+          reviewCreated: false,
+          providerCalled: false,
+        },
+      });
+    }
   } catch (error) {
     return supervisoryApiError({
       error,

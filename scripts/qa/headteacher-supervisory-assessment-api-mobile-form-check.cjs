@@ -67,6 +67,30 @@ assert(source.create.includes("createHeadteacherSupervisoryAssessmentDraft"), "F
 assert(source.section.includes("saveHeadteacherSupervisoryAssessmentSection"), "F3 section save not wired");
 assert(source.finalize.includes("finalizeHeadteacherSupervisoryAssessment"), "F3 finalization not wired");
 assert(source.finalize.includes("confirmFinalization"), "Explicit finalization confirmation missing");
+assert(
+  source.finalize.includes(
+    "ensureHeadteacherDirectorCorrectionReviewContinuation",
+  ),
+  "Correction finalization continuation not wired",
+);
+assert(
+  !source.finalize.includes("auth.scope"),
+  "Finalize route must not depend on an unverified auth scope shape",
+);
+assert(
+  source.finalize.includes("finalizationCommitted: true"),
+  "Post-finalization continuation failure must report committed finalization",
+);
+assert(
+  source.finalize.includes("retrySafe: true"),
+  "Post-finalization continuation failure must be retry-safe",
+);
+assert(
+  source.finalize.includes(
+    "HEADTEACHER_SUPERVISORY_FINALIZATION_CONTINUATION_RETRY_REQUIRED",
+  ),
+  "Correction continuation retry contract missing",
+);
 assert(source.revision.includes("createReturnedHeadteacherSupervisoryAssessmentRevision"), "F4 revision not wired");
 assert(source.revision.includes("confirmRevision"), "Explicit revision confirmation missing");
 assert(source.load.includes("loadHeadteacherSupervisoryAssessmentWorkspace"), "Workspace read not wired");
@@ -326,6 +350,8 @@ console.log("Draft creation                 : F2 transaction wired");
 console.log("Assessment load                : owner-bound workspace");
 console.log("Section save                   : F3 transaction wired");
 console.log("Finalization                   : explicit confirmation + F3");
+console.log("Correction continuation        : post-finalization Director Stage 1 bridge");
+console.log("Continuation retry             : finalization-committed and retry-safe");
 console.log("Returned revision              : explicit confirmation + F4");
 console.log("Revision workspace switch      : stale prior revision cleared");
 console.log("Official form                  : 4 sections / 34 items");
