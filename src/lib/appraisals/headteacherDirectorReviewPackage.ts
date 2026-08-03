@@ -23,6 +23,10 @@ import {
   canonicalHeadteacherSupervisoryAssessorRole,
   inspectHeadteacherSupervisoryInstrument,
 } from "@/lib/appraisals/headteacherSupervisoryAssessment";
+import {
+  HEADTEACHER_SUPERVISORY_VISIT_DETAILS_POLICY,
+  visitDetailsFromEvidenceSnapshot,
+} from "@/lib/appraisals/headteacherSupervisoryVisitDetails";
 import { calculateAppraisalScores } from "@/lib/appraisals/scoring";
 import { effectiveRole } from "@/lib/roleRouting";
 
@@ -38,6 +42,8 @@ export const HEADTEACHER_DIRECTOR_REVIEW_PACKAGE_POLICY = {
   expectedSectionCount: 4,
   expectedItemCount: 34,
   expectedSectionMaximums: [55, 45, 40, 30] as const,
+  officialVisitDetailsIncluded: true,
+  legacyVisitContextReadable: true,
   separateEvidenceStreams: true,
   combinedWeightingDefined: false,
   comparisonDirection: "SUPERVISORY_MINUS_STAFF_PERCENTAGE_POINTS",
@@ -188,6 +194,16 @@ export type HeadteacherDirectorReviewPackage = {
     instrumentVersion: 1;
     instrumentContentHash: string;
     dateObserved: string;
+    visit: {
+      contextSchemaVersion: 1 | 2;
+      officialDetailsAvailable: boolean;
+      arrivalTime: string | null;
+      staffStrength: number | null;
+      totalEnrolment: number | null;
+      girls: number | null;
+      boys: number | null;
+      teachersPresentAtVisit: number | null;
+    };
     finalizedAt: string;
     overallPercentage: number;
     sectionPercentages: Record<string, number>;
@@ -1496,7 +1512,19 @@ function supervisoryView(input: {
   const contextTarget = objectValue(context.target);
   const contextInstrument = objectValue(context.instrument);
   const scopeLevel = normalized(assessor.scopeLevel);
+  const contextSchemaVersion = Number(context.schemaVersion);
+  const metadata = objectValue(input.assessment.metadata);
+  let visitDetails;
+  try {
+    visitDetails = visitDetailsFromEvidenceSnapshot(
+      input.assessment.evidenceSnapshotJson,
+    );
+  } catch {
+    fail("HEADTEACHER_DIRECTOR_REVIEW_PACKAGE_VISIT_DETAILS_INVALID", 409);
+  }
+
   if (
+    ![1, 2].includes(contextSchemaVersion) ||
     clean(contextTarget.userId) === "" ||
     clean(assessor.userId) !== input.assessment.assessorUserId ||
     clean(assessor.assignmentId) !== input.assessment.assessorAssignmentId ||
@@ -1515,6 +1543,21 @@ function supervisoryView(input: {
       ))
   ) {
     fail("HEADTEACHER_DIRECTOR_REVIEW_PACKAGE_VISIT_CONTEXT_FIELDS_DRIFT", 409);
+  }
+
+  if (
+    contextSchemaVersion ===
+      HEADTEACHER_SUPERVISORY_VISIT_DETAILS_POLICY.visitContextSchemaVersion &&
+    (
+      !visitDetails ||
+      Number(metadata.visitContextSchemaVersion) !==
+        HEADTEACHER_SUPERVISORY_VISIT_DETAILS_POLICY.visitContextSchemaVersion ||
+      Number(metadata.visitDetailsSchemaVersion) !==
+        HEADTEACHER_SUPERVISORY_VISIT_DETAILS_POLICY.schemaVersion ||
+      metadata.officialVisitDetailsIncluded !== true
+    )
+  ) {
+    fail("HEADTEACHER_DIRECTOR_REVIEW_PACKAGE_VISIT_DETAILS_INVALID", 409);
   }
 
   const scoreMap = new Map(
@@ -1584,6 +1627,17 @@ function supervisoryView(input: {
         "HEADTEACHER_DIRECTOR_REVIEW_PACKAGE_OBSERVATION_DATE_MISSING",
       ),
     ),
+    visit: {
+      contextSchemaVersion: contextSchemaVersion as 1 | 2,
+      officialDetailsAvailable: visitDetails !== null,
+      arrivalTime: visitDetails?.arrivalTime ?? null,
+      staffStrength: visitDetails?.staffStrength ?? null,
+      totalEnrolment: visitDetails?.totalEnrolment ?? null,
+      girls: visitDetails?.girls ?? null,
+      boys: visitDetails?.boys ?? null,
+      teachersPresentAtVisit:
+        visitDetails?.teachersPresentAtVisit ?? null,
+    },
     finalizedAt: requireDate(
       input.assessment.finalizedAt,
       "HEADTEACHER_DIRECTOR_REVIEW_PACKAGE_FINALIZED_AT_MISSING",
@@ -1920,7 +1974,51 @@ function decisionNote(input: {
   return note || null;
 }
 
+function assertDecisionVisitDetails(
+  visit: HeadteacherDirectorReviewPackage["supervisoryAssessment"]["visit"],
+) {
+  if (visit.contextSchemaVersion === 1) {
+    if (
+      visit.officialDetailsAvailable !== false ||
+      visit.arrivalTime !== null ||
+      visit.staffStrength !== null ||
+      visit.totalEnrolment !== null ||
+      visit.girls !== null ||
+      visit.boys !== null ||
+      visit.teachersPresentAtVisit !== null
+    ) {
+      fail("HEADTEACHER_DIRECTOR_REVIEW_DECISION_VISIT_DETAILS_INVALID", 409);
+    }
+    return;
+  }
+
+  const wholeNumbers = [
+    visit.staffStrength,
+    visit.totalEnrolment,
+    visit.girls,
+    visit.boys,
+    visit.teachersPresentAtVisit,
+  ];
+  if (
+    visit.contextSchemaVersion !== 2 ||
+    visit.officialDetailsAvailable !== true ||
+    !/^([01]\d|2[0-3]):[0-5]\d$/.test(clean(visit.arrivalTime)) ||
+    wholeNumbers.some(
+      (value) =>
+        typeof value !== "number" ||
+        !Number.isSafeInteger(value) ||
+        value < 0,
+    ) ||
+    Number(visit.girls) + Number(visit.boys) !==
+      Number(visit.totalEnrolment) ||
+    Number(visit.teachersPresentAtVisit) > Number(visit.staffStrength)
+  ) {
+    fail("HEADTEACHER_DIRECTOR_REVIEW_DECISION_VISIT_DETAILS_INVALID", 409);
+  }
+}
+
 function assertDecisionPackage(reviewPackage: HeadteacherDirectorReviewPackage) {
+  assertDecisionVisitDetails(reviewPackage.supervisoryAssessment.visit);
   if (
     reviewPackage.schemaVersion !== 1 ||
     reviewPackage.audience !== "DISTRICT_DIRECTOR" ||

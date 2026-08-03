@@ -146,6 +146,15 @@ function fullReviewFailureText(value: unknown, fallback: string) {
   const candidate = value as ApiFailure | null;
   if (
     candidate?.error ===
+    "HEADTEACHER_DIRECTOR_REVIEW_PACKAGE_CYCLE_NOT_ACTIVE"
+  ) {
+    return (
+      "This appraisal is ready, but the full Director review has not started. " +
+      "Use Start full decision review on the record, confirm the action, then load the evidence package."
+    );
+  }
+  if (
+    candidate?.error ===
     "HEADTEACHER_DIRECTOR_REVIEW_SUPERVISORY_ASSESSMENT_REQUIRED"
   ) {
     return (
@@ -632,7 +641,7 @@ function paperScoreCellTone(input: {
   }
 }
 
-function paperValue(value: string | null | undefined) {
+function paperValue(value: unknown) {
   return clean(value) || "Not captured in this historical record";
 }
 
@@ -642,6 +651,7 @@ function SupervisoryForm(props: {
   onBack: () => void;
 }) {
   const assessment = props.reviewPackage.supervisoryAssessment;
+  const visit = assessment.visit;
   const cycle = props.reviewPackage.cycle;
   const officialMaximum = props.sections.reduce(
     (sum, section) => sum + section.sectionMaxScore,
@@ -693,11 +703,31 @@ function SupervisoryForm(props: {
           <table className="w-full border-collapse text-[12px] leading-5">
             <tbody>
               {[
-                ["Name of School", cycle.schoolName, "Staff Strength", null],
-                ["Name of Circuit", cycle.circuitName, "Total Enrolment", null],
-                ["Name of Head", cycle.targetName, "Girls", null],
-                ["Date of Visit", formatDate(assessment.dateObserved), "Boys", null],
-                ["Arrival Time", null, "Teachers Present at the Time of Visit", null],
+                [
+                  "Name of School",
+                  cycle.schoolName,
+                  "Staff Strength",
+                  visit.staffStrength,
+                ],
+                [
+                  "Name of Circuit",
+                  cycle.circuitName,
+                  "Total Enrolment",
+                  visit.totalEnrolment,
+                ],
+                ["Name of Head", cycle.targetName, "Girls", visit.girls],
+                [
+                  "Date of Visit",
+                  formatDate(assessment.dateObserved),
+                  "Boys",
+                  visit.boys,
+                ],
+                [
+                  "Arrival Time",
+                  visit.arrivalTime,
+                  "Teachers Present at the Time of Visit",
+                  visit.teachersPresentAtVisit,
+                ],
               ].map((row) => (
                 <tr key={String(row[0])}>
                   <th className="w-[16%] border border-slate-300 bg-slate-100 px-3 py-2 text-left text-[11px] font-black uppercase">
@@ -717,9 +747,15 @@ function SupervisoryForm(props: {
             </tbody>
           </table>
 
-          <div className="border-x border-b border-slate-300 bg-amber-50 px-4 py-3 text-[11px] leading-5 text-amber-950">
-            This version-1 historical assessment predates the expanded visit header. Missing arrival-time, staffing and enrolment values are shown as not captured rather than reconstructed.
-          </div>
+          {visit.officialDetailsAvailable ? (
+            <div className="border-x border-b border-slate-300 bg-emerald-50 px-4 py-3 text-[11px] leading-5 text-emerald-950">
+              Official visit particulars were captured when this assessment was created and are displayed from the immutable evidence snapshot.
+            </div>
+          ) : (
+            <div className="border-x border-b border-slate-300 bg-amber-50 px-4 py-3 text-[11px] leading-5 text-amber-950">
+              This version-1 historical assessment predates the expanded visit header. Missing arrival-time, staffing and enrolment values are shown as not captured rather than reconstructed.
+            </div>
+          )}
 
           <table className="w-full border-collapse text-[11px] leading-4">
             <colgroup>

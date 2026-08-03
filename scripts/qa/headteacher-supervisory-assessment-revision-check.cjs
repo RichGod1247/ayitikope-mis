@@ -74,7 +74,7 @@ function instrumentVersion() {
   };
 }
 function cycle(overrides={}) { return { id:"cycle-headteacher-001", scopeZoneId:"district-001", targetUserId:"headteacher-001", targetTenantId:"tenant-001", targetZoneId:"circuit-001", status:"UNDER_REVIEW", openedAt:OPENED, closedAt:CLOSED, reviewStartedAt:REVIEW_STARTED, releasedAt:null, cancelledAt:null, metadata:{}, ...overrides }; }
-function visitContext() { return { schemaVersion:1, workflow:"HEADTEACHER_GOVERNANCE_SUPERVISORY_ASSESSMENT", evidenceStream:"GOVERNANCE_SUPERVISORY_ASSESSMENT", cycle:{id:"cycle-headteacher-001",statusAtDraft:"OPEN",openedAt:OPENED.toISOString(),deadlineAt:CLOSED.toISOString(),closedAt:null}, target:{userId:"headteacher-001",role:"HEADTEACHER",tenantId:"tenant-001",name:"Head Teacher One",schoolName:"School One"}, assessor:{userId:"actor-001",name:"Director One",role:"DISTRICT_DIRECTOR",assignmentId:"assignment-director-001",assignmentRole:"DISTRICT_DIRECTOR",scopeLevel:"DISTRICT"}, jurisdiction:{districtZoneId:"district-001",districtName:"District One",circuitZoneId:"circuit-001",circuitName:"Circuit One",assignmentZoneId:"district-001",assignmentZoneName:"District One",assignmentParentZoneId:null,assignmentParentZoneName:null}, instrument:{instrumentId:"supervisory-instrument-001",instrumentVersionId:"supervisory-version-001",code:"HEADTEACHER_SUPERVISORY_ASSESSMENT_V1",version:1,contentHash:CONTENT_HASH}, observation:{dateObserved:"2026-07-28"} }; }
+function visitContext({ schemaVersion = 2, includeVisitDetails = true } = {}) { return { schemaVersion, workflow:"HEADTEACHER_GOVERNANCE_SUPERVISORY_ASSESSMENT", evidenceStream:"GOVERNANCE_SUPERVISORY_ASSESSMENT", cycle:{id:"cycle-headteacher-001",statusAtDraft:"OPEN",openedAt:OPENED.toISOString(),deadlineAt:CLOSED.toISOString(),closedAt:null}, target:{userId:"headteacher-001",role:"HEADTEACHER",tenantId:"tenant-001",name:"Head Teacher One",schoolName:"School One"}, assessor:{userId:"actor-001",name:"Director One",role:"DISTRICT_DIRECTOR",assignmentId:"assignment-director-001",assignmentRole:"DISTRICT_DIRECTOR",scopeLevel:"DISTRICT"}, jurisdiction:{districtZoneId:"district-001",districtName:"District One",circuitZoneId:"circuit-001",circuitName:"Circuit One",assignmentZoneId:"district-001",assignmentZoneName:"District One",assignmentParentZoneId:null,assignmentParentZoneName:null}, instrument:{instrumentId:"supervisory-instrument-001",instrumentVersionId:"supervisory-version-001",code:"HEADTEACHER_SUPERVISORY_ASSESSMENT_V1",version:1,contentHash:CONTENT_HASH}, observation:{dateObserved:"2026-07-28",...(schemaVersion===2&&includeVisitDetails?{visitDetails:{schemaVersion:1,arrivalTime:"08:00",staffStrength:5,totalEnrolment:200,girls:90,boys:110,teachersPresentAtVisit:4}}:{})} }; }
 function fullScores(assessmentId="assessment-001") {
   return instrumentVersion().sections.flatMap((section) => section.items.map((item) => ({ id:`score-${item.id}`, assessmentId, instrumentItemId:item.id, sectionKey:section.key, sectionTitle:section.title, sectionOrder:section.order, sectionMaxScore:section.maxScore, itemKey:item.key, itemLabel:item.label, itemOrder:item.order, itemMaxScore:item.maxScore, score:5, notApplicable:false })));
 }
@@ -85,8 +85,9 @@ function assessmentHash(record) {
   return hashJson({ schemaVersion:1, workflow:"HEADTEACHER_GOVERNANCE_SUPERVISORY_ASSESSMENT", evidenceStream:"GOVERNANCE_SUPERVISORY_ASSESSMENT", assessment:{id:record.id,cycleId:record.cycleId,revision:record.revision,assessorUserId:record.assessorUserId,assessorAssignmentId:record.assessorAssignmentId,dateObserved:"2026-07-28",visitContextHash:record.metadata.visitContextHash}, instrument:{instrumentVersionId:record.instrumentVersionId,code:version.instrument.code,version:version.version,contentHash:CONTENT_HASH}, scores:version.sections.flatMap((section)=>section.items.map((item)=>{const score=stored.get(item.id);return {instrumentItemId:item.id,itemKey:item.key,sectionKey:section.key,sectionOrder:section.order,itemOrder:item.order,itemMaxScore:item.maxScore,score:score?.score??null,notApplicable:score?.notApplicable??false};})), sectionPercentages:percentages(), overallPercentage:100, commentsIncluded:false, separateFromStaffFeedback:true, combinedWeightingDefined:false });
 }
 function returnedAssessment(overrides={}) {
-  const context = visitContext();
-  const record = { id:"assessment-001", cycleId:"cycle-headteacher-001", instrumentVersionId:"supervisory-version-001", assessorUserId:"actor-001", assessorAssignmentId:"assignment-director-001", status:"RETURNED", revision:1, priorAssessmentId:null, dateObserved:OBSERVED, overallPercentage:100, sectionPercentagesJson:percentages(), generalComment:null, evidenceSnapshotJson:context, assessmentHash:null, finalizedByUserId:"actor-001", finalizedAt:FINALIZED, metadata:{workflow:"HEADTEACHER_GOVERNANCE_SUPERVISORY_ASSESSMENT",evidenceStream:"GOVERNANCE_SUPERVISORY_ASSESSMENT",visitContextHash:hashJson(context),visitContextImmutable:true}, createdAt:new Date("2026-07-28T10:00:00.000Z"), scores:fullScores(), reviews:[{id:"review-001",cycleId:"cycle-headteacher-001",assessmentId:"assessment-001",reviewerUserId:"reviewer-001",reviewerAssignmentId:"reviewer-assignment-001",stage:1,decision:"RETURNED",note:"Clarify the evidence for two indicators.",decidedAt:RETURNED,metadata:{reviewerMayRewriteScores:false},createdAt:RETURNED}], cycle:cycle(), instrumentVersion:instrumentVersion(), ...overrides };
+  const context = overrides.evidenceSnapshotJson ?? visitContext();
+  const contextSchemaVersion = Number(context.schemaVersion);
+  const record = { id:"assessment-001", cycleId:"cycle-headteacher-001", instrumentVersionId:"supervisory-version-001", assessorUserId:"actor-001", assessorAssignmentId:"assignment-director-001", status:"RETURNED", revision:1, priorAssessmentId:null, dateObserved:OBSERVED, overallPercentage:100, sectionPercentagesJson:percentages(), generalComment:null, evidenceSnapshotJson:context, assessmentHash:null, finalizedByUserId:"actor-001", finalizedAt:FINALIZED, metadata:{workflow:"HEADTEACHER_GOVERNANCE_SUPERVISORY_ASSESSMENT",evidenceStream:"GOVERNANCE_SUPERVISORY_ASSESSMENT",visitContextHash:hashJson(context),visitContextImmutable:true,...(contextSchemaVersion===2?{visitContextSchemaVersion:2,visitDetailsSchemaVersion:1,officialVisitDetailsIncluded:true}:{})}, createdAt:new Date("2026-07-28T10:00:00.000Z"), scores:fullScores(), reviews:[{id:"review-001",cycleId:"cycle-headteacher-001",assessmentId:"assessment-001",reviewerUserId:"reviewer-001",reviewerAssignmentId:"reviewer-assignment-001",stage:1,decision:"RETURNED",note:"Clarify the evidence for two indicators.",decidedAt:RETURNED,metadata:{reviewerMayRewriteScores:false},createdAt:RETURNED}], cycle:cycle(), instrumentVersion:instrumentVersion(), ...overrides };
   record.assessmentHash = assessmentHash(record);
   return record;
 }
@@ -122,11 +123,12 @@ function auditText(db){return JSON.stringify(db.audits);}
 async function main(){
   const sourcePath=path.join(repoRoot,"src/lib/appraisals/headteacherSupervisoryAssessmentRevision.ts");
   const source=fs.readFileSync(sourcePath,"utf8");
-  for(const marker of ["createReturnedHeadteacherSupervisoryAssessmentRevision","readHeadteacherSupervisoryAssessorState","planReturnedHeadteacherSupervisoryRevision","Prisma.TransactionIsolationLevel.Serializable","reviewerMayRewriteScores: false","providerCalled: false"]){assert(source.includes(marker),`Missing source marker: ${marker}`);}
+  for(const marker of ["createReturnedHeadteacherSupervisoryAssessmentRevision","readHeadteacherSupervisoryAssessorState","planReturnedHeadteacherSupervisoryRevision","visitDetailsFromEvidenceSnapshot","preserveVisitDetailsMetadata: true","Prisma.TransactionIsolationLevel.Serializable","reviewerMayRewriteScores: false","providerCalled: false"]){assert(source.includes(marker),`Missing source marker: ${marker}`);}
   for(const forbidden of ["sendSms","sendEmail","appraisalReview.create","appraisalAggregateSnapshot.create"]){assert(!source.includes(forbidden),`Forbidden source marker: ${forbidden}`);}
   const revisionModule=require(sourcePath);
   const {createReturnedHeadteacherSupervisoryAssessmentRevision,readHeadteacherSupervisoryAssessorState,HEADTEACHER_SUPERVISORY_REVISION_POLICY}=revisionModule;
   assertEqual(HEADTEACHER_SUPERVISORY_REVISION_POLICY.eligibleCycleStatus,"UNDER_REVIEW","Cycle boundary must be under review");
+  assertEqual(HEADTEACHER_SUPERVISORY_REVISION_POLICY.preserveVisitDetailsMetadata,true,"Revision must preserve visit-details metadata");
 
   const db=new FakeDatabase();
   const created=await createReturnedHeadteacherSupervisoryAssessmentRevision({actorUserId:"actor-001",actorRoleName:"DISTRICT_DIRECTOR",returnedAssessmentId:"assessment-001",now:NOW,database:db});
@@ -137,6 +139,11 @@ async function main(){
   assertEqual(db.assessments[0].status,"SUPERSEDED","Original should become superseded");
   assertEqual(db.assessments[1].priorAssessmentId,"assessment-001","Revision should point to original");
   assertEqual(db.assessments[1].scores.length,34,"Copied score rows should exist");
+  assertEqual(db.assessments[1].metadata.visitContextSchemaVersion,2,"Version-2 context marker must be preserved");
+  assertEqual(db.assessments[1].metadata.visitDetailsSchemaVersion,1,"Visit-details schema marker must be preserved");
+  assertEqual(db.assessments[1].metadata.officialVisitDetailsIncluded,true,"Official visit-details marker must be preserved");
+  assertEqual(db.assessments[1].evidenceSnapshotJson.observation.visitDetails.arrivalTime,"08:00","Arrival time must remain frozen");
+  assertEqual(db.assessments[1].evidenceSnapshotJson.observation.visitDetails.totalEnrolment,200,"Enrolment must remain frozen");
   assertEqual(db.audits.length,1,"One audit should be written");
   assert(!auditText(db).includes('"score":5'),"Audit must not contain score values");
   assert(!auditText(db).includes("Director One"),"Audit must not contain names");
@@ -170,6 +177,17 @@ async function main(){
   const releasedDb=new FakeDatabase({assessment:{cycle:cycle({status:"RELEASED",releasedAt:NOW}),status:"FINALIZED",reviews:[]}});
   const releasedState=await readHeadteacherSupervisoryAssessorState({actorUserId:"actor-001",assessmentId:"assessment-001",database:releasedDb});
   assertEqual(releasedState.state,"RELEASED_READ_ONLY","Released state should be locked");
+
+  const legacyDb=new FakeDatabase({assessment:{evidenceSnapshotJson:visitContext({schemaVersion:1})}});
+  legacyDb.original.metadata={workflow:"HEADTEACHER_GOVERNANCE_SUPERVISORY_ASSESSMENT",evidenceStream:"GOVERNANCE_SUPERVISORY_ASSESSMENT",visitContextHash:hashJson(legacyDb.original.evidenceSnapshotJson),visitContextImmutable:true};
+  legacyDb.original.assessmentHash=assessmentHash(legacyDb.original);
+  const legacyCreated=await createReturnedHeadteacherSupervisoryAssessmentRevision({actorUserId:"actor-001",actorRoleName:"DISTRICT_DIRECTOR",returnedAssessmentId:"assessment-001",now:NOW,database:legacyDb});
+  assertEqual(legacyCreated.outcome,"CREATED","Version-1 revision should remain supported");
+  assertEqual(legacyDb.assessments[1].metadata.visitContextSchemaVersion,1,"Legacy context version must be preserved");
+  assertEqual(legacyDb.assessments[1].metadata.visitDetailsSchemaVersion,null,"Legacy visit-details schema must remain absent");
+  assertEqual(legacyDb.assessments[1].metadata.officialVisitDetailsIncluded,false,"Legacy visit details must not be invented");
+
+  await expectReject(()=>createReturnedHeadteacherSupervisoryAssessmentRevision({actorUserId:"actor-001",actorRoleName:"DISTRICT_DIRECTOR",returnedAssessmentId:"assessment-001",now:NOW,database:new FakeDatabase({assessment:{evidenceSnapshotJson:visitContext({schemaVersion:2,includeVisitDetails:false})}})}),"HEADTEACHER_SUPERVISORY_REVISION_VISIT_DETAILS_INVALID","Version-2 revision must fail closed without visit details");
 
   await expectReject(()=>createReturnedHeadteacherSupervisoryAssessmentRevision({actorUserId:"other",actorRoleName:"DISTRICT_DIRECTOR",returnedAssessmentId:"assessment-001",now:NOW,database:new FakeDatabase()}),"HEADTEACHER_SUPERVISORY_REVISION_ASSESSOR_ONLY","Outsider must be rejected");
   await expectReject(()=>createReturnedHeadteacherSupervisoryAssessmentRevision({actorUserId:"actor-001",actorRoleName:"DISTRICT_DIRECTOR",returnedAssessmentId:"assessment-001",now:NOW,database:new FakeDatabase({assignments:[]})}),"HEADTEACHER_SUPERVISORY_REVISION_AUTHORITY_ACTIVE_ASSIGNMENT_REQUIRED","Active assignment must be revalidated");

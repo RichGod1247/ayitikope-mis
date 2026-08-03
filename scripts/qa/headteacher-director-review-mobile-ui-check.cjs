@@ -263,6 +263,16 @@ function main() {
   );
   contains(
     client,
+    "HEADTEACHER_DIRECTOR_REVIEW_PACKAGE_CYCLE_NOT_ACTIVE",
+    "closed-cycle package guidance mapping",
+  );
+  contains(
+    client,
+    "This appraisal is ready, but the full Director review has not started.",
+    "BBC-friendly closed-cycle guidance",
+  );
+  contains(
+    client,
     "anonymousResponses?.cycle.id",
     "closed-cycle anonymous evidence selection",
   );
@@ -352,6 +362,36 @@ function main() {
     client,
     "four-section Monitoring and Inspection Sheet",
     "four-section supervisory evidence",
+  );
+  contains(
+    client,
+    "const visit = assessment.visit",
+    "Director visit-details projection",
+  );
+  contains(client, "visit.arrivalTime", "arrival-time rendering");
+  contains(client, "visit.staffStrength", "staff-strength rendering");
+  contains(client, "visit.totalEnrolment", "total-enrolment rendering");
+  contains(client, "visit.girls", "girls rendering");
+  contains(client, "visit.boys", "boys rendering");
+  contains(
+    client,
+    "visit.teachersPresentAtVisit",
+    "teachers-present rendering",
+  );
+  contains(
+    client,
+    "visit.officialDetailsAvailable",
+    "version-aware visit-details presentation",
+  );
+  contains(
+    client,
+    "Official visit particulars were captured when this assessment was created",
+    "immutable version-2 visit-details guidance",
+  );
+  contains(
+    client,
+    "This version-1 historical assessment predates the expanded visit header.",
+    "truthful version-1 historical guidance",
   );
   contains(client, "Back to respondents", "anonymous-form navigation");
   contains(client, "Previous", "previous comparison control");
@@ -480,6 +520,12 @@ function main() {
   );
   console.log(
     "Supervisory evidence           : native 4-section / 34-item sheet",
+  );
+  console.log(
+    "Version-2 visit particulars    : rendered from immutable evidence",
+  );
+  console.log(
+    "Version-1 visit compatibility  : truthful historical fallback",
   );
   console.log(
     "Staff evidence                 : anonymous native 4-section / 34-item forms",

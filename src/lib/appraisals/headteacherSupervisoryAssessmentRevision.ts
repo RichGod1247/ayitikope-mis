@@ -1,3 +1,4 @@
+//src/lib/appraisals/headteacherSupervisoryAssessmentRevision.ts
 import { createHash, randomUUID } from "crypto";
 import { Prisma, type AppraisalAssessmentStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -9,6 +10,10 @@ import {
   type HeadteacherSupervisoryGovernanceAssignment,
   type HeadteacherSupervisoryTarget,
 } from "@/lib/appraisals/headteacherSupervisoryAssessment";
+import {
+  HEADTEACHER_SUPERVISORY_VISIT_DETAILS_POLICY,
+  visitDetailsFromEvidenceSnapshot,
+} from "@/lib/appraisals/headteacherSupervisoryVisitDetails";
 
 export const HEADTEACHER_SUPERVISORY_REVISION_POLICY = {
   schemaVersion: 1,
@@ -19,6 +24,7 @@ export const HEADTEACHER_SUPERVISORY_REVISION_POLICY = {
   newRevisionStatus: "DRAFT",
   returnDecision: "RETURNED",
   preserveVisitContext: true,
+  preserveVisitDetailsMetadata: true,
   copyScoreRows: true,
   commentsAllowed: false,
   finalizedSourceImmutable: true,
@@ -584,19 +590,24 @@ function instrumentSections(record: AssessmentRecord) {
   return sections;
 }
 
-function visitContextHash(record: AssessmentRecord) {
+function visitContextEvidence(record: AssessmentRecord) {
   const metadata = objectValue(record.metadata);
   const expectedHash = clean(metadata.visitContextHash).toLowerCase();
-  if (!/^[a-f0-9]{64}$/.test(expectedHash) || hashJson(record.evidenceSnapshotJson) !== expectedHash) {
+  if (
+    !/^[a-f0-9]{64}$/.test(expectedHash) ||
+    hashJson(record.evidenceSnapshotJson) !== expectedHash
+  ) {
     fail("HEADTEACHER_SUPERVISORY_REVISION_VISIT_CONTEXT_HASH_INVALID", 409);
   }
+
   const context = objectValue(record.evidenceSnapshotJson);
+  const contextSchemaVersion = Number(context.schemaVersion);
   const target = objectValue(context.target);
   const assessor = objectValue(context.assessor);
   const instrument = objectValue(context.instrument);
   const observation = objectValue(context.observation);
   if (
-    context.schemaVersion !== 1 ||
+    ![1, 2].includes(contextSchemaVersion) ||
     context.workflow !== HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.workflow ||
     context.evidenceStream !== "GOVERNANCE_SUPERVISORY_ASSESSMENT" ||
     target.userId !== record.cycle.targetUserId ||
@@ -607,15 +618,44 @@ function visitContextHash(record: AssessmentRecord) {
     instrument.instrumentVersionId !== record.instrumentVersionId ||
     instrument.code !== HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.instrumentCode ||
     instrument.version !== HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.instrumentVersion ||
-    clean(instrument.contentHash).toLowerCase() !== clean(record.instrumentVersion.contentHash).toLowerCase() ||
+    clean(instrument.contentHash).toLowerCase() !==
+      clean(record.instrumentVersion.contentHash).toLowerCase() ||
     !record.dateObserved ||
     observation.dateObserved !== isoDateOnly(record.dateObserved)
   ) {
     fail("HEADTEACHER_SUPERVISORY_REVISION_VISIT_CONTEXT_DRIFT", 409);
   }
-  return expectedHash;
-}
 
+  let visitDetails;
+  try {
+    visitDetails = visitDetailsFromEvidenceSnapshot(
+      record.evidenceSnapshotJson,
+    );
+  } catch {
+    fail("HEADTEACHER_SUPERVISORY_REVISION_VISIT_DETAILS_INVALID", 409);
+  }
+  if (
+    contextSchemaVersion ===
+      HEADTEACHER_SUPERVISORY_VISIT_DETAILS_POLICY.visitContextSchemaVersion &&
+    (
+      !visitDetails ||
+      Number(metadata.visitContextSchemaVersion) !==
+        HEADTEACHER_SUPERVISORY_VISIT_DETAILS_POLICY.visitContextSchemaVersion ||
+      Number(metadata.visitDetailsSchemaVersion) !==
+        HEADTEACHER_SUPERVISORY_VISIT_DETAILS_POLICY.schemaVersion ||
+      metadata.officialVisitDetailsIncluded !== true
+    )
+  ) {
+    fail("HEADTEACHER_SUPERVISORY_REVISION_VISIT_DETAILS_INVALID", 409);
+  }
+
+  return {
+    contextHash: expectedHash,
+    contextSchemaVersion: contextSchemaVersion as 1 | 2,
+    visitDetailsSchemaVersion: visitDetails?.schemaVersion ?? null,
+    officialVisitDetailsIncluded: visitDetails !== null,
+  };
+}
 function scoringRows(record: AssessmentRecord, sections: InstrumentSectionRecord[]) {
   const scores = new Map(record.scores.map((score) => [score.instrumentItemId, score]));
   if (scores.size !== record.scores.length) {
@@ -738,11 +778,11 @@ function assertFinalizedSourceEvidence(record: AssessmentRecord) {
   ) {
     fail("HEADTEACHER_SUPERVISORY_REVISION_SOURCE_CALCULATION_DRIFT", 409);
   }
-  const contextHash = visitContextHash(record);
+  const visitEvidence = visitContextEvidence(record);
   const expectedHash = hashJson(
     assessmentHashPayload({
       record,
-      visitContextHash: contextHash,
+      visitContextHash: visitEvidence.contextHash,
       sections,
       sectionPercentages: calculated.value.sectionPercentages,
       overallPercentage: calculated.value.overallPercentage,
@@ -751,7 +791,12 @@ function assertFinalizedSourceEvidence(record: AssessmentRecord) {
   if (expectedHash !== clean(record.assessmentHash).toLowerCase()) {
     fail("HEADTEACHER_SUPERVISORY_REVISION_SOURCE_HASH_DRIFT", 409);
   }
-  return { sections, contextHash, calculated: calculated.value };
+  return {
+    sections,
+    contextHash: visitEvidence.contextHash,
+    visitEvidence,
+    calculated: calculated.value,
+  };
 }
 
 function targetFromMembership(
@@ -944,6 +989,11 @@ function existingRevisionSummary(input: {
   returnHash: string;
   sourceHash: string;
   visitHash: string;
+  visitEvidence: {
+    contextSchemaVersion: 1 | 2;
+    visitDetailsSchemaVersion: 1 | null;
+    officialVisitDetailsIncluded: boolean;
+  };
 }) {
   const metadata = objectValue(input.existing.metadata);
   if (
@@ -958,6 +1008,14 @@ function existingRevisionSummary(input: {
     clean(metadata.sourceAssessmentHash).toLowerCase() !== input.sourceHash ||
     clean(metadata.returnEvidenceHash).toLowerCase() !== input.returnHash ||
     clean(metadata.visitContextHash).toLowerCase() !== input.visitHash ||
+    Number(metadata.visitContextSchemaVersion) !==
+      input.visitEvidence.contextSchemaVersion ||
+    (input.visitEvidence.visitDetailsSchemaVersion === null
+      ? metadata.visitDetailsSchemaVersion !== null
+      : Number(metadata.visitDetailsSchemaVersion) !==
+        input.visitEvidence.visitDetailsSchemaVersion) ||
+    metadata.officialVisitDetailsIncluded !==
+      input.visitEvidence.officialVisitDetailsIncluded ||
     metadata.reviewerMayRewriteScores !== false ||
     metadata.preserveVisitContext !== true
   ) {
@@ -1148,6 +1206,7 @@ async function performRevisionTransaction(input: {
           returnHash: reviewHash,
           sourceHash,
           visitHash: evidence.contextHash,
+          visitEvidence: evidence.visitEvidence,
         }),
       };
     }
@@ -1207,6 +1266,12 @@ async function performRevisionTransaction(input: {
           returnEvidenceHash: reviewHash,
           returnReason: clean(review.note),
           visitContextHash: evidence.contextHash,
+          visitContextSchemaVersion:
+            evidence.visitEvidence.contextSchemaVersion,
+          visitDetailsSchemaVersion:
+            evidence.visitEvidence.visitDetailsSchemaVersion,
+          officialVisitDetailsIncluded:
+            evidence.visitEvidence.officialVisitDetailsIncluded,
           preserveVisitContext: true,
           copiedScoreCount: original.scores.length,
           reviewerMayRewriteScores: false,
@@ -1274,6 +1339,12 @@ async function performRevisionTransaction(input: {
           sourceAssessmentHash: sourceHash,
           returnEvidenceHash: reviewHash,
           visitContextHash: evidence.contextHash,
+          visitContextSchemaVersion:
+            evidence.visitEvidence.contextSchemaVersion,
+          visitDetailsSchemaVersion:
+            evidence.visitEvidence.visitDetailsSchemaVersion,
+          officialVisitDetailsIncluded:
+            evidence.visitEvidence.officialVisitDetailsIncluded,
           copiedScoreCount: copied.count,
           scoreValuesRecordedInAudit: false,
           aggregateScoreRecordedInAudit: false,

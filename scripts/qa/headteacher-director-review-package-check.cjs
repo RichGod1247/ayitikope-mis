@@ -212,9 +212,9 @@ function assessmentHashPayload(assessment, sections, sectionPercentages, overall
   };
 }
 
-function makeVisitContext() {
+function makeVisitContext({ schemaVersion = 2, includeVisitDetails = true } = {}) {
   return {
-    schemaVersion: 1,
+    schemaVersion,
     workflow: "HEADTEACHER_GOVERNANCE_SUPERVISORY_ASSESSMENT",
     evidenceStream: "GOVERNANCE_SUPERVISORY_ASSESSMENT",
     cycle: {
@@ -256,10 +256,24 @@ function makeVisitContext() {
       version: 1,
       contentHash: SUPERVISORY_DEFINITION_HASH,
     },
-    observation: { dateObserved: "2026-07-27" },
+    observation: {
+      dateObserved: "2026-07-27",
+      ...(schemaVersion === 2 && includeVisitDetails
+        ? {
+            visitDetails: {
+              schemaVersion: 1,
+              arrivalTime: "08:00",
+              staffStrength: 5,
+              totalEnrolment: 200,
+              girls: 90,
+              boys: 110,
+              teachersPresentAtVisit: 4,
+            },
+          }
+        : {}),
+    },
   };
 }
-
 function makeAssessment(overrides = {}) {
   const sections = officialSections();
   const scoreRows = sections.flatMap((section) =>
@@ -285,8 +299,9 @@ function makeAssessment(overrides = {}) {
   );
   assert(calculated.ok, "Fixture supervisory scores must calculate", calculated);
 
-  const context = makeVisitContext();
+  const context = overrides.evidenceSnapshotJson ?? makeVisitContext();
   const visitContextHash = hashJson(context);
+  const contextSchemaVersion = Number(context.schemaVersion);
   const assessment = {
     id: "assessment-001",
     cycleId: "cycle-headteacher-001",
@@ -306,6 +321,13 @@ function makeAssessment(overrides = {}) {
     finalizedAt: new Date("2026-07-28T10:00:00.000Z"),
     metadata: {
       visitContextHash,
+      ...(contextSchemaVersion === 2
+        ? {
+            visitContextSchemaVersion: 2,
+            visitDetailsSchemaVersion: 1,
+            officialVisitDetailsIncluded: true,
+          }
+        : {}),
       reviewerMayRewriteScores: false,
       combinedWeightingDefined: false,
     },
@@ -688,6 +710,16 @@ async function main() {
     "G2 must resolve the latest pending review stage",
   );
   assertEqual(
+    HEADTEACHER_DIRECTOR_REVIEW_PACKAGE_POLICY.officialVisitDetailsIncluded,
+    true,
+    "Director package must include official visit details",
+  );
+  assertEqual(
+    HEADTEACHER_DIRECTOR_REVIEW_PACKAGE_POLICY.legacyVisitContextReadable,
+    true,
+    "Version-1 historical visit contexts must remain readable",
+  );
+  assertEqual(
     HEADTEACHER_DIRECTOR_REVIEW_DECISION_POLICY.minimumReasonLength,
     3,
     "Return/hold reasons must satisfy the revision contract",
@@ -709,6 +741,26 @@ async function main() {
   assertEqual(reviewPackage.staffFeedback.sections.length, 4, "Four staff sections required");
   assertEqual(reviewPackage.staffFeedback.items.length, 34, "Thirty-four staff items required");
   assertEqual(reviewPackage.supervisoryAssessment.items.length, 34, "Thirty-four supervisory items required");
+  assertEqual(
+    reviewPackage.supervisoryAssessment.visit.contextSchemaVersion,
+    2,
+    "Fresh supervisory evidence must expose visit-context version 2",
+  );
+  assertEqual(
+    reviewPackage.supervisoryAssessment.visit.officialDetailsAvailable,
+    true,
+    "Fresh supervisory visit details must be available",
+  );
+  assertEqual(reviewPackage.supervisoryAssessment.visit.arrivalTime, "08:00", "Arrival time mismatch");
+  assertEqual(reviewPackage.supervisoryAssessment.visit.staffStrength, 5, "Staff strength mismatch");
+  assertEqual(reviewPackage.supervisoryAssessment.visit.totalEnrolment, 200, "Total enrolment mismatch");
+  assertEqual(reviewPackage.supervisoryAssessment.visit.girls, 90, "Girls mismatch");
+  assertEqual(reviewPackage.supervisoryAssessment.visit.boys, 110, "Boys mismatch");
+  assertEqual(
+    reviewPackage.supervisoryAssessment.visit.teachersPresentAtVisit,
+    4,
+    "Teachers-present mismatch",
+  );
   assertEqual(reviewPackage.comparison.sections.length, 4, "Four section comparisons required");
   assertEqual(reviewPackage.comparison.items.length, 34, "Thirty-four item comparisons required");
   assertEqual(
@@ -760,6 +812,68 @@ async function main() {
     reviewPackage.integrity.reviewerMayRewriteScores,
     false,
     "Reviewer score rewriting must remain forbidden",
+  );
+
+  const legacyAssessment = makeAssessment({
+    evidenceSnapshotJson: makeVisitContext({ schemaVersion: 1 }),
+    metadata: undefined,
+  });
+  legacyAssessment.metadata = {
+    visitContextHash: hashJson(legacyAssessment.evidenceSnapshotJson),
+    reviewerMayRewriteScores: false,
+    combinedWeightingDefined: false,
+  };
+  legacyAssessment.assessmentHash = hashJson(
+    assessmentHashPayload(
+      legacyAssessment,
+      legacyAssessment.instrumentVersion.sections,
+      legacyAssessment.sectionPercentagesJson,
+      legacyAssessment.overallPercentage,
+    ),
+  );
+  const legacyPackage = await readHeadteacherDirectorReviewPackage({
+    ...baseInput(),
+    database: createDatabase({
+      assessment: legacyAssessment,
+      assessments: [legacyAssessment],
+      review: makeReview(legacyAssessment),
+    }).db,
+  });
+  assertEqual(
+    legacyPackage.supervisoryAssessment.visit.contextSchemaVersion,
+    1,
+    "Historical supervisory context must remain version 1",
+  );
+  assertEqual(
+    legacyPackage.supervisoryAssessment.visit.officialDetailsAvailable,
+    false,
+    "Historical visit details must not be invented",
+  );
+  assertEqual(
+    legacyPackage.supervisoryAssessment.visit.arrivalTime,
+    null,
+    "Historical arrival time must remain unavailable",
+  );
+
+  await expectReject(
+    () => {
+      const malformedAssessment = makeAssessment({
+        evidenceSnapshotJson: makeVisitContext({
+          schemaVersion: 2,
+          includeVisitDetails: false,
+        }),
+      });
+      return readHeadteacherDirectorReviewPackage({
+        ...baseInput(),
+        database: createDatabase({
+          assessment: malformedAssessment,
+          assessments: [malformedAssessment],
+          review: makeReview(malformedAssessment),
+        }).db,
+      });
+    },
+    "HEADTEACHER_DIRECTOR_REVIEW_PACKAGE_VISIT_DETAILS_INVALID",
+    "Version-2 supervisory evidence must fail closed without visit details",
   );
 
   await expectReject(
@@ -1011,6 +1125,18 @@ async function main() {
     "Supervisory calculations must be independently verified",
   );
   assert(
+    serviceSource.includes("visitDetailsFromEvidenceSnapshot"),
+    "Director package must reuse the canonical visit-details parser",
+  );
+  assert(
+    serviceSource.includes("officialVisitDetailsIncluded: true"),
+    "Director package policy must include official visit details",
+  );
+  assert(
+    serviceSource.includes("legacyVisitContextReadable: true"),
+    "Director package must preserve version-1 compatibility",
+  );
+  assert(
     serviceSource.includes("combinedOverallPercentage: null"),
     "Combined appraisal score must remain absent",
   );
@@ -1035,6 +1161,8 @@ async function main() {
   console.log("Staff evidence                  : immutable aggregate snapshot V1");
   console.log("Supervisory evidence            : one finalized current assessment");
   console.log("Supervisory scores/hash          : recalculated and verified");
+  console.log("Version-2 visit particulars      : projected from immutable snapshot");
+  console.log("Version-1 visit compatibility    : preserved without reconstruction");
   console.log("Evidence comparison              : overall / 4 sections / 34 items");
   console.log("Comparison direction             : supervisory minus staff percentage points");
   console.log("Comparison thresholds            : undefined");
