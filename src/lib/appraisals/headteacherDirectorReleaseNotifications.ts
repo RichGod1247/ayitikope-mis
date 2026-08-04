@@ -1,8 +1,15 @@
+//src/lib/appraisals/headteacherDirectorReleaseNotifications.ts
 import { createHash, randomUUID } from "crypto";
 import {
   AppraisalNotificationChannel,
   AppraisalNotificationStatus,
   AppraisalNotificationType,
+  GovernanceInterventionPriority,
+  GovernanceOfficialNoticeAudienceMode,
+  GovernanceOfficialNoticeChannel,
+  GovernanceOfficialNoticeDeliveryStatus,
+  GovernanceOfficialNoticeRecipientType,
+  GovernanceOfficialNoticeStatus,
   Prisma,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -10,10 +17,10 @@ import { APPRAISAL_AUDIT_ACTIONS } from "@/lib/appraisals/audit";
 import { HEADTEACHER_FEEDBACK_POLICY } from "@/lib/appraisals/headteacherFeedback";
 
 export const HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   notificationType: AppraisalNotificationType.FEEDBACK_RELEASED,
-  channels: [
-    AppraisalNotificationChannel.IN_APP,
+  officialInAppChannel: GovernanceOfficialNoticeChannel.IN_APP,
+  externalChannels: [
     AppraisalNotificationChannel.SMS,
     AppraisalNotificationChannel.EMAIL,
   ] as const,
@@ -22,7 +29,10 @@ export const HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY = {
   requiredReleaseProofVersion: 1,
   releaseMetadataKey: "headteacherDirectorRelease",
   requiredNotificationReadiness: "READY_FOR_POST_RELEASE_SEEDING",
-  inAppHref: "/headteacher/teacher-appraisal",
+  inAppHref: "/headteacher/my-appraisal",
+  inAppActionLabel: "Open released appraisal",
+  officialNoticeIdempotencyScope:
+    "HEADTEACHER_APPRAISAL_FEEDBACK_RELEASED",
   smsTemplate: "headteacher-appraisal-feedback-released",
   maximumAttempts: 5,
   priority: 2,
@@ -91,12 +101,30 @@ type ReleaseNotificationDelegate = {
   findMany(args: unknown): Promise<NotificationSummaryRow[]>;
 };
 
+type OfficialNoticeRecord = { id: string };
+
+type OfficialNoticeDelegate = {
+  findUnique(args: unknown): Promise<OfficialNoticeRecord | null>;
+  create(args: unknown): Promise<OfficialNoticeRecord>;
+};
+
+type OfficialNoticeRecipientDelegate = {
+  create(args: unknown): Promise<{ id: string }>;
+};
+
+type OfficialNoticeDeliveryDelegate = {
+  create(args: unknown): Promise<unknown>;
+};
+
 type ReleaseAuditDelegate = {
   create(args: unknown): Promise<unknown>;
 };
 
 export type HeadteacherDirectorReleaseNotificationTransactionClient = {
   appraisalNotification: ReleaseNotificationDelegate;
+  governanceOfficialNotice: OfficialNoticeDelegate;
+  governanceOfficialNoticeRecipient: OfficialNoticeRecipientDelegate;
+  governanceOfficialNoticeDelivery: OfficialNoticeDeliveryDelegate;
   auditLog: ReleaseAuditDelegate;
 };
 
@@ -104,6 +132,7 @@ export type HeadteacherDirectorReleaseNotificationDatabase = {
   appraisalCycle: ReleasedCycleDelegate;
   membership: MembershipDelegate;
   appraisalNotification: ReleaseNotificationDelegate;
+  governanceOfficialNotice: OfficialNoticeDelegate;
   $transaction<T>(
     operation: (
       tx: HeadteacherDirectorReleaseNotificationTransactionClient,
@@ -152,6 +181,8 @@ export type EnsureHeadteacherDirectorReleaseNotificationsResult = {
   outcome: "SEEDED" | "EXISTING_MATCH";
   cycleId: string;
   rowsInserted: number;
+  officialInAppNoticeCreated: boolean;
+  officialInAppNoticeVisible: true;
   summary: HeadteacherDirectorReleaseNotificationSummary;
   providerCalled: false;
   recipientIdentityReturned: false;
@@ -185,6 +216,27 @@ function normalized(value: unknown) {
 function objectValue(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
+}
+
+function jsonValue(value: unknown, fallback: unknown): Prisma.InputJsonValue {
+  try {
+    return JSON.parse(
+      JSON.stringify(value === undefined ? fallback : value),
+    ) as Prisma.InputJsonValue;
+  } catch {
+    return JSON.parse(JSON.stringify(fallback)) as Prisma.InputJsonValue;
+  }
+}
+
+function jsonObject(value: unknown): Prisma.InputJsonValue {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return jsonValue({}, {});
+  }
+  return jsonValue(value, {});
+}
+
+function jsonArray(value: unknown): Prisma.InputJsonValue {
+  return Array.isArray(value) ? jsonValue(value, []) : jsonValue([], []);
 }
 
 function fail(
@@ -282,6 +334,56 @@ function idempotencyKey(input: {
   ].join(":");
 }
 
+function officialNoticeIdempotencyKey(input: {
+  cycleId: string;
+  recipientUserId: string;
+  releaseProofHash: string;
+}) {
+  const digest = createHash("sha256")
+    .update(
+      [
+        HEADTEACHER_FEEDBACK_POLICY.workflow,
+        input.cycleId,
+        input.recipientUserId,
+        HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.notificationType,
+        "OFFICIAL_IN_APP_NOTICE",
+        input.releaseProofHash,
+      ].join("|"),
+      "utf8",
+    )
+    .digest("hex");
+
+  return `appraisal:feedback-released:official-in-app:${digest}`;
+}
+
+function officialNoticeMetadata(input: {
+  cycleId: string;
+  releasedAt: string;
+  releaseProofHash: string;
+}) {
+  return jsonObject({
+    source: "headteacher-appraisal-release",
+    workflow: HEADTEACHER_FEEDBACK_POLICY.workflow,
+    event: HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.notificationType,
+    cycleId: input.cycleId,
+    releasedAt: input.releasedAt,
+    releaseProofHash: input.releaseProofHash,
+    noticeKind: "INFORMATION_ONLY",
+    requiresAcknowledgement: false,
+    requiresResponse: false,
+    actionHref: HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.inAppHref,
+    actionLabel:
+      HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.inAppActionLabel,
+    privacy: {
+      respondentIdentitiesIncluded: false,
+      individualStaffResponsesIncluded: false,
+      scoreValuesIncluded: false,
+      releaseNoteIncluded: false,
+      providerCalled: false,
+    },
+  });
+}
+
 function commonPayload(input: {
   cycleId: string;
   releasedAt: string;
@@ -328,23 +430,6 @@ export function buildHeadteacherDirectorReleaseNotificationRows(input: {
   };
 
   return [
-    {
-      cycleId: input.cycle.id,
-      recipientUserId: input.cycle.targetUserId,
-      recipientTenantId: input.cycle.targetTenantId,
-      channel: AppraisalNotificationChannel.IN_APP,
-      type: HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.notificationType,
-      status: AppraisalNotificationStatus.SENT,
-      idempotencyKey: idempotencyKey({
-        ...keyInput,
-        channel: AppraisalNotificationChannel.IN_APP,
-      }),
-      payload: common,
-      attempts: 0,
-      maxAttempts: 1,
-      priority: HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.priority,
-      sentAt: input.now,
-    },
     {
       cycleId: input.cycle.id,
       recipientUserId: input.cycle.targetUserId,
@@ -459,6 +544,7 @@ function incrementStatus(
 
 export function summarizeHeadteacherDirectorReleaseNotifications(input: {
   rows: NotificationSummaryRow[];
+  officialInAppVisible?: boolean;
 }): HeadteacherDirectorReleaseNotificationSummary {
   const summary: HeadteacherDirectorReleaseNotificationSummary = {
     recipientCount: 1,
@@ -469,10 +555,13 @@ export function summarizeHeadteacherDirectorReleaseNotifications(input: {
     },
   };
 
+  if (input.officialInAppVisible) {
+    summary.channels.inApp.total = 1;
+    summary.channels.inApp.sent = 1;
+  }
+
   for (const row of input.rows) {
-    if (row.channel === AppraisalNotificationChannel.IN_APP) {
-      incrementStatus(summary.channels.inApp, row.status);
-    } else if (row.channel === AppraisalNotificationChannel.SMS) {
+    if (row.channel === AppraisalNotificationChannel.SMS) {
       incrementStatus(summary.channels.sms, row.status);
     } else if (row.channel === AppraisalNotificationChannel.EMAIL) {
       incrementStatus(summary.channels.email, row.status);
@@ -552,21 +641,40 @@ function assertActiveTargetMembership(input: {
 async function notificationSummary(input: {
   database: HeadteacherDirectorReleaseNotificationDatabase;
   cycleId: string;
+  officialNoticeKey: string;
 }) {
-  const rows = await input.database.appraisalNotification.findMany({
-    where: {
-      cycleId: input.cycleId,
-      type: HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.notificationType,
-    },
-    select: { channel: true, status: true },
+  const [rows, officialNotice] = await Promise.all([
+    input.database.appraisalNotification.findMany({
+      where: {
+        cycleId: input.cycleId,
+        type: HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.notificationType,
+        channel: {
+          in: HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.externalChannels,
+        },
+      },
+      select: { channel: true, status: true },
+    }),
+    input.database.governanceOfficialNotice.findUnique({
+      where: { idempotencyKey: input.officialNoticeKey },
+      select: { id: true },
+    }),
+  ]);
+
+  return summarizeHeadteacherDirectorReleaseNotifications({
+    rows,
+    officialInAppVisible: Boolean(officialNotice),
   });
-
-  return summarizeHeadteacherDirectorReleaseNotifications({ rows });
 }
 
-function isTransactionConflict(error: unknown) {
-  return clean((error as { code?: unknown })?.code) === "P2034";
+function retryableSeedConflict(error: unknown) {
+  const code = clean((error as { code?: unknown })?.code);
+  return code === "P2034" || code === "P2002";
 }
+
+type SeedNotificationResult = {
+  appraisalRowsInserted: number;
+  officialInAppNoticeCreated: boolean;
+};
 
 async function seedNotificationRows(input: {
   database: HeadteacherDirectorReleaseNotificationDatabase;
@@ -574,18 +682,100 @@ async function seedNotificationRows(input: {
   cycle: ReleasedCycleRecord;
   actorUserId: string;
   releaseProofHash: string;
+  releasedAt: string;
+  officialNoticeKey: string;
   reqId: string;
+  now: Date;
   ip?: string | null;
   userAgent?: string | null;
-}) {
+}): Promise<SeedNotificationResult> {
   return input.database.$transaction(
     async (tx) => {
+      const existingNotice = await tx.governanceOfficialNotice.findUnique({
+        where: { idempotencyKey: input.officialNoticeKey },
+        select: { id: true },
+      });
+
+      let officialInAppNoticeCreated = false;
+
+      if (!existingNotice) {
+        const notice = await tx.governanceOfficialNotice.create({
+          data: {
+            tenantId: input.cycle.targetTenantId,
+            senderUserId: input.actorUserId,
+            title: "Headteacher appraisal result released",
+            body:
+              "Your official Headteacher appraisal result has been released. Open My Appraisal in EduLife OS to review the released result.",
+            priority: GovernanceInterventionPriority.MEDIUM,
+            status: GovernanceOfficialNoticeStatus.SENT,
+            audienceMode: GovernanceOfficialNoticeAudienceMode.INDIVIDUALS,
+            channels: jsonArray([
+              HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.officialInAppChannel,
+            ]),
+            audienceSummary: "Headteacher: 1",
+            idempotencyKey: input.officialNoticeKey,
+            idempotencyScope:
+              HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.officialNoticeIdempotencyScope,
+            metadata: officialNoticeMetadata({
+              cycleId: input.cycle.id,
+              releasedAt: input.releasedAt,
+              releaseProofHash: input.releaseProofHash,
+            }),
+            sentAt: input.now,
+          },
+          select: { id: true },
+        });
+
+        const recipient = await tx.governanceOfficialNoticeRecipient.create({
+          data: {
+            noticeId: notice.id,
+            tenantId: input.cycle.targetTenantId,
+            recipientUserId: input.cycle.targetUserId,
+            recipientType: GovernanceOfficialNoticeRecipientType.HEADTEACHER,
+            displayName: null,
+            roleLabel: "Headteacher",
+            phone: null,
+            email: null,
+            inAppVisible: true,
+            metadata: jsonObject({
+              source: "headteacher-appraisal-release",
+              cycleId: input.cycle.id,
+              releaseProofHash: input.releaseProofHash,
+            }),
+          },
+          select: { id: true },
+        });
+
+        await tx.governanceOfficialNoticeDelivery.create({
+          data: {
+            noticeId: notice.id,
+            recipientId: recipient.id,
+            channel: GovernanceOfficialNoticeChannel.IN_APP,
+            status: GovernanceOfficialNoticeDeliveryStatus.SENT,
+            toAddress: null,
+            provider: "EDULIFE_OS",
+            providerStatusDescription: "IN_APP_VISIBLE",
+            attempts: 1,
+            lastAttemptAt: input.now,
+            sentAt: input.now,
+            providerRaw: jsonObject({
+              source: "headteacher-appraisal-release",
+              initialStatus: GovernanceOfficialNoticeDeliveryStatus.SENT,
+              description: "IN_APP_VISIBLE",
+              idempotencyKey: input.officialNoticeKey,
+            }),
+          },
+        });
+
+        officialInAppNoticeCreated = true;
+      }
+
       const created = await tx.appraisalNotification.createMany({
         data: input.rows,
         skipDuplicates: true,
       });
 
-      if (created.count > 0) {
+      if (officialInAppNoticeCreated || created.count > 0) {
         await tx.auditLog.create({
           data: {
             tenantId: input.cycle.targetTenantId,
@@ -603,9 +793,14 @@ async function seedNotificationRows(input: {
                 HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.notificationType,
               releaseProofHash: input.releaseProofHash,
               recipientCount: 1,
-              rowsCreated: created.count,
-              channels:
-                HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.channels,
+              officialInAppNoticeCreated,
+              externalRowsCreated: created.count,
+              channels: [
+                GovernanceOfficialNoticeChannel.IN_APP,
+                ...HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.externalChannels,
+              ],
+              inAppHref:
+                HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.inAppHref,
               recipientIdentityIncluded: false,
               contactDestinationsIncluded: false,
               respondentIdentitiesIncluded: false,
@@ -618,7 +813,10 @@ async function seedNotificationRows(input: {
         });
       }
 
-      return created.count;
+      return {
+        appraisalRowsInserted: created.count,
+        officialInAppNoticeCreated,
+      };
     },
     {
       isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -724,38 +922,59 @@ export async function ensureHeadteacherDirectorReleaseNotifications(
     releaseProofHash,
     now,
   });
+  const officialNoticeKey = officialNoticeIdempotencyKey({
+    cycleId,
+    recipientUserId: cycle.targetUserId,
+    releaseProofHash,
+  });
 
-  let rowsInserted: number;
+  let seeded: SeedNotificationResult;
   try {
-    rowsInserted = await seedNotificationRows({
+    seeded = await seedNotificationRows({
       database,
       rows,
       cycle,
       actorUserId,
       releaseProofHash,
+      releasedAt,
+      officialNoticeKey,
       reqId,
+      now,
       ip: input.ip,
       userAgent: input.userAgent,
     });
   } catch (error) {
-    if (!isTransactionConflict(error)) throw error;
-    rowsInserted = await seedNotificationRows({
+    if (!retryableSeedConflict(error)) throw error;
+    seeded = await seedNotificationRows({
       database,
       rows,
       cycle,
       actorUserId,
       releaseProofHash,
+      releasedAt,
+      officialNoticeKey,
       reqId,
+      now,
       ip: input.ip,
       userAgent: input.userAgent,
     });
   }
 
+  const rowsInserted =
+    seeded.appraisalRowsInserted +
+    (seeded.officialInAppNoticeCreated ? 1 : 0);
+
   return {
     outcome: rowsInserted > 0 ? "SEEDED" : "EXISTING_MATCH",
     cycleId,
     rowsInserted,
-    summary: await notificationSummary({ database, cycleId }),
+    officialInAppNoticeCreated: seeded.officialInAppNoticeCreated,
+    officialInAppNoticeVisible: true,
+    summary: await notificationSummary({
+      database,
+      cycleId,
+      officialNoticeKey,
+    }),
     providerCalled: false,
     recipientIdentityReturned: false,
     contactDestinationsReturned: false,

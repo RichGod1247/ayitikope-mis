@@ -1,6 +1,7 @@
 // src/components/governance/OfficialNoticeInboxClient.tsx
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import GovernanceNoticeAttachmentList, {
   type GovernanceNoticeAttachmentItem,
@@ -238,6 +239,42 @@ function metadataBoolean(
   }
 
   return metadata[key] === true;
+}
+
+type SafeNoticeAction = {
+  href: string;
+  label: string;
+};
+
+function safeInternalNoticeAction(
+  metadata: Record<string, unknown> | null | undefined,
+): SafeNoticeAction | null {
+  const rawHref = metadataString(metadata, "actionHref");
+  if (!rawHref || !rawHref.startsWith("/") || rawHref.startsWith("//")) {
+    return null;
+  }
+
+  try {
+    const base = new URL("https://edulife.local");
+    const resolved = new URL(rawHref, base);
+
+    if (
+      resolved.origin !== base.origin ||
+      !resolved.pathname.startsWith("/") ||
+      resolved.pathname.startsWith("//")
+    ) {
+      return null;
+    }
+
+    const label = metadataString(metadata, "actionLabel").trim();
+
+    return {
+      href: `${resolved.pathname}${resolved.search}${resolved.hash}`,
+      label: label || "Open related page",
+    };
+  } catch {
+    return null;
+  }
 }
 
 function officialNoticeRef(notice: NoticeInboxItem["notice"]) {
@@ -702,6 +739,9 @@ export default function OfficialNoticeInboxClient({
             const respondKey = `respond:${item.id}`;
             const responseDraft = responseDrafts[item.id] ?? "";
             const responseReady = responseDraft.trim().length >= 20;
+            const noticeAction = safeInternalNoticeAction(
+              item.notice.metadata,
+            );
 
             return (
               <article
@@ -771,6 +811,23 @@ export default function OfficialNoticeInboxClient({
 <GovernanceNoticeAttachmentList
   attachments={item.notice.attachments}
 />
+
+{noticeAction ? (
+  <div className="mt-4 rounded-2xl border border-blue-300/20 bg-blue-400/[0.07] p-4">
+    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-100">
+      Related action
+    </p>
+    <p className="mt-1 text-sm leading-6 text-slate-300">
+      Open the secure EduLife OS page connected to this notice.
+    </p>
+    <Link
+      href={noticeAction.href}
+      className="mt-3 inline-flex min-h-12 w-full items-center justify-center rounded-2xl border border-blue-300/30 bg-blue-400/15 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-400/25 sm:w-auto"
+    >
+      {noticeAction.label}
+    </Link>
+  </div>
+) : null}
 
 <div className="mt-4 flex flex-wrap gap-2">
                       {channels.map((channel) => (

@@ -53,6 +53,40 @@ const AppraisalNotificationType = enumObject([
   "FEEDBACK_RELEASED",
   "CYCLE_CANCELLED",
 ]);
+const GovernanceInterventionPriority = enumObject([
+  "LOW",
+  "MEDIUM",
+  "HIGH",
+  "CRITICAL",
+]);
+const GovernanceOfficialNoticeAudienceMode = enumObject([
+  "ROLE_SCOPE",
+  "INDIVIDUALS",
+  "SCHOOL_SET",
+]);
+const GovernanceOfficialNoticeChannel = enumObject(["IN_APP", "SMS", "EMAIL"]);
+const GovernanceOfficialNoticeDeliveryStatus = enumObject([
+  "PENDING",
+  "SENT",
+  "FAILED",
+  "SKIPPED",
+]);
+const GovernanceOfficialNoticeRecipientType = enumObject([
+  "GOVERNANCE_OFFICER",
+  "SCHOOL_ADMIN",
+  "HEADTEACHER",
+  "TEACHER",
+  "PARENT",
+  "CUSTOM",
+]);
+const GovernanceOfficialNoticeStatus = enumObject([
+  "DRAFT",
+  "QUEUED",
+  "SENT",
+  "PARTIALLY_FAILED",
+  "FAILED",
+  "CANCELLED",
+]);
 const Prisma = {
   TransactionIsolationLevel: { Serializable: "Serializable" },
 };
@@ -64,12 +98,22 @@ Module._load = function patchedLoad(request, parent, isMain) {
       AppraisalNotificationChannel,
       AppraisalNotificationStatus,
       AppraisalNotificationType,
+      GovernanceInterventionPriority,
+      GovernanceOfficialNoticeAudienceMode,
+      GovernanceOfficialNoticeChannel,
+      GovernanceOfficialNoticeDeliveryStatus,
+      GovernanceOfficialNoticeRecipientType,
+      GovernanceOfficialNoticeStatus,
       Prisma,
     };
   }
   if (request === "@/lib/prisma") return { prisma: {} };
   if (request === "@/lib/appraisals/audit") {
-    return { APPRAISAL_AUDIT_ACTIONS: { NOTIFICATION_QUEUED: "NOTIFICATION_QUEUED" } };
+    return {
+      APPRAISAL_AUDIT_ACTIONS: {
+        NOTIFICATION_QUEUED: "NOTIFICATION_QUEUED",
+      },
+    };
   }
   if (request === "@/lib/appraisals/headteacherFeedback") {
     return {
@@ -104,14 +148,19 @@ const routePath = path.join(
   repositoryRoot,
   "src/app/api/district/headteacher-appraisals/[cycleId]/release/route.ts",
 );
-const clientPath = path.join(
+const noticeClientPath = path.join(
+  repositoryRoot,
+  "src/components/governance/OfficialNoticeInboxClient.tsx",
+);
+const directorClientPath = path.join(
   repositoryRoot,
   "src/app/district/headteacher-appraisals/review/HeadteacherDirectorReviewClient.tsx",
 );
 
 const serviceSource = fs.readFileSync(servicePath, "utf8");
 const routeSource = fs.readFileSync(routePath, "utf8");
-const clientSource = fs.readFileSync(clientPath, "utf8");
+const noticeClientSource = fs.readFileSync(noticeClientPath, "utf8");
+const directorClientSource = fs.readFileSync(directorClientPath, "utf8");
 const service = require(servicePath);
 
 const proofHash = "a".repeat(64);
@@ -157,10 +206,15 @@ function releasedCycle(overrides = {}) {
   };
 }
 
-function fixtureDatabase(cycle = releasedCycle()) {
-  const rows = [];
+function fixtureDatabase(cycle = releasedCycle(), initialRows = []) {
+  const rows = [...initialRows];
+  const notices = [];
+  const recipients = [];
+  const deliveries = [];
   const audits = [];
   const transactionOptions = [];
+  let noticeCounter = 0;
+  let recipientCounter = 0;
 
   const notificationDelegate = {
     async createMany(args) {
@@ -175,13 +229,42 @@ function fixtureDatabase(cycle = releasedCycle()) {
       return { count };
     },
     async findMany(args) {
+      const channels = args.where.channel?.in ?? [];
       return rows
         .filter(
           (row) =>
             row.cycleId === args.where.cycleId &&
-            row.type === args.where.type,
+            row.type === args.where.type &&
+            (!channels.length || channels.includes(row.channel)),
         )
         .map((row) => ({ channel: row.channel, status: row.status }));
+    },
+  };
+
+  const officialNoticeDelegate = {
+    async findUnique(args) {
+      return (
+        notices.find(
+          (notice) => notice.idempotencyKey === args.where.idempotencyKey,
+        ) ?? null
+      );
+    },
+    async create(args) {
+      if (
+        notices.some(
+          (notice) => notice.idempotencyKey === args.data.idempotencyKey,
+        )
+      ) {
+        const error = new Error("unique");
+        error.code = "P2002";
+        throw error;
+      }
+      const notice = {
+        id: `notice_${++noticeCounter}`,
+        ...args.data,
+      };
+      notices.push(notice);
+      return { id: notice.id };
     },
   };
 
@@ -204,10 +287,28 @@ function fixtureDatabase(cycle = releasedCycle()) {
       },
     },
     appraisalNotification: notificationDelegate,
+    governanceOfficialNotice: officialNoticeDelegate,
     async $transaction(operation, options) {
       transactionOptions.push(options);
       return operation({
         appraisalNotification: notificationDelegate,
+        governanceOfficialNotice: officialNoticeDelegate,
+        governanceOfficialNoticeRecipient: {
+          async create(args) {
+            const recipient = {
+              id: `recipient_${++recipientCounter}`,
+              ...args.data,
+            };
+            recipients.push(recipient);
+            return { id: recipient.id };
+          },
+        },
+        governanceOfficialNoticeDelivery: {
+          async create(args) {
+            deliveries.push(args.data);
+            return args.data;
+          },
+        },
         auditLog: {
           async create(args) {
             audits.push(args.data);
@@ -218,7 +319,15 @@ function fixtureDatabase(cycle = releasedCycle()) {
     },
   };
 
-  return { database, rows, audits, transactionOptions };
+  return {
+    database,
+    rows,
+    notices,
+    recipients,
+    deliveries,
+    audits,
+    transactionOptions,
+  };
 }
 
 async function expectReject(operation, expectedCode, message) {
@@ -233,14 +342,24 @@ async function expectReject(operation, expectedCode, message) {
 
 async function main() {
   equal(
+    service.HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.schemaVersion,
+    2,
+    "visible notification policy version",
+  );
+  equal(
     service.HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.notificationType,
     "FEEDBACK_RELEASED",
     "release event type",
   );
   equal(
-    service.HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.channels.length,
-    3,
-    "three notification channels",
+    service.HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.inAppHref,
+    "/headteacher/my-appraisal",
+    "released-result action route",
+  );
+  equal(
+    service.HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.externalChannels.length,
+    2,
+    "only SMS and email use appraisal outbox",
   );
   equal(
     service.HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.providerCallsAllowed,
@@ -255,24 +374,36 @@ async function main() {
     releaseProofHash: proofHash,
     now,
   });
-  equal(built.length, 3, "one row per channel");
-  equal(built[0].channel, "IN_APP", "in-app row first");
-  equal(built[0].status, "SENT", "in-app immediately sent");
-  equal(built[1].status, "PENDING", "valid opted-in SMS pending");
-  equal(built[2].status, "PENDING", "valid email pending");
+  equal(built.length, 2, "only external outbox rows are built");
+  equal(built[0].channel, "SMS", "SMS outbox row first");
+  equal(built[0].status, "PENDING", "valid opted-in SMS pending");
+  equal(built[1].channel, "EMAIL", "email outbox row second");
+  equal(built[1].status, "PENDING", "valid email pending");
+  truthy(
+    built.every((row) => row.channel !== "IN_APP"),
+    "in-app is not written to the invisible appraisal outbox",
+  );
   equal(
-    built[1].payload.delivery.template,
+    built[0].payload.delivery.template,
     "headteacher-appraisal-feedback-released",
     "payload-selected SMS template",
   );
-  equal(new Set(built.map((row) => row.idempotencyKey)).size, 3, "unique keys");
+  equal(new Set(built.map((row) => row.idempotencyKey)).size, 2, "unique keys");
   truthy(
     built.every((row) => row.idempotencyKey.length <= 180),
     "idempotency keys within schema limit",
   );
-  includes(JSON.stringify(built), "\"releaseNoteIncluded\":false", "release note exclusion declared");
+  includes(
+    JSON.stringify(built),
+    "\"releaseNoteIncluded\":false",
+    "release note exclusion declared",
+  );
   excludes(JSON.stringify(built), "respondentUserId", "respondents excluded");
-  includes(JSON.stringify(built), "\"scoreValuesIncluded\":false", "score exclusion declared");
+  includes(
+    JSON.stringify(built),
+    "\"scoreValuesIncluded\":false",
+    "score exclusion declared",
+  );
 
   const skippedRows = service.buildHeadteacherDirectorReleaseNotificationRows({
     cycle: releasedCycle({
@@ -288,10 +419,10 @@ async function main() {
     releaseProofHash: proofHash,
     now,
   });
-  equal(skippedRows[1].status, "SKIPPED", "SMS opt-out skipped");
-  equal(skippedRows[1].lastError, "SMS_OPT_OUT", "SMS opt-out reason");
-  equal(skippedRows[2].status, "SKIPPED", "invalid email skipped");
-  equal(skippedRows[2].lastError, "EMAIL_UNAVAILABLE", "email skip reason");
+  equal(skippedRows[0].status, "SKIPPED", "SMS opt-out skipped");
+  equal(skippedRows[0].lastError, "SMS_OPT_OUT", "SMS opt-out reason");
+  equal(skippedRows[1].status, "SKIPPED", "invalid email skipped");
+  equal(skippedRows[1].lastError, "EMAIL_UNAVAILABLE", "email skip reason");
 
   const fixture = fixtureDatabase();
   const first = await service.ensureHeadteacherDirectorReleaseNotifications({
@@ -303,18 +434,39 @@ async function main() {
     now,
     database: fixture.database,
   });
-  equal(first.outcome, "SEEDED", "first call seeds rows");
-  equal(first.rowsInserted, 3, "three rows inserted");
+  equal(first.outcome, "SEEDED", "first call seeds visible notification");
+  equal(first.rowsInserted, 3, "one inbox notice plus two external rows");
+  equal(first.officialInAppNoticeCreated, true, "official notice created");
+  equal(first.officialInAppNoticeVisible, true, "official notice visible");
   equal(first.summary.recipientCount, 1, "one Headteacher recipient");
-  equal(first.summary.channels.inApp.sent, 1, "in-app sent summary");
+  equal(first.summary.channels.inApp.sent, 1, "official inbox visible summary");
   equal(first.summary.channels.sms.pending, 1, "SMS pending summary");
   equal(first.summary.channels.email.pending, 1, "email pending summary");
   equal(first.providerCalled, false, "no provider call");
   equal(first.recipientIdentityReturned, false, "identity not returned");
   equal(first.contactDestinationsReturned, false, "contacts not returned");
+  equal(fixture.notices.length, 1, "one official notice");
+  equal(fixture.recipients.length, 1, "one official notice recipient");
+  equal(fixture.deliveries.length, 1, "one visible in-app delivery");
+  equal(fixture.deliveries[0].channel, "IN_APP", "in-app delivery channel");
+  equal(fixture.deliveries[0].status, "SENT", "in-app delivery sent");
+  equal(fixture.notices[0].status, "SENT", "official notice sent");
+  equal(
+    fixture.notices[0].audienceMode,
+    "INDIVIDUALS",
+    "exact recipient audience",
+  );
   equal(fixture.audits.length, 1, "one audit on first seed");
-  excludes(JSON.stringify(fixture.audits), "headteacher@example.com", "email absent from audit");
-  excludes(JSON.stringify(fixture.audits), "+233244000000", "phone absent from audit");
+  excludes(
+    JSON.stringify(fixture.audits),
+    "headteacher@example.com",
+    "email absent from audit",
+  );
+  excludes(
+    JSON.stringify(fixture.audits),
+    "+233244000000",
+    "phone absent from audit",
+  );
   equal(
     fixture.transactionOptions[0].isolationLevel,
     "Serializable",
@@ -334,8 +486,44 @@ async function main() {
   });
   equal(retry.outcome, "EXISTING_MATCH", "retry is idempotent");
   equal(retry.rowsInserted, 0, "retry inserts no rows");
-  equal(fixture.rows.length, 3, "retry preserves exact three rows");
+  equal(retry.officialInAppNoticeCreated, false, "retry reuses official notice");
+  equal(fixture.notices.length, 1, "retry preserves one notice");
+  equal(fixture.recipients.length, 1, "retry preserves one recipient");
+  equal(fixture.deliveries.length, 1, "retry preserves one in-app delivery");
+  equal(fixture.rows.length, 2, "retry preserves exact external rows");
   equal(fixture.audits.length, 1, "retry creates no duplicate audit");
+
+  const legacyRows = [
+    {
+      cycleId: cycle.id,
+      recipientUserId: cycle.targetUserId,
+      channel: "IN_APP",
+      type: "FEEDBACK_RELEASED",
+      status: "SENT",
+      idempotencyKey: "legacy-in-app-row",
+    },
+    ...built,
+  ];
+  const repairFixture = fixtureDatabase(cycle, legacyRows);
+  const repair = await service.ensureHeadteacherDirectorReleaseNotifications({
+    cycleId: cycle.id,
+    actorUserId: "director_user_001",
+    releaseProofHash: proofHash,
+    releasedAt,
+    reqId: "request_release_notification_repair_001",
+    now,
+    database: repairFixture.database,
+  });
+  equal(repair.outcome, "SEEDED", "existing release can be repaired");
+  equal(repair.rowsInserted, 1, "repair creates only visible official notice");
+  equal(repair.officialInAppNoticeCreated, true, "repair creates inbox notice");
+  equal(
+    repair.summary.channels.inApp.total,
+    1,
+    "legacy invisible row is not double-counted as visible delivery",
+  );
+  equal(repairFixture.rows.length, 3, "legacy outbox rows remain historical");
+  equal(repairFixture.notices.length, 1, "repair creates one official notice");
 
   const driftFixture = fixtureDatabase(
     releasedCycle({
@@ -385,10 +573,51 @@ async function main() {
     "Repeating release will not duplicate the official result.",
     "The Headteacher notification was queued safely.",
   ]) {
-    includes(clientSource, marker, `truthful BBC retry contract: ${marker}`);
+    includes(
+      directorClientSource,
+      marker,
+      `truthful BBC retry contract: ${marker}`,
+    );
   }
-  excludes(clientSource, "localStorage", "no browser persistence");
-  excludes(clientSource, "setInterval(", "no polling");
+  excludes(directorClientSource, "localStorage", "no browser persistence");
+  excludes(directorClientSource, "setInterval(", "no polling");
+
+  for (const marker of [
+    "GovernanceOfficialNoticeStatus.SENT",
+    "GovernanceOfficialNoticeAudienceMode.INDIVIDUALS",
+    "GovernanceOfficialNoticeRecipientType.HEADTEACHER",
+    "GovernanceOfficialNoticeDeliveryStatus.SENT",
+    "inAppVisible: true",
+    'inAppHref: "/headteacher/my-appraisal"',
+    'inAppActionLabel: "Open released appraisal"',
+    'noticeKind: "INFORMATION_ONLY"',
+    "officialInAppNoticeCreated",
+    "officialInAppNoticeVisible: true",
+  ]) {
+    includes(serviceSource, marker, `visible in-app contract: ${marker}`);
+  }
+  excludes(
+    serviceSource,
+    "channel: AppraisalNotificationChannel.IN_APP",
+    "invisible appraisal in-app row removed",
+  );
+
+  for (const marker of [
+    'import Link from "next/link"',
+    "safeInternalNoticeAction",
+    'metadataString(metadata, "actionHref")',
+    'rawHref.startsWith("/")',
+    'rawHref.startsWith("//")',
+    "resolved.origin !== base.origin",
+    'metadataString(metadata, "actionLabel")',
+    "noticeAction.href",
+    "noticeAction.label",
+    "Open the secure EduLife OS page connected to this notice.",
+  ]) {
+    includes(noticeClientSource, marker, `safe inbox action: ${marker}`);
+  }
+  excludes(noticeClientSource, 'target="_blank"', "notice action stays in portal");
+  excludes(noticeClientSource, "window.location", "no unchecked imperative redirect");
 
   for (const forbidden of [
     "sendSms",
@@ -401,19 +630,23 @@ async function main() {
     excludes(serviceSource, forbidden, `forbidden service marker: ${forbidden}`);
   }
 
-  console.log("=== D3.4G4C IDEMPOTENT POST-RELEASE NOTIFICATION SEEDING ===");
+  console.log("=== D3.4G4C VISIBLE POST-RELEASE NOTIFICATION SEEDING ===");
   console.log("");
   console.log("Trigger boundary                : after verified Director release");
   console.log("Recipient                       : exact released Headteacher only");
   console.log("Notification event              : FEEDBACK_RELEASED");
-  console.log("In-app                          : immediately SENT");
-  console.log("SMS/email                       : PENDING or contact-safe SKIPPED");
+  console.log("In-app system                   : Official Notice Inbox");
+  console.log("In-app route                    : /headteacher/my-appraisal");
+  console.log("In-app lifecycle                : visible + read tracking");
+  console.log("SMS/email                       : appraisal outbox only");
+  console.log("Legacy invisible in-app rows    : ignored, not duplicated");
   console.log("Queue idempotency               : release proof + cycle + channel hash");
+  console.log("Official notice idempotency     : deterministic release-proof key");
   console.log("Repeated seeding                : EXISTING_MATCH");
+  console.log("Historical release repair       : supported without manual SQL");
   console.log("Release proof                   : revalidated before queueing");
   console.log("Release transaction             : remains separate and immutable");
   console.log("Partial-success response        : releaseCommitted + retrySafe");
-  console.log("BBC retry guidance              : truthful, no blind duplicate warning");
   console.log("Respondent identities/forms     : not accessed");
   console.log("Score/release-note payload      : absent");
   console.log("Audit contacts/identity         : absent");
@@ -421,7 +654,7 @@ async function main() {
   console.log("Transaction                     : serializable and bounded");
   console.log("Database accessed               : false");
   console.log("");
-  console.log("RESULT: D3.4G4C RELEASE NOTIFICATION SEEDING GREEN");
+  console.log("RESULT: D3.4G4C VISIBLE RELEASE NOTIFICATION GREEN");
 }
 
 main().catch((error) => {
