@@ -7,6 +7,10 @@ import {
   inspectHeadteacherSupervisoryInstrument,
 } from "@/lib/appraisals/headteacherSupervisoryAssessment";
 import { calculateAppraisalScores } from "@/lib/appraisals/scoring";
+import {
+  visitDetailsFromEvidenceSnapshot,
+  type HeadteacherSupervisoryVisitDetailsSnapshot,
+} from "@/lib/appraisals/headteacherSupervisoryVisitDetails";
 import { effectiveRole } from "@/lib/roleRouting";
 
 export const HEADTEACHER_RELEASED_RESULT_POLICY = {
@@ -26,6 +30,9 @@ export const HEADTEACHER_RELEASED_RESULT_POLICY = {
   staffItemAveragesIncluded: false,
   supervisoryItemScoresIncluded: true,
   supervisoryItemScoresReadOnly: true,
+  supervisoryVisitDetailsIncluded: true,
+  supervisoryVisitDetailsSource: "IMMUTABLE_EVIDENCE_SNAPSHOT",
+  version1VisitCompatibility: "NULL_NOT_RECONSTRUCTED",
   respondentIdentitiesIncluded: false,
   individualStaffResponsesIncluded: false,
   participantListIncluded: false,
@@ -41,6 +48,8 @@ export const HEADTEACHER_RELEASED_RESULT_POLICY = {
   readOnly: true,
   databaseWritesAllowed: false,
   transactionRequired: false,
+  databaseReadShape: "SEQUENTIAL_FOUR_READS",
+  concurrentPrismaReadsAllowed: false,
   notificationsSeeded: false,
   providerCallsAllowed: false,
 } as const;
@@ -98,6 +107,7 @@ export type HeadteacherReleasedResult = {
   supervisoryAssessment: {
     revision: number;
     dateObserved: string;
+    visit: HeadteacherSupervisoryVisitDetailsSnapshot | null;
     finalizedAt: string;
     overallPercentage: number;
     sections: Array<{
@@ -148,6 +158,7 @@ export type HeadteacherReleasedResult = {
     staffSnapshotProofAnchored: true;
     supervisoryAssessmentHashRecomputed: true;
     supervisoryItemScoresVerified: true;
+    supervisoryVisitEvidenceVerified: true;
     separateEvidenceStreams: true;
     combinedWeightingDefined: false;
     scoreMutationAllowed: false;
@@ -265,7 +276,9 @@ type AssessmentRecord = {
   finalizedByUserId: string | null;
   finalizedAt: Date | null;
   metadata: unknown;
+  evidenceSnapshotJson: unknown;
   scores: AssessmentScoreRecord[];
+  reviews: ReviewRecord[];
   instrumentVersion: {
     id: string;
     version: number;
@@ -308,10 +321,6 @@ export type HeadteacherReleasedResultDatabase = {
   };
   appraisalAssessment: {
     findUnique(args: unknown): Promise<AssessmentRecord | null>;
-  };
-  appraisalReview: {
-    findUnique(args: unknown): Promise<ReviewRecord | null>;
-    findMany(args: unknown): Promise<ReviewRecord[]>;
   };
 };
 
@@ -415,6 +424,23 @@ const ASSESSMENT_SELECT = {
   finalizedByUserId: true,
   finalizedAt: true,
   metadata: true,
+  evidenceSnapshotJson: true,
+  reviews: {
+    orderBy: [{ stage: "asc" }, { createdAt: "asc" }],
+    select: {
+      id: true,
+      cycleId: true,
+      assessmentId: true,
+      reviewerUserId: true,
+      reviewerAssignmentId: true,
+      stage: true,
+      decision: true,
+      note: true,
+      decidedAt: true,
+      metadata: true,
+      createdAt: true,
+    },
+  },
   scores: {
     orderBy: [{ sectionOrder: "asc" }, { itemOrder: "asc" }],
     select: {
@@ -472,19 +498,6 @@ const ASSESSMENT_SELECT = {
   },
 } as const;
 
-const REVIEW_SELECT = {
-  id: true,
-  cycleId: true,
-  assessmentId: true,
-  reviewerUserId: true,
-  reviewerAssignmentId: true,
-  stage: true,
-  decision: true,
-  note: true,
-  decidedAt: true,
-  metadata: true,
-  createdAt: true,
-} as const;
 
 function clean(value: unknown) {
   return String(value ?? "").trim();
@@ -1088,32 +1101,23 @@ export async function readHeadteacherReleasedResult(
   );
   const snapshotId = requireIdentifier(cycleRelease.snapshotId, "snapshotId");
 
-  const [review, assessment, snapshot] = await Promise.all([
-    database.appraisalReview.findUnique({
-      where: { id: reviewId },
-      select: REVIEW_SELECT,
-    }),
-    database.appraisalAssessment.findUnique({
-      where: { id: assessmentId },
-      select: ASSESSMENT_SELECT,
-    }),
-    database.appraisalAggregateSnapshot.findUnique({
-      where: { id: snapshotId },
-      select: SNAPSHOT_SELECT,
-    }),
-  ]);
-  if (!review) fail("HEADTEACHER_RELEASED_RESULT_REVIEW_NOT_FOUND", 409);
+  const assessment = await database.appraisalAssessment.findUnique({
+    where: { id: assessmentId },
+    select: ASSESSMENT_SELECT,
+  });
   if (!assessment) {
     fail("HEADTEACHER_RELEASED_RESULT_ASSESSMENT_NOT_FOUND", 409);
   }
-  if (!snapshot) fail("HEADTEACHER_RELEASED_RESULT_SNAPSHOT_NOT_FOUND", 409);
 
-  const reviews = await database.appraisalReview.findMany({
-    where: { assessmentId },
-    select: REVIEW_SELECT,
-    orderBy: [{ stage: "asc" }, { createdAt: "asc" }],
+  const review = assessment.reviews.find((row) => row.id === reviewId) ?? null;
+  if (!review) fail("HEADTEACHER_RELEASED_RESULT_REVIEW_NOT_FOUND", 409);
+  verifyReviewChain(assessment.reviews, review);
+
+  const snapshot = await database.appraisalAggregateSnapshot.findUnique({
+    where: { id: snapshotId },
+    select: SNAPSHOT_SELECT,
   });
-  verifyReviewChain(reviews, review);
+  if (!snapshot) fail("HEADTEACHER_RELEASED_RESULT_SNAPSHOT_NOT_FOUND", 409);
 
   const reviewRelease = objectValue(
     objectValue(review.metadata)[RELEASE_METADATA_KEY],
@@ -1160,6 +1164,9 @@ export async function readHeadteacherReleasedResult(
 
   const anchors = reviewEvidenceAnchors(review);
   const verifiedAssessment = verifyAssessment(assessment);
+  const visitDetails = visitDetailsFromEvidenceSnapshot(
+    assessment.evidenceSnapshotJson,
+  );
   const verifiedSnapshot = snapshotSections(snapshot);
   assertSharedItemBank({
     assessmentSections: verifiedAssessment.sections,
@@ -1297,6 +1304,7 @@ export async function readHeadteacherReleasedResult(
     supervisoryAssessment: {
       revision: assessment.revision,
       dateObserved: isoDateOnly(assessment.dateObserved!),
+      visit: visitDetails,
       finalizedAt: assessment.finalizedAt!.toISOString(),
       overallPercentage: verifiedAssessment.overallPercentage!,
       sections: supervisorySections,
@@ -1335,6 +1343,7 @@ export async function readHeadteacherReleasedResult(
       staffSnapshotProofAnchored: true,
       supervisoryAssessmentHashRecomputed: true,
       supervisoryItemScoresVerified: true,
+      supervisoryVisitEvidenceVerified: true,
       separateEvidenceStreams: true,
       combinedWeightingDefined: false,
       scoreMutationAllowed: false,

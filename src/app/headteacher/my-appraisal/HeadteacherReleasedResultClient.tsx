@@ -27,6 +27,10 @@ export const HEADTEACHER_RELEASED_RESULT_UI_POLICY = {
   resultMutationAllowed: false,
   notificationsSeeded: false,
   providerCallsAllowed: false,
+  deterministicDateLocale: "en-GH",
+  deterministicDateTimeZone: "Africa/Accra",
+  staffPercentageExplanationIncluded: true,
+  supervisoryVisitDetailsIncluded: true,
 } as const;
 
 type ReleasedResultApiResponse =
@@ -93,11 +97,12 @@ function dateLabel(value: string | null | undefined) {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString(undefined, {
+  return new Intl.DateTimeFormat("en-GH", {
     day: "2-digit",
     month: "short",
     year: "numeric",
-  });
+    timeZone: "Africa/Accra",
+  }).format(date);
 }
 
 function stateGuidance(state: HeadteacherOwnAppraisalReadState | null) {
@@ -214,7 +219,12 @@ function releasedResultContractSafe(item: HeadteacherReleasedResult) {
     item.supervisoryAssessment.sections.reduce(
       (sum, section) => sum + section.items.length,
       0,
-    ) === 34
+    ) === 34 &&
+    (item.supervisoryAssessment.visit === null ||
+      (item.supervisoryAssessment.visit.schemaVersion === 1 &&
+        /^\d{2}:\d{2}$/.test(
+          item.supervisoryAssessment.visit.arrivalTime,
+        )))
   );
 }
 
@@ -242,7 +252,7 @@ function paperScoreCellTone(input: {
   }
 }
 
-function paperValue(value: string | null | undefined) {
+function paperValue(value: unknown) {
   return String(value ?? "").trim() || "Not included in this released record";
 }
 
@@ -394,19 +404,36 @@ function StaffAggregateView(props: {
               <h3 className="mt-2 text-base font-black leading-6 text-white">
                 {section.sectionTitle}
               </h3>
-              <div className="mt-4 flex items-end justify-between gap-3">
+              <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
                 <div>
                   <p className="text-xs text-[#8F98A8]">
-                    Aggregate section average
+                    Average section result
                   </p>
                   <p className="mt-1 text-2xl font-black text-white">
                     {percentage(section.averagePercentage)}
                   </p>
                 </div>
-                <p className="text-xs font-semibold text-[#8F98A8]">
-                  Official maximum {section.sectionMaxScore}
-                </p>
+                <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left sm:text-right">
+                  <p className="text-xs font-semibold text-[#C9CDD6]">
+                    Full section scale: {section.sectionMaxScore} points
+                  </p>
+                  <p className="mt-1 text-[11px] leading-5 text-[#8F98A8]">
+                    {Math.round(section.sectionMaxScore / 5)} indicators × 5
+                  </p>
+                </div>
               </div>
+
+              <details className="mt-4 rounded-2xl border border-cyan-300/15 bg-cyan-400/[0.055] px-3 py-2.5">
+                <summary className="cursor-pointer text-xs font-bold text-cyan-100">
+                  How this percentage was calculated
+                </summary>
+                <p className="mt-2 text-xs leading-6 text-[#C9CDD6]">
+                  Each finalized respondent’s N/A indicators are excluded from
+                  that person’s applicable maximum first. The percentages that
+                  remain are then averaged for this section. The full scale is
+                  shown for orientation; it is not a reconstructed raw score.
+                </p>
+              </details>
             </article>
           ))}
         </div>
@@ -492,19 +519,19 @@ function SupervisoryNativeForm(props: {
                   "Name of School",
                   props.result.cycle.schoolName,
                   "Staff Strength",
-                  null,
+                  props.result.supervisoryAssessment.visit?.staffStrength,
                 ],
                 [
                   "Name of Circuit",
                   props.result.cycle.circuitName,
                   "Total Enrolment",
-                  null,
+                  props.result.supervisoryAssessment.visit?.totalEnrolment,
                 ],
                 [
                   "Name of Head",
                   props.result.cycle.headteacherName,
                   "Girls",
-                  null,
+                  props.result.supervisoryAssessment.visit?.girls,
                 ],
                 [
                   "Date of Visit",
@@ -512,13 +539,14 @@ function SupervisoryNativeForm(props: {
                     props.result.supervisoryAssessment.dateObserved,
                   ),
                   "Boys",
-                  null,
+                  props.result.supervisoryAssessment.visit?.boys,
                 ],
                 [
                   "Arrival Time",
-                  null,
+                  props.result.supervisoryAssessment.visit?.arrivalTime,
                   "Teachers Present at the Time of Visit",
-                  null,
+                  props.result.supervisoryAssessment.visit
+                    ?.teachersPresentAtVisit,
                 ],
               ].map((row) => (
                 <tr key={String(row[0])}>
@@ -540,9 +568,9 @@ function SupervisoryNativeForm(props: {
           </table>
 
           <div className="border-x border-b border-slate-300 bg-indigo-50 px-4 py-3 text-[11px] leading-5 text-indigo-950">
-            This released-result payload contains the verified observation date
-            and score evidence. Other visit-header values are not included and
-            are shown as not captured rather than reconstructed.
+            {props.result.supervisoryAssessment.visit
+              ? "Official visit particulars were captured when this assessment was created and are displayed from the immutable evidence snapshot."
+              : "This historical assessment predates official visit-particular capture. Missing values are shown as not included and are never reconstructed."}
           </div>
 
           <table className="w-full border-collapse text-[11px] leading-4">

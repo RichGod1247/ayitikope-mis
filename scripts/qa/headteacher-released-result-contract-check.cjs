@@ -203,6 +203,21 @@ function makeState() {
     finalizedByUserId: "sisso-user-001",
     finalizedAt: FINALIZED_AT,
     metadata: { visitContextHash: VISIT_HASH },
+    evidenceSnapshotJson: {
+      schemaVersion: 2,
+      observation: {
+        dateObserved: "2026-08-01",
+        visitDetails: {
+          schemaVersion: 1,
+          arrivalTime: "08:15",
+          staffStrength: 12,
+          totalEnrolment: 320,
+          girls: 168,
+          boys: 152,
+          teachersPresentAtVisit: 10,
+        },
+      },
+    },
     scores,
     instrumentVersion: {
       id: "instrument-version-001",
@@ -508,17 +523,10 @@ function makeDatabase(state) {
     appraisalAssessment: {
       async findUnique() {
         reads.push("appraisalAssessment.findUnique");
-        return clone(state.assessment);
-      },
-    },
-    appraisalReview: {
-      async findUnique() {
-        reads.push("appraisalReview.findUnique");
-        return clone(state.review);
-      },
-      async findMany() {
-        reads.push("appraisalReview.findMany");
-        return clone(state.reviews);
+        return {
+          ...clone(state.assessment),
+          reviews: clone(state.reviews),
+        };
       },
     },
   };
@@ -550,6 +558,16 @@ async function main() {
     "Supervisory item scores must remain read-only",
   );
   assertEqual(HEADTEACHER_RELEASED_RESULT_POLICY.combinedWeightingDefined, false, "Combined weighting must remain undefined");
+  assertEqual(
+    HEADTEACHER_RELEASED_RESULT_POLICY.supervisoryVisitDetailsIncluded,
+    true,
+    "Immutable supervisory visit details must be included",
+  );
+  assertEqual(
+    HEADTEACHER_RELEASED_RESULT_POLICY.concurrentPrismaReadsAllowed,
+    false,
+    "Single-connection UAT path must not launch concurrent Prisma reads",
+  );
 
   const state = makeState();
   const database = makeDatabase(state);
@@ -561,6 +579,16 @@ async function main() {
   assertEqual(result.release.integrityVerified, true, "Release proof not verified");
   assertEqual(result.staffFeedback.sections.length, 4, "Staff section count drift");
   assertEqual(result.supervisoryAssessment.sections.length, 4, "Supervisory section count drift");
+  assertEqual(result.supervisoryAssessment.visit?.arrivalTime, "08:15", "Arrival time projection drift");
+  assertEqual(result.supervisoryAssessment.visit?.staffStrength, 12, "Staff strength projection drift");
+  assertEqual(result.supervisoryAssessment.visit?.totalEnrolment, 320, "Enrolment projection drift");
+  assertEqual(result.supervisoryAssessment.visit?.girls, 168, "Girls projection drift");
+  assertEqual(result.supervisoryAssessment.visit?.boys, 152, "Boys projection drift");
+  assertEqual(
+    result.supervisoryAssessment.visit?.teachersPresentAtVisit,
+    10,
+    "Teachers-present projection drift",
+  );
   assertEqual(result.comparison.sections.length, 4, "Comparison section count drift");
   assertEqual(result.comparison.overall.supervisoryMinusStaffPercentagePoints, 5, "Comparison direction drift");
   assertEqual(result.comparison.combinedOverallPercentage, null, "Combined score must remain absent");
@@ -595,7 +623,26 @@ async function main() {
   );
   assert(!JSON.stringify(result).includes(REVIEWER_USER), "Reviewer identity leaked");
   assert(!JSON.stringify(result).includes("sisso-user-001"), "Assessor identity leaked");
-  assertEqual(database.reads.length, 6, "Unexpected read shape");
+  assertEqual(database.reads.length, 4, "Unexpected read shape");
+  assertEqual(
+    database.reads.join(" -> "),
+    "appraisalCycle.findUnique -> membership.findMany -> appraisalAssessment.findUnique -> appraisalAggregateSnapshot.findUnique",
+    "Released-result reads must remain sequential and pool-safe",
+  );
+
+  const historicalState = makeState();
+  historicalState.assessment.evidenceSnapshotJson = {
+    schemaVersion: 1,
+    observation: { dateObserved: "2026-08-01" },
+  };
+  const historical = await readHeadteacherReleasedResult(
+    input(makeDatabase(historicalState)),
+  );
+  assertEqual(
+    historical.supervisoryAssessment.visit,
+    null,
+    "Version-1 visit compatibility must remain truthful and unreconstructed",
+  );
 
   await expectReject(
     () => readHeadteacherReleasedResult(input(makeDatabase(makeState()), { actorRoleName: "TEACHER" })),
@@ -652,6 +699,13 @@ async function main() {
     path.join(repoRoot, "src/lib/appraisals/headteacherReleasedResult.ts"),
     "utf8",
   );
+  const clientSource = fs.readFileSync(
+    path.join(
+      repoRoot,
+      "src/app/headteacher/my-appraisal/HeadteacherReleasedResultClient.tsx",
+    ),
+    "utf8",
+  );
   for (const forbidden of [
     "$transaction",
     "auditLog",
@@ -660,9 +714,34 @@ async function main() {
     "sendSms",
     "sendEmail",
     "appraisalNotification",
+    "Promise.all(",
+    "appraisalReview.",
   ]) {
     assert(!source.includes(forbidden), `Forbidden write/identity marker: ${forbidden}`);
   }
+
+
+  for (const marker of [
+    'new Intl.DateTimeFormat("en-GH"',
+    'timeZone: "Africa/Accra"',
+    "Full section scale:",
+    "How this percentage was calculated",
+    "immutable evidence snapshot",
+    "supervisoryAssessment.visit?.arrivalTime",
+    "supervisoryAssessment.visit?.staffStrength",
+  ]) {
+    assert(clientSource.includes(marker), `Released-result client marker missing: ${marker}`);
+  }
+  assert(
+    /supervisoryAssessment\.visit\s*\?\.\s*teachersPresentAtVisit/.test(
+      clientSource,
+    ),
+    "Released-result client marker missing: supervisoryAssessment.visit?.teachersPresentAtVisit",
+  );
+  assert(
+    !clientSource.includes("toLocaleDateString(undefined"),
+    "Released-result dates must not depend on server/browser default locale",
+  );
 
   console.log("=== D3.4H1 HEADTEACHER RELEASED-RESULT READ CONTRACT ===");
   console.log("");
@@ -674,6 +753,9 @@ async function main() {
   console.log("Release note hash                : verified");
   console.log("Staff snapshot                   : immutable V1 proof-anchored");
   console.log("Supervisory assessment           : calculations/hash recomputed");
+  console.log("Version-2 visit particulars      : immutable snapshot projected");
+  console.log("Version-1 visit compatibility    : null, never reconstructed");
+  console.log("Database read shape              : four sequential reads, no Promise.all");
   console.log("Visible staff evidence           : aggregate overall + four sections");
   console.log("Visible supervisory evidence     : native 4-section / 34-item sheet");
   console.log("Response counts                  : hidden");

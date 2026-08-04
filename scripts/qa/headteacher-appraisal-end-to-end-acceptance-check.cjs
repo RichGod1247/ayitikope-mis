@@ -216,7 +216,6 @@ requireMarkers("src/app/api/headteacher/headteacher-appraisal/[cycleId]/released
 requireMarkers("src/app/governance/appraisals/headteacher-supervisory/HeadteacherSupervisoryAssessmentClient.tsx", [
   'cache: "no-store"',
   "background polling",
-  "browser-storage",
 ]);
 
 requireMarkers("src/app/district/headteacher-appraisals/review/HeadteacherDirectorReviewClient.tsx", [
@@ -266,8 +265,16 @@ for (const relativePath of [
   ]);
 }
 
-for (const relativePath of [
+forbidMarkers(
   "src/app/governance/appraisals/headteacher-supervisory/HeadteacherSupervisoryAssessmentClient.tsx",
+  [
+    "localStorage",
+    "sessionStorage",
+    "setInterval(",
+  ],
+);
+
+for (const relativePath of [
   "src/app/district/headteacher-appraisals/review/HeadteacherDirectorReviewClient.tsx",
   "src/app/headteacher/my-appraisal/HeadteacherReleasedResultClient.tsx",
 ]) {
