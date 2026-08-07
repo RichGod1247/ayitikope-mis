@@ -403,7 +403,17 @@ type LiveSectionScore = {
 };
 
 function dashboardHref(actorRole: string | undefined) {
-  return actorRole === "SISSO" ? "/circuit/dashboard" : "/district/dashboard";
+  switch (actorRole) {
+    case "SISSO":
+    case "CIRCUIT_SUPERVISOR":
+      return "/circuit/dashboard";
+    case "HEAD_OF_SUPERVISION":
+      return "/district/hos/dashboard";
+    case "BASIC_SCHOOL_COORDINATOR":
+      return "/district/bsc/dashboard";
+    default:
+      return "/district/dashboard";
+  }
 }
 
 function queueStateTone(state: SupervisoryQueueState) {

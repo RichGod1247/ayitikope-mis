@@ -97,6 +97,21 @@ assert(source.load.includes("loadHeadteacherSupervisoryAssessmentWorkspace"), "W
 assert(source.page.includes("requireGovernancePageContext"), "Page governance gate missing");
 assert(source.page.includes("operationalAssessorRoles"), "Page assessor roles missing");
 assert(source.client.includes("queueSectionAutosave"), "Serialized autosave queue missing");
+assert(
+  source.client.includes('case "HEAD_OF_SUPERVISION":') &&
+    source.client.includes('return "/district/hos/dashboard";'),
+  "HOS appraisal workspace dashboard return route missing",
+);
+assert(
+  source.client.includes('case "BASIC_SCHOOL_COORDINATOR":') &&
+    source.client.includes('return "/district/bsc/dashboard";'),
+  "BSC appraisal workspace dashboard return route missing",
+);
+assert(
+  source.client.includes('case "SISSO":') &&
+    source.client.includes('return "/circuit/dashboard";'),
+  "SISSO appraisal workspace dashboard return route missing",
+);
 assert(source.client.includes("scrollIntoView"), "Anchored section navigation missing");
 assert(
   source.client.includes("supervisory-section-"),
@@ -346,6 +361,7 @@ console.log("");
 console.log("=== GOVERNANCE SUPERVISORY NAVIGATION + NATIVE FINAL REVIEW ===");
 console.log("");
 console.log("Audience scope                 : original authorized governance assessor");
+console.log("Dashboard return routing       : SISSO / HOS / BSC role-specific");
 console.log("Draft creation                 : F2 transaction wired");
 console.log("Assessment load                : owner-bound workspace");
 console.log("Section save                   : F3 transaction wired");
