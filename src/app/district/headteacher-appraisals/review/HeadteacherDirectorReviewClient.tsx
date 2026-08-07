@@ -2101,6 +2101,13 @@ export default function HeadteacherDirectorReviewClient({
             onClick={() => setQueuePanel("APPROVAL")}
           />
           <SummaryCard
+            label="Feedback in progress"
+            value={collectingOpenItems.length}
+            description="Open cycles still waiting for one or more responses."
+            active={queuePanel === "OPEN"}
+            onClick={() => setQueuePanel("OPEN")}
+          />
+          <SummaryCard
             label="All responses received"
             value={completedOpenItems.length}
             description="Every frozen respondent has finalized before the deadline."
@@ -2115,13 +2122,6 @@ export default function HeadteacherDirectorReviewClient({
             active={queuePanel === "READY"}
             attention
             onClick={() => setQueuePanel("READY")}
-          />
-          <SummaryCard
-            label="Feedback in progress"
-            value={collectingOpenItems.length}
-            description="Open cycles still waiting for one or more responses."
-            active={queuePanel === "OPEN"}
-            onClick={() => setQueuePanel("OPEN")}
           />
         </section>
 

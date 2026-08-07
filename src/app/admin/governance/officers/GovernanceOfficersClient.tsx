@@ -70,17 +70,10 @@ type ListResponse =
 const ROLE_OPTIONS = [
   {
     value: "SISSO",
-    label: "SISO",
+    label: "SISSO",
     level: 1,
     titlePrefix: "SISO",
     help: "Circuit-level supervision officer.",
-  },
-  {
-    value: "CIRCUIT_SUPERVISOR",
-    label: "Circuit Supervisor",
-    level: 1,
-    titlePrefix: "Circuit Supervisor",
-    help: "Circuit-level monitoring and support.",
   },
   {
     value: "DISTRICT_DIRECTOR",
@@ -88,6 +81,20 @@ const ROLE_OPTIONS = [
     level: 2,
     titlePrefix: "District Director",
     help: "District-level command responsibility.",
+  },
+  {
+    value: "HEAD_OF_SUPERVISION",
+    label: "Head of Supervision",
+    level: 2,
+    titlePrefix: "Head of Supervision",
+    help: "District-level supervision leadership and appraisal review.",
+  },
+  {
+    value: "BASIC_SCHOOL_COORDINATOR",
+    label: "Basic School Coordinator",
+    level: 2,
+    titlePrefix: "Basic School Coordinator",
+    help: "District-level basic-school monitoring and appraisal work.",
   },
   {
     value: "DISTRICT_MIS_OFFICER",
@@ -148,8 +155,22 @@ function formatDate(v: string | null | undefined) {
 }
 
 function roleLabel(role: string) {
-  const found = ROLE_OPTIONS.find((r) => r.value === role);
-  return found?.label ?? role.replaceAll("_", " ");
+  const normalizedRole = role === "CIRCUIT_SUPERVISOR" ? "SISSO" : role;
+  const found = ROLE_OPTIONS.find((r) => r.value === normalizedRole);
+  return found?.label ?? normalizedRole.replaceAll("_", " ");
+}
+
+function displayedTitle(role: string, title: string | null) {
+  const value = clean(title);
+  if (!value) return "No title";
+
+  if (role === "SISSO" || role === "CIRCUIT_SUPERVISOR") {
+    return value
+      .replace(/^Circuit Supervisor\b/i, "SISSO")
+      .replace(/^SISO\b/i, "SISSO");
+  }
+
+  return value;
 }
 
 function expectedLevelForRole(role: string) {
@@ -664,7 +685,7 @@ export default function GovernanceOfficersClient() {
                       </div>
 
                       <p className="mt-1 text-sm text-slate-700">
-                        {roleLabel(a.role)} · {a.title || "No title"}
+                        {roleLabel(a.role)} · {displayedTitle(a.role, a.title)}
                       </p>
 
                       <p className="mt-1 text-xs text-slate-500">

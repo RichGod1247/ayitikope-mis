@@ -38,6 +38,8 @@ function roleLabel(role: string) {
   if (role === "SISSO") return "SISO";
   if (role === "CIRCUIT_SUPERVISOR") return "Circuit Supervisor";
   if (role === "DISTRICT_DIRECTOR") return "District Director";
+  if (role === "HEAD_OF_SUPERVISION") return "Head of Supervision";
+  if (role === "BASIC_SCHOOL_COORDINATOR") return "Basic School Coordinator";
   if (role === "DISTRICT_MIS_OFFICER") return "District MIS/Data Officer";
   if (role === "DISTRICT_SHEP_OFFICER") return "District SHEP/Health Officer";
   if (role === "DISTRICT_ASSESSMENT_OFFICER") return "District Assessment Officer";
@@ -320,8 +322,8 @@ export default function GovernanceInviteAcceptClient({ token }: { token: string 
                 </button>
 
                 <p className="text-xs leading-5 text-[#C9CDD6]">
-                  After accepting, you will sign in and land on the correct circuit or district
-                  dashboard.
+                  After accepting, you will sign in and land on the dashboard assigned to your
+                  governance role.
                 </p>
               </div>
             ) : null}

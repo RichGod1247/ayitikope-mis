@@ -81,19 +81,25 @@ function isCircuitGovernance(role: string) {
   return role === "SISSO" || role === "CIRCUIT_SUPERVISOR";
 }
 
-function isDistrictGovernance(role: string) {
+function isHeadOfSupervision(role: string) {
+  return role === "HEAD_OF_SUPERVISION";
+}
+
+function isBasicSchoolCoordinator(role: string) {
+  return role === "BASIC_SCHOOL_COORDINATOR";
+}
+
+function isDistrictDirector(role: string) {
+  return role === "DISTRICT_DIRECTOR";
+}
+
+function isDistrictCommandGovernance(role: string) {
   return (
     role === "DISTRICT_DIRECTOR" ||
-    role === "HEAD_OF_SUPERVISION" ||
-    role === "BASIC_SCHOOL_COORDINATOR" ||
     role === "DISTRICT_MIS_OFFICER" ||
     role === "DISTRICT_SHEP_OFFICER" ||
     role === "DISTRICT_ASSESSMENT_OFFICER"
   );
-}
-
-function isGovernance(role: string) {
-  return isCircuitGovernance(role) || isDistrictGovernance(role) || role === "REGIONAL_VIEWER";
 }
 
 function isAdminish(role: string) {
@@ -116,13 +122,41 @@ function isParentLike(role: string) {
   return isSuper(role) || isParent(role);
 }
 
+function isHosDashboardPath(path: string) {
+  return path === "/district/hos" || path.startsWith("/district/hos/");
+}
+
+function isBscDashboardPath(path: string) {
+  return path === "/district/bsc" || path.startsWith("/district/bsc/");
+}
+
+function isDirectorHeadteacherAppraisalPath(path: string) {
+  return (
+    path === "/district/headteacher-appraisals" ||
+    path.startsWith("/district/headteacher-appraisals/") ||
+    path === "/api/district/headteacher-appraisals" ||
+    path.startsWith("/api/district/headteacher-appraisals/")
+  );
+}
+
+function isDirectorFeedbackPath(path: string) {
+  return (
+    path === "/district/director-feedback" ||
+    path.startsWith("/district/director-feedback/") ||
+    path === "/api/district/director-feedback" ||
+    path.startsWith("/api/district/director-feedback/")
+  );
+}
+
 export function roleDefaultDestination(roleName: unknown) {
   const role = effectiveRole(roleName);
 
   if (role === "SUPERADMIN") return "/admin/super";
 
   if (isCircuitGovernance(role)) return "/circuit/dashboard";
-  if (isDistrictGovernance(role)) return "/district/dashboard";
+  if (isHeadOfSupervision(role)) return "/district/hos/dashboard";
+  if (isBasicSchoolCoordinator(role)) return "/district/bsc/dashboard";
+  if (isDistrictCommandGovernance(role)) return "/district/dashboard";
   if (role === "REGIONAL_VIEWER") return "/district/dashboard";
 
   if (role === "SCHOOL_ADMIN") return "/admin/dashboard";
@@ -143,6 +177,10 @@ export function requiredRoleForPath(path: string) {
   if (p.startsWith("/headteacher")) return "HEADTEACHER";
   if (p.startsWith("/teacher")) return "TEACHER";
   if (p.startsWith("/circuit")) return "SISSO";
+  if (isHosDashboardPath(p)) return "HEAD_OF_SUPERVISION";
+  if (isBscDashboardPath(p)) return "BASIC_SCHOOL_COORDINATOR";
+  if (isDirectorHeadteacherAppraisalPath(p)) return "DISTRICT_DIRECTOR";
+  if (isDirectorFeedbackPath(p)) return "DISTRICT_DIRECTOR";
   if (p.startsWith("/district")) return "DISTRICT_DIRECTOR";
   if (p.startsWith("/admin")) return "SCHOOL_ADMIN";
   if (p.startsWith("/parents") || p.startsWith("/parent-portal")) return "PARENT";
@@ -150,6 +188,8 @@ export function requiredRoleForPath(path: string) {
   // APIs
   if (p.startsWith("/api/admin/governance")) return "SUPERADMIN";
   if (p.startsWith("/api/circuit")) return "SISSO";
+  if (isDirectorHeadteacherAppraisalPath(p)) return "DISTRICT_DIRECTOR";
+  if (isDirectorFeedbackPath(p)) return "DISTRICT_DIRECTOR";
   if (p.startsWith("/api/district")) return "DISTRICT_DIRECTOR";
   if (p.startsWith("/api/headteacher")) return "HEADTEACHER";
   if (p.startsWith("/api/teacher")) return "TEACHER";
@@ -194,12 +234,31 @@ export function isPathAllowedForRole(path: string, roleName: unknown) {
   if (p.startsWith("/admin/governance")) return isSuper(role);
   if (p.startsWith("/api/admin/governance")) return isSuper(role);
 
+  // Exact governance-officer dashboard routes.
+  if (isHosDashboardPath(p)) {
+    return isSuper(role) || isHeadOfSupervision(role);
+  }
+
+  if (isBscDashboardPath(p)) {
+    return isSuper(role) || isBasicSchoolCoordinator(role);
+  }
+
+  // Director-only Headteacher review, anonymous-response, decision and release routes.
+  if (isDirectorHeadteacherAppraisalPath(p)) {
+    return isSuper(role) || isDistrictDirector(role);
+  }
+
+  // Director-only own-feedback request and review routes.
+  if (isDirectorFeedbackPath(p)) {
+    return isSuper(role) || isDistrictDirector(role);
+  }
+
   // Governance officer areas.
   if (p.startsWith("/circuit")) return isSuper(role) || isCircuitGovernance(role);
-  if (p.startsWith("/district")) return isSuper(role) || isDistrictGovernance(role);
+  if (p.startsWith("/district")) return isSuper(role) || isDistrictCommandGovernance(role);
 
   if (p.startsWith("/api/circuit")) return isSuper(role) || isCircuitGovernance(role);
-  if (p.startsWith("/api/district")) return isSuper(role) || isDistrictGovernance(role);
+  if (p.startsWith("/api/district")) return isSuper(role) || isDistrictCommandGovernance(role);
 
   // Protected API families
   if (p.startsWith("/api/tenants")) return isSuper(role);

@@ -92,6 +92,10 @@ function assignmentTitle(role: string, zoneName: string) {
   if (role === "SISSO") return `SISO ${zoneName}`;
   if (role === "CIRCUIT_SUPERVISOR") return `Circuit Supervisor ${zoneName}`;
   if (role === "DISTRICT_DIRECTOR") return `District Director ${zoneName}`;
+  if (role === "HEAD_OF_SUPERVISION") return `Head of Supervision ${zoneName}`;
+  if (role === "BASIC_SCHOOL_COORDINATOR") {
+    return `Basic School Coordinator ${zoneName}`;
+  }
   if (role === "DISTRICT_MIS_OFFICER") return `District MIS Officer ${zoneName}`;
   if (role === "DISTRICT_SHEP_OFFICER") {
     return `District SHEP Officer ${zoneName}`;

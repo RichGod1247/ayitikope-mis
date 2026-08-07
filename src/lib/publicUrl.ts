@@ -1,17 +1,48 @@
-// src/lib/publicUrl.ts
 function cleanBase(value: unknown) {
   return String(value ?? "").trim().replace(/\/+$/, "");
+}
+
+function localUatUrlsAllowed() {
+  return (
+    process.env.NODE_ENV !== "production" &&
+    (process.env.EDULIFE_UAT_LOCAL_URLS ?? "")
+      .trim()
+      .toLowerCase() === "true"
+  );
+}
+
+function isExactLocalUatBase(value: string) {
+  if (!localUatUrlsAllowed()) return false;
+
+  try {
+    const url = new URL(value);
+    const hostname = url.hostname.toLowerCase();
+
+    return (
+      url.protocol === "http:" &&
+      (hostname === "127.0.0.1" || hostname === "localhost") &&
+      url.port === "3001" &&
+      url.pathname === "/" &&
+      !url.search &&
+      !url.hash &&
+      !url.username &&
+      !url.password
+    );
+  } catch {
+    return false;
+  }
 }
 
 function isBadPublicBase(value: string) {
   const v = value.toLowerCase();
 
-  return (
-    !v ||
-    v.includes("0.0.0.0") ||
-    v.includes("127.0.0.1") ||
-    v.includes("localhost")
-  );
+  if (!v || v.includes("0.0.0.0")) return true;
+
+  if (v.includes("127.0.0.1") || v.includes("localhost")) {
+    return !isExactLocalUatBase(value);
+  }
+
+  return false;
 }
 
 export function getPublicBaseUrl(req?: Request) {

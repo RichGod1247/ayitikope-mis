@@ -10,6 +10,8 @@ function roleLabel(role: string) {
   if (role === "SISSO") return "SISSO";
   if (role === "CIRCUIT_SUPERVISOR") return "Circuit Supervisor";
   if (role === "DISTRICT_DIRECTOR") return "District Director";
+  if (role === "HEAD_OF_SUPERVISION") return "Head of Supervision";
+  if (role === "BASIC_SCHOOL_COORDINATOR") return "Basic School Coordinator";
   if (role === "DISTRICT_MIS_OFFICER") return "District MIS Officer";
   if (role === "DISTRICT_SHEP_OFFICER") return "District SHEP Officer";
   if (role === "DISTRICT_ASSESSMENT_OFFICER") {
@@ -64,7 +66,7 @@ export async function deliverGovernanceOfficerInvite(params: {
         `Use this secure link to accept your invite and activate your dashboard access:\n\n` +
         `${inviteUrl}\n\n` +
         `This invite expires at: ${expiresAt}\n\n` +
-        `EduLife OS gives you a clean command view for school risk, attendance signals, official notices, and accountability evidence.\n`,
+        `EduLife OS gives you controlled access to the governance work assigned to your office.\n`,
       meta: {
         category: "GOVERNANCE_OFFICER_INVITE",
         inviteId: params.inviteId ?? null,
@@ -124,8 +126,8 @@ export async function sendGovernanceOfficerWelcomeSms(params: {
     return await sendViaHubtel({
       to: phone,
       body:
-        `Welcome to EduLife OS. Your ${role} access is active. ` +
-        `You can now monitor ${zoneName} risk, attendance, official notices, and accountability evidence.`,
+        `Welcome to EduLife OS. Your ${role} access is active for ${zoneName}. ` +
+        `Sign in to open the governance work assigned to your office.`,
       brand: "EDULIFEOS",
       tenantId: undefined,
       actorId: params.actorId ?? undefined,

@@ -1,16 +1,20 @@
 // src/app/district/dashboard/page.tsx
 import GovernanceCommandDashboardClient from "@/components/governance/GovernanceCommandDashboardClient";
-import {
-  DISTRICT_GOVERNANCE_ROLES,
-  requireGovernancePageContext,
-} from "@/lib/governance/scope";
+import { requireGovernancePageContext } from "@/lib/governance/scope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const DISTRICT_COMMAND_DASHBOARD_ROLES = [
+  "DISTRICT_DIRECTOR",
+  "DISTRICT_MIS_OFFICER",
+  "DISTRICT_SHEP_OFFICER",
+  "DISTRICT_ASSESSMENT_OFFICER",
+] as const;
+
 export default async function DistrictDashboardPage() {
   await requireGovernancePageContext({
-    allowedRoles: DISTRICT_GOVERNANCE_ROLES,
+    allowedRoles: DISTRICT_COMMAND_DASHBOARD_ROLES,
     allowedZoneLevels: [2],
     redirectTo: "/district/dashboard",
   });

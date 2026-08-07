@@ -25,6 +25,8 @@ const GOVERNANCE_ROLES = new Set([
   "SISSO",
   "CIRCUIT_SUPERVISOR",
   "DISTRICT_DIRECTOR",
+  "HEAD_OF_SUPERVISION",
+  "BASIC_SCHOOL_COORDINATOR",
   "DISTRICT_MIS_OFFICER",
   "DISTRICT_SHEP_OFFICER",
   "DISTRICT_ASSESSMENT_OFFICER",
@@ -79,6 +81,8 @@ function roleZoneLevel(role: string) {
 
   if (
     role === "DISTRICT_DIRECTOR" ||
+    role === "HEAD_OF_SUPERVISION" ||
+    role === "BASIC_SCHOOL_COORDINATOR" ||
     role === "DISTRICT_MIS_OFFICER" ||
     role === "DISTRICT_SHEP_OFFICER" ||
     role === "DISTRICT_ASSESSMENT_OFFICER"
@@ -252,7 +256,6 @@ export async function POST(req: Request) {
       zoneId,
       zoneName: zone.name,
       expiresAt: invite.expiresAt.toISOString(),
-      inviteUrl,
       delivery,
     },
   });

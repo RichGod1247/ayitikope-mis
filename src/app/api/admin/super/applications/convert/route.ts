@@ -108,6 +108,8 @@ function roleZoneLevel(role: string) {
 
   if (
     role === "DISTRICT_DIRECTOR" ||
+    role === "HEAD_OF_SUPERVISION" ||
+    role === "BASIC_SCHOOL_COORDINATOR" ||
     role === "DISTRICT_MIS_OFFICER" ||
     role === "DISTRICT_SHEP_OFFICER" ||
     role === "DISTRICT_ASSESSMENT_OFFICER"
@@ -450,10 +452,9 @@ export async function POST(req: NextRequest) {
           ip,
           userAgent,
           metadata: {
-  inviteUrl: result.inviteUrl,
-  delivery: jsonSafe(delivery),
-  source: "ONBOARDING_APPLICATION_CONVERSION",
-},
+            delivery: jsonSafe(delivery),
+            source: "ONBOARDING_APPLICATION_CONVERSION",
+          },
         },
       });
     }

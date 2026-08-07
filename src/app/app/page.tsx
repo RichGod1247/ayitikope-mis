@@ -51,9 +51,13 @@ function defaultRouteForRole(role: string) {
     case "CIRCUIT_SUPERVISOR":
       return "/circuit/dashboard";
 
-    case "DISTRICT_DIRECTOR":
     case "HEAD_OF_SUPERVISION":
+      return "/district/hos/dashboard";
+
     case "BASIC_SCHOOL_COORDINATOR":
+      return "/district/bsc/dashboard";
+
+    case "DISTRICT_DIRECTOR":
     case "DISTRICT_MIS_OFFICER":
     case "DISTRICT_SHEP_OFFICER":
     case "DISTRICT_ASSESSMENT_OFFICER":
@@ -90,7 +94,7 @@ export default async function AppEntry(props: { searchParams?: SP | Promise<SP> 
   const ctx = await getServerUserContextOrNull({ requireTenant: false });
   if (!ctx?.userId) redirect("/auth/signin?callbackUrl=%2Fapp");
 
-  const roleRaw = (ctx as any).roleName ?? "";
+  const roleRaw = ctx.roleName ?? "";
   const role = effectiveRole(roleRaw);
 
   const next = first(sp, "next");
@@ -109,7 +113,7 @@ export default async function AppEntry(props: { searchParams?: SP | Promise<SP> 
   }
 
   // School users must still have an active tenant.
-  const tenantId = String((ctx as any).tenantId ?? "").trim();
+  const tenantId = String(ctx.tenantId ?? "").trim();
   if (!tenantId) {
     redirect("/auth/signin?error=NO_ACTIVE_TENANT&callbackUrl=%2Fapp");
   }
