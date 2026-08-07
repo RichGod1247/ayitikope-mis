@@ -550,8 +550,8 @@ function main() {
     "DISTRICT_DIRECTOR",
   ]) {
     assert(
-      !hasAppraisalCapability(role, "ASSESS_TEACHER"),
-      `${role} Teacher-observation authority must remain disabled until N6-D2`,
+      hasAppraisalCapability(role, "ASSESS_TEACHER"),
+      `${role} Teacher-observation authority must be active in N6-D2`,
     );
   }
 
@@ -787,7 +787,7 @@ function main() {
   console.log("Multi-response aggregation   : verified");
   console.log("Headteacher item 4.5         : provisional positive wording");
   console.log("Headteacher instruments      : activation-ready");
-  console.log("Teacher observation          : activation-ready; authority deferred to N6-D2");
+  console.log("Teacher observation          : activation-ready; governance assessor authority active");
   console.log("Director instrument          : activation-ready");
   console.log("");
   console.log("RESULT: D3.1C APPRAISAL CONTRACT PROOF GREEN");
