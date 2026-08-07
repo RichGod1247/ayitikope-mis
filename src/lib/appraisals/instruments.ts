@@ -10,6 +10,7 @@ export const APPRAISAL_INSTRUMENT_CODES = {
   HEADTEACHER_STAFF_FEEDBACK_V1: "HEADTEACHER_STAFF_FEEDBACK_V1",
   HEADTEACHER_SUPERVISORY_ASSESSMENT_V1:
     "HEADTEACHER_SUPERVISORY_ASSESSMENT_V1",
+  TEACHER_OBSERVATION_V1: "TEACHER_OBSERVATION_V1",
   DIRECTOR_GOVERNANCE_APPRAISAL_V1: "DIRECTOR_GOVERNANCE_APPRAISAL_V1",
 } as const;
 
@@ -32,7 +33,7 @@ export type AppraisalInstrumentSpecification = {
   workflowKind: AppraisalWorkflowKind;
   title: string;
   documentTitle: string;
-  targetRole: "HEADTEACHER" | "DISTRICT_DIRECTOR";
+  targetRole: "TEACHER" | "HEADTEACHER" | "DISTRICT_DIRECTOR";
   expectedSectionCount: number;
   expectedRawMaximum: number;
   calculationMethod: AppraisalCalculationMethod;
@@ -97,6 +98,29 @@ export const APPRAISAL_INSTRUMENT_SPECIFICATIONS = {
     scaleMax: 5,
     allowNotApplicable: true,
     commentsPolicy: "PROHIBITED",
+    identityVisibility: "AUTHORIZED_GOVERNANCE_ONLY",
+    responseWindowDays: null,
+    minimumResponses: null,
+    sourceState: "TRANSCRIBED_AND_VERIFIED",
+    activationBlockedReason: null,
+  },
+
+  TEACHER_OBSERVATION_V1: {
+    code: APPRAISAL_INSTRUMENT_CODES.TEACHER_OBSERVATION_V1,
+    version: 1,
+    purpose: "TEACHER_OBSERVATION",
+    subjectType: "TEACHER",
+    workflowKind: "SUPERVISORY_ASSESSMENT",
+    title: "Governance Supervisory Appraisal of Teacher",
+    documentTitle: "Monitoring and Inspection Sheet (Teachers)",
+    targetRole: "TEACHER",
+    expectedSectionCount: 6,
+    expectedRawMaximum: 170,
+    calculationMethod: "AVERAGE_VALID_SECTION_PERCENTAGES",
+    scaleMin: 1,
+    scaleMax: 5,
+    allowNotApplicable: true,
+    commentsPolicy: "OFFICIAL_FORM_CONTROLLED",
     identityVisibility: "AUTHORIZED_GOVERNANCE_ONLY",
     responseWindowDays: null,
     minimumResponses: null,
@@ -438,6 +462,280 @@ const HEADTEACHER_SUPERVISORY_HEADER_FIELDS = [
   },
 ] as const satisfies readonly AppraisalInstrumentHeaderFieldDefinition[];
 
+const TEACHER_OBSERVATION_HEADER_FIELDS = [
+  {
+    key: "teacherName",
+    label: "Name of Teacher",
+    order: 1,
+    inputMode: "SNAPSHOT",
+    required: true,
+  },
+  {
+    key: "yearsInService",
+    label: "Number of Years in the Service",
+    order: 2,
+    inputMode: "AUTO_OR_MANUAL",
+    required: false,
+  },
+  {
+    key: "schoolName",
+    label: "Name of School",
+    order: 3,
+    inputMode: "SNAPSHOT",
+    required: true,
+  },
+  {
+    key: "yearsInPresentSchool",
+    label: "Number of Years in Present School",
+    order: 4,
+    inputMode: "AUTO_OR_MANUAL",
+    required: false,
+  },
+  {
+    key: "circuitName",
+    label: "Name of Circuit",
+    order: 5,
+    inputMode: "SNAPSHOT",
+    required: true,
+  },
+  {
+    key: "subjectBeingObserved",
+    label: "Subject Being Observed",
+    order: 6,
+    inputMode: "AUTO_OR_MANUAL",
+    required: false,
+  },
+  {
+    key: "dateObserved",
+    label: "Date Observed",
+    order: 7,
+    inputMode: "MANUAL",
+    required: true,
+  },
+  {
+    key: "subStrand",
+    label: "Sub-strand",
+    order: 8,
+    inputMode: "AUTO_OR_MANUAL",
+    required: false,
+  },
+  {
+    key: "classTaught",
+    label: "Class Taught",
+    order: 9,
+    inputMode: "AUTO_OR_MANUAL",
+    required: false,
+  },
+  {
+    key: "durationOfLesson",
+    label: "Duration of Lesson",
+    order: 10,
+    inputMode: "MANUAL",
+    required: false,
+  },
+] as const satisfies readonly AppraisalInstrumentHeaderFieldDefinition[];
+
+const TEACHER_OBSERVATION_SECTIONS = [
+  {
+    key: "PREPARATION",
+    title: "Measurement of Preparation of Lesson Plan",
+    order: 1,
+    maxScore: 35,
+    items: [
+      item(
+        "1.1",
+        1,
+        "Preparation of Scheme of work (vetted and covers the term)",
+      ),
+      item(
+        "1.2",
+        2,
+        "Preparation of Learner notes (vetted, detailed, appropriate and up-to-date)",
+      ),
+      item(
+        "1.3",
+        3,
+        "Originality of Learner Notes (No signs of downloaded learner notes)",
+      ),
+      item(
+        "1.4",
+        4,
+        "Statement of adequate and appropriate core competencies",
+      ),
+      item(
+        "1.5",
+        5,
+        "Statement of appropriate/relevant TLMs in the lesson plan",
+      ),
+      item(
+        "1.6",
+        6,
+        "Statement of interactive activities in the lesson plan",
+      ),
+      item(
+        "1.7",
+        7,
+        "Coherence of stages of learner plan (well-arranged and well-paced)",
+      ),
+    ],
+  },
+  {
+    key: "LESSON_DELIVERY",
+    title: "Measurement of Lesson Delivery/Instruction",
+    order: 2,
+    maxScore: 25,
+    items: [
+      item(
+        "2.1",
+        1,
+        "Articulation of the Performance Indicators (PI) at the beginning of the lesson",
+      ),
+      item(
+        "2.2",
+        2,
+        "Clarity of explanation of content (logically sequenced, use of illustrations, use of examples to aid understanding)",
+      ),
+      item(
+        "2.3",
+        3,
+        "Linkage of pupils daily life or cultural orientation to the content of the lesson",
+      ),
+      item("2.4", 4, "Deployment of TLMs during lesson delivery"),
+      item("2.5", 5, "Teacher's confidence level during lesson delivery"),
+    ],
+  },
+  {
+    key: "CLASSROOM_CULTURE",
+    title: "Measurement of Classroom Culture",
+    order: 3,
+    maxScore: 25,
+    items: [
+      item(
+        "3.1",
+        1,
+        "The teacher treats all pupils with respect (e.g. teacher does not shout on pupils)",
+      ),
+      item(
+        "3.2",
+        2,
+        "The teacher uses positive language (e.g. good attempt, well done)",
+      ),
+      item(
+        "3.3",
+        3,
+        "The teacher rephrases language to promote understanding",
+      ),
+      item(
+        "3.4",
+        4,
+        "The teacher focuses on expected behaviour and redirects misbehavior",
+      ),
+      item(
+        "3.5",
+        5,
+        "The teacher recognizes learners with special needs and provides them with relevant support",
+      ),
+    ],
+  },
+  {
+    key: "LEARNER_PARTICIPATION",
+    title: "Measurement of Learners' Participation During Lesson Delivery",
+    order: 4,
+    maxScore: 30,
+    items: [
+      item(
+        "4.1",
+        1,
+        "Pupils volunteer to participate in the lesson without the teacher's prompt",
+      ),
+      item("4.2", 2, "Learners ask questions during lesson"),
+      item(
+        "4.3",
+        3,
+        "Learners work collaboratively with each other during lesson",
+      ),
+      item(
+        "4.4",
+        4,
+        "Learners accept feedback from peers and teachers and work with them",
+      ),
+      item(
+        "4.5",
+        5,
+        "Learners have adequate learning materials (textbooks, notebooks, exercise books, pens, pencils, etc)",
+      ),
+      item(
+        "4.6",
+        6,
+        "The teacher provides learners with choices when it comes to activities",
+      ),
+    ],
+  },
+  {
+    key: "UNDERSTANDING_STRATEGIES",
+    title: "Measurement of Strategies to Improve Pupils' Understanding",
+    order: 5,
+    maxScore: 30,
+    items: [
+      item(
+        "5.1",
+        1,
+        "The teacher uses questions, prompts or other strategies to determine pupils' level of understanding",
+      ),
+      item(
+        "5.2",
+        2,
+        "The teacher distributes questions/learning task to all pupils in the class",
+      ),
+      item(
+        "5.3",
+        3,
+        "The teacher monitors pupils/students during independent/group work",
+      ),
+      item(
+        "5.4",
+        4,
+        "The teacher provides positive reinforcement (nodding, good, okay but...)",
+      ),
+      item(
+        "5.5",
+        5,
+        "The teacher links current lessons to previous lessons or knowledge in other subjects",
+      ),
+      item(
+        "5.6",
+        6,
+        "The teacher provides guidance to pupils before handing exercises/assignments",
+      ),
+    ],
+  },
+  {
+    key: "EVALUATION_STRATEGIES",
+    title: "Measurement of Evaluation Strategies",
+    order: 6,
+    maxScore: 25,
+    items: [
+      item(
+        "6.1",
+        1,
+        "Set tasks on relevant performance indicators/core competencies",
+      ),
+      item("6.2", 2, "Marks learner's work promptly and accurately"),
+      item(
+        "6.3",
+        3,
+        "Provides feedback on learners performance (good/poor is not a good feedback)",
+      ),
+      item(
+        "6.4",
+        4,
+        "Records learner's marks in continuous assessment books/record",
+      ),
+      item("6.5", 5, "Corrections have been done and marked"),
+    ],
+  },
+] as const satisfies readonly AppraisalInstrumentSectionDefinition[];
+
 const DIRECTOR_SECTIONS = [
   {
     key: "ADMINISTRATIVE_MANAGERIAL_COMPETENCE",
@@ -699,6 +997,27 @@ export const APPRAISAL_INSTRUMENT_DEFINITIONS = {
       "The directorate heading must be resolved from the assessor’s active governance jurisdiction at runtime and must never be hardcoded.",
     ],
     sections: HEADTEACHER_SHARED_SECTIONS,
+  },
+
+  TEACHER_OBSERVATION_V1: {
+    ...APPRAISAL_INSTRUMENT_SPECIFICATIONS.TEACHER_OBSERVATION_V1,
+    directorateName: null,
+    officialHeader: {
+      jurisdictionScoped: true,
+      documentTitle: "Monitoring and Inspection Sheet (Teachers)",
+    },
+    instructions:
+      "The authorized governance assessor records the observed lesson particulars, scores each item from 1 to 5 or N/A, may add the official general comment, and finalizes the observation for separate staged review. Finalized governance observation scores are immutable and do not overwrite the Headteacher's Teacher appraisal.",
+    allowComments: true,
+    headerFields: TEACHER_OBSERVATION_HEADER_FIELDS,
+    sourceNotes: [
+      "The official six-section, 34-item Teacher observation form is reused without changing the legacy Headteacher-to-Teacher appraisal record.",
+      "The raw maximum is 170, with section maximums 35, 25, 25, 30, 30 and 25.",
+      "N/A rows are excluded from the applicable section denominator; the overall result is the average of valid section percentages.",
+      "The official form permits general comments and displays structured evidence links separately from the scoring rows.",
+      "The directorate heading must be resolved from the governance assessor's active jurisdiction at runtime and must never be hardcoded.",
+    ],
+    sections: TEACHER_OBSERVATION_SECTIONS,
   },
 
   DIRECTOR_GOVERNANCE_APPRAISAL_V1: {

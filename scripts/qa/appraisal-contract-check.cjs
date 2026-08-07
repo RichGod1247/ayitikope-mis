@@ -205,18 +205,21 @@ function main() {
 
   const codes = Object.values(APPRAISAL_INSTRUMENT_CODES);
 
-  assertEqual(codes.length, 3, "Expected exactly three appraisal instruments");
+  assertEqual(codes.length, 4, "Expected exactly four appraisal instruments");
 
   const staffCode =
     APPRAISAL_INSTRUMENT_CODES.HEADTEACHER_STAFF_FEEDBACK_V1;
   const supervisoryCode =
     APPRAISAL_INSTRUMENT_CODES.HEADTEACHER_SUPERVISORY_ASSESSMENT_V1;
+  const teacherCode =
+    APPRAISAL_INSTRUMENT_CODES.TEACHER_OBSERVATION_V1;
   const directorCode =
     APPRAISAL_INSTRUMENT_CODES.DIRECTOR_GOVERNANCE_APPRAISAL_V1;
 
   const staff = APPRAISAL_INSTRUMENT_DEFINITIONS[staffCode];
   const supervisory =
     APPRAISAL_INSTRUMENT_DEFINITIONS[supervisoryCode];
+  const teacher = APPRAISAL_INSTRUMENT_DEFINITIONS[teacherCode];
   const director = APPRAISAL_INSTRUMENT_DEFINITIONS[directorCode];
 
   for (const code of codes) {
@@ -276,6 +279,45 @@ function main() {
     "The two headteacher workflows must reuse one shared item bank",
   );
 
+  assertEqual(teacher.sections.length, 6, "Teacher observation section count");
+  assertEqual(itemCount(teacher), 34, "Teacher observation item count");
+  assertEqual(rawMaximum(teacher), 170, "Teacher observation raw maximum");
+  assertDeepEqual(
+    sectionMaximums(teacher),
+    [35, 25, 25, 30, 30, 25],
+    "Teacher observation section maximums",
+  );
+  assertEqual(
+    teacher.purpose,
+    "TEACHER_OBSERVATION",
+    "Teacher observation purpose",
+  );
+  assertEqual(
+    teacher.subjectType,
+    "TEACHER",
+    "Teacher observation subject type",
+  );
+  assertEqual(
+    teacher.targetRole,
+    "TEACHER",
+    "Teacher observation target role",
+  );
+  assertEqual(
+    teacher.commentsPolicy,
+    "OFFICIAL_FORM_CONTROLLED",
+    "Teacher observation comments policy",
+  );
+  assertEqual(
+    teacher.allowComments,
+    true,
+    "Teacher observation official general comments",
+  );
+  assertEqual(
+    teacher.headerFields.length,
+    10,
+    "Teacher observation official header field count",
+  );
+
   assertEqual(director.sections.length, 7, "Director section count");
   assertEqual(itemCount(director), 35, "Director item count");
   assertEqual(rawMaximum(director), 175, "Director raw maximum");
@@ -283,6 +325,12 @@ function main() {
     sectionMaximums(director),
     [40, 25, 30, 20, 20, 10, 30],
     "Director section maximums",
+  );
+
+  assertEqual(
+    teacher.calculationMethod,
+    "AVERAGE_VALID_SECTION_PERCENTAGES",
+    "Teacher observation must average all valid section percentages",
   );
 
   assertEqual(
@@ -356,6 +404,11 @@ function main() {
     "Supervisory instrument should be activation-ready",
   );
   assertEqual(
+    instrumentActivationIsBlocked(teacherCode),
+    false,
+    "Teacher observation instrument should be activation-ready",
+  );
+  assertEqual(
     instrumentActivationIsBlocked(directorCode),
     false,
     "Director instrument should be activation-ready",
@@ -388,6 +441,24 @@ function main() {
     },
     "Jurisdiction-scoped heading resolution",
   );
+
+  const teacherHeading = resolveJurisdictionScopedOfficialHeading({
+    code: teacherCode,
+    jurisdictionDirectorateName:
+      "Hohoe Municipal Education Directorate",
+  });
+
+  assertDeepEqual(
+    teacherHeading,
+    {
+      directorateName:
+        "HOHOE MUNICIPAL EDUCATION DIRECTORATE",
+      documentTitle:
+        "MONITORING AND INSPECTION SHEET (TEACHERS)",
+    },
+    "Teacher observation jurisdiction-scoped heading resolution",
+  );
+
 
   const instrumentsSource = fs.readFileSync(
     path.join(
@@ -470,6 +541,19 @@ function main() {
     ),
     "Head of Supervision extension capability",
   );
+
+  for (const role of [
+    "SISSO",
+    "CIRCUIT_SUPERVISOR",
+    "BASIC_SCHOOL_COORDINATOR",
+    "HEAD_OF_SUPERVISION",
+    "DISTRICT_DIRECTOR",
+  ]) {
+    assert(
+      !hasAppraisalCapability(role, "ASSESS_TEACHER"),
+      `${role} Teacher-observation authority must remain disabled until N6-D2`,
+    );
+  }
 
   assert(
     hasAppraisalCapability(
@@ -688,9 +772,11 @@ function main() {
   console.log("");
   console.log("=== D3.1C APPRAISAL CONTRACT PROOF ===");
   console.log("");
-  console.log("Instrument definitions       : 3");
+  console.log("Instrument definitions       : 4");
   console.log("Headteacher sections/items   : 4 / 34");
   console.log("Headteacher raw maximum      : 170");
+  console.log("Teacher sections/items       : 6 / 34");
+  console.log("Teacher raw maximum          : 170");
   console.log("Director sections/items      : 7 / 35");
   console.log("Director raw maximum         : 175");
   console.log("Shared headteacher item bank : true");
@@ -701,6 +787,7 @@ function main() {
   console.log("Multi-response aggregation   : verified");
   console.log("Headteacher item 4.5         : provisional positive wording");
   console.log("Headteacher instruments      : activation-ready");
+  console.log("Teacher observation          : activation-ready; authority deferred to N6-D2");
   console.log("Director instrument          : activation-ready");
   console.log("");
   console.log("RESULT: D3.1C APPRAISAL CONTRACT PROOF GREEN");

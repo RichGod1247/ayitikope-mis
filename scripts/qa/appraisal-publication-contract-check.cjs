@@ -327,12 +327,15 @@ async function main() {
     APPRAISAL_PUBLICATION_TRANSACTION_OPTIONS,
   } = publication;
 
+  const teacherCode =
+    APPRAISAL_INSTRUMENT_CODES.TEACHER_OBSERVATION_V1;
   const directorCode =
     APPRAISAL_INSTRUMENT_CODES.DIRECTOR_GOVERNANCE_APPRAISAL_V1;
   const staffCode =
     APPRAISAL_INSTRUMENT_CODES.HEADTEACHER_STAFF_FEEDBACK_V1;
   const supervisoryCode =
     APPRAISAL_INSTRUMENT_CODES.HEADTEACHER_SUPERVISORY_ASSESSMENT_V1;
+  const teacher = APPRAISAL_INSTRUMENT_DEFINITIONS[teacherCode];
   const director = APPRAISAL_INSTRUMENT_DEFINITIONS[directorCode];
   const staff = APPRAISAL_INSTRUMENT_DEFINITIONS[staffCode];
   const supervisory =
@@ -645,6 +648,109 @@ async function main() {
     "Headteacher idempotency must not duplicate an audit",
   );
 
+  const teacherDatabase = new FakePublicationDatabase();
+
+  const teacherCreated = await publishAppraisalInstrumentVersion({
+    code: teacherCode,
+    actorUserId: "director-user-1",
+    reqId: "req-teacher-observation-publication",
+    now,
+    database: teacherDatabase,
+  });
+
+  assertEqual(
+    teacherCreated.outcome,
+    "CREATED",
+    "Teacher-observation publication outcome",
+  );
+  assertEqual(
+    teacherCreated.sectionCount,
+    6,
+    "Teacher-observation published section count",
+  );
+  assertEqual(
+    teacherCreated.itemCount,
+    34,
+    "Teacher-observation published item count",
+  );
+  assertEqual(
+    teacherCreated.status,
+    "ACTIVE",
+    "Teacher-observation published status",
+  );
+  assertEqual(
+    teacherDatabase.instrumentsByCode.size,
+    1,
+    "Teacher-observation instrument row count",
+  );
+  assertEqual(
+    teacherDatabase.versionsByInstrumentVersion.size,
+    1,
+    "Teacher-observation version row count",
+  );
+  assertEqual(
+    teacherDatabase.sections.length,
+    6,
+    "Teacher-observation published section rows",
+  );
+  assertEqual(
+    teacherDatabase.items.length,
+    34,
+    "Teacher-observation published item rows",
+  );
+  assertEqual(
+    teacherDatabase.auditLogs.length,
+    1,
+    "Teacher-observation publication audit count",
+  );
+  assertEqual(
+    JSON.stringify(teacherDatabase.versionStatusTransitions),
+    JSON.stringify(["DRAFT", "ACTIVE"]),
+    "Teacher observation must build in DRAFT before activation",
+  );
+  assertEqual(
+    teacherDatabase.auditLogs[0].metadata.contentHash,
+    hashAppraisalInstrumentDefinition(teacher),
+    "Teacher-observation publication audit hash",
+  );
+
+  const storedTeacherInstrument =
+    teacherDatabase.instrumentsByCode.get(teacherCode);
+  assertEqual(
+    storedTeacherInstrument.purpose,
+    "TEACHER_OBSERVATION",
+    "Teacher-observation stored purpose",
+  );
+  assertEqual(
+    storedTeacherInstrument.subjectType,
+    "TEACHER",
+    "Teacher-observation stored subject type",
+  );
+
+  const teacherExisting = await publishAppraisalInstrumentVersion({
+    code: teacherCode,
+    actorUserId: "director-user-1",
+    reqId: "req-teacher-observation-idempotent",
+    now: new Date("2026-07-26T12:00:00.000Z"),
+    database: teacherDatabase,
+  });
+
+  assertEqual(
+    teacherExisting.outcome,
+    "EXISTING_MATCH",
+    "Teacher-observation publication must be idempotent",
+  );
+  assertEqual(
+    teacherDatabase.versionsByInstrumentVersion.size,
+    1,
+    "Teacher-observation idempotency must not add a version",
+  );
+  assertEqual(
+    teacherDatabase.auditLogs.length,
+    1,
+    "Teacher-observation idempotency must not duplicate an audit",
+  );
+
   const driftDatabase = new FakePublicationDatabase();
   const driftCreated = await publishAppraisalInstrumentVersion({
     code: directorCode,
@@ -759,6 +865,7 @@ async function main() {
   console.log("Identity drift rejection     : verified");
   console.log("Concurrent race recovery     : verified");
   console.log("Headteacher instruments      : activation-ready, fake publication verified");
+  console.log("Teacher observation          : 6 / 34, activation-ready, fake publication verified");
   console.log("");
   console.log("RESULT: D3.2 APPRAISAL PUBLICATION CONTRACT PROOF GREEN");
 }
