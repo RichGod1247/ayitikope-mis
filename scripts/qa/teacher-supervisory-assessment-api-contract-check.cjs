@@ -26,6 +26,7 @@ function read(relativePath) {
 const files = {
   shared: "src/app/api/governance/appraisals/teacher-supervisory/_shared.ts",
   root: "src/app/api/governance/appraisals/teacher-supervisory/route.ts",
+  options: "src/app/api/governance/appraisals/teacher-supervisory/observation-options/route.ts",
   load: "src/app/api/governance/appraisals/teacher-supervisory/[assessmentId]/route.ts",
   section: "src/app/api/governance/appraisals/teacher-supervisory/[assessmentId]/section/route.ts",
   comment: "src/app/api/governance/appraisals/teacher-supervisory/[assessmentId]/comment/route.ts",
@@ -54,7 +55,7 @@ for (const [key, text] of Object.entries(source)) {
   }
 }
 
-for (const routeKey of ["root", "load", "section", "comment", "finalize"]) {
+for (const routeKey of ["root", "options", "load", "section", "comment", "finalize"]) {
   const text = source[routeKey];
   assert(
     text.includes("requireTeacherSupervisoryGovernanceApiContext"),
@@ -98,6 +99,20 @@ assert(
   "Read-only Teacher queue not wired",
 );
 assert(
+  source.options.includes("readTeacherSupervisoryObservationOptions"),
+  "Teacher assignment/curriculum observation options not wired",
+);
+assert(
+  source.options.includes("governanceScope: auth.scope"),
+  "Observation options must receive verified governance scope",
+);
+assert(
+  source.options.includes("targetUserId") &&
+    source.options.includes("targetTenantId") &&
+    source.options.includes("dateObserved"),
+  "Observation options target/date query contract missing",
+);
+assert(
   source.root.includes("createTeacherSupervisoryAssessmentDraft"),
   "Atomic Teacher draft service not wired",
 );
@@ -121,6 +136,22 @@ assert(
   source.root.includes("TEACHER_SUPERVISORY_TARGET_FIELDS_SERVER_RESOLVED"),
   "Server-resolved hierarchy guard missing",
 );
+assert(
+  source.root.includes('"subjectBeingObserved"') &&
+    source.root.includes('"subStrand"') &&
+    source.root.includes('"classTaught"'),
+  "Browser-supplied class/subject/sub-strand labels must be rejected",
+);
+for (const field of [
+  "totalEnrolment",
+  "girls",
+  "boys",
+  "classroomId",
+  "curriculumSubjectId",
+  "curriculumSubStrandId",
+]) {
+  assert(source.root.includes(field), `Verified observation POST field missing: ${field}`);
+}
 assert(
   source.root.includes("TEACHER_SUPERVISORY_DRAFT_NON_HEADER_FIELDS_FORBIDDEN"),
   "Draft score/comment/lifecycle injection guard missing",
@@ -207,9 +238,12 @@ console.log("");
 console.log("API audience                     : SISSO / BSC / HOS / Director");
 console.log("Circuit Supervisor alias         : policy-canonical SISSO office");
 console.log("Queue GET                        : read-only eligible Teacher discovery");
-console.log("Draft POST                       : atomic N6-D3 observation start");
+console.log("Observation-options GET         : authorized Teacher assignment + curriculum");
+console.log("Draft POST                       : atomic verified v2 observation start");
 console.log("Observation idempotency          : stable caller key required");
 console.log("Hierarchy/names                  : revalidated + server resolved");
+console.log("Class/subject/sub-strand labels  : server resolved; browser labels rejected");
+console.log("Governance enrolment evidence    : total / girls / boys forwarded to v2 validator");
 console.log("Workspace GET                    : original assessor only");
 console.log("Section POST                     : D4A section service only");
 console.log("Comment POST                     : separate D4A comment service only");

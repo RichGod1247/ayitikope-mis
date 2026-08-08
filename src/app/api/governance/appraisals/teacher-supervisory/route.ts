@@ -29,6 +29,15 @@ const SERVER_RESOLVED_FIELDS = [
   "teacherName",
   "assessorUserId",
   "assessorAssignmentId",
+  "subjectBeingObserved",
+  "subject",
+  "subStrand",
+  "classTaught",
+  "phase",
+  "level",
+  "strandId",
+  "strandCode",
+  "strandTitle",
 ] as const;
 
 function submittedServerResolvedField(
@@ -143,6 +152,25 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const classroomId = clean(body.classroomId);
+    const curriculumSubjectId = clean(body.curriculumSubjectId);
+    const curriculumSubStrandId = clean(body.curriculumSubStrandId);
+
+    for (const [fieldName, value] of [
+      ["classroomId", classroomId],
+      ["curriculumSubjectId", curriculumSubjectId],
+      ["curriculumSubStrandId", curriculumSubStrandId],
+    ] as const) {
+      if (!isLikelyIdentifier(value)) {
+        return jsonNoStore(400, {
+          ok: false,
+          reqId: meta.reqId,
+          error: "TEACHER_SUPERVISORY_OBSERVATION_SELECTION_ID_INVALID",
+          details: { fieldName },
+        });
+      }
+    }
+
     const forbiddenField = submittedServerResolvedField(body);
     if (forbiddenField) {
       return jsonNoStore(400, {
@@ -182,10 +210,13 @@ export async function POST(req: NextRequest) {
       dateObserved,
       yearsInService: body.yearsInService,
       yearsInPresentSchool: body.yearsInPresentSchool,
-      subjectBeingObserved: body.subjectBeingObserved,
-      subStrand: body.subStrand,
-      classTaught: body.classTaught,
       durationMinutes: body.durationMinutes,
+      totalEnrolment: body.totalEnrolment,
+      girls: body.girls,
+      boys: body.boys,
+      classroomId,
+      curriculumSubjectId,
+      curriculumSubStrandId,
       reqId: meta.reqId,
       ip: meta.ip,
       userAgent: meta.userAgent,

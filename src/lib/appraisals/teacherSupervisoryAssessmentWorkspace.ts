@@ -9,6 +9,9 @@ import {
   readTeacherSupervisoryObservationDetailsSnapshot,
   type TeacherSupervisoryObservationDetailsSnapshot,
 } from "@/lib/appraisals/teacherSupervisoryObservationDetails";
+import {
+  readTeacherSupervisoryObservationSelectionSnapshot,
+} from "@/lib/appraisals/teacherSupervisoryObservationOptions";
 import { TEACHER_SUPERVISORY_ASSESSMENT_POLICY } from "@/lib/appraisals/teacherSupervisoryAssessment";
 
 export const TEACHER_SUPERVISORY_WORKSPACE_POLICY = {
@@ -50,7 +53,7 @@ export type TeacherSupervisoryWorkspaceSection = {
 };
 
 export type TeacherSupervisoryWorkspaceObservation = {
-  contextSchemaVersion: 1;
+  contextSchemaVersion: 1 | 2;
   targetName: string | null;
   schoolName: string;
   circuitName: string;
@@ -63,6 +66,11 @@ export type TeacherSupervisoryWorkspaceObservation = {
   subStrand: string | null;
   classTaught: string | null;
   durationMinutes: number | null;
+  totalEnrolment: number | null;
+  girls: number | null;
+  boys: number | null;
+  teacherAssignmentVerified: boolean;
+  curriculumSelectionVerified: boolean;
 };
 
 export type TeacherSupervisoryWorkspaceLifecycle = {
@@ -169,6 +177,7 @@ type ObservationContext = {
   observation?: {
     dateObserved?: unknown;
     details?: unknown;
+    selection?: unknown;
   };
 };
 
@@ -275,7 +284,7 @@ function buildWorkspaceObservation(input: {
   const dateObserved = clean(snapshot.observation?.dateObserved);
 
   if (
-    schemaVersion !== 1 ||
+    (schemaVersion !== 1 && schemaVersion !== 2) ||
     clean(snapshot.workflow) !== TEACHER_SUPERVISORY_ASSESSMENT_POLICY.workflow ||
     clean(snapshot.evidenceStream) !==
       TEACHER_SUPERVISORY_ASSESSMENT_POLICY.evidenceStream ||
@@ -299,12 +308,35 @@ function buildWorkspaceObservation(input: {
       snapshot.observation?.details,
     );
 
-  if (!details || details.dateObserved !== dateObserved) {
+  if (
+    !details ||
+    details.dateObserved !== dateObserved ||
+    Number(details.schemaVersion) !== schemaVersion
+  ) {
     fail("TEACHER_SUPERVISORY_WORKSPACE_OBSERVATION_DETAILS_INVALID", 409);
   }
 
+  let teacherAssignmentVerified = false;
+  let curriculumSelectionVerified = false;
+
+  if (schemaVersion === 2) {
+    const selection = readTeacherSupervisoryObservationSelectionSnapshot(
+      snapshot.observation?.selection,
+    );
+    if (
+      !selection ||
+      selection.classTaught !== details.classTaught ||
+      selection.subjectBeingObserved !== details.subjectBeingObserved ||
+      selection.subStrand !== details.subStrand
+    ) {
+      fail("TEACHER_SUPERVISORY_WORKSPACE_OBSERVATION_SELECTION_INVALID", 409);
+    }
+    teacherAssignmentVerified = true;
+    curriculumSelectionVerified = true;
+  }
+
   return {
-    contextSchemaVersion: 1,
+    contextSchemaVersion: schemaVersion as 1 | 2,
     targetName,
     schoolName,
     circuitName,
@@ -317,6 +349,11 @@ function buildWorkspaceObservation(input: {
     subStrand: details.subStrand,
     classTaught: details.classTaught,
     durationMinutes: details.durationMinutes,
+    totalEnrolment: details.schemaVersion === 2 ? details.totalEnrolment : null,
+    girls: details.schemaVersion === 2 ? details.girls : null,
+    boys: details.schemaVersion === 2 ? details.boys : null,
+    teacherAssignmentVerified,
+    curriculumSelectionVerified,
   };
 }
 

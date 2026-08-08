@@ -183,6 +183,68 @@ function instrument(overrides = {}) {
   };
 }
 
+function observationClassroom(overrides = {}) {
+  return {
+    id: "class-jhs3-a",
+    tenantId: "tenant-school-001",
+    name: "JHS 3",
+    grade: "JHS 3",
+    arm: "A",
+    status: "ACTIVE",
+    ...overrides,
+  };
+}
+
+function teacherAssessmentAssignment(overrides = {}) {
+  return {
+    id: "teacher-assignment-science-001",
+    tenantId: "tenant-school-001",
+    teacherUserId: "teacher-001",
+    assignmentKind: "SUBJECT",
+    classroomId: "class-jhs3-a",
+    phase: "JHS",
+    level: "JHS 3",
+    subject: "Science",
+    subjectNorm: "SCIENCE",
+    status: "ACTIVE",
+    startsAt: new Date("2026-01-01T00:00:00.000Z"),
+    endsAt: null,
+    revokedAt: null,
+    ...overrides,
+  };
+}
+
+function curriculumScience(overrides = {}) {
+  return {
+    id: "curriculum-science-jhs3",
+    tenantId: null,
+    phase: "JHS",
+    level: "JHS 3",
+    name: "Science",
+    orderIndex: 1,
+    isGlobal: true,
+    isActive: true,
+    countryCode: "GH",
+    strands: [
+      {
+        id: "strand-farming-001",
+        code: "SCI-JHS3-S1",
+        title: "Farming",
+        orderIndex: 1,
+        subStrands: [
+          {
+            id: "substrand-farming-systems-001",
+            code: "SCI-JHS3-S1-SS1",
+            title: "Farming Systems",
+            orderIndex: 1,
+          },
+        ],
+      },
+    ],
+    ...overrides,
+  };
+}
+
 class FakeDatabase {
   constructor(overrides = {}) {
     this.membershipRecord = overrides.membership ?? baseMembership();
@@ -194,6 +256,11 @@ class FakeDatabase {
     };
     this.assignments = overrides.assignments ?? [districtAssignment()];
     this.instrumentVersion = overrides.instrumentVersion ?? instrument();
+    this.teacherAssessmentAssignments =
+      overrides.teacherAssessmentAssignments ?? [teacherAssessmentAssignment()];
+    this.teacherProfileRecord = overrides.teacherProfile ?? null;
+    this.classrooms = overrides.classrooms ?? [observationClassroom()];
+    this.curriculumSubjects = overrides.curriculumSubjects ?? [curriculumScience()];
     this.cycles = overrides.cycles ?? [];
     this.assessments = overrides.assessments ?? [];
     this.audits = overrides.audits ?? [];
@@ -336,6 +403,18 @@ class FakeDatabase {
       appraisalInstrumentVersion: {
         findFirst: async () => this.instrumentVersion,
       },
+      teacherAssessmentAssignment: {
+        findMany: async () => this.teacherAssessmentAssignments,
+      },
+      teacherProfile: {
+        findUnique: async () => this.teacherProfileRecord,
+      },
+      classroom: {
+        findMany: async () => this.classrooms,
+      },
+      curriculumSubject: {
+        findMany: async () => this.curriculumSubjects,
+      },
       appraisalCycle: this.appraisalCycle,
       appraisalAssessment: this.appraisalAssessment,
       auditLog: {
@@ -379,10 +458,13 @@ function input(overrides = {}) {
     dateObserved: "2026-08-07",
     yearsInService: 9,
     yearsInPresentSchool: "4",
-    subjectBeingObserved: " Science ",
-    subStrand: " Farming   Systems ",
-    classTaught: " JHS 3 ",
     durationMinutes: "60",
+    totalEnrolment: 40,
+    girls: 22,
+    boys: 18,
+    classroomId: "class-jhs3-a",
+    curriculumSubjectId: "curriculum-science-jhs3",
+    curriculumSubStrandId: "substrand-farming-systems-001",
     reqId: "req-n6-d3-001",
     ip: "127.0.0.1",
     userAgent: "N6-D3-QA",
@@ -418,11 +500,13 @@ async function main() {
   const {
     TEACHER_SUPERVISORY_OBSERVATION_DETAILS_POLICY,
     buildTeacherSupervisoryObservationDetailsSnapshot,
+    readTeacherSupervisoryObservationDetailsSnapshot,
   } = detailsModule;
 
   assertEqual(TEACHER_SUPERVISORY_DRAFT_POLICY.initialCycleStatus, "OPEN", "Initial cycle status");
   assertEqual(TEACHER_SUPERVISORY_DRAFT_POLICY.initialAssessmentStatus, "DRAFT", "Initial assessment status");
   assertEqual(TEACHER_SUPERVISORY_DRAFT_POLICY.cycleAndAssessmentAtomic, true, "Cycle + assessment must be atomic");
+  assertEqual(TEACHER_SUPERVISORY_DRAFT_POLICY.observationContextSchemaVersion, 2, "New Teacher observations must use verified v2 context");
   assertEqual(TEACHER_SUPERVISORY_DRAFT_POLICY.responseWindowDays, 0, "No response window on observation cycle");
   assertEqual(TEACHER_SUPERVISORY_DRAFT_POLICY.minimumResponses, 0, "No respondents required");
   assertEqual(TEACHER_SUPERVISORY_DRAFT_POLICY.respondentWorkflow, false, "No respondent workflow");
@@ -432,35 +516,84 @@ async function main() {
   assertEqual(TEACHER_SUPERVISORY_DRAFT_POLICY.providerCallsAllowed, false, "Provider calls forbidden");
 
   assertEqual(TEACHER_SUPERVISORY_OBSERVATION_DETAILS_POLICY.officialHeaderFieldCount, 10, "Official header count");
+  assertEqual(TEACHER_SUPERVISORY_OBSERVATION_DETAILS_POLICY.schemaVersion, 2, "New observation details schema");
+  assertEqual(TEACHER_SUPERVISORY_OBSERVATION_DETAILS_POLICY.legacySchemaVersion, 1, "Legacy observation details remain readable");
+  assertEqual(TEACHER_SUPERVISORY_OBSERVATION_DETAILS_POLICY.governanceObservationEvidenceFieldCount, 3, "Governance enrolment evidence count");
+  assertEqual(TEACHER_SUPERVISORY_OBSERVATION_DETAILS_POLICY.classSubjectAndSubStrandServerResolved, true, "Class/subject/sub-strand must be server resolved");
+  assertEqual(TEACHER_SUPERVISORY_OBSERVATION_DETAILS_POLICY.enrolmentBreakdownMustBalance, true, "Enrolment balance gate");
   assertEqual(TEACHER_SUPERVISORY_OBSERVATION_DETAILS_POLICY.termIsOfficialHeaderField, false, "Term is not official printed header");
   assertEqual(TEACHER_SUPERVISORY_OBSERVATION_DETAILS_POLICY.academicYearIsOfficialHeaderField, false, "Academic year is not official printed header");
   assertEqual(TEACHER_SUPERVISORY_OBSERVATION_DETAILS_POLICY.mutableAfterDraftCreation, false, "Observation details immutable");
 
-  const normalizedDetails = buildTeacherSupervisoryObservationDetailsSnapshot(input());
+  const normalizedDetails = buildTeacherSupervisoryObservationDetailsSnapshot({
+    dateObserved: "2026-08-07",
+    yearsInService: 9,
+    yearsInPresentSchool: "4",
+    subjectBeingObserved: " Science ",
+    subStrand: " Farming   Systems ",
+    classTaught: " JHS 3 A ",
+    durationMinutes: "60",
+    totalEnrolment: 40,
+    girls: 22,
+    boys: 18,
+  });
   assertDeepEqual(
     normalizedDetails,
     {
-      schemaVersion: 1,
+      schemaVersion: 2,
       dateObserved: "2026-08-07",
       yearsInService: 9,
       yearsInPresentSchool: 4,
       subjectBeingObserved: "Science",
       subStrand: "Farming Systems",
-      classTaught: "JHS 3",
+      classTaught: "JHS 3 A",
       durationMinutes: 60,
+      totalEnrolment: 40,
+      girls: 22,
+      boys: 18,
     },
-    "Observation details normalization",
+    "Observation details v2 normalization",
   );
 
+  const legacyDetails = readTeacherSupervisoryObservationDetailsSnapshot({
+    schemaVersion: 1,
+    dateObserved: "2026-08-07",
+    yearsInService: null,
+    yearsInPresentSchool: null,
+    subjectBeingObserved: null,
+    subStrand: null,
+    classTaught: null,
+    durationMinutes: null,
+  });
+  assertEqual(legacyDetails.schemaVersion, 1, "Legacy v1 observation remains readable");
+  assertEqual(legacyDetails.classTaught, null, "Legacy missing evidence must remain missing");
+
   expectThrow(
-    () => buildTeacherSupervisoryObservationDetailsSnapshot({ dateObserved: "2026-02-31" }),
+    () => buildTeacherSupervisoryObservationDetailsSnapshot({
+      dateObserved: "2026-02-31", yearsInService: 9, yearsInPresentSchool: 4,
+      subjectBeingObserved: "Science", subStrand: "Farming Systems", classTaught: "JHS 3 A",
+      durationMinutes: 60, totalEnrolment: 40, girls: 22, boys: 18,
+    }),
     "TEACHER_SUPERVISORY_OBSERVATION_DATE_INVALID",
     "Impossible calendar date must fail",
   );
   expectThrow(
-    () => buildTeacherSupervisoryObservationDetailsSnapshot({ dateObserved: "2026-08-07", durationMinutes: 81 }),
+    () => buildTeacherSupervisoryObservationDetailsSnapshot({
+      dateObserved: "2026-08-07", yearsInService: 9, yearsInPresentSchool: 4,
+      subjectBeingObserved: "Science", subStrand: "Farming Systems", classTaught: "JHS 3 A",
+      durationMinutes: 81, totalEnrolment: 40, girls: 22, boys: 18,
+    }),
     "TEACHER_SUPERVISORY_OBSERVATION_FIELD_INVALID",
-    "Duration outside legacy-compatible 0..80 range must fail",
+    "Duration outside 0..80 range must fail",
+  );
+  expectThrow(
+    () => buildTeacherSupervisoryObservationDetailsSnapshot({
+      dateObserved: "2026-08-07", yearsInService: 9, yearsInPresentSchool: 4,
+      subjectBeingObserved: "Science", subStrand: "Farming Systems", classTaught: "JHS 3 A",
+      durationMinutes: 60, totalEnrolment: 40, girls: 21, boys: 18,
+    }),
+    "TEACHER_SUPERVISORY_ENROLMENT_TOTAL_MISMATCH",
+    "Girls + boys must equal total enrolment",
   );
 
   const database = new FakeDatabase();
@@ -507,7 +640,7 @@ async function main() {
   assertEqual(assessment._count.reviews, 0, "No review rows at draft start");
 
   const snapshot = assessment.evidenceSnapshotJson;
-  assertEqual(snapshot.schemaVersion, 1, "Observation context schema");
+  assertEqual(snapshot.schemaVersion, 2, "Observation context schema");
   assertEqual(snapshot.workflow, "TEACHER_GOVERNANCE_SUPERVISORY_ASSESSMENT", "Teacher governance workflow");
   assertEqual(snapshot.evidenceStream, "GOVERNANCE_TEACHER_OBSERVATION", "Teacher governance evidence stream");
   assertEqual(snapshot.cycle.id, cycle.id, "Cycle identity frozen in assessment evidence");
@@ -523,7 +656,15 @@ async function main() {
   assertEqual(snapshot.jurisdiction.circuitZoneId, "circuit-gef-001", "Circuit jurisdiction frozen");
   assertEqual(snapshot.instrument.code, "TEACHER_OBSERVATION_V1", "Teacher observation instrument code frozen");
   assertEqual(snapshot.instrument.contentHash, CONTENT_HASH, "Published instrument hash frozen");
-  assertDeepEqual(snapshot.observation.details, normalizedDetails, "Official observation particulars frozen");
+  assertDeepEqual(snapshot.observation.details, normalizedDetails, "Official observation particulars + governance evidence frozen");
+  assertEqual(snapshot.observation.selection.classroomId, "class-jhs3-a", "Assigned classroom frozen");
+  assertEqual(snapshot.observation.selection.curriculumSubjectId, "curriculum-science-jhs3", "Curriculum subject frozen");
+  assertEqual(snapshot.observation.selection.curriculumSubStrandId, "substrand-farming-systems-001", "Curriculum sub-strand frozen");
+  assertEqual(snapshot.observation.selection.authorization.source, "TEACHER_ASSESSMENT_ASSIGNMENT", "Assignment provenance frozen");
+  assertDeepEqual(snapshot.observation.selection.authorization.assignmentIds, ["teacher-assignment-science-001"], "Exact Teacher assignment frozen");
+  assertEqual(assessment.metadata.governanceEnrolmentEvidenceIncluded, true, "Governance enrolment evidence flag");
+  assertEqual(assessment.metadata.teacherAssignmentVerified, true, "Teacher assignment verification flag");
+  assertEqual(assessment.metadata.curriculumSelectionVerified, true, "Curriculum selection verification flag");
 
   const contextHash = assessment.metadata.observationContextHash;
   assert(/^[a-f0-9]{64}$/.test(contextHash), "Observation context SHA-256 required", contextHash);
@@ -566,11 +707,11 @@ async function main() {
 
   await expectReject(
     () => createTeacherSupervisoryAssessmentDraft({
-      ...input({ subjectBeingObserved: "Mathematics", reqId: "req-context-subject" }),
+      ...input({ totalEnrolment: 41, girls: 22, boys: 19, reqId: "req-context-enrolment" }),
       database,
     }),
     "TEACHER_SUPERVISORY_DRAFT_CONTEXT_DRIFT",
-    "Same observation key with changed particulars must fail closed",
+    "Same observation key with changed governance observation evidence must fail closed",
   );
 
   const secondObservation = await createTeacherSupervisoryAssessmentDraft({
@@ -693,6 +834,33 @@ async function main() {
 
   await expectReject(
     () => createTeacherSupervisoryAssessmentDraft({
+      ...input({ yearsInService: "" }),
+      database: new FakeDatabase(),
+    }),
+    "TEACHER_SUPERVISORY_OBSERVATION_FIELD_REQUIRED",
+    "New v2 draft requires years in service",
+  );
+
+  await expectReject(
+    () => createTeacherSupervisoryAssessmentDraft({
+      ...input({ totalEnrolment: 40, girls: 21, boys: 18 }),
+      database: new FakeDatabase(),
+    }),
+    "TEACHER_SUPERVISORY_ENROLMENT_TOTAL_MISMATCH",
+    "New v2 draft requires balanced enrolment evidence",
+  );
+
+  await expectReject(
+    () => createTeacherSupervisoryAssessmentDraft({
+      ...input({ curriculumSubjectId: "curriculum-maths-jhs3" }),
+      database: new FakeDatabase(),
+    }),
+    "TEACHER_SUPERVISORY_OBSERVATION_SELECTION_INVALID",
+    "Browser-supplied subject outside verified assignment/curriculum must fail",
+  );
+
+  await expectReject(
+    () => createTeacherSupervisoryAssessmentDraft({
       ...input(),
       database: new FakeDatabase({
         instrumentVersion: instrument({ contentHash: null }),
@@ -739,6 +907,11 @@ async function main() {
     "appraisalAssessment.create",
     "Prisma.TransactionIsolationLevel.Serializable",
     "cycleAndAssessmentAtomic: true",
+    "observationContextSchemaVersion: 2",
+    "resolveTeacherSupervisoryObservationSelection",
+    "governanceEnrolmentEvidenceIncluded: true",
+    "teacherAssignmentVerified: true",
+    "curriculumSelectionVerified: true",
     "observationContextHash",
     "TEACHER_SUPERVISORY_OBSERVATION_CYCLE_OPENED",
     "TEACHER_SUPERVISORY_ASSESSMENT_DRAFT_CREATED",
@@ -751,6 +924,10 @@ async function main() {
 
   for (const marker of [
     "officialHeaderFieldCount: 10",
+    "governanceObservationEvidenceFieldCount: 3",
+    "classSubjectAndSubStrandServerResolved: true",
+    "enrolmentBreakdownMustBalance: true",
+    "legacySchemaVersion: 1",
     "termIsOfficialHeaderField: false",
     "academicYearIsOfficialHeaderField: false",
     "mutableAfterDraftCreation: false",
@@ -788,7 +965,10 @@ async function main() {
   console.log("Respondent workflow            : absent (0-day / 0-response / 0 participants)");
   console.log("Assessment                     : DRAFT revision 1");
   console.log("Assessor identity/assignment   : actual governance officer frozen");
-  console.log("Observation particulars        : immutable official snapshot");
+  console.log("Observation particulars        : all required + immutable v2 snapshot");
+  console.log("Class / subject / sub-strand   : server-verified assignment + curriculum");
+  console.log("Governance evidence            : total / girls / boys, balanced");
+  console.log("Legacy v1 drafts               : readable without invented evidence");
   console.log("Term / academic year           : not silently added to official header");
   console.log("Published instrument hash      : frozen");
   console.log("Observation-context proof      : deterministic SHA-256");

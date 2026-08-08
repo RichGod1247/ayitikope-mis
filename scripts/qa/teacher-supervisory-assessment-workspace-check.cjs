@@ -182,6 +182,51 @@ function evidenceContext() {
   };
 }
 
+function evidenceContextV2() {
+  const legacy = evidenceContext();
+  return {
+    ...legacy,
+    schemaVersion: 2,
+    observation: {
+      dateObserved: "2026-08-07",
+      details: {
+        schemaVersion: 2,
+        dateObserved: "2026-08-07",
+        yearsInService: 12,
+        yearsInPresentSchool: 4,
+        subjectBeingObserved: "English Language",
+        subStrand: "Reading",
+        classTaught: "Basic 5 A",
+        durationMinutes: 45,
+        totalEnrolment: 36,
+        girls: 20,
+        boys: 16,
+      },
+      selection: {
+        schemaVersion: 1,
+        classroomId: "class-basic5-a",
+        classTaught: "Basic 5 A",
+        phase: "PRIMARY",
+        level: "B5",
+        curriculumSubjectId: "curriculum-english-b5",
+        subjectBeingObserved: "English Language",
+        curriculumSubStrandId: "substrand-reading-b5",
+        subStrand: "Reading",
+        subStrandCode: "B5.ENG.2.1",
+        strandId: "strand-english-b5",
+        strandCode: "B5.ENG.2",
+        strandTitle: "Reading",
+        authorization: {
+          source: "TEACHER_ASSESSMENT_ASSIGNMENT",
+          assignmentIds: ["teacher-assignment-english-b5"],
+          assignmentKinds: ["SUBJECT"],
+          teacherProfileId: null,
+        },
+      },
+    },
+  };
+}
+
 function scoringAssessment() {
   const context = evidenceContext();
   return {
@@ -244,6 +289,22 @@ function scoringAssessment() {
     },
     instrumentVersion: instrumentVersion(),
   };
+}
+
+function scoringAssessmentV2() {
+  const assessment = scoringAssessment();
+  const context = evidenceContextV2();
+  assessment.evidenceSnapshotJson = context;
+  assessment.metadata = {
+    ...assessment.metadata,
+    observationContextSchemaVersion: 2,
+    observationContextHash: hashJson(context),
+    observationDetailsSchemaVersion: 2,
+    governanceEnrolmentEvidenceIncluded: true,
+    teacherAssignmentVerified: true,
+    curriculumSelectionVerified: true,
+  };
+  return assessment;
 }
 
 function workspaceRecord() {
@@ -342,6 +403,13 @@ function scoringDatabase() {
   };
 }
 
+function scoringDatabaseV2() {
+  const database = scoringDatabase();
+  const assessment = scoringAssessmentV2();
+  database.appraisalAssessment.findUnique = async () => structuredClone(assessment);
+  return database;
+}
+
 async function main() {
   const sourcePath = path.join(
     repoRoot,
@@ -427,6 +495,29 @@ async function main() {
   assertEqual(built.observation.durationMinutes, 45, "Duration drift");
   assertEqual(built.observation.yearsInService, 12, "Years in service drift");
   assertEqual(built.observation.yearsInPresentSchool, 4, "Years in present school drift");
+  assertEqual(built.observation.contextSchemaVersion, 1, "Legacy v1 context remains readable");
+  assertEqual(built.observation.totalEnrolment, null, "Legacy v1 must not invent total enrolment");
+  assertEqual(built.observation.girls, null, "Legacy v1 must not invent girls count");
+  assertEqual(built.observation.boys, null, "Legacy v1 must not invent boys count");
+  assertEqual(built.observation.teacherAssignmentVerified, false, "Legacy v1 assignment verification must not be invented");
+
+  const v2Record = workspaceRecord();
+  v2Record.evidenceSnapshotJson = evidenceContextV2();
+  const v2AssessmentView = {
+    ...assessmentView,
+    observationContextHash: hashJson(evidenceContextV2()),
+  };
+  const builtV2 = buildTeacherSupervisoryWorkspace({
+    record: v2Record,
+    assessment: v2AssessmentView,
+  });
+  assertEqual(builtV2.observation.contextSchemaVersion, 2, "Verified v2 context must be readable");
+  assertEqual(builtV2.observation.classTaught, "Basic 5 A", "V2 verified class");
+  assertEqual(builtV2.observation.totalEnrolment, 36, "V2 total enrolment");
+  assertEqual(builtV2.observation.girls, 20, "V2 girls count");
+  assertEqual(builtV2.observation.boys, 16, "V2 boys count");
+  assertEqual(builtV2.observation.teacherAssignmentVerified, true, "V2 Teacher assignment verification");
+  assertEqual(builtV2.observation.curriculumSelectionVerified, true, "V2 curriculum verification");
   assertEqual(built.lifecycle.originalAssessorOnly, true, "Original-assessor lifecycle marker missing");
   assertEqual(built.lifecycle.reviewControlsIncluded, false, "Review controls must remain absent");
   assertEqual(built.privacy.legacyTeacherAppraisalIncluded, false, "Legacy TeacherAppraisal must remain excluded");
@@ -449,6 +540,23 @@ async function main() {
   assertEqual(loaded.assessment.assessorUserId, "actor-workspace-001", "Loaded workspace assessor mismatch");
   assertEqual(loaded.sections.length, 6, "Loaded workspace section count drift");
   assertEqual(loaded.policy.databaseWritesAllowed, false, "Workspace must remain read only");
+
+  const loadedV2Record = workspaceRecord();
+  loadedV2Record.evidenceSnapshotJson = evidenceContextV2();
+  const loadedV2 = await loadTeacherSupervisoryAssessmentWorkspace({
+    actorUserId: "actor-workspace-001",
+    actorRoleName: "HEAD_OF_SUPERVISION",
+    assessmentId: "assessment-workspace-001",
+    now: NOW,
+    scoringDatabase: scoringDatabaseV2(),
+    workspaceDatabase: {
+      appraisalAssessment: {
+        findUnique: async () => structuredClone(loadedV2Record),
+      },
+    },
+  });
+  assertEqual(loadedV2.observation.contextSchemaVersion, 2, "Scoring + workspace load must accept verified v2 context");
+  assertEqual(loadedV2.observation.totalEnrolment, 36, "Loaded v2 governance evidence");
 
   await expectReject(
     () =>
@@ -477,6 +585,19 @@ async function main() {
     "Workspace must fail closed on duplicate item keys",
   );
 
+  const selectionDrift = workspaceRecord();
+  const selectionDriftContext = evidenceContextV2();
+  selectionDriftContext.observation.selection.classTaught = "Basic 5 B";
+  selectionDrift.evidenceSnapshotJson = selectionDriftContext;
+  await expectReject(
+    async () => buildTeacherSupervisoryWorkspace({
+      record: selectionDrift,
+      assessment: v2AssessmentView,
+    }),
+    "TEACHER_SUPERVISORY_WORKSPACE_OBSERVATION_SELECTION_INVALID",
+    "Workspace must fail closed when verified selection labels drift",
+  );
+
   const outputText = JSON.stringify(built);
   assert(!outputText.toLowerCase().includes("email"), "Workspace payload must not expose email fields");
   assert(!outputText.toLowerCase().includes("phone"), "Workspace payload must not expose phone fields");
@@ -487,6 +608,8 @@ async function main() {
     "SERIALIZED_AUTOSAVE",
     "loadTeacherSupervisoryAssessment",
     "readTeacherSupervisoryObservationDetailsSnapshot",
+    "readTeacherSupervisoryObservationSelectionSnapshot",
+    "contextSchemaVersion: schemaVersion as 1 | 2",
     "reviewControlsIncluded: false",
     "legacyTeacherAppraisalIncluded: false",
   ]) {
@@ -510,7 +633,9 @@ async function main() {
   console.log("=== N6-D4A GOVERNANCE TEACHER OWNER-BOUND WORKSPACE CONTRACT ===");
   console.log("");
   console.log("Audience                        : original governance assessor only");
-  console.log("Official observation header     : Teacher/school/circuit + 7 observation particulars");
+  console.log("Official observation header     : unchanged 10-field Teacher instrument");
+  console.log("Legacy observation context       : v1 readable; missing evidence not invented");
+  console.log("Verified observation context     : v2 class/curriculum + enrolment evidence");
   console.log("Official scoring form           : 6 sections / 34 items");
   console.log("General comments                : visible in native workspace");
   console.log("Score persistence               : database-backed reload");

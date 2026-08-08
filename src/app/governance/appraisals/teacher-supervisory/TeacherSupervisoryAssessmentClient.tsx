@@ -73,7 +73,7 @@ type Workspace = {
     reviewControlsIncluded: false;
   };
   observation: {
-    contextSchemaVersion: 1;
+    contextSchemaVersion: 1 | 2;
     targetName: string | null;
     schoolName: string;
     circuitName: string;
@@ -86,6 +86,11 @@ type Workspace = {
     subStrand: string | null;
     classTaught: string | null;
     durationMinutes: number | null;
+    totalEnrolment: number | null;
+    girls: number | null;
+    boys: number | null;
+    teacherAssignmentVerified: boolean;
+    curriculumSelectionVerified: boolean;
   };
   generalComment: string | null;
   sections: WorkspaceSection[];
@@ -179,24 +184,78 @@ type TeacherAssessmentRecords = {
   noBackgroundPolling: true;
 };
 
+type ObservationSubStrandOption = {
+  curriculumSubStrandId: string;
+  code: string | null;
+  title: string;
+  strandId: string;
+  strandCode: string | null;
+  strandTitle: string;
+};
+
+type ObservationSubjectOption = {
+  curriculumSubjectId: string;
+  subject: string;
+  phase: "KG" | "PRIMARY" | "JHS";
+  level: string;
+  subStrands: ObservationSubStrandOption[];
+};
+
+type ObservationClassOption = {
+  classroomId: string;
+  classTaught: string;
+  phase: "KG" | "PRIMARY" | "JHS";
+  level: string;
+  subjects: ObservationSubjectOption[];
+};
+
+type TeacherObservationOptions = {
+  actorRole: string;
+  officeLabel: string;
+  target: {
+    targetUserId: string;
+    targetName: string | null;
+    targetTenantId: string;
+    schoolName: string;
+    circuitId: string;
+    circuitName: string;
+    districtId: string;
+    districtName: string;
+  };
+  observationDate: string;
+  classes: ObservationClassOption[];
+  readOnly: true;
+  assignmentVerified: true;
+  curriculumVerified: true;
+  historicalLessonEvidenceIncluded: false;
+  contactDetailsIncluded: false;
+  providerCalled: false;
+};
+
 type ObservationDraft = {
   yearsInService: string;
   yearsInPresentSchool: string;
-  subjectBeingObserved: string;
   dateObserved: string;
-  subStrand: string;
-  classTaught: string;
   durationMinutes: string;
+  totalEnrolment: string;
+  girls: string;
+  boys: string;
+  classroomId: string;
+  curriculumSubjectId: string;
+  curriculumSubStrandId: string;
 };
 
 type ValidatedObservation = {
-  yearsInService: number | null;
-  yearsInPresentSchool: number | null;
-  subjectBeingObserved: string | null;
+  yearsInService: number;
+  yearsInPresentSchool: number;
   dateObserved: string;
-  subStrand: string | null;
-  classTaught: string | null;
-  durationMinutes: number | null;
+  durationMinutes: number;
+  totalEnrolment: number;
+  girls: number;
+  boys: number;
+  classroomId: string;
+  curriculumSubjectId: string;
+  curriculumSubStrandId: string;
 };
 
 type ApiFailure = {
@@ -281,74 +340,141 @@ function dashboardHref(actorRole: string | undefined) {
   }
 }
 
-function normalizeOptionalText(value: string) {
-  const normalized = value.replace(/\s+/g, " ").trim();
-  return normalized || null;
-}
-
-function parseOptionalWholeNumber(value: string, label: string) {
+function parseRequiredWholeNumber(
+  value: string,
+  label: string,
+  maximum = 80,
+) {
   const raw = value.trim();
-  if (!raw) return { ok: true as const, value: null };
+  if (!raw) {
+    return { ok: false as const, message: `${label} is required.` };
+  }
   if (!/^\d+$/.test(raw)) {
     return {
       ok: false as const,
-      message: `${label} must be a whole number from 0 to 80.`,
+      message: `${label} must be a whole number from 0 to ${maximum}.`,
     };
   }
   const parsed = Number(raw);
-  if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed > 80) {
+  if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed > maximum) {
     return {
       ok: false as const,
-      message: `${label} must be a whole number from 0 to 80.`,
+      message: `${label} must be a whole number from 0 to ${maximum}.`,
     };
   }
   return { ok: true as const, value: parsed };
 }
 
-function validateObservation(draft: ObservationDraft):
+function parseRequiredNonNegativeWholeNumber(value: string, label: string) {
+  const raw = value.trim();
+  if (!raw) {
+    return { ok: false as const, message: `${label} is required.` };
+  }
+  if (!/^\d+$/.test(raw)) {
+    return {
+      ok: false as const,
+      message: `${label} must be a non-negative whole number.`,
+    };
+  }
+  const parsed = Number(raw);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) {
+    return {
+      ok: false as const,
+      message: `${label} must be a non-negative whole number.`,
+    };
+  }
+  return { ok: true as const, value: parsed };
+}
+
+function validObservationDate(value: string) {
+  const dateObserved = value.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateObserved)) return false;
+  const parsedDate = new Date(`${dateObserved}T00:00:00.000Z`);
+  return (
+    !Number.isNaN(parsedDate.getTime()) &&
+    parsedDate.toISOString().slice(0, 10) === dateObserved &&
+    dateObserved <= today()
+  );
+}
+
+function validateObservation(
+  draft: ObservationDraft,
+  options: TeacherObservationOptions | null,
+):
   | { ok: true; values: ValidatedObservation }
   | { ok: false; message: string } {
   const dateObserved = draft.dateObserved.trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateObserved)) {
-    return { ok: false, message: "Select a valid observation date." };
-  }
-  const parsedDate = new Date(`${dateObserved}T00:00:00.000Z`);
-  if (
-    Number.isNaN(parsedDate.getTime()) ||
-    parsedDate.toISOString().slice(0, 10) !== dateObserved
-  ) {
-    return { ok: false, message: "Select a real calendar date." };
-  }
-  if (dateObserved > today()) {
-    return { ok: false, message: "The observation date cannot be in the future." };
+  if (!validObservationDate(dateObserved)) {
+    return { ok: false, message: "Select a valid observation date that is not in the future." };
   }
 
-  const yearsInService = parseOptionalWholeNumber(
+  const yearsInService = parseRequiredWholeNumber(
     draft.yearsInService,
     "Years in service",
   );
   if (!yearsInService.ok) return yearsInService;
 
-  const yearsInPresentSchool = parseOptionalWholeNumber(
+  const yearsInPresentSchool = parseRequiredWholeNumber(
     draft.yearsInPresentSchool,
     "Years in present school",
   );
   if (!yearsInPresentSchool.ok) return yearsInPresentSchool;
 
-  const durationMinutes = parseOptionalWholeNumber(
+  const durationMinutes = parseRequiredWholeNumber(
     draft.durationMinutes,
     "Lesson duration",
   );
   if (!durationMinutes.ok) return durationMinutes;
 
-  for (const [label, value] of [
-    ["Subject being observed", draft.subjectBeingObserved],
-    ["Sub-strand", draft.subStrand],
-    ["Class taught", draft.classTaught],
-  ] as const) {
-    if (normalizeOptionalText(value)?.length && normalizeOptionalText(value)!.length > 240) {
-      return { ok: false, message: `${label} must be 240 characters or fewer.` };
-    }
+  const totalEnrolment = parseRequiredNonNegativeWholeNumber(
+    draft.totalEnrolment,
+    "Total enrolment",
+  );
+  if (!totalEnrolment.ok) return totalEnrolment;
+
+  const girls = parseRequiredNonNegativeWholeNumber(draft.girls, "Girls");
+  if (!girls.ok) return girls;
+
+  const boys = parseRequiredNonNegativeWholeNumber(draft.boys, "Boys");
+  if (!boys.ok) return boys;
+
+  if (girls.value + boys.value !== totalEnrolment.value) {
+    return {
+      ok: false,
+      message: "Girls plus boys must equal total enrolment.",
+    };
+  }
+
+  if (!options || options.observationDate !== dateObserved) {
+    return {
+      ok: false,
+      message: "Wait for the Teacher's verified class and curriculum options to load.",
+    };
+  }
+
+  const classroom = options.classes.find(
+    (candidate) => candidate.classroomId === draft.classroomId,
+  );
+  if (!classroom) {
+    return { ok: false, message: "Choose a verified class taught by this Teacher." };
+  }
+
+  const subject = classroom.subjects.find(
+    (candidate) => candidate.curriculumSubjectId === draft.curriculumSubjectId,
+  );
+  if (!subject) {
+    return { ok: false, message: "Choose a verified subject for the selected class." };
+  }
+
+  const subStrand = subject.subStrands.find(
+    (candidate) =>
+      candidate.curriculumSubStrandId === draft.curriculumSubStrandId,
+  );
+  if (!subStrand) {
+    return {
+      ok: false,
+      message: "Choose a curriculum sub-strand for the selected class and subject.",
+    };
   }
 
   return {
@@ -356,11 +482,14 @@ function validateObservation(draft: ObservationDraft):
     values: {
       yearsInService: yearsInService.value,
       yearsInPresentSchool: yearsInPresentSchool.value,
-      subjectBeingObserved: normalizeOptionalText(draft.subjectBeingObserved),
       dateObserved,
-      subStrand: normalizeOptionalText(draft.subStrand),
-      classTaught: normalizeOptionalText(draft.classTaught),
       durationMinutes: durationMinutes.value,
+      totalEnrolment: totalEnrolment.value,
+      girls: girls.value,
+      boys: boys.value,
+      classroomId: classroom.classroomId,
+      curriculumSubjectId: subject.curriculumSubjectId,
+      curriculumSubStrandId: subStrand.curriculumSubStrandId,
     },
   };
 }
@@ -455,12 +584,21 @@ export default function TeacherSupervisoryAssessmentClient({
   const [observationDraft, setObservationDraft] = useState<ObservationDraft>({
     yearsInService: "",
     yearsInPresentSchool: "",
-    subjectBeingObserved: "",
     dateObserved: today(),
-    subStrand: "",
-    classTaught: "",
     durationMinutes: "",
+    totalEnrolment: "",
+    girls: "",
+    boys: "",
+    classroomId: "",
+    curriculumSubjectId: "",
+    curriculumSubStrandId: "",
   });
+  const [observationOptions, setObservationOptions] =
+    useState<TeacherObservationOptions | null>(null);
+  const [observationOptionsLoading, setObservationOptionsLoading] =
+    useState(false);
+  const [observationOptionsError, setObservationOptionsError] = useState("");
+  const [savedAssessmentsOpen, setSavedAssessmentsOpen] = useState(false);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [answers, setAnswers] = useState<Record<string, ScoreDraft>>({});
   const [generalComment, setGeneralComment] = useState("");
@@ -490,6 +628,7 @@ export default function TeacherSupervisoryAssessmentClient({
   const commentRetryTimerRef = useRef<number | null>(null);
   const commentAutosaveRunningRef = useRef(false);
   const draftAttemptRef = useRef<DraftAttempt | null>(null);
+  const observationOptionsRequestRef = useRef(0);
   const nativeReviewRef = useRef<HTMLElement | null>(null);
 
   const clearWorkspaceForAssessmentChange = useCallback(() => {
@@ -721,6 +860,78 @@ export default function TeacherSupervisoryAssessmentClient({
       ) ?? null,
     [queueTeachers, selectedTeacherUserId],
   );
+  const observationOptionsTargetUserId = selectedTeacher?.targetUserId ?? "";
+  const observationOptionsTargetTenantId = selectedTeacher?.schoolId ?? "";
+
+  useEffect(() => {
+    const requestId = observationOptionsRequestRef.current + 1;
+    observationOptionsRequestRef.current = requestId;
+    setObservationOptions(null);
+    setObservationOptionsError("");
+    setObservationDraft((current) => ({
+      ...current,
+      classroomId: "",
+      curriculumSubjectId: "",
+      curriculumSubStrandId: "",
+    }));
+
+    if (
+      !observationOptionsTargetUserId ||
+      !observationOptionsTargetTenantId ||
+      !validObservationDate(observationDraft.dateObserved)
+    ) {
+      setObservationOptionsLoading(false);
+      return;
+    }
+
+    const targetUserId = observationOptionsTargetUserId;
+    const targetTenantId = observationOptionsTargetTenantId;
+    const dateObserved = observationDraft.dateObserved.trim();
+    setObservationOptionsLoading(true);
+
+    const params = new URLSearchParams({
+      targetUserId,
+      targetTenantId,
+      dateObserved,
+    });
+
+    void fetch(
+      `/api/governance/appraisals/teacher-supervisory/observation-options?${params.toString()}`,
+      { cache: "no-store" },
+    )
+      .then(async (response) => {
+        const body = (await readApiBody(response)) as
+          | { ok: true; options: TeacherObservationOptions }
+          | ApiFailure;
+        if (!response.ok || body.ok !== true) {
+          throw new Error(messageFromFailure(body, response.status));
+        }
+        if (observationOptionsRequestRef.current !== requestId) return;
+        setObservationOptions(body.options);
+        if (!body.options.classes.length) {
+          setObservationOptionsError(
+            "No verified class, subject and curriculum sub-strand combination is available for this Teacher on the selected date.",
+          );
+        }
+      })
+      .catch((loadError) => {
+        if (observationOptionsRequestRef.current !== requestId) return;
+        setObservationOptionsError(
+          loadError instanceof Error
+            ? loadError.message
+            : "The Teacher's verified class and curriculum options could not be loaded.",
+        );
+      })
+      .finally(() => {
+        if (observationOptionsRequestRef.current === requestId) {
+          setObservationOptionsLoading(false);
+        }
+      });
+  }, [
+    observationOptionsTargetUserId,
+    observationOptionsTargetTenantId,
+    observationDraft.dateObserved,
+  ]);
 
   useEffect(() => {
     if (!queue) return;
@@ -1101,7 +1312,24 @@ export default function TeacherSupervisoryAssessmentClient({
   }
 
   function updateObservationField(field: keyof ObservationDraft, value: string) {
-    setObservationDraft((current) => ({ ...current, [field]: value }));
+    setObservationDraft((current) => {
+      if (field === "classroomId") {
+        return {
+          ...current,
+          classroomId: value,
+          curriculumSubjectId: "",
+          curriculumSubStrandId: "",
+        };
+      }
+      if (field === "curriculumSubjectId") {
+        return {
+          ...current,
+          curriculumSubjectId: value,
+          curriculumSubStrandId: "",
+        };
+      }
+      return { ...current, [field]: value };
+    });
     setError("");
     setNotice("");
   }
@@ -1112,7 +1340,7 @@ export default function TeacherSupervisoryAssessmentClient({
       return;
     }
 
-    const validation = validateObservation(observationDraft);
+    const validation = validateObservation(observationDraft, observationOptions);
     if (!validation.ok) {
       setError(validation.message);
       return;
@@ -1260,7 +1488,14 @@ export default function TeacherSupervisoryAssessmentClient({
     const selectedSchool = queueSchools.find(
       (school) => school.schoolId === selectedSchoolId,
     );
-    const observationValidation = validateObservation(observationDraft);
+    const observationValidation = validateObservation(observationDraft, observationOptions);
+    const selectedObservationClass = observationOptions?.classes.find(
+      (candidate) => candidate.classroomId === observationDraft.classroomId,
+    ) ?? null;
+    const selectedObservationSubject = selectedObservationClass?.subjects.find(
+      (candidate) =>
+        candidate.curriculumSubjectId === observationDraft.curriculumSubjectId,
+    ) ?? null;
 
     return (
       <div className="min-h-screen bg-[#070B12] px-4 py-6 text-[#F7F4ED] md:px-8">
@@ -1306,103 +1541,80 @@ export default function TeacherSupervisoryAssessmentClient({
             </div>
           ) : null}
 
-          <section className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4 md:p-5">
-            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-              <div>
+          <section className="rounded-[24px] border border-white/10 bg-white/[0.04] p-3 md:p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
                   My saved assessments
                 </p>
-                <h2 className="mt-1 text-xl font-semibold text-white">
-                  Continue where you stopped
-                </h2>
-                <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-300">
-                  Your own saved Teacher observations appear here. Drafts can be reopened without remembering an assessment link.
+                <p className="mt-1 text-sm text-slate-300">
+                  {records?.summary.inProgress ?? 0} to continue · {records?.summary.submitted ?? 0} submitted
                 </p>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-center">
-                <div className="rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-cyan-100/70">Continue</p>
-                  <p className="mt-1 text-xl font-bold text-white">{records?.summary.inProgress ?? 0}</p>
-                </div>
-                <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-emerald-100/70">Submitted</p>
-                  <p className="mt-1 text-xl font-bold text-white">{records?.summary.submitted ?? 0}</p>
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={() => setSavedAssessmentsOpen((open) => !open)}
+                aria-expanded={savedAssessmentsOpen}
+                className="min-h-11 rounded-xl border border-white/10 bg-black/20 px-4 text-sm font-bold text-white hover:bg-white/[0.08]"
+              >
+                {savedAssessmentsOpen
+                  ? "Hide saved assessments"
+                  : `Show saved assessments (${records?.summary.total ?? 0})`}
+              </button>
             </div>
 
-            {recordsLoading && !records ? (
-              <p className="mt-4 text-sm text-slate-300">Loading your saved assessments…</p>
-            ) : records?.items.length ? (
-              <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                {records.items.map((record) => (
-                  <a
-                    key={record.assessmentId}
-                    href={record.workspaceUrl}
-                    className="rounded-2xl border border-white/10 bg-black/20 p-4 transition hover:bg-white/[0.08]"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="font-semibold text-white">
-                          {record.targetName || "Teacher"}
-                        </p>
-                        <p className="mt-1 text-sm text-slate-300">
-                          {record.schoolName} · {record.circuitName}
-                        </p>
-                        <p className="mt-1 text-xs text-slate-400">
-                          Observed {record.dateObserved}
-                        </p>
-                      </div>
-                      <span
-                        className={cx(
-                          "shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold",
-                          record.state === "IN_PROGRESS"
-                            ? "border-cyan-300/25 bg-cyan-400/15 text-cyan-100"
-                            : "border-emerald-300/25 bg-emerald-400/15 text-emerald-100",
-                        )}
+            {savedAssessmentsOpen ? (
+              <div className="mt-3 border-t border-white/10 pt-3">
+                {recordsLoading && !records ? (
+                  <p className="text-sm text-slate-300">Loading your saved assessments…</p>
+                ) : records?.items.length ? (
+                  <div className="space-y-2">
+                    {records.items.map((record) => (
+                      <a
+                        key={record.assessmentId}
+                        href={record.workspaceUrl}
+                        className="flex flex-col gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 transition hover:bg-white/[0.08] sm:flex-row sm:items-center sm:justify-between"
                       >
-                        {record.state === "IN_PROGRESS" ? "CONTINUE" : "SUBMITTED"}
-                      </span>
-                    </div>
-
-                    {record.state === "IN_PROGRESS" ? (
-                      <div className="mt-4">
-                        <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
-                          <span>{record.answeredItems}/{record.totalItems} saved</span>
-                          <span>{record.completionPercentage}%</span>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-white">
+                            {record.targetName || "Teacher"}
+                          </p>
+                          <p className="truncate text-xs text-slate-400">
+                            {record.schoolName} · {record.dateObserved}
+                          </p>
                         </div>
-                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
-                          <div
-                            className="h-full rounded-full bg-[linear-gradient(90deg,#22D3EE,#34D399)]"
-                            style={{ width: `${record.completionPercentage}%` }}
-                          />
+                        <div className="flex shrink-0 items-center gap-2 text-xs">
+                          <span
+                            className={cx(
+                              "rounded-full border px-2 py-1 font-bold",
+                              record.state === "IN_PROGRESS"
+                                ? "border-cyan-300/25 bg-cyan-400/15 text-cyan-100"
+                                : "border-emerald-300/25 bg-emerald-400/15 text-emerald-100",
+                            )}
+                          >
+                            {record.state === "IN_PROGRESS"
+                              ? `${record.answeredItems}/${record.totalItems} saved`
+                              : record.overallPercentage == null
+                                ? "SUBMITTED"
+                                : formatPercent(record.overallPercentage)}
+                          </span>
+                          <span className="font-bold text-white">
+                            {record.state === "IN_PROGRESS" ? "Continue →" : "View →"}
+                          </span>
                         </div>
-                      </div>
-                    ) : (
-                      <p className="mt-4 text-sm font-semibold text-emerald-100">
-                        {record.overallPercentage == null
-                          ? "Submitted and locked"
-                          : `Final result: ${formatPercent(record.overallPercentage)}`}
-                      </p>
-                    )}
-
-                    <p className="mt-4 text-sm font-bold text-white">
-                      {record.state === "IN_PROGRESS"
-                        ? "Continue assessment →"
-                        : "View submitted assessment →"}
-                    </p>
-                  </a>
-                ))}
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="rounded-xl border border-dashed border-white/15 bg-black/10 p-3 text-sm text-slate-300">
+                    No saved Teacher assessment yet.
+                  </p>
+                )}
+                <p className="mt-3 text-xs leading-5 text-slate-400">
+                  This list shows progress only. Individual scores, General Comments, contact details and review evidence are not loaded into the work-list response.
+                </p>
               </div>
-            ) : (
-              <p className="mt-4 rounded-2xl border border-dashed border-white/15 bg-black/10 p-4 text-sm text-slate-300">
-                No saved Teacher assessment yet. Start one below and it will appear here automatically.
-              </p>
-            )}
-
-            <p className="mt-3 text-xs leading-5 text-slate-400">
-              This list shows progress only. Individual scores, General Comments, contact details and review evidence are not loaded into the work-list response.
-            </p>
+            ) : null}
           </section>
 
           <section className="grid grid-cols-3 gap-2 md:gap-4">
@@ -1561,6 +1773,7 @@ export default function TeacherSupervisoryAssessmentClient({
                       max="80"
                       step="1"
                       inputMode="numeric"
+                      required
                       value={observationDraft.yearsInService}
                       onChange={(event: ChangeEvent<HTMLInputElement>) =>
                         updateObservationField("yearsInService", event.target.value)
@@ -1577,6 +1790,7 @@ export default function TeacherSupervisoryAssessmentClient({
                       max="80"
                       step="1"
                       inputMode="numeric"
+                      required
                       value={observationDraft.yearsInPresentSchool}
                       onChange={(event: ChangeEvent<HTMLInputElement>) =>
                         updateObservationField("yearsInPresentSchool", event.target.value)
@@ -1590,6 +1804,7 @@ export default function TeacherSupervisoryAssessmentClient({
                     <input
                       type="date"
                       max={today()}
+                      required
                       value={observationDraft.dateObserved}
                       onChange={(event: ChangeEvent<HTMLInputElement>) =>
                         updateObservationField("dateObserved", event.target.value)
@@ -1599,42 +1814,72 @@ export default function TeacherSupervisoryAssessmentClient({
                   </label>
 
                   <label className="block text-sm font-semibold text-slate-200">
-                    Subject being observed
-                    <input
-                      type="text"
-                      value={observationDraft.subjectBeingObserved}
-                      onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                        updateObservationField("subjectBeingObserved", event.target.value)
+                    Class taught
+                    <select
+                      required
+                      disabled={!selectedTeacher || observationOptionsLoading || !observationOptions}
+                      value={observationDraft.classroomId}
+                      onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                        updateObservationField("classroomId", event.target.value)
                       }
-                      className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50"
-                    />
+                      className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50 disabled:opacity-50"
+                    >
+                      <option value="">Choose class</option>
+                      {observationOptions?.classes.map((option) => (
+                        <option key={option.classroomId} value={option.classroomId}>
+                          {option.classTaught}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block text-sm font-semibold text-slate-200">
+                    Subject being observed
+                    <select
+                      required
+                      disabled={!selectedObservationClass}
+                      value={observationDraft.curriculumSubjectId}
+                      onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                        updateObservationField("curriculumSubjectId", event.target.value)
+                      }
+                      className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50 disabled:opacity-50"
+                    >
+                      <option value="">Choose subject</option>
+                      {selectedObservationClass?.subjects.map((option) => (
+                        <option
+                          key={option.curriculumSubjectId}
+                          value={option.curriculumSubjectId}
+                        >
+                          {option.subject}
+                        </option>
+                      ))}
+                    </select>
                   </label>
 
                   <label className="block text-sm font-semibold text-slate-200">
                     Sub-strand
-                    <input
-                      type="text"
-                      value={observationDraft.subStrand}
-                      onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                        updateObservationField("subStrand", event.target.value)
+                    <select
+                      required
+                      disabled={!selectedObservationSubject}
+                      value={observationDraft.curriculumSubStrandId}
+                      onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                        updateObservationField("curriculumSubStrandId", event.target.value)
                       }
-                      className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50"
-                    />
+                      className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50 disabled:opacity-50"
+                    >
+                      <option value="">Choose sub-strand</option>
+                      {selectedObservationSubject?.subStrands.map((option) => (
+                        <option
+                          key={option.curriculumSubStrandId}
+                          value={option.curriculumSubStrandId}
+                        >
+                          {option.strandTitle} · {option.title}
+                        </option>
+                      ))}
+                    </select>
                   </label>
 
                   <label className="block text-sm font-semibold text-slate-200">
-                    Class taught
-                    <input
-                      type="text"
-                      value={observationDraft.classTaught}
-                      onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                        updateObservationField("classTaught", event.target.value)
-                      }
-                      className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50"
-                    />
-                  </label>
-
-                  <label className="block text-sm font-semibold text-slate-200 sm:col-span-2 lg:col-span-1">
                     Duration of lesson (minutes)
                     <input
                       type="number"
@@ -1642,6 +1887,7 @@ export default function TeacherSupervisoryAssessmentClient({
                       max="80"
                       step="1"
                       inputMode="numeric"
+                      required
                       value={observationDraft.durationMinutes}
                       onChange={(event: ChangeEvent<HTMLInputElement>) =>
                         updateObservationField("durationMinutes", event.target.value)
@@ -1649,7 +1895,69 @@ export default function TeacherSupervisoryAssessmentClient({
                       className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50"
                     />
                   </label>
+
+                  <label className="block text-sm font-semibold text-slate-200">
+                    Total enrolment
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      inputMode="numeric"
+                      required
+                      value={observationDraft.totalEnrolment}
+                      onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                        updateObservationField("totalEnrolment", event.target.value)
+                      }
+                      className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50"
+                    />
+                  </label>
+
+                  <label className="block text-sm font-semibold text-slate-200">
+                    Girls
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      inputMode="numeric"
+                      required
+                      value={observationDraft.girls}
+                      onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                        updateObservationField("girls", event.target.value)
+                      }
+                      className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50"
+                    />
+                  </label>
+
+                  <label className="block text-sm font-semibold text-slate-200">
+                    Boys
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      inputMode="numeric"
+                      required
+                      value={observationDraft.boys}
+                      onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                        updateObservationField("boys", event.target.value)
+                      }
+                      className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50"
+                    />
+                  </label>
                 </div>
+
+                {observationOptionsLoading ? (
+                  <p className="mt-3 text-xs text-cyan-100">
+                    Loading this Teacher&apos;s verified class and curriculum options…
+                  </p>
+                ) : observationOptionsError ? (
+                  <p className="mt-3 rounded-xl border border-amber-300/25 bg-amber-400/10 p-3 text-xs leading-5 text-amber-100">
+                    {observationOptionsError}
+                  </p>
+                ) : selectedTeacher && observationOptions ? (
+                  <p className="mt-3 text-xs leading-5 text-slate-400">
+                    Class and subject authority comes from the Teacher&apos;s current assignment scope; sub-strands come from the matching curriculum. Old schemes, lesson notes and lesson deliveries do not widen this list.
+                  </p>
+                ) : null}
 
                 <div
                   className={cx(
@@ -1664,13 +1972,13 @@ export default function TeacherSupervisoryAssessmentClient({
                   {!selectedTeacher
                     ? "Choose the Teacher you are observing."
                     : observationValidation.ok
-                      ? "Ready. Teacher, school and circuit are server-resolved; these observation particulars will be frozen when the draft is created."
+                      ? "Ready. Teacher, school, circuit, assignment, curriculum selection and enrolment balance have all passed the consistency gate. These particulars will be frozen when the draft is created."
                       : observationValidation.message}
                 </div>
 
                 <button
                   type="button"
-                  disabled={busy || !selectedTeacher || !observationValidation.ok}
+                  disabled={busy || observationOptionsLoading || !selectedTeacher || !observationValidation.ok}
                   onClick={() => void createDraft()}
                   className="mt-5 min-h-14 w-full rounded-2xl border border-cyan-300/25 bg-cyan-400/15 px-5 text-base font-bold text-cyan-50 hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -2005,6 +2313,30 @@ export default function TeacherSupervisoryAssessmentClient({
                   </div>
                 ))}
               </div>
+
+              <div className="mt-4 rounded-2xl border border-cyan-300/20 bg-cyan-400/10 p-3">
+                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-cyan-100">
+                  Class Enrollment Data
+                </p>
+                {workspace.observation.contextSchemaVersion === 2 ? (
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                    {[
+                      ["Total", workspace.observation.totalEnrolment],
+                      ["Girls", workspace.observation.girls],
+                      ["Boys", workspace.observation.boys],
+                    ].map(([label, value]) => (
+                      <div key={String(label)} className="rounded-xl border border-white/10 bg-black/20 p-2">
+                        <p className="text-[10px] uppercase tracking-[0.1em] text-slate-400">{label}</p>
+                        <p className="mt-1 font-bold text-white">{String(value ?? "—")}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs leading-5 text-cyan-50/80">
+                    Legacy v1 draft: enrolment breakdown was not captured in this immutable version.
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4">
@@ -2217,7 +2549,7 @@ export default function TeacherSupervisoryAssessmentClient({
                     Monitoring and Inspection Sheet (Teachers)
                   </h3>
                   <p className="mt-2 text-xs font-black uppercase tracking-[0.14em] text-cyan-800">
-                    Governance Teacher observation · native final review copy
+                    Governance Teacher observation · final review copy
                   </p>
                 </header>
 
@@ -2243,6 +2575,30 @@ export default function TeacherSupervisoryAssessmentClient({
                       </div>
                     </div>
                   ))}
+                </div>
+
+                <div className="border-b-2 border-slate-900 bg-cyan-50 px-6 py-4">
+                  <p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-900">
+                    Class Enrollment Data
+                  </p>
+                  {workspace.observation.contextSchemaVersion === 2 ? (
+                    <div className="mt-3 grid grid-cols-3 gap-3 text-sm">
+                      {[
+                        ["Total enrolment", workspace.observation.totalEnrolment],
+                        ["Girls", workspace.observation.girls],
+                        ["Boys", workspace.observation.boys],
+                      ].map(([label, value]) => (
+                        <div key={String(label)} className="border border-cyan-200 bg-white px-4 py-3">
+                          <p className="text-[11px] font-black uppercase text-cyan-900">{label}</p>
+                          <p className="mt-1 text-base font-black text-slate-950">{String(value ?? "—")}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-sm font-semibold text-slate-700">
+                      Legacy v1 draft — enrolment breakdown was not captured in this immutable version.
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-[68px_1fr_62px_repeat(5,62px)_78px] border-b-2 border-slate-900 bg-slate-100 text-center text-sm font-black">

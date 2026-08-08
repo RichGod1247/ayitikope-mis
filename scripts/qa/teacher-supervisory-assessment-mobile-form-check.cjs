@@ -76,13 +76,19 @@ assert(client.includes("EXISTING_MATCH"), "Idempotent start result missing");
 for (const field of [
   "yearsInService",
   "yearsInPresentSchool",
-  "subjectBeingObserved",
   "dateObserved",
-  "subStrand",
-  "classTaught",
   "durationMinutes",
+  "totalEnrolment",
+  "girls",
+  "boys",
+  "classroomId",
+  "curriculumSubjectId",
+  "curriculumSubStrandId",
 ]) {
-  assert(client.includes(field), `Official observation field missing: ${field}`);
+  assert(client.includes(field), `Required observation field missing: ${field}`);
+}
+for (const serverResolvedLabel of ["subjectBeingObserved", "subStrand", "classTaught"]) {
+  assert(client.includes(serverResolvedLabel), `Server-resolved observation label missing: ${serverResolvedLabel}`);
 }
 assert(!client.includes("academicYear"), "Academic year must not be added to official Teacher header");
 assert(!client.includes("body.term"), "Term must not be added to official Teacher header");
@@ -97,16 +103,28 @@ assert(client.includes('window.addEventListener("online"'), "Online retry hook m
 assert(client.includes('window.addEventListener("offline"'), "Offline state hook missing");
 assert(client.includes('cache: "no-store"'), "No-store client reads missing");
 
+assert(client.includes("/teacher-supervisory/observation-options?"), "Teacher assignment/curriculum options endpoint missing");
+assert(client.includes("observationOptionsLoading"), "Observation options loading state missing");
+assert(client.includes("Choose class"), "Verified class dropdown missing");
+assert(client.includes("Choose subject"), "Verified subject dropdown missing");
+assert(client.includes("Choose sub-strand"), "Curriculum sub-strand dropdown missing");
+assert(client.includes("Old schemes, lesson notes and lesson deliveries do not widen this list."), "Historical-evidence non-authority guidance missing");
+assert(client.includes("Girls plus boys must equal total enrolment."), "Enrolment consistency rule missing");
+assert(client.includes("validateObservation(observationDraft, observationOptions)"), "Complete observation consistency gate missing");
+assert(client.includes("observationOptionsLoading || !selectedTeacher || !observationValidation.ok"), "Start button consistency lock missing");
+
 assert(client.includes("/api/governance/appraisals/teacher-supervisory"), "Teacher supervisory API root missing");
 assert(client.includes("/teacher-supervisory/records"), "Saved-record reopenability endpoint missing");
 assert(client.includes("My saved assessments"), "Saved-assessment BBC section missing");
-assert(client.includes("Continue where you stopped"), "Saved-assessment reopenability guidance missing");
-assert(client.includes("Continue assessment →"), "Draft reopen action missing");
-assert(client.includes("View submitted assessment →"), "Submitted record read action missing");
+assert(client.includes("savedAssessmentsOpen"), "Collapsed saved-assessment state missing");
+assert(client.includes("Show saved assessments"), "Saved-assessment reveal control missing");
+assert(client.includes("Hide saved assessments"), "Saved-assessment collapse control missing");
+assert(!client.includes("Drafts can be reopened without remembering an assessment link."), "Discarded saved-assessment sentence must remain absent");
+assert(client.includes('record.state === "IN_PROGRESS" ? "Continue →" : "View →"'), "Compact saved-record reopen action missing");
 assert(client.includes("records?.summary.inProgress"), "Saved draft summary missing");
 assert(client.includes("records?.summary.submitted"), "Submitted record summary missing");
 assert(client.includes("record.answeredItems"), "Saved progress count missing");
-assert(client.includes("record.completionPercentage"), "Saved progress percentage missing");
+assert(!client.includes('className="h-full rounded-full bg-cyan-300"'), "Saved work list must not restore oversized progress bars");
 assert(client.includes("/section`"), "Teacher section endpoint missing");
 assert(client.includes("/comment`"), "Teacher comment endpoint missing");
 assert(client.includes("/finalize`"), "Teacher finalize endpoint missing");
@@ -151,14 +169,17 @@ console.log("");
 console.log("Audience                        : SISSO / BSC / HOS / Director");
 console.log("Selection                       : circuit → school → Teacher");
 console.log("Target identity                 : server-backed queue only");
-console.log("Official header                 : 10 fields / 3 server + 7 assessor-entered");
+console.log("Official header                 : unchanged 10 fields");
+console.log("Required observation start      : all particulars must pass consistency gate");
+console.log("Class / subject / sub-strand    : server-backed assignment + curriculum options");
+console.log("Governance enrolment evidence   : total + girls + boys; must balance");
 console.log("Observation retry               : stable idempotency key per unchanged attempt");
 console.log("Official form                   : 6 sections / 34 indicators");
 console.log("Rating controls                 : 1-5 plus N/A");
 console.log("Section autosave                : serialized + retry");
 console.log("General Comments                : separate serialized autosave");
 console.log("Database reload                 : source of truth before review");
-console.log("Saved-record reopenability      : assessor-owned server list");
+console.log("Saved-record reopenability      : assessor-owned, collapsed compact server list");
 console.log("Saved list evidence             : progress only; no score/comment payload");
 console.log("Incomplete overall result       : suppressed until 34/34");
 console.log("Mobile progress/navigation      : present");

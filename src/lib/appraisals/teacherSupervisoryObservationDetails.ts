@@ -1,7 +1,9 @@
-// src/lib/appraisals/teacherSupervisoryObservationDetails.ts
 export const TEACHER_SUPERVISORY_OBSERVATION_DETAILS_POLICY = {
-  schemaVersion: 1,
+  schemaVersion: 2,
+  legacySchemaVersion: 1,
   officialHeaderFieldCount: 10,
+  assessorEnteredOfficialHeaderFieldCount: 7,
+  governanceObservationEvidenceFieldCount: 3,
   dateFormat: "YYYY-MM-DD",
   wholeNumberMinimum: 0,
   wholeNumberMaximum: 80,
@@ -9,6 +11,8 @@ export const TEACHER_SUPERVISORY_OBSERVATION_DETAILS_POLICY = {
   teacherNameServerResolved: true,
   schoolNameServerResolved: true,
   circuitNameServerResolved: true,
+  classSubjectAndSubStrandServerResolved: true,
+  enrolmentBreakdownMustBalance: true,
   termIsOfficialHeaderField: false,
   academicYearIsOfficialHeaderField: false,
   termAndAcademicYearLifecycleMetadataDeferred: true,
@@ -17,7 +21,7 @@ export const TEACHER_SUPERVISORY_OBSERVATION_DETAILS_POLICY = {
   providerCallsAllowed: false,
 } as const;
 
-export type TeacherSupervisoryObservationDetails = {
+export type TeacherSupervisoryObservationDetailsV1 = {
   dateObserved: string;
   yearsInService: number | null;
   yearsInPresentSchool: number | null;
@@ -25,6 +29,19 @@ export type TeacherSupervisoryObservationDetails = {
   subStrand: string | null;
   classTaught: string | null;
   durationMinutes: number | null;
+};
+
+export type TeacherSupervisoryObservationDetails = {
+  dateObserved: string;
+  yearsInService: number;
+  yearsInPresentSchool: number;
+  subjectBeingObserved: string;
+  subStrand: string;
+  classTaught: string;
+  durationMinutes: number;
+  totalEnrolment: number;
+  girls: number;
+  boys: number;
 };
 
 export type TeacherSupervisoryObservationDetailsInput = {
@@ -37,9 +54,12 @@ export type TeacherSupervisoryObservationDetailsInput = {
   classTaught?: unknown;
   durationMinutes?: unknown;
   durationOfLesson?: unknown;
+  totalEnrolment?: unknown;
+  girls?: unknown;
+  boys?: unknown;
 };
 
-export type TeacherSupervisoryObservationDetailsSnapshot = {
+export type TeacherSupervisoryObservationDetailsSnapshotV1 = {
   schemaVersion: 1;
   dateObserved: string;
   yearsInService: number | null;
@@ -49,6 +69,24 @@ export type TeacherSupervisoryObservationDetailsSnapshot = {
   classTaught: string | null;
   durationMinutes: number | null;
 };
+
+export type TeacherSupervisoryObservationDetailsSnapshotV2 = {
+  schemaVersion: 2;
+  dateObserved: string;
+  yearsInService: number;
+  yearsInPresentSchool: number;
+  subjectBeingObserved: string;
+  subStrand: string;
+  classTaught: string;
+  durationMinutes: number;
+  totalEnrolment: number;
+  girls: number;
+  boys: number;
+};
+
+export type TeacherSupervisoryObservationDetailsSnapshot =
+  | TeacherSupervisoryObservationDetailsSnapshotV1
+  | TeacherSupervisoryObservationDetailsSnapshotV2;
 
 type ObservationDetailsError = Error & {
   code?: string;
@@ -100,12 +138,14 @@ function normalizeDateOnly(value: unknown) {
   return raw;
 }
 
-function optionalWholeNumber(value: unknown, fieldName: string) {
+function parseWholeNumber(value: unknown, fieldName: string) {
   if (
     value == null ||
     (typeof value === "string" && clean(value) === "")
   ) {
-    return null;
+    fail("TEACHER_SUPERVISORY_OBSERVATION_FIELD_REQUIRED", 400, {
+      fieldName,
+    });
   }
 
   let parsed: number;
@@ -120,8 +160,19 @@ function optionalWholeNumber(value: unknown, fieldName: string) {
     });
   }
 
+  if (!Number.isSafeInteger(parsed) || parsed < 0) {
+    fail("TEACHER_SUPERVISORY_OBSERVATION_FIELD_INVALID", 400, {
+      fieldName,
+      reason: "NON_NEGATIVE_WHOLE_NUMBER_REQUIRED",
+    });
+  }
+
+  return parsed;
+}
+
+function requiredBoundedWholeNumber(value: unknown, fieldName: string) {
+  const parsed = parseWholeNumber(value, fieldName);
   if (
-    !Number.isSafeInteger(parsed) ||
     parsed < TEACHER_SUPERVISORY_OBSERVATION_DETAILS_POLICY.wholeNumberMinimum ||
     parsed > TEACHER_SUPERVISORY_OBSERVATION_DETAILS_POLICY.wholeNumberMaximum
   ) {
@@ -134,8 +185,46 @@ function optionalWholeNumber(value: unknown, fieldName: string) {
         TEACHER_SUPERVISORY_OBSERVATION_DETAILS_POLICY.wholeNumberMaximum,
     });
   }
-
   return parsed;
+}
+
+function optionalBoundedWholeNumber(value: unknown, fieldName: string) {
+  if (
+    value == null ||
+    (typeof value === "string" && clean(value) === "")
+  ) {
+    return null;
+  }
+  return requiredBoundedWholeNumber(value, fieldName);
+}
+
+function requiredText(value: unknown, fieldName: string) {
+  if (typeof value !== "string") {
+    fail("TEACHER_SUPERVISORY_OBSERVATION_FIELD_REQUIRED", 400, {
+      fieldName,
+    });
+  }
+
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (!normalized) {
+    fail("TEACHER_SUPERVISORY_OBSERVATION_FIELD_REQUIRED", 400, {
+      fieldName,
+    });
+  }
+
+  if (
+    normalized.length >
+    TEACHER_SUPERVISORY_OBSERVATION_DETAILS_POLICY.optionalTextMaximumCharacters
+  ) {
+    fail("TEACHER_SUPERVISORY_OBSERVATION_FIELD_INVALID", 400, {
+      fieldName,
+      reason: "TEXT_TOO_LONG",
+      maximumCharacters:
+        TEACHER_SUPERVISORY_OBSERVATION_DETAILS_POLICY.optionalTextMaximumCharacters,
+    });
+  }
+
+  return normalized;
 }
 
 function optionalText(value: unknown, fieldName: string) {
@@ -166,36 +255,80 @@ function optionalText(value: unknown, fieldName: string) {
 export function normalizeTeacherSupervisoryObservationDetails(
   input: TeacherSupervisoryObservationDetailsInput,
 ): TeacherSupervisoryObservationDetails {
+  const totalEnrolment = parseWholeNumber(
+    input.totalEnrolment,
+    "totalEnrolment",
+  );
+  const girls = parseWholeNumber(input.girls, "girls");
+  const boys = parseWholeNumber(input.boys, "boys");
+
+  if (girls + boys !== totalEnrolment) {
+    fail("TEACHER_SUPERVISORY_ENROLMENT_TOTAL_MISMATCH", 400, {
+      fieldName: "totalEnrolment",
+      reason: "GIRLS_PLUS_BOYS_MUST_EQUAL_TOTAL_ENROLMENT",
+    });
+  }
+
   return {
     dateObserved: normalizeDateOnly(input.dateObserved),
-    yearsInService: optionalWholeNumber(
+    yearsInService: requiredBoundedWholeNumber(
       input.yearsInService,
       "yearsInService",
     ),
-    yearsInPresentSchool: optionalWholeNumber(
+    yearsInPresentSchool: requiredBoundedWholeNumber(
       input.yearsInPresentSchool,
       "yearsInPresentSchool",
     ),
-    subjectBeingObserved: optionalText(
+    subjectBeingObserved: requiredText(
       input.subjectBeingObserved ?? input.subject,
       "subjectBeingObserved",
     ),
-    subStrand: optionalText(input.subStrand, "subStrand"),
-    classTaught: optionalText(input.classTaught, "classTaught"),
-    durationMinutes: optionalWholeNumber(
+    subStrand: requiredText(input.subStrand, "subStrand"),
+    classTaught: requiredText(input.classTaught, "classTaught"),
+    durationMinutes: requiredBoundedWholeNumber(
       input.durationMinutes ?? input.durationOfLesson,
       "durationMinutes",
     ),
+    totalEnrolment,
+    girls,
+    boys,
   };
 }
 
 export function buildTeacherSupervisoryObservationDetailsSnapshot(
   input: TeacherSupervisoryObservationDetailsInput,
-): TeacherSupervisoryObservationDetailsSnapshot {
+): TeacherSupervisoryObservationDetailsSnapshotV2 {
   return {
     schemaVersion:
       TEACHER_SUPERVISORY_OBSERVATION_DETAILS_POLICY.schemaVersion,
     ...normalizeTeacherSupervisoryObservationDetails(input),
+  };
+}
+
+function readLegacySnapshot(
+  snapshot: Record<string, unknown>,
+): TeacherSupervisoryObservationDetailsSnapshotV1 {
+  return {
+    schemaVersion: 1,
+    dateObserved: normalizeDateOnly(snapshot.dateObserved),
+    yearsInService: optionalBoundedWholeNumber(
+      snapshot.yearsInService,
+      "yearsInService",
+    ),
+    yearsInPresentSchool: optionalBoundedWholeNumber(
+      snapshot.yearsInPresentSchool,
+      "yearsInPresentSchool",
+    ),
+    subjectBeingObserved: optionalText(
+      snapshot.subjectBeingObserved,
+      "subjectBeingObserved",
+    ),
+    subStrand: optionalText(snapshot.subStrand, "subStrand"),
+    classTaught: optionalText(snapshot.classTaught, "classTaught"),
+    durationMinutes: optionalBoundedWholeNumber(
+      snapshot.durationMinutes,
+      "durationMinutes",
+    ),
   };
 }
 
@@ -205,13 +338,19 @@ export function readTeacherSupervisoryObservationDetailsSnapshot(
   const snapshot = objectValue(value);
   if (!Object.keys(snapshot).length) return null;
 
+  const schemaVersion = Number(snapshot.schemaVersion);
   if (
-    snapshot.schemaVersion !==
-    TEACHER_SUPERVISORY_OBSERVATION_DETAILS_POLICY.schemaVersion
+    schemaVersion !==
+      TEACHER_SUPERVISORY_OBSERVATION_DETAILS_POLICY.legacySchemaVersion &&
+    schemaVersion !== TEACHER_SUPERVISORY_OBSERVATION_DETAILS_POLICY.schemaVersion
   ) {
     fail("TEACHER_SUPERVISORY_OBSERVATION_DETAILS_SCHEMA_UNSUPPORTED", 409, {
       fieldName: "observationDetails.schemaVersion",
     });
+  }
+
+  if (schemaVersion === 1) {
+    return readLegacySnapshot(snapshot);
   }
 
   return buildTeacherSupervisoryObservationDetailsSnapshot({
@@ -222,5 +361,8 @@ export function readTeacherSupervisoryObservationDetailsSnapshot(
     subStrand: snapshot.subStrand,
     classTaught: snapshot.classTaught,
     durationMinutes: snapshot.durationMinutes,
+    totalEnrolment: snapshot.totalEnrolment,
+    girls: snapshot.girls,
+    boys: snapshot.boys,
   });
 }

@@ -8,6 +8,10 @@ import {
   type TeacherSupervisoryObservationDetailsSnapshot,
 } from "@/lib/appraisals/teacherSupervisoryObservationDetails";
 import {
+  readTeacherSupervisoryObservationSelectionSnapshot,
+  type TeacherSupervisoryObservationSelectionSnapshot,
+} from "@/lib/appraisals/teacherSupervisoryObservationOptions";
+import {
   TEACHER_SUPERVISORY_ASSESSMENT_POLICY,
   canonicalTeacherSupervisoryAssessorRole,
   decideTeacherSupervisoryAssessmentAuthority,
@@ -362,7 +366,7 @@ export type TeacherSupervisoryScoringDatabase = {
 };
 
 type ObservationContextSnapshot = {
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
   workflow: string;
   evidenceStream: string;
   cycle: {
@@ -405,6 +409,7 @@ type ObservationContextSnapshot = {
   observation: {
     dateObserved: string;
     details: TeacherSupervisoryObservationDetailsSnapshot;
+    selection?: TeacherSupervisoryObservationSelectionSnapshot;
   };
 };
 
@@ -768,13 +773,51 @@ function parseObservationContext(
   }
 
   const typed = context as unknown as ObservationContextSnapshot;
+  const contextSchemaVersion = Number(typed.schemaVersion);
   const instrumentHash = clean(record.instrumentVersion.contentHash).toLowerCase();
   const details = readTeacherSupervisoryObservationDetailsSnapshot(
     typed.observation?.details,
   );
+  const detailsSchemaVersion = Number(details?.schemaVersion);
+  const metadataContextSchemaVersion = Number(
+    metadata.observationContextSchemaVersion,
+  );
+  const metadataDetailsSchemaVersion = Number(
+    metadata.observationDetailsSchemaVersion,
+  );
+  const supportedContextSchema =
+    contextSchemaVersion === 1 || contextSchemaVersion === 2;
+
+  let selection: TeacherSupervisoryObservationSelectionSnapshot | null = null;
+  if (contextSchemaVersion === 2) {
+    selection = readTeacherSupervisoryObservationSelectionSnapshot(
+      typed.observation?.selection,
+    );
+  }
+
+  const legacyContextValid =
+    contextSchemaVersion === 1 &&
+    detailsSchemaVersion === 1 &&
+    metadataContextSchemaVersion === 1 &&
+    metadataDetailsSchemaVersion === 1;
+
+  const verifiedContextValid =
+    contextSchemaVersion === 2 &&
+    detailsSchemaVersion === 2 &&
+    metadataContextSchemaVersion === 2 &&
+    metadataDetailsSchemaVersion === 2 &&
+    metadata.governanceEnrolmentEvidenceIncluded === true &&
+    metadata.teacherAssignmentVerified === true &&
+    metadata.curriculumSelectionVerified === true &&
+    selection != null &&
+    details != null &&
+    selection.classTaught === details.classTaught &&
+    selection.subjectBeingObserved === details.subjectBeingObserved &&
+    selection.subStrand === details.subStrand;
 
   if (
-    Number(typed.schemaVersion) !== 1 ||
+    !supportedContextSchema ||
+    (!legacyContextValid && !verifiedContextValid) ||
     typed.workflow !== TEACHER_SUPERVISORY_ASSESSMENT_POLICY.workflow ||
     typed.evidenceStream !== TEACHER_SUPERVISORY_ASSESSMENT_POLICY.evidenceStream ||
     typed.cycle?.id !== record.cycleId ||
@@ -797,8 +840,6 @@ function parseObservationContext(
     typed.observation?.dateObserved !== isoDateOnly(record.dateObserved) ||
     !details ||
     details.dateObserved !== typed.observation.dateObserved ||
-    Number(metadata.observationContextSchemaVersion) !== 1 ||
-    Number(metadata.observationDetailsSchemaVersion) !== 1 ||
     metadata.officialObservationDetailsIncluded !== true ||
     metadata.observationContextImmutable !== true ||
     metadata.separateFromLegacyTeacherAppraisal !== true ||
@@ -809,7 +850,15 @@ function parseObservationContext(
     fail("TEACHER_SUPERVISORY_OBSERVATION_CONTEXT_DRIFT", 409);
   }
 
-  return typed;
+  return {
+    ...typed,
+    schemaVersion: contextSchemaVersion as 1 | 2,
+    observation: {
+      ...typed.observation,
+      details,
+      ...(selection ? { selection } : {}),
+    },
+  };
 }
 
 function targetFromMembership(

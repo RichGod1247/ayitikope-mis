@@ -11,12 +11,18 @@ import {
 } from "@/lib/appraisals/teacherSupervisoryAssessment";
 import {
   buildTeacherSupervisoryObservationDetailsSnapshot,
+  type TeacherSupervisoryObservationDetailsInput,
   type TeacherSupervisoryObservationDetailsSnapshot,
 } from "@/lib/appraisals/teacherSupervisoryObservationDetails";
+import {
+  resolveTeacherSupervisoryObservationSelection,
+  type TeacherSupervisoryObservationResolutionDatabase,
+  type TeacherSupervisoryObservationSelectionSnapshot,
+} from "@/lib/appraisals/teacherSupervisoryObservationOptions";
 
 export const TEACHER_SUPERVISORY_DRAFT_POLICY = {
   schemaVersion: 1,
-  observationContextSchemaVersion: 1,
+  observationContextSchemaVersion: 2,
   initialRevision: 1,
   initialAssessmentStatus: "DRAFT",
   initialCycleStatus: "OPEN",
@@ -53,12 +59,14 @@ export type CreateTeacherSupervisoryDraftInput = {
   dateObserved: unknown;
   yearsInService?: unknown;
   yearsInPresentSchool?: unknown;
-  subjectBeingObserved?: unknown;
-  subject?: unknown;
-  subStrand?: unknown;
-  classTaught?: unknown;
   durationMinutes?: unknown;
   durationOfLesson?: unknown;
+  totalEnrolment?: unknown;
+  girls?: unknown;
+  boys?: unknown;
+  classroomId: unknown;
+  curriculumSubjectId: unknown;
+  curriculumSubStrandId: unknown;
   reqId?: string | null;
   ip?: string | null;
   userAgent?: string | null;
@@ -230,7 +238,8 @@ type AppraisalAssessmentDelegate = {
   create(args: unknown): Promise<AssessmentRecord>;
 };
 
-export type TeacherSupervisoryDraftTransactionClient = {
+export type TeacherSupervisoryDraftTransactionClient =
+  TeacherSupervisoryObservationResolutionDatabase & {
   membership: {
     findFirst(args: unknown): Promise<TargetMembershipRecord | null>;
   };
@@ -275,7 +284,7 @@ type ResolvedTarget = {
 };
 
 type ObservationContextSnapshot = {
-  schemaVersion: 1;
+  schemaVersion: 2;
   workflow: string;
   evidenceStream: "GOVERNANCE_TEACHER_OBSERVATION";
   cycle: {
@@ -318,6 +327,7 @@ type ObservationContextSnapshot = {
   observation: {
     dateObserved: string;
     details: TeacherSupervisoryObservationDetailsSnapshot;
+    selection: TeacherSupervisoryObservationSelectionSnapshot;
   };
 };
 
@@ -438,6 +448,27 @@ function isoDateOnly(value: Date) {
 
 function dateFromDateOnly(value: string) {
   return new Date(`${value}T00:00:00.000Z`);
+}
+
+function requireObservationDate(value: unknown) {
+  const raw = clean(value);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    fail("TEACHER_SUPERVISORY_OBSERVATION_DATE_INVALID", 400, {
+      fieldName: "dateObserved",
+      reason: "EXPECTED_YYYY_MM_DD",
+    });
+  }
+  const parsed = dateFromDateOnly(raw);
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    isoDateOnly(parsed) !== raw
+  ) {
+    fail("TEACHER_SUPERVISORY_OBSERVATION_DATE_INVALID", 400, {
+      fieldName: "dateObserved",
+      reason: "EXPECTED_REAL_CALENDAR_DATE",
+    });
+  }
+  return raw;
 }
 
 function assertObservationNotFuture(dateObserved: string, now: Date) {
@@ -623,6 +654,7 @@ function buildObservationContext(input: {
   scopeLevel: "DISTRICT" | "CIRCUIT";
   instrumentVersion: TeacherInstrumentVersionRecord & { contentHash: string };
   observationDetails: TeacherSupervisoryObservationDetailsSnapshot;
+  observationSelection: TeacherSupervisoryObservationSelectionSnapshot;
 }): ObservationContextSnapshot {
   const assignmentParent = input.assignment.zone.parentZone;
 
@@ -672,6 +704,7 @@ function buildObservationContext(input: {
     observation: {
       dateObserved: input.observationDetails.dateObserved,
       details: input.observationDetails,
+      selection: input.observationSelection,
     },
   };
 }
@@ -811,7 +844,10 @@ async function performDraftTransaction(input: {
   targetTenantId: string;
   idempotencyKey: string;
   observationKeyHash: string;
-  observationDetails: TeacherSupervisoryObservationDetailsSnapshot;
+  observationInput: TeacherSupervisoryObservationDetailsInput;
+  classroomId: string;
+  curriculumSubjectId: string;
+  curriculumSubStrandId: string;
   reqId: string;
   ip: string | null;
   userAgent: string | null;
@@ -934,6 +970,26 @@ async function performDraftTransaction(input: {
       }
       const assignment = findAssignment(assignments, authority.assignmentId);
 
+      const observationSelection =
+        await resolveTeacherSupervisoryObservationSelection({
+          targetUserId: target.target.userId,
+          targetTenantId: target.target.tenantId,
+          dateObserved: input.observationInput.dateObserved,
+          classroomId: input.classroomId,
+          curriculumSubjectId: input.curriculumSubjectId,
+          curriculumSubStrandId: input.curriculumSubStrandId,
+          database: tx,
+        });
+
+      const observationDetails =
+        buildTeacherSupervisoryObservationDetailsSnapshot({
+          ...input.observationInput,
+          classTaught: observationSelection.classTaught,
+          subjectBeingObserved:
+            observationSelection.subjectBeingObserved,
+          subStrand: observationSelection.subStrand,
+        });
+
       const instrumentVersion = assertInstrument(
         await tx.appraisalInstrumentVersion.findFirst({
           where: {
@@ -1006,7 +1062,8 @@ async function performDraftTransaction(input: {
           assignment,
           scopeLevel: authority.scopeLevel,
           instrumentVersion,
-          observationDetails: input.observationDetails,
+          observationDetails,
+          observationSelection,
         });
         const contextHash = hashJson(context);
 
@@ -1105,7 +1162,8 @@ async function performDraftTransaction(input: {
         assignment,
         scopeLevel: authority.scopeLevel,
         instrumentVersion,
-        observationDetails: input.observationDetails,
+        observationDetails,
+        observationSelection,
       });
       const observationContextHash = hashJson(context);
 
@@ -1118,7 +1176,7 @@ async function performDraftTransaction(input: {
           status: "DRAFT",
           revision: TEACHER_SUPERVISORY_DRAFT_POLICY.initialRevision,
           priorAssessmentId: null,
-          dateObserved: dateFromDateOnly(input.observationDetails.dateObserved),
+          dateObserved: dateFromDateOnly(observationDetails.dateObserved),
           overallPercentage: null,
           sectionPercentagesJson: {},
           generalComment: null,
@@ -1134,8 +1192,11 @@ async function performDraftTransaction(input: {
             observationContextHash,
             observationContextImmutable: true,
             observationDetailsSchemaVersion:
-              input.observationDetails.schemaVersion,
+              observationDetails.schemaVersion,
             officialObservationDetailsIncluded: true,
+            governanceEnrolmentEvidenceIncluded: true,
+            teacherAssignmentVerified: true,
+            curriculumSelectionVerified: true,
             targetMembershipId: target.membershipId,
             separateFromLegacyTeacherAppraisal: true,
             legacyTeacherAppraisalMutationAllowed: false,
@@ -1213,10 +1274,10 @@ async function performDraftTransaction(input: {
             targetDistrictZoneId: target.districtZoneId,
             instrumentCode: instrumentVersion.instrument.code,
             instrumentVersion: instrumentVersion.version,
-            dateObserved: input.observationDetails.dateObserved,
+            dateObserved: observationDetails.dateObserved,
             observationContextHash,
             observationDetailsSchemaVersion:
-              input.observationDetails.schemaVersion,
+              observationDetails.schemaVersion,
             scoreCount: 0,
             reviewCount: 0,
             contactFieldsIncluded: false,
@@ -1266,16 +1327,26 @@ export async function createTeacherSupervisoryAssessmentDraft(
     fail("TEACHER_SUPERVISORY_INVALID_CURRENT_TIME", 400);
   }
 
-  const observationDetails = buildTeacherSupervisoryObservationDetailsSnapshot({
-    dateObserved: input.dateObserved,
+  const dateObserved = requireObservationDate(input.dateObserved);
+  assertObservationNotFuture(dateObserved, now);
+  const classroomId = requireIdentifier(input.classroomId, "classroomId");
+  const curriculumSubjectId = requireIdentifier(
+    input.curriculumSubjectId,
+    "curriculumSubjectId",
+  );
+  const curriculumSubStrandId = requireIdentifier(
+    input.curriculumSubStrandId,
+    "curriculumSubStrandId",
+  );
+  const observationInput: TeacherSupervisoryObservationDetailsInput = {
+    dateObserved,
     yearsInService: input.yearsInService,
     yearsInPresentSchool: input.yearsInPresentSchool,
-    subjectBeingObserved: input.subjectBeingObserved ?? input.subject,
-    subStrand: input.subStrand,
-    classTaught: input.classTaught,
     durationMinutes: input.durationMinutes ?? input.durationOfLesson,
-  });
-  assertObservationNotFuture(observationDetails.dateObserved, now);
+    totalEnrolment: input.totalEnrolment,
+    girls: input.girls,
+    boys: input.boys,
+  };
 
   const idempotencyKey = cycleIdempotencyKey({
     targetTenantId,
@@ -1295,7 +1366,10 @@ export async function createTeacherSupervisoryAssessmentDraft(
         targetTenantId,
         idempotencyKey,
         observationKeyHash: hashedObservationKey,
-        observationDetails,
+        observationInput,
+        classroomId,
+        curriculumSubjectId,
+        curriculumSubStrandId,
         reqId,
         ip: input.ip ?? null,
         userAgent: input.userAgent ?? null,
