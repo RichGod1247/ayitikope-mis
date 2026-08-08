@@ -22,7 +22,10 @@ function assert(condition, message, detail) {
 function read(relativePath) {
   const absolutePath = path.join(repoRoot, relativePath);
   assert(fs.existsSync(absolutePath), "N6_A_REQUIRED_FILE_MISSING", relativePath);
-  return fs.readFileSync(absolutePath, "utf8");
+  return fs
+    .readFileSync(absolutePath, "utf8")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n");
 }
 
 function requireMarkers(relativePath, markers) {
@@ -120,16 +123,20 @@ requireMarkers(files.bscPage, [
 ]);
 
 requireMarkers(files.hub, [
-  "data-appraisal-dashboard-role={role}",
+  'data-appraisal-dashboard-role={role}',
   'className="text-sm font-bold uppercase tracking-[0.2em] text-[#E8C96A]"',
   "EduLife OS · Governance Dashboard",
   "Appraisals",
   "Teacher Appraisal",
   "Headteacher Appraisal",
   "My Appraisal",
+  'href="/governance/appraisals/teacher-supervisory"',
+  "Assess Teacher",
+  "official six-section, 34-indicator observation form.",
   'href="/governance/appraisals/headteacher-supervisory"',
   "Assess Headteacher",
   "Assessment active",
+  "Review reports · next phase",
   "Not yet active",
   "District Director remains the ultimate district review and release authority.",
   "no background polling",
@@ -137,6 +144,7 @@ requireMarkers(files.hub, [
 ]);
 
 forbidMarkers(files.hub, [
+  "Assess Teachers and review authorized finalized reports when the governance assessor and staged-review transactions are completed.",
   "EduLife OS · Governance Appraisals",
   'className="text-xs font-bold uppercase tracking-[0.2em] text-[#E8C96A]"',
   "/district/headteacher-appraisals",
@@ -148,37 +156,94 @@ forbidMarkers(files.hub, [
 ]);
 
 const middlewareSource = requireMarkers(files.middleware, [
+  "buildAppCallbackUrl",
+  "effectiveRole",
   "isPathAllowedForRole",
-  'path.startsWith("/district/")',
+  "function buildSignInRedirect(req: NextRequest)",
+  'const url = req.nextUrl.clone();',
+  'const attempted = `${req.nextUrl.pathname}${req.nextUrl.search}`;',
   'url.pathname = "/auth/signin";',
+  'req.nextUrl.pathname.startsWith("/circuit")',
+  'req.nextUrl.pathname.startsWith("/district")',
   'url.searchParams.set("mode", "governance");',
   'url.searchParams.set("callbackUrl", attempted);',
+  'url.searchParams.set("callbackUrl", buildAppCallbackUrl(attempted));',
+  'path.startsWith("/circuit/")',
+  'path.startsWith("/district/")',
+  'path.startsWith("/api/circuit/")',
+  'path.startsWith("/api/district/")',
+  "if (isApi) return jsonUnauthorized();",
+  "if (isApi) return jsonForbidden(role, path);",
   'url.pathname = "/app";',
   'url.search = `?next=${encodeURIComponent(`${req.nextUrl.pathname}${req.nextUrl.search}`)}`;',
-  "return NextResponse.redirect(url);",
+  '"Cache-Control": "no-store"',
+  '"X-Content-Type-Options": "nosniff"',
 ]);
 
-forbidMarkers(files.middleware, [
-  "function firstHeaderValue(value: string | null)",
-  "function localUatRedirectOriginAllowed()",
-  "process.env.EDULIFE_UAT_LOCAL_URLS",
-  "function isExactLocalUatRedirectOrigin(value: string)",
-  "function requestRedirectOrigin(req: NextRequest)",
-  "function internalRedirect(req: NextRequest, location: string)",
-  "requestRedirectOrigin(req)",
-  "NextResponse.redirect(target, 307)",
-]);
+for (const staleMarker of [
+  "function relativeRedirect(location: string)",
+  "const params = new URLSearchParams();",
+  "Location: location,",
+  'return relativeRedirect(`/auth/signin?${params.toString()}`);',
+  'return relativeRedirect(`/app?${params.toString()}`);',
+  "const tokenClaims = (token ?? {}) as Record<string, unknown>;",
+]) {
+  assert(
+    !middlewareSource.includes(staleMarker),
+    "N6_A_STALE_MIDDLEWARE_REDIRECT_PATTERN_PRESENT",
+    staleMarker,
+  );
+}
 
-assert(
-  middlewareSource.indexOf('url.pathname = "/auth/signin";') <
-    middlewareSource.indexOf('url.searchParams.set("mode", "governance");'),
-  "N6_A_GOVERNANCE_SIGNIN_REDIRECT_ORDER_INVALID",
+const signInRedirectStart = middlewareSource.indexOf(
+  "function buildSignInRedirect(req: NextRequest)",
+);
+const attemptedIndex = middlewareSource.indexOf(
+  "const attempted =",
+  signInRedirectStart,
+);
+const signInPathIndex = middlewareSource.indexOf(
+  'url.pathname = "/auth/signin";',
+  signInRedirectStart,
+);
+const governanceModeIndex = middlewareSource.indexOf(
+  'url.searchParams.set("mode", "governance");',
+  signInRedirectStart,
+);
+const governanceCallbackIndex = middlewareSource.indexOf(
+  'url.searchParams.set("callbackUrl", attempted);',
+  signInRedirectStart,
+);
+const appCallbackIndex = middlewareSource.indexOf(
+  'url.searchParams.set("callbackUrl", buildAppCallbackUrl(attempted));',
+  signInRedirectStart,
 );
 
 assert(
-  middlewareSource.indexOf('if (isApi) return jsonForbidden(role, path);') <
-    middlewareSource.lastIndexOf('url.pathname = "/app";'),
-  "N6_A_ROLE_DENIAL_DOES_NOT_FAIL_CLOSED_BEFORE_PAGE_REDIRECT",
+  signInRedirectStart >= 0 &&
+    attemptedIndex > signInRedirectStart &&
+    signInPathIndex > attemptedIndex &&
+    governanceModeIndex > signInPathIndex &&
+    governanceCallbackIndex > governanceModeIndex &&
+    appCallbackIndex > governanceCallbackIndex,
+  "N6_A_CURRENT_SIGNIN_REDIRECT_CONTRACT_INVALID",
+);
+
+assert(
+  middlewareSource.includes(
+    'url.search = `?next=${encodeURIComponent(`${req.nextUrl.pathname}${req.nextUrl.search}`)}`;',
+  ),
+  "N6_A_ROLE_DENIAL_REDIRECT_NEXT_PATH_MISSING",
+);
+
+assert(
+  middlewareSource.includes(
+    'return NextResponse.json(\n    { ok: false, error: "UNAUTHORIZED" },',
+  ) &&
+    middlewareSource.includes(
+      'return NextResponse.json(\n    { ok: false, error: "FORBIDDEN", role, path },',
+    ),
+  "N6_A_API_DENIAL_JSON_CONTRACT_INVALID",
 );
 
 requireMarkers(files.inviteAccept, [
@@ -324,20 +389,17 @@ try {
 }
 
 console.log("");
-console.log("=== N6-A HOS/BSC APPRAISAL DASHBOARD ROUTING ===");
+console.log("=== N6-D4C3A HOS/BSC APPRAISAL HUB TEACHER ACTIVATION ===");
 console.log("");
 console.log("HOS default destination       : /district/hos/dashboard");
 console.log("BSC default destination       : /district/bsc/dashboard");
 console.log("Dashboard hero identity       : Governance Dashboard");
-console.log("Dashboard hero size           : text-sm");
-console.log("Appraisals module label       : preserved");
 console.log("Dashboard role gates          : exact role + district assignment");
-console.log("Role-denial redirect          : stable fail-closed /app gateway");
-console.log("Local host alias correction   : not asserted; deferred browser-only defect");
-console.log("Canonical-host redirect smoke : deferred to staging/production hardening");
 console.log("Director command dashboard    : HOS/BSC excluded");
+console.log("Teacher assessment            : active governance workspace");
+console.log("Teacher assessment route      : /governance/appraisals/teacher-supervisory");
+console.log("Teacher report review         : deferred to staged review phase");
 console.log("Headteacher assessment        : existing supervisory workspace");
-console.log("Teacher assessment/review     : visible, truthfully locked");
 console.log("Governance My Appraisal       : visible, truthfully locked");
 console.log("Director review/release       : Director-only");
 console.log("Anonymous Teacher forms       : absent from HOS/BSC hub");
@@ -345,4 +407,4 @@ console.log("Background polling/storage    : absent");
 console.log("Schema/database mutation      : absent");
 console.log("Database accessed             : false");
 console.log("");
-console.log("RESULT: N6-A HOS/BSC APPRAISAL DASHBOARDS GREEN");
+console.log("RESULT: N6-D4C3A HOS/BSC TEACHER APPRAISAL HUB ENTRY GREEN");

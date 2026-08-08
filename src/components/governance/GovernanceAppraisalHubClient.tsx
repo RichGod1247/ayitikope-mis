@@ -1,4 +1,3 @@
-// src/components/governance/GovernanceAppraisalHubClient.tsx
 "use client";
 
 import Link from "next/link";
@@ -136,11 +135,43 @@ export default function GovernanceAppraisalHubClient({
               id="governance-appraisal-actions"
               className="mt-4 grid gap-3 lg:grid-cols-3"
             >
-              <LockedAction
-                icon="📝"
-                title="Teacher Appraisal"
-                description="Assess Teachers and review authorized finalized reports when the governance assessor and staged-review transactions are completed."
-              />
+              <article className="rounded-3xl border border-sky-300/25 bg-sky-400/10 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-2xl" aria-hidden="true">
+                    📝
+                  </span>
+                  <span className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-[11px] font-bold text-emerald-100">
+                    Assessment active
+                  </span>
+                </div>
+
+                <h3 className="mt-4 text-base font-bold text-white">
+                  Teacher Appraisal
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-sky-100/80">
+                  Select an authorized circuit, school and Teacher, then complete
+                  the official six-section, 34-indicator observation form.
+                </p>
+
+                <Link
+                  href="/governance/appraisals/teacher-supervisory"
+                  className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-3 text-center text-sm font-black text-[#071A3D] transition hover:brightness-105"
+                >
+                  Assess Teacher
+                </Link>
+
+                <div
+                  aria-disabled="true"
+                  className="mt-3 rounded-2xl border border-white/10 bg-black/20 px-3 py-3"
+                >
+                  <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
+                    Review reports · next phase
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-slate-300">
+                    {reviewDescription}
+                  </p>
+                </div>
+              </article>
 
               <article className="rounded-3xl border border-indigo-300/25 bg-indigo-400/10 p-4">
                 <div className="flex items-start justify-between gap-3">
