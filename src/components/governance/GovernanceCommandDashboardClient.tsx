@@ -2893,28 +2893,40 @@ const mockCommandTile = (
     </div>
 
     <div className="mt-4 grid gap-3 md:grid-cols-3">
-      <button
-        type="button"
-        onClick={() => openPanel("teacher-appraisal")}
-        className="rounded-2xl border border-emerald-300/25 bg-emerald-400/10 p-4 text-left transition hover:-translate-y-0.5 hover:bg-emerald-400/15"
-      >
+      <article className="rounded-2xl border border-emerald-300/25 bg-emerald-400/10 p-4">
         <div className="flex items-start justify-between gap-3">
           <span className="text-xl">📝</span>
           <span className="rounded-full border border-emerald-300/25 bg-black/20 px-2.5 py-1 text-[11px] font-bold text-emerald-100">
-            Available
+            Assessment active
           </span>
         </div>
+
         <p className="mt-3 text-sm font-bold text-white">
           Teacher Appraisal
         </p>
         <p className="mt-1 text-xs leading-5 text-emerald-100/80">
-          Review finalized teacher appraisal reports within{" "}
+          Assess authorized Teachers with the official six-section,
+          34-indicator observation form, or review finalized reports within{" "}
           {isDistrictView ? "district" : "circuit"} scope.
         </p>
-        <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-100">
-          Open reports
-        </p>
-      </button>
+
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <a
+            href="/governance/appraisals/teacher-supervisory"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-center text-xs font-bold text-[#071A3D] transition hover:brightness-105"
+          >
+            Assess Teacher
+          </a>
+
+          <button
+            type="button"
+            onClick={() => openPanel("teacher-appraisal")}
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-emerald-300/30 bg-emerald-400/10 px-4 py-2 text-center text-xs font-bold text-emerald-50 transition hover:bg-emerald-400/20"
+          >
+            Open reports
+          </button>
+        </div>
+      </article>
 
       <a
         href={
