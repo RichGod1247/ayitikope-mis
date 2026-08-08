@@ -136,6 +136,49 @@ type TeacherQueue = {
   noBackgroundPolling: true;
 };
 
+type TeacherAssessmentRecord = {
+  assessmentId: string;
+  cycleId: string;
+  revision: number;
+  status: "DRAFT" | "FINALIZED";
+  state: "IN_PROGRESS" | "SUBMITTED";
+  label: string;
+  targetUserId: string;
+  targetName: string | null;
+  schoolId: string;
+  schoolName: string;
+  circuitId: string;
+  circuitName: string;
+  districtId: string;
+  districtName: string;
+  dateObserved: string;
+  answeredItems: number;
+  totalItems: number;
+  completionPercentage: number;
+  overallPercentage: number | null;
+  finalizedAt: string | null;
+  workspaceUrl: string;
+};
+
+type TeacherAssessmentRecords = {
+  actorRole: string;
+  officeLabel: string;
+  summary: {
+    total: number;
+    inProgress: number;
+    submitted: number;
+  };
+  items: TeacherAssessmentRecord[];
+  actorAssessmentOnly: true;
+  progressOnly: true;
+  individualScoresIncluded: false;
+  generalCommentsIncluded: false;
+  contactDetailsIncluded: false;
+  legacyTeacherAppraisalIncluded: false;
+  reviewEvidenceIncluded: false;
+  noBackgroundPolling: true;
+};
+
 type ObservationDraft = {
   yearsInService: string;
   yearsInPresentSchool: string;
@@ -404,6 +447,8 @@ export default function TeacherSupervisoryAssessmentClient({
   const [assessmentId, setAssessmentId] = useState(initialAssessmentId);
   const [queue, setQueue] = useState<TeacherQueue | null>(null);
   const [queueLoading, setQueueLoading] = useState(false);
+  const [records, setRecords] = useState<TeacherAssessmentRecords | null>(null);
+  const [recordsLoading, setRecordsLoading] = useState(false);
   const [selectedCircuitId, setSelectedCircuitId] = useState("");
   const [selectedSchoolId, setSelectedSchoolId] = useState("");
   const [selectedTeacherUserId, setSelectedTeacherUserId] = useState("");
@@ -505,6 +550,31 @@ export default function TeacherSupervisoryAssessmentClient({
     }
   }, []);
 
+  const loadRecords = useCallback(async () => {
+    setRecordsLoading(true);
+    try {
+      const response = await fetch(
+        "/api/governance/appraisals/teacher-supervisory/records",
+        { cache: "no-store" },
+      );
+      const body = (await readApiBody(response)) as
+        | { ok: true; records: TeacherAssessmentRecords }
+        | ApiFailure;
+      if (!response.ok || body.ok !== true) {
+        throw new Error(messageFromFailure(body, response.status));
+      }
+      setRecords(body.records);
+    } catch (recordsError) {
+      setError(
+        recordsError instanceof Error
+          ? recordsError.message
+          : "Your saved Teacher assessments could not be loaded.",
+      );
+    } finally {
+      setRecordsLoading(false);
+    }
+  }, []);
+
   const loadWorkspace = useCallback(
     async (id: string, preserveSectionIndex?: number) => {
       if (workspaceRef.current?.assessment.assessmentId !== id) {
@@ -586,8 +656,11 @@ export default function TeacherSupervisoryAssessmentClient({
   );
 
   useEffect(() => {
-    if (!assessmentId) void loadQueue();
-  }, [assessmentId, loadQueue]);
+    if (!assessmentId) {
+      void loadQueue();
+      void loadRecords();
+    }
+  }, [assessmentId, loadQueue, loadRecords]);
 
   useEffect(() => {
     if (assessmentId) void loadWorkspace(assessmentId);
@@ -1180,7 +1253,7 @@ export default function TeacherSupervisoryAssessmentClient({
   }
 
   if (!assessmentId) {
-    const actorRole = queue?.actorRole;
+    const actorRole = queue?.actorRole || records?.actorRole;
     const selectedCircuit = queue?.circuits.find(
       (circuit) => circuit.circuitId === selectedCircuitId,
     );
@@ -1214,11 +1287,14 @@ export default function TeacherSupervisoryAssessmentClient({
                 </Link>
                 <button
                   type="button"
-                  disabled={queueLoading}
-                  onClick={() => void loadQueue()}
+                  disabled={queueLoading || recordsLoading}
+                  onClick={() => {
+                    void loadQueue();
+                    void loadRecords();
+                  }}
                   className="rounded-2xl border border-cyan-300/25 bg-cyan-400/15 px-4 py-3 text-sm font-semibold text-cyan-50 hover:bg-cyan-400/20 disabled:opacity-50"
                 >
-                  {queueLoading ? "Refreshing…" : "Refresh Teacher list"}
+                  {queueLoading || recordsLoading ? "Refreshing…" : "Refresh work list"}
                 </button>
               </div>
             </div>
@@ -1229,6 +1305,105 @@ export default function TeacherSupervisoryAssessmentClient({
               {error}
             </div>
           ) : null}
+
+          <section className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4 md:p-5">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
+                  My saved assessments
+                </p>
+                <h2 className="mt-1 text-xl font-semibold text-white">
+                  Continue where you stopped
+                </h2>
+                <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-300">
+                  Your own saved Teacher observations appear here. Drafts can be reopened without remembering an assessment link.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-center">
+                <div className="rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-cyan-100/70">Continue</p>
+                  <p className="mt-1 text-xl font-bold text-white">{records?.summary.inProgress ?? 0}</p>
+                </div>
+                <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-emerald-100/70">Submitted</p>
+                  <p className="mt-1 text-xl font-bold text-white">{records?.summary.submitted ?? 0}</p>
+                </div>
+              </div>
+            </div>
+
+            {recordsLoading && !records ? (
+              <p className="mt-4 text-sm text-slate-300">Loading your saved assessments…</p>
+            ) : records?.items.length ? (
+              <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                {records.items.map((record) => (
+                  <a
+                    key={record.assessmentId}
+                    href={record.workspaceUrl}
+                    className="rounded-2xl border border-white/10 bg-black/20 p-4 transition hover:bg-white/[0.08]"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-white">
+                          {record.targetName || "Teacher"}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-300">
+                          {record.schoolName} · {record.circuitName}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-400">
+                          Observed {record.dateObserved}
+                        </p>
+                      </div>
+                      <span
+                        className={cx(
+                          "shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold",
+                          record.state === "IN_PROGRESS"
+                            ? "border-cyan-300/25 bg-cyan-400/15 text-cyan-100"
+                            : "border-emerald-300/25 bg-emerald-400/15 text-emerald-100",
+                        )}
+                      >
+                        {record.state === "IN_PROGRESS" ? "CONTINUE" : "SUBMITTED"}
+                      </span>
+                    </div>
+
+                    {record.state === "IN_PROGRESS" ? (
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
+                          <span>{record.answeredItems}/{record.totalItems} saved</span>
+                          <span>{record.completionPercentage}%</span>
+                        </div>
+                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
+                          <div
+                            className="h-full rounded-full bg-[linear-gradient(90deg,#22D3EE,#34D399)]"
+                            style={{ width: `${record.completionPercentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="mt-4 text-sm font-semibold text-emerald-100">
+                        {record.overallPercentage == null
+                          ? "Submitted and locked"
+                          : `Final result: ${formatPercent(record.overallPercentage)}`}
+                      </p>
+                    )}
+
+                    <p className="mt-4 text-sm font-bold text-white">
+                      {record.state === "IN_PROGRESS"
+                        ? "Continue assessment →"
+                        : "View submitted assessment →"}
+                    </p>
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-4 rounded-2xl border border-dashed border-white/15 bg-black/10 p-4 text-sm text-slate-300">
+                No saved Teacher assessment yet. Start one below and it will appear here automatically.
+              </p>
+            )}
+
+            <p className="mt-3 text-xs leading-5 text-slate-400">
+              This list shows progress only. Individual scores, General Comments, contact details and review evidence are not loaded into the work-list response.
+            </p>
+          </section>
 
           <section className="grid grid-cols-3 gap-2 md:gap-4">
             {[
@@ -1509,7 +1684,7 @@ export default function TeacherSupervisoryAssessmentClient({
           </section>
 
           <p className="text-xs leading-5 text-slate-400">
-            Teacher discovery refreshes only when requested. No background polling, contact details or legacy Teacher Appraisal evidence is loaded here.
+            Teacher discovery and saved records refresh only when requested. No background polling, contact details, individual scores, General Comments or legacy Teacher Appraisal evidence is loaded into this work list.
           </p>
         </div>
       </div>

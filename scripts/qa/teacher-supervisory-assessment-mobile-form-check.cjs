@@ -98,6 +98,15 @@ assert(client.includes('window.addEventListener("offline"'), "Offline state hook
 assert(client.includes('cache: "no-store"'), "No-store client reads missing");
 
 assert(client.includes("/api/governance/appraisals/teacher-supervisory"), "Teacher supervisory API root missing");
+assert(client.includes("/teacher-supervisory/records"), "Saved-record reopenability endpoint missing");
+assert(client.includes("My saved assessments"), "Saved-assessment BBC section missing");
+assert(client.includes("Continue where you stopped"), "Saved-assessment reopenability guidance missing");
+assert(client.includes("Continue assessment →"), "Draft reopen action missing");
+assert(client.includes("View submitted assessment →"), "Submitted record read action missing");
+assert(client.includes("records?.summary.inProgress"), "Saved draft summary missing");
+assert(client.includes("records?.summary.submitted"), "Submitted record summary missing");
+assert(client.includes("record.answeredItems"), "Saved progress count missing");
+assert(client.includes("record.completionPercentage"), "Saved progress percentage missing");
 assert(client.includes("/section`"), "Teacher section endpoint missing");
 assert(client.includes("/comment`"), "Teacher comment endpoint missing");
 assert(client.includes("/finalize`"), "Teacher finalize endpoint missing");
@@ -149,6 +158,8 @@ console.log("Rating controls                 : 1-5 plus N/A");
 console.log("Section autosave                : serialized + retry");
 console.log("General Comments                : separate serialized autosave");
 console.log("Database reload                 : source of truth before review");
+console.log("Saved-record reopenability      : assessor-owned server list");
+console.log("Saved list evidence             : progress only; no score/comment payload");
 console.log("Incomplete overall result       : suppressed until 34/34");
 console.log("Mobile progress/navigation      : present");
 console.log("Native final review             : full Teacher paper-form copy");
