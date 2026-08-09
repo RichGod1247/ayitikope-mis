@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
-import { finalizeTeacherSupervisoryAssessment } from "@/lib/appraisals/teacherSupervisoryAssessmentScoring";
+import {
+  finalizeTeacherSupervisoryAssessmentWithContinuation,
+} from "@/lib/appraisals/teacherSupervisoryAssessmentCorrectionFinalization";
 import {
   clean,
   isUuidIdentifier,
@@ -67,22 +69,24 @@ export async function POST(req: NextRequest, context: RouteContext) {
   }
 
   try {
-    const result = await finalizeTeacherSupervisoryAssessment({
-      actorUserId: auth.ctx.userId,
-      actorRoleName: auth.ctx.roleName,
-      assessmentId,
-      reqId: meta.reqId,
-      ip: meta.ip,
-      userAgent: meta.userAgent,
-    });
+    const finalized =
+      await finalizeTeacherSupervisoryAssessmentWithContinuation({
+        actorUserId: auth.ctx.userId,
+        actorRoleName: auth.ctx.roleName,
+        assessmentId,
+        reqId: meta.reqId,
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+      });
 
     return jsonNoStore(200, {
       ok: true,
       reqId: meta.reqId,
-      result,
-      reviewCreated: false,
-      cycleTransitioned: false,
-      providerCalled: false,
+      result: finalized.result,
+      reviewCreated: finalized.reviewCreated,
+      cycleTransitioned: finalized.cycleTransitioned,
+      continuation: finalized.continuation,
+      providerCalled: finalized.providerCalled,
     });
   } catch (error) {
     return teacherSupervisoryApiError({

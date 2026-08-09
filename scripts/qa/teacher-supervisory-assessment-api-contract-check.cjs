@@ -31,13 +31,25 @@ const files = {
   section: "src/app/api/governance/appraisals/teacher-supervisory/[assessmentId]/section/route.ts",
   comment: "src/app/api/governance/appraisals/teacher-supervisory/[assessmentId]/comment/route.ts",
   finalize: "src/app/api/governance/appraisals/teacher-supervisory/[assessmentId]/finalize/route.ts",
+  correctionFinalization:
+    "src/lib/appraisals/teacherSupervisoryAssessmentCorrectionFinalization.ts",
 };
 
 const source = Object.fromEntries(
   Object.entries(files).map(([key, relativePath]) => [key, read(relativePath)]),
 );
 
-for (const [key, text] of Object.entries(source)) {
+for (const key of [
+  "shared",
+  "root",
+  "options",
+  "load",
+  "section",
+  "comment",
+  "finalize",
+]) {
+  const text = source[key];
+
   for (const forbidden of [
     "sendSms",
     "sendEmail",
@@ -203,34 +215,121 @@ assert(
   source.comment.includes("TEACHER_SUPERVISORY_COMMENT_ENDPOINT_COMMENT_ONLY"),
   "Comment endpoint must reject score injection",
 );
+
 assert(
-  source.finalize.includes("finalizeTeacherSupervisoryAssessment"),
-  "Teacher finalization not wired",
+  source.finalize.includes(
+    "finalizeTeacherSupervisoryAssessmentWithContinuation",
+  ),
+  "Teacher finalization continuation wrapper not wired",
 );
 assert(
   source.finalize.includes("confirmFinalization"),
   "Explicit Teacher finalization confirmation missing",
 );
 assert(
-  source.finalize.includes("reviewCreated: false"),
-  "N6-D4B must state that review creation is absent",
+  source.finalize.includes("result: finalized.result"),
+  "Finalize route must return the scoring result from the continuation service",
 );
 assert(
-  source.finalize.includes("cycleTransitioned: false"),
-  "N6-D4B must state that cycle transition is absent",
+  source.finalize.includes("reviewCreated: finalized.reviewCreated"),
+  "Finalize route must return server-resolved review creation state",
+);
+assert(
+  source.finalize.includes("cycleTransitioned: finalized.cycleTransitioned"),
+  "Finalize route must return server-resolved cycle transition state",
+);
+assert(
+  source.finalize.includes("continuation: finalized.continuation"),
+  "Finalize route must return correction-continuation custody when present",
+);
+assert(
+  !source.finalize.includes(
+    'reviewCreated: false,\n      cycleTransitioned: false,',
+  ),
+  "Finalize route must not hardcode the obsolete all-finalizations review state",
 );
 assert(
   !source.finalize.includes("ensureHeadteacherDirectorCorrectionReviewContinuation"),
-  "Headteacher review-continuation bridge must not leak into Teacher D4B",
+  "Headteacher review-continuation bridge must not leak into Teacher finalization",
 );
 assert(
   !source.finalize.includes("appraisalReview"),
-  "Teacher D4B finalization must not create review records",
+  "Teacher finalize route must not directly create or mutate review records",
+);
+assert(
+  !source.finalize.includes("appraisalCycle"),
+  "Teacher finalize route must not directly mutate cycle records",
+);
+assert(
+  !source.finalize.includes("prisma."),
+  "Teacher finalize route must remain free of direct Prisma access",
 );
 assert(
   !source.finalize.includes("auth.scope"),
   "Teacher finalization must rely on service authority revalidation",
 );
+
+assert(
+  source.correctionFinalization.includes(
+    "ordinaryFinalizationReviewCreation: false",
+  ),
+  "Ordinary Teacher finalization must continue to create no review",
+);
+assert(
+  source.correctionFinalization.includes(
+    "correctionCycleStatusChanges: false",
+  ),
+  "Correction continuation must not change cycle status",
+);
+assert(
+  source.correctionFinalization.includes("if (!provenance)") &&
+    source.correctionFinalization.includes("reviewCreated: false") &&
+    source.correctionFinalization.includes("cycleTransitioned: false") &&
+    source.correctionFinalization.includes("continuation: null"),
+  "Ordinary finalization branch must preserve the original D4 no-review/no-transition contract",
+);
+assert(
+  source.correctionFinalization.includes("appraisalReview.create") &&
+    source.correctionFinalization.includes('decision: "PENDING"') &&
+    source.correctionFinalization.includes(
+      "stage: provenance.returnReviewStage",
+    ),
+  "Verified correction finalization must recreate the same review stage as PENDING",
+);
+assert(
+  source.correctionFinalization.includes("computeTeacherSupervisoryReviewEvidenceHash"),
+  "Correction continuation must bind a fresh review-evidence hash to the corrected assessment",
+);
+assert(
+  source.correctionFinalization.includes("preserveReturningReviewer: true") &&
+    source.correctionFinalization.includes("preserveReviewStage: true"),
+  "Correction continuation must preserve the returning reviewer and stage",
+);
+assert(
+  source.correctionFinalization.includes("appraisalCycle.updateMany") &&
+    source.correctionFinalization.includes('status: "UNDER_REVIEW"') &&
+    source.correctionFinalization.includes("cycleTransitioned: false"),
+  "Correction continuation must preserve UNDER_REVIEW rather than reopen or transition the cycle",
+);
+
+for (const forbidden of [
+  'status: "OPEN"',
+  "teacherAppraisal.create",
+  "teacherAppraisal.update",
+  "prisma.teacherAppraisal",
+  "sendSms",
+  "sendEmail",
+  "appraisalNotification.create",
+  "localStorage",
+  "sessionStorage",
+  "setInterval(",
+]) {
+  assert(
+    !source.correctionFinalization.includes(forbidden),
+    "Teacher correction continuation contains forbidden marker",
+    forbidden,
+  );
+}
 
 console.log("");
 console.log("=== N6-D4B GOVERNANCE TEACHER THIN API CONTRACT ===");
@@ -247,15 +346,19 @@ console.log("Governance enrolment evidence    : total / girls / boys forwarded t
 console.log("Workspace GET                    : original assessor only");
 console.log("Section POST                     : D4A section service only");
 console.log("Comment POST                     : separate D4A comment service only");
-console.log("Finalize POST                    : explicit confirmation + D4A finalizer");
+console.log("Finalize POST                    : explicit confirmation + Teacher finalization service");
 console.log("JSON body                        : application/json + 16 KiB bound");
 console.log("Assessment IDs                   : strict UUID validation");
 console.log("No-store headers                 : complete");
 console.log("Legacy TeacherAppraisal          : untouched");
-console.log("Review creation                  : absent in N6-D4B");
-console.log("Cycle transition                 : absent in N6-D4B");
+console.log("Ordinary finalization review     : absent");
+console.log("Correction continuation          : delegated to N6-E4C service");
+console.log("Correction review                : same reviewer/stage PENDING only");
+console.log("Direct review mutation in route  : absent");
+console.log("Direct cycle mutation in route   : absent");
+console.log("Cycle transition                 : absent; UNDER_REVIEW preserved");
 console.log("Headteacher continuation bridge  : absent");
 console.log("Notifications/providers          : absent");
-console.log("Database accessed                : false");
+console.log("Database accessed                : route false; service-owned lifecycle");
 console.log("");
 console.log("RESULT: N6-D4B GOVERNANCE TEACHER THIN API GREEN");
