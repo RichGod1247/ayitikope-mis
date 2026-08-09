@@ -13,6 +13,8 @@ const files = {
     "src/lib/appraisals/teacherSupervisoryReleasedResult.ts",
   decision:
     "src/lib/appraisals/teacherSupervisoryDirectorReviewDecision.ts",
+  directRelease:
+    "src/lib/appraisals/teacherSupervisoryDirectorDirectRelease.ts",
   scoring:
     "src/lib/appraisals/teacherSupervisoryAssessmentScoring.ts",
   review:
@@ -51,6 +53,9 @@ for (const marker of [
   'requiredReviewDecision: "ACCEPTED"',
   'requiredAssessmentStatus: "FINALIZED"',
   "releaseProofSchemaVersion: 1",
+  'reviewedReleaseMode: "REVIEWED_DIRECTOR_RELEASE"',
+  'directorAuthoredDirectReleaseMode: "DIRECTOR_AUTHORED_DIRECT_RELEASE"',
+  "dualReleaseModesSupported: true",
   "expectedSectionCount: 6",
   "expectedItemCount: 34",
   "scoreValuesIncluded: true",
@@ -94,6 +99,11 @@ for (const marker of [
   "TEACHER_SUPERVISORY_RELEASED_RESULT_RELEASE_REVIEW_INVALID",
   "TEACHER_SUPERVISORY_RELEASED_RESULT_RELEASE_PROOF_DRIFT",
   "TEACHER_SUPERVISORY_RELEASED_RESULT_CYCLE_RELEASE_ANCHOR_DRIFT",
+  "TEACHER_SUPERVISORY_RELEASED_RESULT_RELEASE_MODE_INVALID",
+  "TEACHER_SUPERVISORY_RELEASED_RESULT_DIRECT_RELEASE_AUTHORITY_DRIFT",
+  "TEACHER_SUPERVISORY_RELEASED_RESULT_DIRECT_RELEASE_POLICY_DRIFT",
+  "TEACHER_SUPERVISORY_RELEASED_RESULT_DIRECT_RELEASE_PROOF_DRIFT",
+  "TEACHER_SUPERVISORY_RELEASED_RESULT_DIRECT_RELEASE_CYCLE_ANCHOR_DRIFT",
   "TEACHER_SUPERVISORY_RELEASED_RESULT_CORRECTION_REVISION_KEY_DRIFT",
   "TEACHER_SUPERVISORY_RELEASED_RESULT_CORRECTION_RETURN_PROOF_DRIFT",
   "TEACHER_SUPERVISORY_RELEASED_RESULT_OBSERVATION_CONTEXT_DRIFT",
@@ -107,8 +117,10 @@ for (const marker of [
 }
 
 for (const marker of [
-  "reviewEvidenceHashVerified: true",
-  "reviewChainHashVerified: true",
+  "releaseModeVerified: true",
+  "reviewEvidenceHashVerified:",
+  "reviewChainHashVerified:",
+  "directReleaseAuthorityVerified:",
   "decisionContractHashVerified: true",
   "releaseRequestHashVerified: true",
   "releaseEvidenceHashVerified: true",
@@ -157,10 +169,13 @@ assert(
   source.decision.includes(
     'const RELEASE_METADATA_KEY = "teacherSupervisoryRelease"',
   ) &&
+    source.directRelease.includes(
+      'const RELEASE_METADATA_KEY = "teacherSupervisoryRelease"',
+    ) &&
     source.released.includes(
       'const RELEASE_METADATA_KEY = "teacherSupervisoryRelease"',
     ),
-  "Released-result metadata key must match Director release writer",
+  "Released-result metadata key must match both Director release writers",
 );
 
 for (const marker of [
@@ -190,6 +205,35 @@ for (const marker of [
   );
 }
 
+
+for (const marker of [
+  'releaseMode: "DIRECTOR_AUTHORED_DIRECT_RELEASE"',
+  "reviewRowsRequired: false",
+  "reviewRowsAllowed: false",
+  "selfReviewAllowed: false",
+  "reviewRowsPresent: false",
+  "selfReviewPerformed: false",
+  'releaserRole: "DISTRICT_DIRECTOR"',
+  "decisionContractHash: input.decisionContractHash",
+  "releaseRequestHash: input.releaseRequestHash",
+  "releaseEvidenceHash: input.releaseEvidenceHash",
+  "assessmentMutationPerformed: false",
+  "scoreMutationPerformed: false",
+  "commentMutationPerformed: false",
+  "legacyTeacherAppraisalIncluded: false",
+  "combinedWeightingDefined: false",
+  "notificationsSeeded: false",
+  "providerCalled: false",
+  "input.cycle.closedByUserId !== input.evidence.assessorUserId",
+  "clean(cycleReview.releasedAt) !== releasedAt",
+]) {
+  assert(
+    source.directRelease.includes(marker),
+    "Director-authored direct-release proof marker missing",
+    marker,
+  );
+}
+
 assert(
   source.released.includes("releaseReviewChainHash(releaseReview)") &&
     source.released.includes("decisionContractHash({") &&
@@ -199,8 +243,47 @@ assert(
     source.released.includes(
       "const expectedReleaseProofHash = hashJson(expectedProof)",
     ),
-  "Released result must independently recompute release hashes",
+  "Released result must independently recompute reviewed release hashes",
 );
+
+assert(
+  source.released.includes("directDecisionContractHash()") &&
+    source.released.includes("directReleaseRequestHash({") &&
+    source.released.includes("directReleaseEvidenceHash({") &&
+    source.released.includes("directReleaseProofPayload({") &&
+    source.released.includes("verifyDirectorAuthoredDirectRelease({") &&
+    source.released.includes("verifyReviewedDirectorRelease({") &&
+    source.released.includes(
+      "storedReleaseMode === DIRECT_RELEASE_MODE",
+    ),
+  "Released result must independently verify both release-proof modes",
+);
+
+for (const marker of [
+  'const REVIEWED_RELEASE_MODE = "REVIEWED_DIRECTOR_RELEASE"',
+  'const DIRECT_RELEASE_MODE = "DIRECTOR_AUTHORED_DIRECT_RELEASE"',
+  "input.record.reviews.length !== 0",
+  'input.evidence.assessorRole !== "DISTRICT_DIRECTOR"',
+  "input.evidence.revision !== 1",
+  "input.record.priorAssessmentId",
+  "input.cycle.closedByUserId !== input.evidence.assessorUserId",
+  "chain.requiresReviewRows !== false",
+  "chain.selfReviewAllowed !== false",
+  "chain.stages.length !== 0",
+  'chain.terminalAuthorityRole !== "DISTRICT_DIRECTOR"',
+  "reviewRowsRequired !== false",
+  "reviewRowsPresent !== false",
+  "selfReviewPerformed !== false",
+  "releaserAssignmentId !== input.evidence.assessorAssignmentId",
+  "releaseVerification.releaseMode",
+  "releaseVerification.reviewStage",
+]) {
+  assert(
+    source.released.includes(marker),
+    "Dual released-result integrity marker missing",
+    marker,
+  );
+}
 
 assert(
   source.released.includes(
@@ -242,8 +325,11 @@ assert(
 assert(
   source.released.includes("generalComment: record.generalComment") &&
     source.released.includes("score: score.score") &&
-    source.released.includes("notApplicable: score.notApplicable"),
-  "Released official Teacher form must include sealed scores and General Comment",
+    source.released.includes("notApplicable: score.notApplicable") &&
+    source.released.includes(
+      "releaseMode: releaseVerification.releaseMode",
+    ),
+  "Released official Teacher form must include sealed scores, General Comment, and verified release mode",
 );
 
 const publicProjectionStart = source.released.lastIndexOf(
@@ -285,38 +371,53 @@ assert(
   "Required finalized/review-chain regressions missing",
 );
 
+
+for (const forbidden of [
+  "appraisalReview.create",
+  "appraisalReview.update",
+  "appraisalReview.updateMany",
+  'decision: "PENDING"',
+  'decision: "ACCEPTED"',
+]) {
+  assert(
+    !source.directRelease.includes(forbidden),
+    "Director-authored direct release must remain review-row free",
+    forbidden,
+  );
+}
+
 console.log("");
-console.log("=== N6-E5D1 GOVERNANCE TEACHER RELEASED-RESULT READ CONTRACT ===");
+console.log("=== N6-E5E2 GOVERNANCE TEACHER DUAL RELEASE-PROOF READ CONTRACT ===");
 console.log("");
 console.log("Audience                         : released target Teacher only");
 console.log("Required lifecycle               : RELEASED");
+console.log("Release modes                    : reviewed Director / Director-authored direct");
+console.log("Reviewed release                 : ACCEPTED Director review + full chain");
+console.log("Direct release                   : no AppraisalReview row + no self-review");
+console.log("Direct assessor/releaser         : exact same District Director + assignment");
+console.log("Direct lifecycle custody         : exact closedBy + shared release timestamp");
 console.log("Target binding                   : exact user + tenant + Teacher membership");
-console.log("School hierarchy                 : active school / circuit / district");
 console.log("Finalized assessment             : shared full verifier");
 console.log("Official Teacher form            : 6 domains / 34 items");
 console.log("Scores / N/A                     : sealed read-only values included");
-console.log("General Comment                  : included; already sealed in assessment hash");
-console.log("Official observation particulars : included");
-console.log("v2 assignment/curriculum         : reverified");
-console.log("Release review                   : exact Director ACCEPTED terminal review");
-console.log("Review evidence hash             : independently recomputed");
-console.log("Review-chain hash                : independently recomputed");
-console.log("Decision contract hash           : independently recomputed");
-console.log("Release request hash             : independently recomputed");
-console.log("Release evidence hash            : independently recomputed");
-console.log("Release proof hash               : independently recomputed");
-console.log("Cycle release anchors            : independently reverified");
-console.log("Correction revisions             : full lineage to revision 1 verified");
-console.log("Historical Return chain          : SUPERSEDED source + durable reviews verified");
+console.log("General Comment                  : included; sealed in assessment hash");
+console.log("Observation particulars          : included + v2 provenance reverified");
+console.log("Reviewed review hashes           : independently recomputed");
+console.log("Direct decision contract hash    : independently recomputed");
+console.log("Direct release request hash      : independently recomputed");
+console.log("Direct release evidence hash     : independently recomputed");
+console.log("Release proof hash               : independently recomputed in both modes");
+console.log("Cycle release anchors            : independently reverified in both modes");
+console.log("Correction lineage               : reviewed path verified to revision 1");
+console.log("Direct revision                  : revision 1 only");
 console.log("Reviewer identity                : excluded from result");
 console.log("Assessor identity                : excluded; office label only");
 console.log("Review notes / Return reasons    : excluded from result");
 console.log("Raw evidence / metadata          : excluded from result");
-console.log("Contact details                  : excluded");
 console.log("Legacy TeacherAppraisal          : excluded");
 console.log("Combined weighting               : undefined");
 console.log("Database writes                  : absent");
 console.log("Notifications/providers          : absent");
 console.log("Database accessed                : source contract only");
 console.log("");
-console.log("RESULT: N6-E5D1 GOVERNANCE TEACHER RELEASED-RESULT READ CONTRACT GREEN");
+console.log("RESULT: N6-E5E2 GOVERNANCE TEACHER DUAL RELEASE-PROOF READ CONTRACT GREEN");

@@ -34,6 +34,9 @@ export const TEACHER_SUPERVISORY_RELEASED_RESULT_POLICY = {
   requiredReviewDecision: "ACCEPTED",
   requiredAssessmentStatus: "FINALIZED",
   releaseProofSchemaVersion: 1,
+  reviewedReleaseMode: "REVIEWED_DIRECTOR_RELEASE",
+  directorAuthoredDirectReleaseMode: "DIRECTOR_AUTHORED_DIRECT_RELEASE",
+  dualReleaseModesSupported: true,
   expectedSectionCount: 6,
   expectedItemCount: 34,
   officialObservationDetailsIncluded: true,
@@ -62,6 +65,8 @@ export const TEACHER_SUPERVISORY_RELEASED_RESULT_POLICY = {
 } as const;
 
 const RELEASE_METADATA_KEY = "teacherSupervisoryRelease";
+const REVIEWED_RELEASE_MODE = "REVIEWED_DIRECTOR_RELEASE";
+const DIRECT_RELEASE_MODE = "DIRECTOR_AUTHORED_DIRECT_RELEASE";
 
 export type ReadTeacherSupervisoryReleasedResultInput = {
   actorUserId: string;
@@ -109,8 +114,11 @@ export type TeacherSupervisoryReleasedResult = {
   };
   release: {
     proofSchemaVersion: 1;
+    releaseMode:
+      | "REVIEWED_DIRECTOR_RELEASE"
+      | "DIRECTOR_AUTHORED_DIRECT_RELEASE";
     releaseProofHash: string;
-    reviewStage: number;
+    reviewStage: number | null;
     integrityVerified: true;
   };
   assessment: {
@@ -155,8 +163,10 @@ export type TeacherSupervisoryReleasedResult = {
     finalizedAssessmentEvidenceVerified: true;
     assessmentHashVerified: true;
     observationContextHashVerified: true;
-    reviewEvidenceHashVerified: true;
-    reviewChainHashVerified: true;
+    releaseModeVerified: true;
+    reviewEvidenceHashVerified: true | null;
+    reviewChainHashVerified: true | null;
+    directReleaseAuthorityVerified: true | null;
     decisionContractHashVerified: true;
     releaseRequestHashVerified: true;
     releaseEvidenceHashVerified: true;
@@ -222,6 +232,7 @@ type ReleasedCycleRecord = {
   targetRoleSnapshot: string | null;
   status: string;
   closedAt: Date | null;
+  closedByUserId: string | null;
   reviewStartedAt: Date | null;
   releasedAt: Date | null;
   cancelledAt: Date | null;
@@ -441,6 +452,7 @@ const CYCLE_SELECT = {
   targetRoleSnapshot: true,
   status: true,
   closedAt: true,
+  closedByUserId: true,
   reviewStartedAt: true,
   releasedAt: true,
   cancelledAt: true,
@@ -1501,6 +1513,539 @@ function assertAssessmentProjection(input: {
   }
 }
 
+
+type ReleaseVerification = {
+  releaseMode:
+    | "REVIEWED_DIRECTOR_RELEASE"
+    | "DIRECTOR_AUTHORED_DIRECT_RELEASE";
+  releaseProofHash: string;
+  reviewStage: number | null;
+  reviewEvidenceHashVerified: true | null;
+  reviewChainHashVerified: true | null;
+  directReleaseAuthorityVerified: true | null;
+};
+
+function directDecisionContractHash() {
+  return hashJson({
+    schemaVersion: 1,
+    workflow: TEACHER_SUPERVISORY_ASSESSMENT_POLICY.workflow,
+    evidenceStream: TEACHER_SUPERVISORY_ASSESSMENT_POLICY.evidenceStream,
+    releaseMode: DIRECT_RELEASE_MODE,
+    action: "RELEASE",
+    assessorRole: "DISTRICT_DIRECTOR",
+    releaserRole: "DISTRICT_DIRECTOR",
+    exactAssessorAsReleaserRequired: true,
+    exactAssessorAssignmentAsReleaserAssignmentRequired: true,
+    reviewRowsRequired: false,
+    reviewRowsAllowed: false,
+    selfReviewAllowed: false,
+    assessmentStatus: "FINALIZED",
+    cycleIngress: [
+      "OPEN",
+      "CLOSED",
+      "UNDER_REVIEW",
+      "RELEASED",
+    ],
+    assessmentMutationAllowed: false,
+    scoreMutationAllowed: false,
+    commentMutationAllowed: false,
+    legacyTeacherAppraisalIncluded: false,
+    combinedWeightingDefined: false,
+    notificationsSeeded: false,
+    providerCalled: false,
+  });
+}
+
+function directReleaseRequestHash(input: {
+  evidence: TeacherSupervisoryFinalizedAssessmentEvidence;
+  releaserAssignmentId: string;
+  decisionContractHash: string;
+}) {
+  return hashJson({
+    schemaVersion: 1,
+    workflow: TEACHER_SUPERVISORY_ASSESSMENT_POLICY.workflow,
+    evidenceStream: TEACHER_SUPERVISORY_ASSESSMENT_POLICY.evidenceStream,
+    releaseMode: DIRECT_RELEASE_MODE,
+    assessment: {
+      id: input.evidence.assessmentId,
+      cycleId: input.evidence.cycleId,
+      revision: input.evidence.revision,
+      assessmentHash: input.evidence.assessmentHash,
+      observationContextHash: input.evidence.observationContextHash,
+    },
+    assessor: {
+      userId: input.evidence.assessorUserId,
+      assignmentId: input.evidence.assessorAssignmentId,
+      role: input.evidence.assessorRole,
+    },
+    releaser: {
+      userId: input.evidence.assessorUserId,
+      assignmentId: input.releaserAssignmentId,
+      role: "DISTRICT_DIRECTOR",
+    },
+    reviewRowsRequired: false,
+    selfReviewPerformed: false,
+    action: "RELEASE",
+    decisionContractHash: input.decisionContractHash,
+  });
+}
+
+function directReleaseEvidenceHash(input: {
+  evidence: TeacherSupervisoryFinalizedAssessmentEvidence;
+  releaseRequestHash: string;
+}) {
+  return hashJson({
+    schemaVersion: 1,
+    releaseMode: DIRECT_RELEASE_MODE,
+    releaseRequestHash: input.releaseRequestHash,
+    assessmentHash: input.evidence.assessmentHash,
+    observationContextHash: input.evidence.observationContextHash,
+    reviewRowsPresent: false,
+    selfReviewPerformed: false,
+  });
+}
+
+function directReleaseProofPayload(input: {
+  evidence: TeacherSupervisoryFinalizedAssessmentEvidence;
+  releaserAssignmentId: string;
+  decisionContractHash: string;
+  releaseRequestHash: string;
+  releaseEvidenceHash: string;
+  releasedAt: string;
+}) {
+  return {
+    proofSchemaVersion:
+      TEACHER_SUPERVISORY_RELEASED_RESULT_POLICY.releaseProofSchemaVersion,
+    releaseMode: DIRECT_RELEASE_MODE,
+    workflow: TEACHER_SUPERVISORY_ASSESSMENT_POLICY.workflow,
+    evidenceStream: TEACHER_SUPERVISORY_ASSESSMENT_POLICY.evidenceStream,
+    cycleId: input.evidence.cycleId,
+    assessmentId: input.evidence.assessmentId,
+    assessmentRevision: input.evidence.revision,
+    assessmentStatus: "FINALIZED",
+    assessmentHash: input.evidence.assessmentHash,
+    observationContextHash: input.evidence.observationContextHash,
+    assessorUserId: input.evidence.assessorUserId,
+    assessorAssignmentId: input.evidence.assessorAssignmentId,
+    assessorRole: "DISTRICT_DIRECTOR",
+    reviewRowsRequired: false,
+    reviewRowsPresent: false,
+    selfReviewPerformed: false,
+    releaserUserId: input.evidence.assessorUserId,
+    releaserAssignmentId: input.releaserAssignmentId,
+    releaserRole: "DISTRICT_DIRECTOR",
+    decisionContractHash: input.decisionContractHash,
+    releaseRequestHash: input.releaseRequestHash,
+    releaseEvidenceHash: input.releaseEvidenceHash,
+    releasedAt: input.releasedAt,
+    assessmentMutationPerformed: false,
+    scoreMutationPerformed: false,
+    commentMutationPerformed: false,
+    reviewerMayRewriteScores: false,
+    reviewerMayRewriteComment: false,
+    reviewerMayRewriteObservationDetails: false,
+    reviewerMayRewriteGovernanceEnrolmentEvidence: false,
+    reviewerMayRewriteTeacherAssignmentProvenance: false,
+    reviewerMayRewriteCurriculumProvenance: false,
+    legacyTeacherAppraisalIncluded: false,
+    combinedWeightingDefined: false,
+    notificationsSeeded: false,
+    providerCalled: false,
+  } as const;
+}
+
+function verifyReviewedDirectorRelease(input: {
+  cycle: ReleasedCycleRecord;
+  record: AssessmentRecord;
+  evidence: TeacherSupervisoryFinalizedAssessmentEvidence;
+  release: Record<string, unknown>;
+}): ReleaseVerification {
+  if (clean(input.release.releaseMode)) {
+    fail(
+      "TEACHER_SUPERVISORY_RELEASED_RESULT_REVIEWED_RELEASE_MODE_DRIFT",
+      409,
+    );
+  }
+
+  const reviewId = requireIdentifier(input.release.reviewId, "reviewId");
+  const releaseReview =
+    input.record.reviews.find((review) => review.id === reviewId) ?? null;
+
+  if (
+    !releaseReview ||
+    releaseReview.cycleId !== input.cycle.id ||
+    releaseReview.assessmentId !== input.record.id ||
+    normalized(releaseReview.decision) !== "ACCEPTED" ||
+    clean(releaseReview.note) ||
+    !releaseReview.decidedAt ||
+    releaseReview.decidedAt.toISOString() !==
+      input.cycle.releasedAt?.toISOString() ||
+    !clean(releaseReview.reviewerAssignmentId)
+  ) {
+    fail(
+      "TEACHER_SUPERVISORY_RELEASED_RESULT_RELEASE_REVIEW_INVALID",
+      409,
+    );
+  }
+
+  assertCurrentReleaseReviewChain({
+    reviews: input.record.reviews,
+    releaseReview,
+    evidence: input.evidence,
+  });
+
+  const releaseReviewMetadata = objectValue(releaseReview.metadata);
+  const reviewerAssignmentId = clean(
+    releaseReview.reviewerAssignmentId,
+  );
+
+  if (
+    clean(releaseReviewMetadata.workflow) !==
+      TEACHER_SUPERVISORY_ASSESSMENT_POLICY.workflow ||
+    clean(releaseReviewMetadata.evidenceStream) !==
+      TEACHER_SUPERVISORY_ASSESSMENT_POLICY.evidenceStream ||
+    clean(releaseReviewMetadata.reviewerRole) !== "DISTRICT_DIRECTOR" ||
+    clean(releaseReviewMetadata.decisionAction) !== "RELEASE" ||
+    clean(releaseReviewMetadata.decidedByUserId) !==
+      releaseReview.reviewerUserId ||
+    clean(releaseReviewMetadata.decidedByAssignmentId) !==
+      reviewerAssignmentId ||
+    clean(releaseReviewMetadata.decidedByRole) !== "DISTRICT_DIRECTOR" ||
+    releaseReviewMetadata.revisionRequired !== false ||
+    releaseReviewMetadata.preserveReturningReviewerForCorrection !== false ||
+    releaseReviewMetadata.reviewerMayRewriteScores !== false ||
+    releaseReviewMetadata.reviewerMayRewriteComment !== false ||
+    releaseReviewMetadata.scoreMutationPerformed !== false ||
+    releaseReviewMetadata.commentMutationPerformed !== false ||
+    releaseReviewMetadata.legacyTeacherAppraisalIncluded !== false ||
+    releaseReviewMetadata.combinedWeightingDefined !== false ||
+    releaseReviewMetadata.notificationsSeeded !== false ||
+    releaseReviewMetadata.providerCalled !== false
+  ) {
+    fail(
+      "TEACHER_SUPERVISORY_RELEASED_RESULT_RELEASE_REVIEW_PROOF_DRIFT",
+      409,
+    );
+  }
+
+  const expectedReviewEvidenceHash =
+    computeTeacherSupervisoryReviewEvidenceHash({
+      evidence: input.evidence,
+      reviewerUserId: releaseReview.reviewerUserId,
+      reviewerAssignmentId,
+      reviewerRole: "DISTRICT_DIRECTOR",
+      reviewStage: releaseReview.stage,
+    });
+
+  const expectedReviewChainHash =
+    releaseReviewChainHash(releaseReview);
+
+  const expectedDecisionContractHash =
+    decisionContractHash({
+      assessorRole: input.evidence.assessorRole,
+      stage: releaseReview.stage,
+    });
+
+  const expectedReleaseRequestHash =
+    releaseRequestHash({
+      evidence: input.evidence,
+      review: releaseReview,
+      reviewerAssignmentId,
+      sourceReviewEvidenceHash: expectedReviewEvidenceHash,
+      contractHash: expectedDecisionContractHash,
+    });
+
+  const expectedReleaseEvidenceHash =
+    releaseEvidenceHash({
+      releaseRequestHash: expectedReleaseRequestHash,
+      sourceReviewEvidenceHash: expectedReviewEvidenceHash,
+    });
+
+  const expectedProof =
+    releaseProofPayload({
+      evidence: input.evidence,
+      review: releaseReview,
+      reviewerAssignmentId,
+      sourceReviewEvidenceHash: expectedReviewEvidenceHash,
+      reviewChainHash: expectedReviewChainHash,
+      decisionContractHash: expectedDecisionContractHash,
+      releaseRequestHash: expectedReleaseRequestHash,
+      releaseEvidenceHash: expectedReleaseEvidenceHash,
+      releasedAt: input.cycle.releasedAt!.toISOString(),
+    });
+
+  const expectedReleaseProofHash = hashJson(expectedProof);
+
+  if (
+    Number(input.release.proofSchemaVersion) !==
+      TEACHER_SUPERVISORY_RELEASED_RESULT_POLICY.releaseProofSchemaVersion ||
+    !sameJson(
+      Object.fromEntries(
+        Object.entries(input.release).filter(
+          ([key]) => key !== "releaseProofHash",
+        ),
+      ),
+      expectedProof,
+    ) ||
+    clean(input.release.releaseProofHash).toLowerCase() !==
+      expectedReleaseProofHash ||
+    clean(releaseReviewMetadata.reviewEvidenceHash).toLowerCase() !==
+      expectedReviewEvidenceHash ||
+    clean(releaseReviewMetadata.reviewChainHash).toLowerCase() !==
+      expectedReviewChainHash ||
+    clean(releaseReviewMetadata.decisionContractHash).toLowerCase() !==
+      expectedDecisionContractHash ||
+    clean(releaseReviewMetadata.decisionRequestHash).toLowerCase() !==
+      expectedReleaseRequestHash ||
+    clean(releaseReviewMetadata.decisionEvidenceHash).toLowerCase() !==
+      expectedReleaseEvidenceHash ||
+    clean(releaseReviewMetadata.releaseProofHash).toLowerCase() !==
+      expectedReleaseProofHash
+  ) {
+    fail(
+      "TEACHER_SUPERVISORY_RELEASED_RESULT_RELEASE_PROOF_DRIFT",
+      409,
+    );
+  }
+
+  const cycleReview = objectValue(
+    objectValue(input.cycle.metadata).teacherSupervisoryReview,
+  );
+
+  if (
+    Number(cycleReview.schemaVersion) !== 1 ||
+    clean(cycleReview.state) !== "RELEASED" ||
+    clean(cycleReview.currentReviewId) !== releaseReview.id ||
+    Number(cycleReview.currentReviewStage) !== releaseReview.stage ||
+    clean(cycleReview.currentReviewerRole) !== "DISTRICT_DIRECTOR" ||
+    clean(cycleReview.currentReviewerAssignmentId) !==
+      reviewerAssignmentId ||
+    clean(cycleReview.reviewEvidenceHash).toLowerCase() !==
+      expectedReviewEvidenceHash ||
+    clean(cycleReview.reviewChainHash).toLowerCase() !==
+      expectedReviewChainHash ||
+    clean(cycleReview.admittedAssessmentId) !== input.evidence.assessmentId ||
+    Number(cycleReview.admittedAssessmentRevision) !== input.evidence.revision ||
+    clean(cycleReview.assessmentHash).toLowerCase() !==
+      input.evidence.assessmentHash ||
+    clean(cycleReview.observationContextHash).toLowerCase() !==
+      input.evidence.observationContextHash ||
+    clean(cycleReview.releaseProofHash).toLowerCase() !==
+      expectedReleaseProofHash ||
+    cycleReview.awaitingRevision !== false ||
+    clean(cycleReview.releasedAt) !==
+      input.cycle.releasedAt!.toISOString() ||
+    cycleReview.reviewerMayRewriteScores !== false ||
+    cycleReview.reviewerMayRewriteComment !== false ||
+    cycleReview.legacyTeacherAppraisalIncluded !== false ||
+    cycleReview.combinedWeightingDefined !== false ||
+    cycleReview.notificationsSeeded !== false ||
+    cycleReview.providerCalled !== false
+  ) {
+    fail(
+      "TEACHER_SUPERVISORY_RELEASED_RESULT_CYCLE_RELEASE_ANCHOR_DRIFT",
+      409,
+    );
+  }
+
+  return {
+    releaseMode: REVIEWED_RELEASE_MODE,
+    releaseProofHash: expectedReleaseProofHash,
+    reviewStage: releaseReview.stage,
+    reviewEvidenceHashVerified: true,
+    reviewChainHashVerified: true,
+    directReleaseAuthorityVerified: null,
+  };
+}
+
+function verifyDirectorAuthoredDirectRelease(input: {
+  cycle: ReleasedCycleRecord;
+  record: AssessmentRecord;
+  evidence: TeacherSupervisoryFinalizedAssessmentEvidence;
+  release: Record<string, unknown>;
+}): ReleaseVerification {
+  if (
+    clean(input.release.releaseMode) !== DIRECT_RELEASE_MODE ||
+    input.record.reviews.length !== 0 ||
+    input.evidence.assessorRole !== "DISTRICT_DIRECTOR" ||
+    input.evidence.revision !== 1 ||
+    input.record.priorAssessmentId ||
+    input.cycle.closedByUserId !== input.evidence.assessorUserId ||
+    !input.cycle.closedAt ||
+    !input.cycle.reviewStartedAt ||
+    !input.cycle.releasedAt ||
+    input.cycle.closedAt.getTime() !==
+      input.cycle.reviewStartedAt.getTime() ||
+    input.cycle.reviewStartedAt.getTime() !==
+      input.cycle.releasedAt.getTime()
+  ) {
+    fail(
+      "TEACHER_SUPERVISORY_RELEASED_RESULT_DIRECT_RELEASE_AUTHORITY_DRIFT",
+      409,
+    );
+  }
+
+  const chain = teacherSupervisoryReviewChainForAssessor(
+    input.evidence.assessorRole,
+  );
+
+  if (
+    !chain ||
+    chain.assessorRole !== "DISTRICT_DIRECTOR" ||
+    chain.requiresReviewRows !== false ||
+    chain.selfReviewAllowed !== false ||
+    chain.stages.length !== 0 ||
+    chain.terminalAuthorityRole !== "DISTRICT_DIRECTOR"
+  ) {
+    fail(
+      "TEACHER_SUPERVISORY_RELEASED_RESULT_DIRECT_RELEASE_POLICY_DRIFT",
+      409,
+    );
+  }
+
+  const releaserAssignmentId = clean(
+    input.release.releaserAssignmentId,
+  );
+  const expectedDecisionContractHash = directDecisionContractHash();
+  const expectedReleaseRequestHash = directReleaseRequestHash({
+    evidence: input.evidence,
+    releaserAssignmentId,
+    decisionContractHash: expectedDecisionContractHash,
+  });
+  const expectedReleaseEvidenceHash = directReleaseEvidenceHash({
+    evidence: input.evidence,
+    releaseRequestHash: expectedReleaseRequestHash,
+  });
+  const expectedProof = directReleaseProofPayload({
+    evidence: input.evidence,
+    releaserAssignmentId,
+    decisionContractHash: expectedDecisionContractHash,
+    releaseRequestHash: expectedReleaseRequestHash,
+    releaseEvidenceHash: expectedReleaseEvidenceHash,
+    releasedAt: input.cycle.releasedAt.toISOString(),
+  });
+  const expectedReleaseProofHash = hashJson(expectedProof);
+
+  if (
+    !releaserAssignmentId ||
+    Number(input.release.proofSchemaVersion) !==
+      TEACHER_SUPERVISORY_RELEASED_RESULT_POLICY.releaseProofSchemaVersion ||
+    clean(input.release.workflow) !==
+      TEACHER_SUPERVISORY_ASSESSMENT_POLICY.workflow ||
+    clean(input.release.evidenceStream) !==
+      TEACHER_SUPERVISORY_ASSESSMENT_POLICY.evidenceStream ||
+    clean(input.release.cycleId) !== input.evidence.cycleId ||
+    clean(input.release.assessmentId) !== input.evidence.assessmentId ||
+    Number(input.release.assessmentRevision) !== 1 ||
+    normalized(input.release.assessmentStatus) !== "FINALIZED" ||
+    clean(input.release.assessmentHash).toLowerCase() !==
+      input.evidence.assessmentHash ||
+    clean(input.release.observationContextHash).toLowerCase() !==
+      input.evidence.observationContextHash ||
+    clean(input.release.assessorUserId) !== input.evidence.assessorUserId ||
+    clean(input.release.assessorAssignmentId) !==
+      input.evidence.assessorAssignmentId ||
+    clean(input.release.assessorRole) !== "DISTRICT_DIRECTOR" ||
+    input.release.reviewRowsRequired !== false ||
+    input.release.reviewRowsPresent !== false ||
+    input.release.selfReviewPerformed !== false ||
+    clean(input.release.releaserUserId) !== input.evidence.assessorUserId ||
+    releaserAssignmentId !== input.evidence.assessorAssignmentId ||
+    clean(input.release.releaserRole) !== "DISTRICT_DIRECTOR" ||
+    clean(input.release.decisionContractHash).toLowerCase() !==
+      expectedDecisionContractHash ||
+    clean(input.release.releaseRequestHash).toLowerCase() !==
+      expectedReleaseRequestHash ||
+    clean(input.release.releaseEvidenceHash).toLowerCase() !==
+      expectedReleaseEvidenceHash ||
+    clean(input.release.releasedAt) !== input.cycle.releasedAt.toISOString() ||
+    input.release.assessmentMutationPerformed !== false ||
+    input.release.scoreMutationPerformed !== false ||
+    input.release.commentMutationPerformed !== false ||
+    input.release.reviewerMayRewriteScores !== false ||
+    input.release.reviewerMayRewriteComment !== false ||
+    input.release.reviewerMayRewriteObservationDetails !== false ||
+    input.release.reviewerMayRewriteGovernanceEnrolmentEvidence !== false ||
+    input.release.reviewerMayRewriteTeacherAssignmentProvenance !== false ||
+    input.release.reviewerMayRewriteCurriculumProvenance !== false ||
+    input.release.legacyTeacherAppraisalIncluded !== false ||
+    input.release.combinedWeightingDefined !== false ||
+    input.release.notificationsSeeded !== false ||
+    input.release.providerCalled !== false ||
+    !sameJson(
+      Object.fromEntries(
+        Object.entries(input.release).filter(
+          ([key]) => key !== "releaseProofHash",
+        ),
+      ),
+      expectedProof,
+    ) ||
+    clean(input.release.releaseProofHash).toLowerCase() !==
+      expectedReleaseProofHash ||
+    !isSha256(input.release.releaseProofHash)
+  ) {
+    fail(
+      "TEACHER_SUPERVISORY_RELEASED_RESULT_DIRECT_RELEASE_PROOF_DRIFT",
+      409,
+    );
+  }
+
+  const cycleReview = objectValue(
+    objectValue(input.cycle.metadata).teacherSupervisoryReview,
+  );
+
+  if (
+    Number(cycleReview.schemaVersion) !== 1 ||
+    clean(cycleReview.state) !== "RELEASED" ||
+    clean(cycleReview.releaseMode) !== DIRECT_RELEASE_MODE ||
+    cycleReview.currentReviewId !== null ||
+    cycleReview.currentReviewStage !== null ||
+    cycleReview.currentReviewerRole !== null ||
+    cycleReview.currentReviewerAssignmentId !== null ||
+    cycleReview.reviewEvidenceHash !== null ||
+    cycleReview.reviewChainHash !== null ||
+    cycleReview.reviewRowsRequired !== false ||
+    cycleReview.reviewRowsPresent !== false ||
+    cycleReview.selfReviewPerformed !== false ||
+    clean(cycleReview.admittedAssessmentId) !== input.evidence.assessmentId ||
+    Number(cycleReview.admittedAssessmentRevision) !== 1 ||
+    clean(cycleReview.assessmentHash).toLowerCase() !==
+      input.evidence.assessmentHash ||
+    clean(cycleReview.observationContextHash).toLowerCase() !==
+      input.evidence.observationContextHash ||
+    clean(cycleReview.directReleasedByUserId) !==
+      input.evidence.assessorUserId ||
+    clean(cycleReview.directReleasedByAssignmentId) !==
+      input.evidence.assessorAssignmentId ||
+    clean(cycleReview.directReleasedByRole) !== "DISTRICT_DIRECTOR" ||
+    clean(cycleReview.releaseProofHash).toLowerCase() !==
+      expectedReleaseProofHash ||
+    cycleReview.awaitingRevision !== false ||
+    clean(cycleReview.releasedAt) !==
+      input.cycle.releasedAt.toISOString() ||
+    cycleReview.reviewerMayRewriteScores !== false ||
+    cycleReview.reviewerMayRewriteComment !== false ||
+    cycleReview.legacyTeacherAppraisalIncluded !== false ||
+    cycleReview.combinedWeightingDefined !== false ||
+    cycleReview.notificationsSeeded !== false ||
+    cycleReview.providerCalled !== false
+  ) {
+    fail(
+      "TEACHER_SUPERVISORY_RELEASED_RESULT_DIRECT_RELEASE_CYCLE_ANCHOR_DRIFT",
+      409,
+    );
+  }
+
+  return {
+    releaseMode: DIRECT_RELEASE_MODE,
+    releaseProofHash: expectedReleaseProofHash,
+    reviewStage: null,
+    reviewEvidenceHashVerified: null,
+    reviewChainHashVerified: null,
+    directReleaseAuthorityVerified: true,
+  };
+}
+
 export async function readTeacherSupervisoryReleasedResult(
   input: ReadTeacherSupervisoryReleasedResultInput,
 ): Promise<TeacherSupervisoryReleasedResult> {
@@ -1622,7 +2167,6 @@ export async function readTeacherSupervisoryReleasedResult(
     release.assessmentId,
     "assessmentId",
   );
-  const reviewId = requireIdentifier(release.reviewId, "reviewId");
 
   const record = await database.appraisalAssessment.findUnique({
     where: {
@@ -1662,184 +2206,33 @@ export async function readTeacherSupervisoryReleasedResult(
     );
   }
 
-  const releaseReview =
-    record.reviews.find((review) => review.id === reviewId) ?? null;
+  const storedReleaseMode = clean(release.releaseMode);
 
   if (
-    !releaseReview ||
-    releaseReview.cycleId !== cycle.id ||
-    releaseReview.assessmentId !== record.id ||
-    normalized(releaseReview.decision) !== "ACCEPTED" ||
-    clean(releaseReview.note) ||
-    !releaseReview.decidedAt ||
-    releaseReview.decidedAt.toISOString() !==
-      cycle.releasedAt.toISOString() ||
-    !clean(releaseReview.reviewerAssignmentId)
+    storedReleaseMode &&
+    storedReleaseMode !== DIRECT_RELEASE_MODE
   ) {
     fail(
-      "TEACHER_SUPERVISORY_RELEASED_RESULT_RELEASE_REVIEW_INVALID",
+      "TEACHER_SUPERVISORY_RELEASED_RESULT_RELEASE_MODE_INVALID",
       409,
+      { releaseMode: storedReleaseMode },
     );
   }
 
-  assertCurrentReleaseReviewChain({
-    reviews: record.reviews,
-    releaseReview,
-    evidence,
-  });
-
-  const releaseReviewMetadata = objectValue(releaseReview.metadata);
-  const reviewerAssignmentId = clean(
-    releaseReview.reviewerAssignmentId,
-  );
-
-  if (
-    clean(releaseReviewMetadata.workflow) !==
-      TEACHER_SUPERVISORY_ASSESSMENT_POLICY.workflow ||
-    clean(releaseReviewMetadata.evidenceStream) !==
-      TEACHER_SUPERVISORY_ASSESSMENT_POLICY.evidenceStream ||
-    clean(releaseReviewMetadata.reviewerRole) !== "DISTRICT_DIRECTOR" ||
-    clean(releaseReviewMetadata.decisionAction) !== "RELEASE" ||
-    clean(releaseReviewMetadata.decidedByUserId) !==
-      releaseReview.reviewerUserId ||
-    clean(releaseReviewMetadata.decidedByAssignmentId) !==
-      reviewerAssignmentId ||
-    clean(releaseReviewMetadata.decidedByRole) !== "DISTRICT_DIRECTOR" ||
-    releaseReviewMetadata.revisionRequired !== false ||
-    releaseReviewMetadata.preserveReturningReviewerForCorrection !== false ||
-    releaseReviewMetadata.reviewerMayRewriteScores !== false ||
-    releaseReviewMetadata.reviewerMayRewriteComment !== false ||
-    releaseReviewMetadata.scoreMutationPerformed !== false ||
-    releaseReviewMetadata.commentMutationPerformed !== false ||
-    releaseReviewMetadata.legacyTeacherAppraisalIncluded !== false ||
-    releaseReviewMetadata.combinedWeightingDefined !== false ||
-    releaseReviewMetadata.notificationsSeeded !== false ||
-    releaseReviewMetadata.providerCalled !== false
-  ) {
-    fail(
-      "TEACHER_SUPERVISORY_RELEASED_RESULT_RELEASE_REVIEW_PROOF_DRIFT",
-      409,
-    );
-  }
-
-  const expectedReviewEvidenceHash =
-    computeTeacherSupervisoryReviewEvidenceHash({
-      evidence,
-      reviewerUserId: releaseReview.reviewerUserId,
-      reviewerAssignmentId,
-      reviewerRole: "DISTRICT_DIRECTOR",
-      reviewStage: releaseReview.stage,
-    });
-
-  const expectedReviewChainHash =
-    releaseReviewChainHash(releaseReview);
-
-  const expectedDecisionContractHash =
-    decisionContractHash({
-      assessorRole: evidence.assessorRole,
-      stage: releaseReview.stage,
-    });
-
-  const expectedReleaseRequestHash =
-    releaseRequestHash({
-      evidence,
-      review: releaseReview,
-      reviewerAssignmentId,
-      sourceReviewEvidenceHash: expectedReviewEvidenceHash,
-      contractHash: expectedDecisionContractHash,
-    });
-
-  const expectedReleaseEvidenceHash =
-    releaseEvidenceHash({
-      releaseRequestHash: expectedReleaseRequestHash,
-      sourceReviewEvidenceHash: expectedReviewEvidenceHash,
-    });
-
-  const expectedProof =
-    releaseProofPayload({
-      evidence,
-      review: releaseReview,
-      reviewerAssignmentId,
-      sourceReviewEvidenceHash: expectedReviewEvidenceHash,
-      reviewChainHash: expectedReviewChainHash,
-      decisionContractHash: expectedDecisionContractHash,
-      releaseRequestHash: expectedReleaseRequestHash,
-      releaseEvidenceHash: expectedReleaseEvidenceHash,
-      releasedAt: cycle.releasedAt.toISOString(),
-    });
-
-  const expectedReleaseProofHash = hashJson(expectedProof);
-
-  if (
-    Number(release.proofSchemaVersion) !==
-      TEACHER_SUPERVISORY_RELEASED_RESULT_POLICY.releaseProofSchemaVersion ||
-    !sameJson(
-      Object.fromEntries(
-        Object.entries(release).filter(
-          ([key]) => key !== "releaseProofHash",
-        ),
-      ),
-      expectedProof,
-    ) ||
-    clean(release.releaseProofHash).toLowerCase() !==
-      expectedReleaseProofHash ||
-    clean(releaseReviewMetadata.reviewEvidenceHash).toLowerCase() !==
-      expectedReviewEvidenceHash ||
-    clean(releaseReviewMetadata.reviewChainHash).toLowerCase() !==
-      expectedReviewChainHash ||
-    clean(releaseReviewMetadata.decisionContractHash).toLowerCase() !==
-      expectedDecisionContractHash ||
-    clean(releaseReviewMetadata.decisionRequestHash).toLowerCase() !==
-      expectedReleaseRequestHash ||
-    clean(releaseReviewMetadata.decisionEvidenceHash).toLowerCase() !==
-      expectedReleaseEvidenceHash ||
-    clean(releaseReviewMetadata.releaseProofHash).toLowerCase() !==
-      expectedReleaseProofHash
-  ) {
-    fail(
-      "TEACHER_SUPERVISORY_RELEASED_RESULT_RELEASE_PROOF_DRIFT",
-      409,
-    );
-  }
-
-  const cycleReview = objectValue(
-    objectValue(cycle.metadata).teacherSupervisoryReview,
-  );
-
-  if (
-    Number(cycleReview.schemaVersion) !== 1 ||
-    clean(cycleReview.state) !== "RELEASED" ||
-    clean(cycleReview.currentReviewId) !== releaseReview.id ||
-    Number(cycleReview.currentReviewStage) !== releaseReview.stage ||
-    clean(cycleReview.currentReviewerRole) !== "DISTRICT_DIRECTOR" ||
-    clean(cycleReview.currentReviewerAssignmentId) !==
-      reviewerAssignmentId ||
-    clean(cycleReview.reviewEvidenceHash).toLowerCase() !==
-      expectedReviewEvidenceHash ||
-    clean(cycleReview.reviewChainHash).toLowerCase() !==
-      expectedReviewChainHash ||
-    clean(cycleReview.admittedAssessmentId) !== evidence.assessmentId ||
-    Number(cycleReview.admittedAssessmentRevision) !== evidence.revision ||
-    clean(cycleReview.assessmentHash).toLowerCase() !==
-      evidence.assessmentHash ||
-    clean(cycleReview.observationContextHash).toLowerCase() !==
-      evidence.observationContextHash ||
-    clean(cycleReview.releaseProofHash).toLowerCase() !==
-      expectedReleaseProofHash ||
-    cycleReview.awaitingRevision !== false ||
-    clean(cycleReview.releasedAt) !== cycle.releasedAt.toISOString() ||
-    cycleReview.reviewerMayRewriteScores !== false ||
-    cycleReview.reviewerMayRewriteComment !== false ||
-    cycleReview.legacyTeacherAppraisalIncluded !== false ||
-    cycleReview.combinedWeightingDefined !== false ||
-    cycleReview.notificationsSeeded !== false ||
-    cycleReview.providerCalled !== false
-  ) {
-    fail(
-      "TEACHER_SUPERVISORY_RELEASED_RESULT_CYCLE_RELEASE_ANCHOR_DRIFT",
-      409,
-    );
-  }
+  const releaseVerification =
+    storedReleaseMode === DIRECT_RELEASE_MODE
+      ? verifyDirectorAuthoredDirectRelease({
+          cycle,
+          record,
+          evidence,
+          release,
+        })
+      : verifyReviewedDirectorRelease({
+          cycle,
+          record,
+          evidence,
+          release,
+        });
 
   await verifyCorrectionLineage({
     database,
@@ -1873,8 +2266,9 @@ export async function readTeacherSupervisoryReleasedResult(
     },
     release: {
       proofSchemaVersion: 1,
-      releaseProofHash: expectedReleaseProofHash,
-      reviewStage: releaseReview.stage,
+      releaseMode: releaseVerification.releaseMode,
+      releaseProofHash: releaseVerification.releaseProofHash,
+      reviewStage: releaseVerification.reviewStage,
       integrityVerified: true,
     },
     assessment: {
@@ -1904,8 +2298,13 @@ export async function readTeacherSupervisoryReleasedResult(
       finalizedAssessmentEvidenceVerified: true,
       assessmentHashVerified: true,
       observationContextHashVerified: true,
-      reviewEvidenceHashVerified: true,
-      reviewChainHashVerified: true,
+      releaseModeVerified: true,
+      reviewEvidenceHashVerified:
+        releaseVerification.reviewEvidenceHashVerified,
+      reviewChainHashVerified:
+        releaseVerification.reviewChainHashVerified,
+      directReleaseAuthorityVerified:
+        releaseVerification.directReleaseAuthorityVerified,
       decisionContractHashVerified: true,
       releaseRequestHashVerified: true,
       releaseEvidenceHashVerified: true,
