@@ -464,7 +464,7 @@ function assertCycleContract(
   });
 }
 
-function reviewEvidenceHash(input: {
+export function computeTeacherSupervisoryReviewEvidenceHash(input: {
   evidence: TeacherSupervisoryFinalizedAssessmentEvidence;
   reviewerUserId: string;
   reviewerAssignmentId: string;
@@ -867,7 +867,7 @@ async function runAdmission(
         now,
       });
 
-      const evidenceHash = reviewEvidenceHash({
+      const evidenceHash = computeTeacherSupervisoryReviewEvidenceHash({
         evidence,
         reviewerUserId: actorUserId,
         reviewerAssignmentId: reviewerAssignment.id,
