@@ -181,6 +181,37 @@ export type FinalizeTeacherSupervisoryAssessmentResult = {
   progress: TeacherSupervisoryProgress;
 };
 
+export type TeacherSupervisoryFinalizedAssessmentEvidence = {
+  assessmentId: string;
+  cycleId: string;
+  revision: number;
+  assessorUserId: string;
+  assessorAssignmentId: string;
+  assessorRole: string;
+  assessorScopeLevel: string;
+  targetUserId: string;
+  targetTenantId: string;
+  targetCircuitZoneId: string;
+  targetDistrictZoneId: string;
+  instrumentVersionId: string;
+  instrumentCode: string;
+  instrumentVersion: number;
+  instrumentContentHash: string;
+  dateObserved: string;
+  observationContextSchemaVersion: 1 | 2;
+  observationContextHash: string;
+  assessmentHash: string;
+  finalizedAt: string;
+  sectionPercentages: Record<string, number | null>;
+  overallPercentage: number | null;
+  answeredItems: number;
+  notApplicableItems: number;
+  generalCommentIncludedInHash: true;
+  separateFromLegacyTeacherAppraisal: true;
+  combinedWeightingDefined: false;
+  providerCalled: false;
+};
+
 type InstrumentItemRecord = {
   id: string;
   key: string;
@@ -1316,6 +1347,81 @@ function verifyFinalizedAssessment(
   }
 
   return calculated.value;
+}
+
+export async function verifyTeacherSupervisoryFinalizedAssessmentEvidence(input: {
+  assessmentId: string;
+  database?: Pick<TeacherSupervisoryScoringDatabase, "appraisalAssessment">;
+}): Promise<TeacherSupervisoryFinalizedAssessmentEvidence> {
+  const database =
+    input.database ??
+    (prisma as unknown as Pick<
+      TeacherSupervisoryScoringDatabase,
+      "appraisalAssessment"
+    >);
+  const assessmentId = requireIdentifier(input.assessmentId, "assessmentId");
+  const record = await findAssessment(database, assessmentId);
+  const sections = assertInstrumentStructure(record);
+
+  validateStoredScores(record, sections);
+  const calculated = verifyFinalizedAssessment(record, sections);
+  const context = parseObservationContext(record);
+  const observationContextHash = clean(
+    objectValue(record.metadata).observationContextHash,
+  ).toLowerCase();
+  const assessmentHash = clean(record.assessmentHash).toLowerCase();
+  const assessorAssignmentId = clean(record.assessorAssignmentId);
+  const targetTenantId = clean(record.cycle.targetTenantId);
+  const targetCircuitZoneId = clean(record.cycle.targetZoneId);
+  const instrumentContentHash = clean(
+    record.instrumentVersion.contentHash,
+  ).toLowerCase();
+
+  if (
+    !assessorAssignmentId ||
+    !targetTenantId ||
+    !targetCircuitZoneId ||
+    !record.dateObserved ||
+    !record.finalizedAt ||
+    !/^[a-f0-9]{64}$/.test(observationContextHash) ||
+    !/^[a-f0-9]{64}$/.test(assessmentHash) ||
+    !/^[a-f0-9]{64}$/.test(instrumentContentHash)
+  ) {
+    fail("TEACHER_SUPERVISORY_FINALIZED_PROOF_INCOMPLETE", 409);
+  }
+
+  return {
+    assessmentId: record.id,
+    cycleId: record.cycleId,
+    revision: record.revision,
+    assessorUserId: record.assessorUserId,
+    assessorAssignmentId,
+    assessorRole: canonicalTeacherSupervisoryAssessorRole(
+      context.assessor.role,
+    ),
+    assessorScopeLevel: normalized(context.assessor.scopeLevel),
+    targetUserId: record.cycle.targetUserId,
+    targetTenantId,
+    targetCircuitZoneId,
+    targetDistrictZoneId: record.cycle.scopeZoneId,
+    instrumentVersionId: record.instrumentVersionId,
+    instrumentCode: record.instrumentVersion.instrument.code,
+    instrumentVersion: record.instrumentVersion.version,
+    instrumentContentHash,
+    dateObserved: isoDateOnly(record.dateObserved),
+    observationContextSchemaVersion: context.schemaVersion,
+    observationContextHash,
+    assessmentHash,
+    finalizedAt: record.finalizedAt.toISOString(),
+    sectionPercentages: calculated.sectionPercentages,
+    overallPercentage: calculated.overallPercentage,
+    answeredItems: calculated.answeredItems,
+    notApplicableItems: calculated.notApplicableItems,
+    generalCommentIncludedInHash: true,
+    separateFromLegacyTeacherAppraisal: true,
+    combinedWeightingDefined: false,
+    providerCalled: false,
+  };
 }
 
 async function findAssessment(
