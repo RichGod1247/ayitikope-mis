@@ -797,8 +797,52 @@ function resolveCurrentPendingReview(input: {
     fail("TEACHER_SUPERVISORY_REVIEW_PACKAGE_REVIEW_CUSTODY_INVALID", 403);
   }
 
-  if (input.reviews.some((candidate) => candidate.stage > review.stage)) {
+  const ordered = [...input.reviews].sort(
+    (left, right) =>
+      left.stage - right.stage ||
+      left.createdAt.getTime() - right.createdAt.getTime(),
+  );
+
+  if (
+    ordered.length !== review.stage ||
+    ordered.some((candidate, index) => candidate.stage !== index + 1) ||
+    ordered[ordered.length - 1]?.id !== review.id
+  ) {
     fail("TEACHER_SUPERVISORY_REVIEW_PACKAGE_REVIEW_STAGE_DRIFT", 409);
+  }
+
+  for (const prior of ordered.slice(0, -1)) {
+    const priorMetadata = objectValue(prior.metadata);
+    if (
+      normalized(prior.decision) !== "ACCEPTED" ||
+      clean(prior.note) ||
+      !prior.decidedAt ||
+      clean(priorMetadata.workflow) !==
+        TEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.workflow ||
+      clean(priorMetadata.evidenceStream) !==
+        TEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.evidenceStream ||
+      clean(priorMetadata.decisionAction) !== "FORWARD" ||
+      clean(priorMetadata.nextReviewId) !== review.id ||
+      Number(priorMetadata.nextReviewStage) !== review.stage ||
+      clean(priorMetadata.nextReviewerRole) !== input.reviewerRole ||
+      !/^[a-f0-9]{64}$/.test(
+        clean(priorMetadata.decisionRequestHash).toLowerCase(),
+      ) ||
+      !/^[a-f0-9]{64}$/.test(
+        clean(priorMetadata.decisionContractHash).toLowerCase(),
+      ) ||
+      !/^[a-f0-9]{64}$/.test(
+        clean(priorMetadata.forwardedReviewEvidenceHash).toLowerCase(),
+      ) ||
+      clean(priorMetadata.forwardedReviewEvidenceHash).toLowerCase() !==
+        clean(objectValue(review.metadata).reviewEvidenceHash).toLowerCase()
+    ) {
+      fail(
+        "TEACHER_SUPERVISORY_REVIEW_PACKAGE_PRIOR_FORWARD_INVALID",
+        409,
+        { stage: prior.stage },
+      );
+    }
   }
 
   const chain = teacherSupervisoryReviewChainForAssessor(
