@@ -28,6 +28,10 @@ export const TEACHER_SUPERVISORY_SCORING_POLICY = {
   partialSectionSaveAllowed: true,
   commentsAllowed: true,
   editableCycleStatus: "OPEN",
+  correctionDraftCycleStatus: "UNDER_REVIEW",
+  correctionRevisionMinimum: 2,
+  correctionRevisionSchemaVersion: 1,
+  correctionRevisionMetadataRequired: true,
   expectedSectionCount: 6,
   expectedItemCount: 34,
   expectedSectionMaximums: [35, 25, 25, 30, 30, 25] as const,
@@ -210,6 +214,36 @@ export type TeacherSupervisoryFinalizedAssessmentEvidence = {
   separateFromLegacyTeacherAppraisal: true;
   combinedWeightingDefined: false;
   providerCalled: false;
+};
+
+export type TeacherSupervisorySealedAssessmentStatus =
+  | "FINALIZED"
+  | "RETURNED"
+  | "SUPERSEDED";
+
+export type TeacherSupervisorySealedAssessmentEvidence =
+  TeacherSupervisoryFinalizedAssessmentEvidence & {
+    status: TeacherSupervisorySealedAssessmentStatus;
+  };
+
+export type TeacherSupervisoryCorrectionRevisionKeyInput = {
+  cycleId: string;
+  sourceAssessmentId: string;
+  sourceAssessmentHash: string;
+  sourceObservationContextHash: string;
+  revisionNumber: number;
+  assessorUserId: string;
+  assessorAssignmentId: string;
+  returnReviewId: string;
+  returnReviewStage: number;
+  returningReviewerUserId: string;
+  returningReviewerAssignmentId: string;
+  returningReviewerRole: string;
+  returnReviewEvidenceHash: string;
+  returnDecisionRequestHash: string;
+  returnDecisionEvidenceHash: string;
+  returnReasonHash: string;
+  returnReasonLength: number;
 };
 
 type InstrumentItemRecord = {
@@ -611,6 +645,52 @@ function hashJson(value: unknown) {
     .digest("hex");
 }
 
+export function computeTeacherSupervisoryCorrectionRevisionKey(
+  input: TeacherSupervisoryCorrectionRevisionKeyInput,
+) {
+  return hashJson({
+    schemaVersion:
+      TEACHER_SUPERVISORY_SCORING_POLICY.correctionRevisionSchemaVersion,
+    workflow: TEACHER_SUPERVISORY_ASSESSMENT_POLICY.workflow,
+    evidenceStream: TEACHER_SUPERVISORY_ASSESSMENT_POLICY.evidenceStream,
+    cycleId: clean(input.cycleId),
+    sourceAssessmentId: clean(input.sourceAssessmentId),
+    sourceAssessmentHash: clean(input.sourceAssessmentHash).toLowerCase(),
+    sourceObservationContextHash: clean(
+      input.sourceObservationContextHash,
+    ).toLowerCase(),
+    revisionNumber: Number(input.revisionNumber),
+    assessorUserId: clean(input.assessorUserId),
+    assessorAssignmentId: clean(input.assessorAssignmentId),
+    returnReviewId: clean(input.returnReviewId),
+    returnReviewStage: Number(input.returnReviewStage),
+    returningReviewerUserId: clean(input.returningReviewerUserId),
+    returningReviewerAssignmentId: clean(
+      input.returningReviewerAssignmentId,
+    ),
+    returningReviewerRole: normalized(input.returningReviewerRole),
+    returnReviewEvidenceHash: clean(
+      input.returnReviewEvidenceHash,
+    ).toLowerCase(),
+    returnDecisionRequestHash: clean(
+      input.returnDecisionRequestHash,
+    ).toLowerCase(),
+    returnDecisionEvidenceHash: clean(
+      input.returnDecisionEvidenceHash,
+    ).toLowerCase(),
+    returnReasonHash: clean(input.returnReasonHash).toLowerCase(),
+    returnReasonLength: Number(input.returnReasonLength),
+    preserveObservationContext: true,
+    copyScores: true,
+    copyGeneralComment: true,
+    reviewerMayRewriteScores: false,
+    reviewerMayRewriteComment: false,
+    returnedAssessmentRequiresRevision: true,
+    separateFromLegacyTeacherAppraisal: true,
+    combinedWeightingDefined: false,
+  });
+}
+
 function normalizeGeneralComment(value: unknown) {
   if (value == null) return null;
   if (typeof value !== "string") {
@@ -624,7 +704,7 @@ function normalizeGeneralComment(value: unknown) {
   return comment;
 }
 
-function assertDraftCycleBoundary(record: AssessmentContextRecord) {
+function assertInitialDraftCycleBoundary(record: AssessmentContextRecord) {
   const cycleMetadata = objectValue(record.cycle.metadata);
   if (
     normalized(record.cycle.status) !==
@@ -653,6 +733,181 @@ function assertDraftCycleBoundary(record: AssessmentContextRecord) {
       status: normalized(record.cycle.status),
     });
   }
+}
+
+function assertCorrectionRevisionBoundary(record: AssessmentContextRecord) {
+  const metadata = objectValue(record.metadata);
+  const cycleReview = objectValue(
+    objectValue(record.cycle.metadata).teacherSupervisoryReview,
+  );
+
+  const priorAssessmentId = clean(record.priorAssessmentId);
+  const sourceAssessmentId = clean(metadata.sourceAssessmentId);
+  const sourceAssessmentHash = clean(
+    metadata.sourceAssessmentHash,
+  ).toLowerCase();
+  const sourceObservationContextHash = clean(
+    metadata.sourceObservationContextHash,
+  ).toLowerCase();
+  const observationContextHash = clean(
+    metadata.observationContextHash,
+  ).toLowerCase();
+  const revisionKey = clean(metadata.revisionKey).toLowerCase();
+  const returnReviewId = clean(metadata.returnReviewId);
+  const returnReviewStage = Number(metadata.returnReviewStage);
+  const returningReviewerUserId = clean(metadata.returningReviewerUserId);
+  const returningReviewerAssignmentId = clean(
+    metadata.returningReviewerAssignmentId,
+  );
+  const returningReviewerRole = normalized(metadata.returningReviewerRole);
+  const returnReviewEvidenceHash = clean(
+    metadata.returnReviewEvidenceHash,
+  ).toLowerCase();
+  const returnDecisionRequestHash = clean(
+    metadata.returnDecisionRequestHash,
+  ).toLowerCase();
+  const returnDecisionEvidenceHash = clean(
+    metadata.returnDecisionEvidenceHash,
+  ).toLowerCase();
+  const returnReason = clean(metadata.returnReason);
+  const returnReasonHash = clean(metadata.returnReasonHash).toLowerCase();
+  const returnReasonLength = Number(metadata.returnReasonLength);
+  const copiedScoreCount = Number(metadata.copiedScoreCount);
+  const revisionSchemaVersion = Number(metadata.revisionSchemaVersion);
+  const validHash = (value: string) => /^[a-f0-9]{64}$/.test(value);
+
+  const expectedRevisionKey =
+    computeTeacherSupervisoryCorrectionRevisionKey({
+      cycleId: record.cycleId,
+      sourceAssessmentId,
+      sourceAssessmentHash,
+      sourceObservationContextHash,
+      revisionNumber: record.revision,
+      assessorUserId: record.assessorUserId,
+      assessorAssignmentId: clean(record.assessorAssignmentId),
+      returnReviewId,
+      returnReviewStage,
+      returningReviewerUserId,
+      returningReviewerAssignmentId,
+      returningReviewerRole,
+      returnReviewEvidenceHash,
+      returnDecisionRequestHash,
+      returnDecisionEvidenceHash,
+      returnReasonHash,
+      returnReasonLength,
+    });
+
+  const valid =
+    normalized(record.status) === "DRAFT" &&
+    normalized(record.cycle.status) ===
+      TEACHER_SUPERVISORY_SCORING_POLICY.correctionDraftCycleStatus &&
+    record.revision >=
+      TEACHER_SUPERVISORY_SCORING_POLICY.correctionRevisionMinimum &&
+    Boolean(priorAssessmentId) &&
+    sourceAssessmentId === priorAssessmentId &&
+    revisionSchemaVersion ===
+      TEACHER_SUPERVISORY_SCORING_POLICY.correctionRevisionSchemaVersion &&
+    returnReason.length >= 3 &&
+    returnReason.length === returnReasonLength &&
+    hashJson(returnReason) === returnReasonHash &&
+    Boolean(returnReviewId) &&
+    Number.isInteger(returnReviewStage) &&
+    returnReviewStage >= 1 &&
+    Boolean(returningReviewerUserId) &&
+    Boolean(returningReviewerAssignmentId) &&
+    (returningReviewerRole === "HEAD_OF_SUPERVISION" ||
+      returningReviewerRole === "DISTRICT_DIRECTOR") &&
+    validHash(revisionKey) &&
+    revisionKey === expectedRevisionKey &&
+    validHash(sourceAssessmentHash) &&
+    validHash(sourceObservationContextHash) &&
+    validHash(observationContextHash) &&
+    sourceObservationContextHash === observationContextHash &&
+    validHash(returnReviewEvidenceHash) &&
+    validHash(returnDecisionRequestHash) &&
+    validHash(returnDecisionEvidenceHash) &&
+    metadata.preserveObservationContext === true &&
+    metadata.copyScores === true &&
+    metadata.copyGeneralComment === true &&
+    copiedScoreCount === TEACHER_SUPERVISORY_SCORING_POLICY.expectedItemCount &&
+    record.scores.length === copiedScoreCount &&
+    metadata.reviewerMayRewriteScores === false &&
+    metadata.reviewerMayRewriteComment === false &&
+    metadata.returnedAssessmentRequiresRevision === true &&
+    metadata.separateFromLegacyTeacherAppraisal === true &&
+    metadata.combinedWeightingDefined === false &&
+    metadata.providerCalled === false &&
+    record.overallPercentage === null &&
+    Object.keys(objectValue(record.sectionPercentagesJson)).length === 0 &&
+    record.assessmentHash === null &&
+    record.finalizedByUserId === null &&
+    record.finalizedAt === null &&
+    Boolean(record.cycle.openedAt) &&
+    Boolean(record.cycle.closedAt) &&
+    Boolean(record.cycle.reviewStartedAt) &&
+    Boolean(
+      record.cycle.reviewStartedAt &&
+        record.createdAt.getTime() >= record.cycle.reviewStartedAt.getTime(),
+    ) &&
+    record.cycle.releasedAt === null &&
+    record.cycle.cancelledAt === null &&
+    clean(cycleReview.state) === "RETURNED_FOR_CORRECTION" &&
+    cycleReview.awaitingRevision === true &&
+    clean(cycleReview.currentReviewId) === returnReviewId &&
+    Number(cycleReview.currentReviewStage) === returnReviewStage &&
+    clean(cycleReview.currentReviewerRole) === returningReviewerRole &&
+    clean(cycleReview.currentReviewerAssignmentId) ===
+      returningReviewerAssignmentId &&
+    clean(cycleReview.admittedAssessmentId) === sourceAssessmentId &&
+    clean(cycleReview.assessmentHash).toLowerCase() === sourceAssessmentHash &&
+    clean(cycleReview.observationContextHash).toLowerCase() ===
+      sourceObservationContextHash;
+
+  if (!valid) {
+    fail(
+      "TEACHER_SUPERVISORY_SCORING_CORRECTION_REVISION_INVALID",
+      409,
+      {
+        cycleId: record.cycle.id,
+        assessmentId: record.id,
+        status: normalized(record.cycle.status),
+        reason: "VERIFIED_RETURNED_REVISION_REQUIRED",
+      },
+    );
+  }
+}
+
+function assertDraftCycleBoundary(record: AssessmentContextRecord) {
+  const cycleStatus = normalized(record.cycle.status);
+
+  if (
+    cycleStatus === TEACHER_SUPERVISORY_SCORING_POLICY.editableCycleStatus
+  ) {
+    assertInitialDraftCycleBoundary(record);
+    return;
+  }
+
+  if (
+    cycleStatus ===
+    TEACHER_SUPERVISORY_SCORING_POLICY.correctionDraftCycleStatus
+  ) {
+    const metadata = objectValue(record.metadata);
+
+    if (metadata.correctionRevision !== true) {
+      fail("TEACHER_SUPERVISORY_SCORING_CYCLE_NOT_EDITABLE", 409, {
+        cycleId: record.cycle.id,
+        status: cycleStatus,
+      });
+    }
+
+    assertCorrectionRevisionBoundary(record);
+    return;
+  }
+
+  fail("TEACHER_SUPERVISORY_SCORING_CYCLE_NOT_EDITABLE", 409, {
+    cycleId: record.cycle.id,
+    status: cycleStatus,
+  });
 }
 
 function assertOwner(record: AssessmentContextRecord, actorUserId: string) {
@@ -1295,12 +1550,14 @@ function sameNumbers(
   return JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right));
 }
 
-function verifyFinalizedAssessment(
+function verifySealedAssessment(
   record: AssessmentContextRecord,
   sections: InstrumentSectionRecord[],
+  allowedStatuses: readonly TeacherSupervisorySealedAssessmentStatus[],
 ) {
+  const status = normalized(record.status) as TeacherSupervisorySealedAssessmentStatus;
   if (
-    normalized(record.status) !== "FINALIZED" ||
+    !allowedStatuses.includes(status) ||
     !record.finalizedAt ||
     record.finalizedByUserId !== record.assessorUserId ||
     !/^[a-f0-9]{64}$/i.test(clean(record.assessmentHash))
@@ -1349,6 +1606,13 @@ function verifyFinalizedAssessment(
   return calculated.value;
 }
 
+function verifyFinalizedAssessment(
+  record: AssessmentContextRecord,
+  sections: InstrumentSectionRecord[],
+) {
+  return verifySealedAssessment(record, sections, ["FINALIZED"]);
+}
+
 export async function verifyTeacherSupervisoryFinalizedAssessmentEvidence(input: {
   assessmentId: string;
   database?: Pick<TeacherSupervisoryScoringDatabase, "appraisalAssessment">;
@@ -1391,6 +1655,96 @@ export async function verifyTeacherSupervisoryFinalizedAssessmentEvidence(input:
   }
 
   return {
+    assessmentId: record.id,
+    cycleId: record.cycleId,
+    revision: record.revision,
+    assessorUserId: record.assessorUserId,
+    assessorAssignmentId,
+    assessorRole: canonicalTeacherSupervisoryAssessorRole(
+      context.assessor.role,
+    ),
+    assessorScopeLevel: normalized(context.assessor.scopeLevel),
+    targetUserId: record.cycle.targetUserId,
+    targetTenantId,
+    targetCircuitZoneId,
+    targetDistrictZoneId: record.cycle.scopeZoneId,
+    instrumentVersionId: record.instrumentVersionId,
+    instrumentCode: record.instrumentVersion.instrument.code,
+    instrumentVersion: record.instrumentVersion.version,
+    instrumentContentHash,
+    dateObserved: isoDateOnly(record.dateObserved),
+    observationContextSchemaVersion: context.schemaVersion,
+    observationContextHash,
+    assessmentHash,
+    finalizedAt: record.finalizedAt.toISOString(),
+    sectionPercentages: calculated.sectionPercentages,
+    overallPercentage: calculated.overallPercentage,
+    answeredItems: calculated.answeredItems,
+    notApplicableItems: calculated.notApplicableItems,
+    generalCommentIncludedInHash: true,
+    separateFromLegacyTeacherAppraisal: true,
+    combinedWeightingDefined: false,
+    providerCalled: false,
+  };
+}
+
+export async function verifyTeacherSupervisorySealedAssessmentEvidence(input: {
+  assessmentId: string;
+  allowedStatuses: readonly TeacherSupervisorySealedAssessmentStatus[];
+  database?: Pick<TeacherSupervisoryScoringDatabase, "appraisalAssessment">;
+}): Promise<TeacherSupervisorySealedAssessmentEvidence> {
+  const database =
+    input.database ??
+    (prisma as unknown as Pick<
+      TeacherSupervisoryScoringDatabase,
+      "appraisalAssessment"
+    >);
+  const assessmentId = requireIdentifier(input.assessmentId, "assessmentId");
+  const allowedStatuses = [...new Set(input.allowedStatuses)];
+
+  if (!allowedStatuses.length) {
+    fail("TEACHER_SUPERVISORY_SEALED_STATUS_REQUIRED", 400);
+  }
+
+  const record = await findAssessment(database, assessmentId);
+  const sections = assertInstrumentStructure(record);
+
+  validateStoredScores(record, sections);
+  const calculated = verifySealedAssessment(
+    record,
+    sections,
+    allowedStatuses,
+  );
+  const context = parseObservationContext(record);
+  const observationContextHash = clean(
+    objectValue(record.metadata).observationContextHash,
+  ).toLowerCase();
+  const assessmentHash = clean(record.assessmentHash).toLowerCase();
+  const assessorAssignmentId = clean(record.assessorAssignmentId);
+  const targetTenantId = clean(record.cycle.targetTenantId);
+  const targetCircuitZoneId = clean(record.cycle.targetZoneId);
+  const instrumentContentHash = clean(
+    record.instrumentVersion.contentHash,
+  ).toLowerCase();
+  const status = normalized(
+    record.status,
+  ) as TeacherSupervisorySealedAssessmentStatus;
+
+  if (
+    !assessorAssignmentId ||
+    !targetTenantId ||
+    !targetCircuitZoneId ||
+    !record.dateObserved ||
+    !record.finalizedAt ||
+    !/^[a-f0-9]{64}$/.test(observationContextHash) ||
+    !/^[a-f0-9]{64}$/.test(assessmentHash) ||
+    !/^[a-f0-9]{64}$/.test(instrumentContentHash)
+  ) {
+    fail("TEACHER_SUPERVISORY_SEALED_PROOF_INCOMPLETE", 409);
+  }
+
+  return {
+    status,
     assessmentId: record.id,
     cycleId: record.cycleId,
     revision: record.revision,
