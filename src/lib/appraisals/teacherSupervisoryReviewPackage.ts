@@ -14,6 +14,7 @@ import {
 } from "@/lib/appraisals/teacherSupervisoryReviewAdmission";
 import {
   verifyTeacherSupervisoryFinalizedAssessmentEvidence,
+  verifyTeacherSupervisorySealedAssessmentEvidence,
   type TeacherSupervisoryFinalizedAssessmentEvidence,
   type TeacherSupervisoryScoringDatabase,
 } from "@/lib/appraisals/teacherSupervisoryAssessmentScoring";
@@ -244,6 +245,16 @@ type PackageReviewRecord = {
   decidedAt: Date | null;
   metadata: unknown;
   createdAt: Date;
+};
+
+type PackageCorrectionContinuationProvenance = {
+  sourceAssessmentId: string;
+  sourceAssessmentHash: string;
+  sourceReviewId: string;
+  sourceReviewStage: number;
+  sourceReviewEvidenceHash: string;
+  sourceReturnDecisionRequestHash: string;
+  sourceReturnDecisionEvidenceHash: string;
 };
 
 type PackageReviewerAssignmentRecord = {
@@ -769,6 +780,106 @@ function assertAssessmentProjection(
   }
 }
 
+function parseCorrectionContinuation(
+  review: PackageReviewRecord,
+): PackageCorrectionContinuationProvenance | null {
+  const metadata = objectValue(review.metadata);
+  if (clean(metadata.reviewType) !== "CORRECTION_CONTINUATION") {
+    return null;
+  }
+
+  const sourceAssessmentId = clean(metadata.sourceAssessmentId);
+  const sourceAssessmentHash = clean(
+    metadata.sourceAssessmentHash,
+  ).toLowerCase();
+  const sourceReviewId = clean(metadata.sourceReviewId);
+  const sourceReviewStage = Number(metadata.sourceReviewStage);
+  const sourceReviewEvidenceHash = clean(
+    metadata.sourceReviewEvidenceHash,
+  ).toLowerCase();
+  const sourceReturnDecisionRequestHash = clean(
+    metadata.sourceReturnDecisionRequestHash,
+  ).toLowerCase();
+  const sourceReturnDecisionEvidenceHash = clean(
+    metadata.sourceReturnDecisionEvidenceHash,
+  ).toLowerCase();
+  const validHash = (value: string) => /^[a-f0-9]{64}$/.test(value);
+
+  if (
+    metadata.continuationFromReturnedReview !== true ||
+    metadata.preserveReturningReviewer !== true ||
+    metadata.preserveReviewStage !== true ||
+    !sourceAssessmentId ||
+    sourceAssessmentId === review.assessmentId ||
+    !validHash(sourceAssessmentHash) ||
+    !sourceReviewId ||
+    !Number.isInteger(sourceReviewStage) ||
+    sourceReviewStage < 1 ||
+    sourceReviewStage !== review.stage ||
+    !validHash(sourceReviewEvidenceHash) ||
+    !validHash(sourceReturnDecisionRequestHash) ||
+    !validHash(sourceReturnDecisionEvidenceHash)
+  ) {
+    fail(
+      "TEACHER_SUPERVISORY_REVIEW_PACKAGE_CORRECTION_CONTINUATION_INVALID",
+      409,
+    );
+  }
+
+  return {
+    sourceAssessmentId,
+    sourceAssessmentHash,
+    sourceReviewId,
+    sourceReviewStage,
+    sourceReviewEvidenceHash,
+    sourceReturnDecisionRequestHash,
+    sourceReturnDecisionEvidenceHash,
+  };
+}
+
+function assertForwardReviewLink(input: {
+  prior: PackageReviewRecord;
+  next: PackageReviewRecord;
+}) {
+  const priorMetadata = objectValue(input.prior.metadata);
+  const nextMetadata = objectValue(input.next.metadata);
+  const nextReviewerRole = clean(nextMetadata.reviewerRole);
+  const nextReviewEvidenceHash = clean(
+    nextMetadata.reviewEvidenceHash,
+  ).toLowerCase();
+
+  if (
+    normalized(input.prior.decision) !== "ACCEPTED" ||
+    clean(input.prior.note) ||
+    !input.prior.decidedAt ||
+    clean(priorMetadata.workflow) !==
+      TEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.workflow ||
+    clean(priorMetadata.evidenceStream) !==
+      TEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.evidenceStream ||
+    clean(priorMetadata.decisionAction) !== "FORWARD" ||
+    clean(priorMetadata.nextReviewId) !== input.next.id ||
+    Number(priorMetadata.nextReviewStage) !== input.next.stage ||
+    clean(priorMetadata.nextReviewerRole) !== nextReviewerRole ||
+    !/^[a-f0-9]{64}$/.test(
+      clean(priorMetadata.decisionRequestHash).toLowerCase(),
+    ) ||
+    !/^[a-f0-9]{64}$/.test(
+      clean(priorMetadata.decisionContractHash).toLowerCase(),
+    ) ||
+    !/^[a-f0-9]{64}$/.test(
+      clean(priorMetadata.forwardedReviewEvidenceHash).toLowerCase(),
+    ) ||
+    clean(priorMetadata.forwardedReviewEvidenceHash).toLowerCase() !==
+      nextReviewEvidenceHash
+  ) {
+    fail(
+      "TEACHER_SUPERVISORY_REVIEW_PACKAGE_PRIOR_FORWARD_INVALID",
+      409,
+      { stage: input.prior.stage },
+    );
+  }
+}
+
 function resolveCurrentPendingReview(input: {
   reviews: PackageReviewRecord[];
   evidence: TeacherSupervisoryFinalizedAssessmentEvidence;
@@ -797,51 +908,34 @@ function resolveCurrentPendingReview(input: {
     fail("TEACHER_SUPERVISORY_REVIEW_PACKAGE_REVIEW_CUSTODY_INVALID", 403);
   }
 
+  const correctionContinuation = parseCorrectionContinuation(review);
   const ordered = [...input.reviews].sort(
     (left, right) =>
       left.stage - right.stage ||
       left.createdAt.getTime() - right.createdAt.getTime(),
   );
 
-  if (
-    ordered.length !== review.stage ||
-    ordered.some((candidate, index) => candidate.stage !== index + 1) ||
-    ordered[ordered.length - 1]?.id !== review.id
-  ) {
-    fail("TEACHER_SUPERVISORY_REVIEW_PACKAGE_REVIEW_STAGE_DRIFT", 409);
-  }
-
-  for (const prior of ordered.slice(0, -1)) {
-    const priorMetadata = objectValue(prior.metadata);
-    if (
-      normalized(prior.decision) !== "ACCEPTED" ||
-      clean(prior.note) ||
-      !prior.decidedAt ||
-      clean(priorMetadata.workflow) !==
-        TEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.workflow ||
-      clean(priorMetadata.evidenceStream) !==
-        TEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.evidenceStream ||
-      clean(priorMetadata.decisionAction) !== "FORWARD" ||
-      clean(priorMetadata.nextReviewId) !== review.id ||
-      Number(priorMetadata.nextReviewStage) !== review.stage ||
-      clean(priorMetadata.nextReviewerRole) !== input.reviewerRole ||
-      !/^[a-f0-9]{64}$/.test(
-        clean(priorMetadata.decisionRequestHash).toLowerCase(),
-      ) ||
-      !/^[a-f0-9]{64}$/.test(
-        clean(priorMetadata.decisionContractHash).toLowerCase(),
-      ) ||
-      !/^[a-f0-9]{64}$/.test(
-        clean(priorMetadata.forwardedReviewEvidenceHash).toLowerCase(),
-      ) ||
-      clean(priorMetadata.forwardedReviewEvidenceHash).toLowerCase() !==
-        clean(objectValue(review.metadata).reviewEvidenceHash).toLowerCase()
-    ) {
+  if (correctionContinuation) {
+    if (ordered.length !== 1 || ordered[0]?.id !== review.id) {
       fail(
-        "TEACHER_SUPERVISORY_REVIEW_PACKAGE_PRIOR_FORWARD_INVALID",
+        "TEACHER_SUPERVISORY_REVIEW_PACKAGE_CORRECTION_STAGE_DRIFT",
         409,
-        { stage: prior.stage },
       );
+    }
+  } else {
+    if (
+      ordered.length !== review.stage ||
+      ordered.some((candidate, index) => candidate.stage !== index + 1) ||
+      ordered[ordered.length - 1]?.id !== review.id
+    ) {
+      fail("TEACHER_SUPERVISORY_REVIEW_PACKAGE_REVIEW_STAGE_DRIFT", 409);
+    }
+
+    for (let index = 0; index < ordered.length - 1; index += 1) {
+      assertForwardReviewLink({
+        prior: ordered[index],
+        next: ordered[index + 1],
+      });
     }
   }
 
@@ -881,7 +975,157 @@ function resolveCurrentPendingReview(input: {
     review,
     reviewerAssignmentId: clean(review.reviewerAssignmentId),
     authority,
+    correctionContinuation,
   };
+}
+
+async function assertCorrectionContinuationSource(input: {
+  database: TeacherSupervisoryReviewPackageDatabase;
+  verificationDatabase: Pick<
+    TeacherSupervisoryScoringDatabase,
+    "appraisalAssessment"
+  >;
+  currentReview: PackageReviewRecord;
+  currentEvidence: TeacherSupervisoryFinalizedAssessmentEvidence;
+  reviewerRole: TeacherSupervisoryReviewerRole;
+  provenance: PackageCorrectionContinuationProvenance;
+}) {
+  const sourceEvidence =
+    await verifyTeacherSupervisorySealedAssessmentEvidence({
+      assessmentId: input.provenance.sourceAssessmentId,
+      allowedStatuses: ["SUPERSEDED"],
+      database: input.verificationDatabase,
+    });
+
+  if (
+    sourceEvidence.cycleId !== input.currentEvidence.cycleId ||
+    sourceEvidence.assessorUserId !== input.currentEvidence.assessorUserId ||
+    sourceEvidence.assessorAssignmentId !==
+      input.currentEvidence.assessorAssignmentId ||
+    sourceEvidence.targetUserId !== input.currentEvidence.targetUserId ||
+    sourceEvidence.targetTenantId !== input.currentEvidence.targetTenantId ||
+    sourceEvidence.targetCircuitZoneId !==
+      input.currentEvidence.targetCircuitZoneId ||
+    sourceEvidence.targetDistrictZoneId !==
+      input.currentEvidence.targetDistrictZoneId ||
+    sourceEvidence.instrumentVersionId !==
+      input.currentEvidence.instrumentVersionId ||
+    sourceEvidence.assessmentHash !== input.provenance.sourceAssessmentHash ||
+    sourceEvidence.observationContextHash !==
+      input.currentEvidence.observationContextHash
+  ) {
+    fail(
+      "TEACHER_SUPERVISORY_REVIEW_PACKAGE_CORRECTION_SOURCE_DRIFT",
+      409,
+    );
+  }
+
+  const sourceReviews = await input.database.appraisalReview.findMany({
+    where: {
+      assessmentId: input.provenance.sourceAssessmentId,
+    },
+    select: {
+      id: true,
+      cycleId: true,
+      assessmentId: true,
+      reviewerUserId: true,
+      reviewerAssignmentId: true,
+      stage: true,
+      decision: true,
+      note: true,
+      decidedAt: true,
+      metadata: true,
+      createdAt: true,
+    },
+    orderBy: {
+      stage: "asc",
+    },
+  });
+
+  const sourceReview = sourceReviews.find(
+    (candidate) => candidate.id === input.provenance.sourceReviewId,
+  );
+
+  if (
+    !sourceReview ||
+    sourceReview.assessmentId !== sourceEvidence.assessmentId ||
+    sourceReview.cycleId !== sourceEvidence.cycleId ||
+    sourceReview.stage !== input.provenance.sourceReviewStage ||
+    sourceReview.reviewerUserId !== input.currentReview.reviewerUserId ||
+    clean(sourceReview.reviewerAssignmentId) !==
+      clean(input.currentReview.reviewerAssignmentId) ||
+    normalized(sourceReview.decision) !== "RETURNED" ||
+    !sourceReview.decidedAt ||
+    clean(sourceReview.note).length < 3
+  ) {
+    fail(
+      "TEACHER_SUPERVISORY_REVIEW_PACKAGE_CORRECTION_SOURCE_REVIEW_DRIFT",
+      409,
+    );
+  }
+
+  const ordered = [...sourceReviews].sort(
+    (left, right) =>
+      left.stage - right.stage ||
+      left.createdAt.getTime() - right.createdAt.getTime(),
+  );
+
+  if (
+    ordered.length !== sourceReview.stage ||
+    ordered.some((candidate, index) => candidate.stage !== index + 1) ||
+    ordered[ordered.length - 1]?.id !== sourceReview.id
+  ) {
+    fail(
+      "TEACHER_SUPERVISORY_REVIEW_PACKAGE_CORRECTION_SOURCE_STAGE_DRIFT",
+      409,
+    );
+  }
+
+  for (let index = 0; index < ordered.length - 1; index += 1) {
+    assertForwardReviewLink({
+      prior: ordered[index],
+      next: ordered[index + 1],
+    });
+  }
+
+  const sourceMetadata = objectValue(sourceReview.metadata);
+  if (
+    clean(sourceMetadata.workflow) !==
+      TEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.workflow ||
+    clean(sourceMetadata.evidenceStream) !==
+      TEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.evidenceStream ||
+    clean(sourceMetadata.decisionAction) !== "RETURN" ||
+    clean(sourceMetadata.reviewerRole) !== input.reviewerRole ||
+    clean(sourceMetadata.reviewEvidenceHash).toLowerCase() !==
+      input.provenance.sourceReviewEvidenceHash ||
+    clean(sourceMetadata.decisionRequestHash).toLowerCase() !==
+      input.provenance.sourceReturnDecisionRequestHash ||
+    clean(sourceMetadata.decisionEvidenceHash).toLowerCase() !==
+      input.provenance.sourceReturnDecisionEvidenceHash ||
+    clean(sourceMetadata.assessmentHash).toLowerCase() !==
+      input.provenance.sourceAssessmentHash ||
+    clean(sourceMetadata.observationContextHash).toLowerCase() !==
+      input.currentEvidence.observationContextHash ||
+    clean(sourceMetadata.decidedByUserId) !==
+      input.currentReview.reviewerUserId ||
+    clean(sourceMetadata.decidedByAssignmentId) !==
+      clean(input.currentReview.reviewerAssignmentId) ||
+    clean(sourceMetadata.decidedByRole) !== input.reviewerRole ||
+    sourceMetadata.revisionRequired !== true ||
+    sourceMetadata.preserveReturningReviewerForCorrection !== true ||
+    sourceMetadata.reviewerMayRewriteScores !== false ||
+    sourceMetadata.reviewerMayRewriteComment !== false ||
+    sourceMetadata.scoreMutationPerformed !== false ||
+    sourceMetadata.commentMutationPerformed !== false ||
+    sourceMetadata.legacyTeacherAppraisalIncluded !== false ||
+    sourceMetadata.combinedWeightingDefined !== false ||
+    sourceMetadata.providerCalled !== false
+  ) {
+    fail(
+      "TEACHER_SUPERVISORY_REVIEW_PACKAGE_CORRECTION_SOURCE_PROVENANCE_DRIFT",
+      409,
+    );
+  }
 }
 
 function assertReviewMetadata(input: {
@@ -1019,6 +1263,17 @@ export async function readTeacherSupervisoryReviewPackage(
     actorUserId,
     reviewerRole,
   });
+
+  if (current.correctionContinuation) {
+    await assertCorrectionContinuationSource({
+      database,
+      verificationDatabase,
+      currentReview: current.review,
+      currentEvidence: evidence,
+      reviewerRole,
+      provenance: current.correctionContinuation,
+    });
+  }
 
   const cycle = await database.appraisalCycle.findUnique({
     where: {

@@ -116,8 +116,11 @@ assert(
   source.package.includes(
     "TEACHER_SUPERVISORY_REVIEW_PACKAGE_PRIOR_FORWARD_INVALID",
   ) &&
+    source.package.includes("assertForwardReviewLink") &&
     source.package.includes('clean(priorMetadata.decisionAction) !== "FORWARD"') &&
-    source.package.includes('normalized(prior.decision) !== "ACCEPTED"'),
+    source.package.includes(
+      'normalized(input.prior.decision) !== "ACCEPTED"',
+    ),
   "Director package must validate the durable HOS forward chain",
 );
 
