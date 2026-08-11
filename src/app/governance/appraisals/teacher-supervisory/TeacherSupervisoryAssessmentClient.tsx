@@ -145,8 +145,8 @@ type TeacherAssessmentRecord = {
   assessmentId: string;
   cycleId: string;
   revision: number;
-  status: "DRAFT" | "FINALIZED";
-  state: "IN_PROGRESS" | "SUBMITTED";
+  status: "DRAFT" | "FINALIZED" | "RETURNED";
+  state: "NEEDS_CORRECTION" | "IN_PROGRESS" | "SUBMITTED";
   label: string;
   targetUserId: string;
   targetName: string | null;
@@ -162,6 +162,10 @@ type TeacherAssessmentRecord = {
   completionPercentage: number;
   overallPercentage: number | null;
   finalizedAt: string | null;
+  correction: {
+    reason: string;
+    revisionRequired: true;
+  } | null;
   workspaceUrl: string;
 };
 
@@ -170,6 +174,7 @@ type TeacherAssessmentRecords = {
   officeLabel: string;
   summary: {
     total: number;
+    needsCorrection: number;
     inProgress: number;
     submitted: number;
   };
@@ -599,6 +604,7 @@ export default function TeacherSupervisoryAssessmentClient({
     useState(false);
   const [observationOptionsError, setObservationOptionsError] = useState("");
   const [savedAssessmentsOpen, setSavedAssessmentsOpen] = useState(false);
+  const [correctionNotificationsOpen, setCorrectionNotificationsOpen] = useState(false);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [answers, setAnswers] = useState<Record<string, ScoreDraft>>({});
   const [generalComment, setGeneralComment] = useState("");
@@ -1407,6 +1413,76 @@ export default function TeacherSupervisoryAssessmentClient({
     }
   }
 
+  async function createCorrectionRevision(record: TeacherAssessmentRecord) {
+    if (
+      record.state !== "NEEDS_CORRECTION" ||
+      record.status !== "RETURNED" ||
+      !record.correction?.revisionRequired
+    ) {
+      setError("This Teacher assessment is not waiting for a correction revision.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Create correction Revision ${record.revision + 1}? Revision ${record.revision} will remain preserved and locked while a new editable revision is created.`,
+    );
+    if (!confirmed) return;
+
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const response = await fetch(
+        `/api/governance/appraisals/teacher-supervisory/${encodeURIComponent(record.assessmentId)}/revision`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ confirmRevision: true }),
+        },
+      );
+      const body = (await readApiBody(response)) as
+        | {
+            ok: true;
+            result: { outcome: "CREATED" | "EXISTING_MATCH" };
+            workspaceUrl: string;
+          }
+        | ApiFailure;
+      if (!response.ok || body.ok !== true) {
+        throw new Error(messageFromFailure(body, response.status));
+      }
+      if (
+        body.result.outcome !== "CREATED" &&
+        body.result.outcome !== "EXISTING_MATCH"
+      ) {
+        throw new Error("The correction revision response could not be verified.");
+      }
+
+      const handoff = new URL(body.workspaceUrl, window.location.origin);
+      const nextId = clean(handoff.searchParams.get("assessmentId"));
+      if (
+        handoff.origin !== window.location.origin ||
+        handoff.pathname !== "/governance/appraisals/teacher-supervisory" ||
+        !nextId
+      ) {
+        throw new Error("The correction revision workspace could not be verified.");
+      }
+
+      const safeWorkspaceUrl =
+        `/governance/appraisals/teacher-supervisory?assessmentId=${encodeURIComponent(nextId)}`;
+      clearWorkspaceForAssessmentChange();
+      setAssessmentId(nextId);
+      router.replace(safeWorkspaceUrl);
+    } catch (revisionError) {
+      setError(
+        revisionError instanceof Error
+          ? revisionError.message
+          : "The correction revision could not be created. Try again without leaving this page.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function reviewCompletedAssessment() {
     if (!workspace || !assessmentId) return;
     for (const section of workspace.sections) {
@@ -1482,6 +1558,10 @@ export default function TeacherSupervisoryAssessmentClient({
 
   if (!assessmentId) {
     const actorRole = queue?.actorRole || records?.actorRole;
+    const correctionRecords =
+      records?.items.filter((record) => record.state === "NEEDS_CORRECTION") ?? [];
+    const savedRecords =
+      records?.items.filter((record) => record.state !== "NEEDS_CORRECTION") ?? [];
     const selectedCircuit = queue?.circuits.find(
       (circuit) => circuit.circuitId === selectedCircuitId,
     );
@@ -1541,6 +1621,105 @@ export default function TeacherSupervisoryAssessmentClient({
             </div>
           ) : null}
 
+          {correctionRecords.length ? (
+            <section className="flex flex-col items-end gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  setCorrectionNotificationsOpen((open) => !open)
+                }
+                aria-expanded={correctionNotificationsOpen}
+                aria-controls="teacher-correction-notifications"
+                aria-label="Correction notifications"
+                title="Correction notifications"
+                className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-amber-200/30 bg-amber-300 text-slate-950 shadow-[0_10px_28px_rgba(251,191,36,0.18)] transition hover:bg-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-200/70"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  className="h-6 w-6"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-[#070B12] bg-rose-500 px-1 text-[10px] font-black leading-none text-white">
+                  {records?.summary.needsCorrection ?? correctionRecords.length}
+                </span>
+              </button>
+
+              {correctionNotificationsOpen ? (
+                <div
+                  id="teacher-correction-notifications"
+                  className="w-full max-w-3xl space-y-2 rounded-[22px] border border-amber-200/20 bg-[#11100B] p-3 shadow-[0_18px_55px_rgba(0,0,0,0.24)] md:p-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.14em] text-amber-200">
+                        Correction notifications
+                      </p>
+                      <p className="mt-1 text-sm text-slate-300">
+                        {correctionRecords.length === 1
+                          ? "1 returned Teacher report needs attention."
+                          : `${correctionRecords.length} returned Teacher reports need attention.`}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCorrectionNotificationsOpen(false)}
+                      className="min-h-10 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-xs font-bold text-white hover:bg-white/[0.08]"
+                    >
+                      Close
+                    </button>
+                  </div>
+
+                  {correctionRecords.map((record) => (
+                    <article
+                      key={record.assessmentId}
+                      className="rounded-2xl border border-amber-200/20 bg-amber-950/20 p-3"
+                    >
+                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <p className="font-bold text-white">
+                              {record.targetName || "Teacher"}
+                            </p>
+                            <span className="rounded-full border border-amber-200/20 bg-amber-300/10 px-2 py-0.5 text-[11px] font-bold text-amber-100">
+                              Revision {record.revision}
+                            </span>
+                          </div>
+                          <p className="mt-1 truncate text-xs text-slate-400">
+                            {record.schoolName} · {record.circuitName}
+                          </p>
+                          <div className="mt-2 rounded-xl border border-amber-200/20 bg-black/20 px-3 py-2.5">
+                            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-amber-200">
+                              Reason for correction
+                            </p>
+                            <p className="mt-1 whitespace-pre-wrap text-sm leading-5 text-amber-50">
+                              {record.correction?.reason || "A correction reason was not available."}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void createCorrectionRevision(record)}
+                          className="min-h-11 shrink-0 rounded-xl border border-amber-200/30 bg-amber-300 px-4 py-2.5 text-sm font-black text-slate-950 hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-50 md:self-end"
+                        >
+                          {busy ? "Please wait…" : "Create correction revision"}
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+
           <section className="rounded-[24px] border border-white/10 bg-white/[0.04] p-3 md:p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
@@ -1559,7 +1738,7 @@ export default function TeacherSupervisoryAssessmentClient({
               >
                 {savedAssessmentsOpen
                   ? "Hide saved assessments"
-                  : `Show saved assessments (${records?.summary.total ?? 0})`}
+                  : `Show saved assessments (${savedRecords.length})`}
               </button>
             </div>
 
@@ -1567,9 +1746,9 @@ export default function TeacherSupervisoryAssessmentClient({
               <div className="mt-3 border-t border-white/10 pt-3">
                 {recordsLoading && !records ? (
                   <p className="text-sm text-slate-300">Loading your saved assessments…</p>
-                ) : records?.items.length ? (
+                ) : savedRecords.length ? (
                   <div className="space-y-2">
-                    {records.items.map((record) => (
+                    {savedRecords.map((record) => (
                       <a
                         key={record.assessmentId}
                         href={record.workspaceUrl}
@@ -1611,7 +1790,7 @@ export default function TeacherSupervisoryAssessmentClient({
                   </p>
                 )}
                 <p className="mt-3 text-xs leading-5 text-slate-400">
-                  This list shows progress only. Individual scores, General Comments, contact details and review evidence are not loaded into the work-list response.
+                  This saved-work list shows progress only. Individual scores, General Comments, contact details and review evidence are not loaded here. Returned correction instructions appear only in the Needs correction section above.
                 </p>
               </div>
             ) : null}

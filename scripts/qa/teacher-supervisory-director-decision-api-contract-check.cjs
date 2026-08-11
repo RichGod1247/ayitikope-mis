@@ -32,7 +32,10 @@ function assert(condition, message, detail) {
 function read(relativePath) {
   const absolutePath = path.join(repoRoot, relativePath);
   if (!fs.existsSync(absolutePath)) fail("Required file missing", relativePath);
-  return fs.readFileSync(absolutePath, "utf8");
+  return fs
+    .readFileSync(absolutePath, "utf8")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n");
 }
 
 const source = Object.fromEntries(
@@ -63,6 +66,9 @@ for (const marker of [
   "reqId: meta.reqId",
   "ip: meta.ip",
   "userAgent: meta.userAgent",
+  "browserDecisionResult",
+  "outcome: result.outcome",
+  "result: browserDecisionResult(result)",
 ]) {
   assert(
     source.route.includes(marker),
@@ -136,6 +142,41 @@ for (const browserAuthorityField of [
 }
 
 assert(
+  !source.route.includes("result,\n") &&
+    !source.route.includes("result: result") &&
+    !source.route.includes("...result"),
+  "Director decision route must not return the rich internal service result",
+);
+
+for (const forbiddenResponseField of [
+  "assessmentId: result.assessmentId",
+  "assessmentRevision: result.assessmentRevision",
+  "assessmentStatus: result.assessmentStatus",
+  "cycleId: result.cycleId",
+  "cycleStatus: result.cycleStatus",
+  "sourceReviewId: result.sourceReviewId",
+  "sourceReviewStage: result.sourceReviewStage",
+  "sourceReviewDecision: result.sourceReviewDecision",
+  "reviewerRole: result.reviewerRole",
+  "assessmentHash: result.assessmentHash",
+  "observationContextHash: result.observationContextHash",
+  "sourceReviewEvidenceHash: result.sourceReviewEvidenceHash",
+  "reviewChainHash: result.reviewChainHash",
+  "decisionContractHash: result.decisionContractHash",
+  "decisionRequestHash: result.decisionRequestHash",
+  "decisionEvidenceHash: result.decisionEvidenceHash",
+  "releaseProofHash: result.releaseProofHash",
+  "decidedAt: result.decidedAt",
+  "releasedAt: result.releasedAt",
+]) {
+  assert(
+    !source.route.includes(forbiddenResponseField),
+    "Director decision browser response must exclude internal service field",
+    forbiddenResponseField,
+  );
+}
+
+assert(
   source.shared.includes("maxJsonBodyBytes: 16_384") &&
     source.shared.includes('"Cache-Control": "no-store, max-age=0"') &&
     source.shared.includes('"X-Content-Type-Options": "nosniff"') &&
@@ -182,7 +223,7 @@ assert(
 );
 
 console.log("");
-console.log("=== N6-E5C GOVERNANCE TEACHER DISTRICT DIRECTOR DECISION THIN API ===");
+console.log("=== N6-F1C4 GOVERNANCE TEACHER DISTRICT DIRECTOR DECISION THIN API ===");
 console.log("");
 console.log("Endpoint                         : review-queue/{assessmentId}/director-decision POST");
 console.log("Audience                         : District Director only");
@@ -192,7 +233,7 @@ console.log("Body                             : application/json + 16 KiB bound"
 console.log("Allowed browser fields           : action / reason / confirm only");
 console.log("Allowed actions                  : Return / Release");
 console.log("Explicit confirmation            : required");
-console.log("Return reason                    : service validates required length");
+console.log("Return reason                    : service validates 3-2000 chars");
 console.log("Release reason                   : service forbids");
 console.log("Reviewer identity                : authenticated server context");
 console.log("Reviewer assignment              : service resolved and revalidated");
@@ -203,6 +244,9 @@ console.log("Finalized evidence               : service reverified");
 console.log("Return mutation                  : service-owned SERIALIZABLE transaction");
 console.log("Release mutation                 : service-owned SERIALIZABLE transaction");
 console.log("Release proof                    : service-owned immutable hashes");
+console.log("Browser response                 : outcome only");
+console.log("Service review ids               : browser excluded");
+console.log("Service proof hashes             : browser excluded");
 console.log("Direct Prisma mutation in route  : absent");
 console.log("Scores / General Comment body    : forbidden");
 console.log("Authority/evidence hashes body   : forbidden");
@@ -211,4 +255,4 @@ console.log("Legacy TeacherAppraisal          : untouched");
 console.log("Notifications/providers          : absent");
 console.log("Database accessed                : source contract only");
 console.log("");
-console.log("RESULT: N6-E5C GOVERNANCE TEACHER DISTRICT DIRECTOR DECISION THIN API GREEN");
+console.log("RESULT: N6-F1C4 GOVERNANCE TEACHER DISTRICT DIRECTOR DECISION THIN API GREEN");

@@ -1,12 +1,10 @@
 #!/usr/bin/env node
 "use strict";
 /* eslint-disable @typescript-eslint/no-require-imports -- CommonJS source-contract QA harness. */
-
 const fs = require("fs");
 const path = require("path");
 
 const repoRoot = path.resolve(__dirname, "..", "..");
-
 const files = {
   shared: "src/app/api/governance/appraisals/teacher-supervisory/_shared.ts",
   packageRoute:
@@ -30,7 +28,10 @@ function assert(condition, message, detail) {
 function read(relativePath) {
   const absolutePath = path.join(repoRoot, relativePath);
   if (!fs.existsSync(absolutePath)) fail("Required file missing", relativePath);
-  return fs.readFileSync(absolutePath, "utf8");
+  return fs
+    .readFileSync(absolutePath, "utf8")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n");
 }
 
 const source = Object.fromEntries(
@@ -40,6 +41,7 @@ const source = Object.fromEntries(
 for (const required of [
   "executeTeacherSupervisoryHosDecision",
   "TEACHER_SUPERVISORY_HOS_DECISION_POLICY",
+  "ExecuteTeacherSupervisoryHosDecisionResult",
   "requireTeacherSupervisoryGovernanceApiContext",
   "isHosReviewer",
   "isUuidIdentifier",
@@ -56,6 +58,9 @@ for (const required of [
   "reqId: meta.reqId",
   "ip: meta.ip",
   "userAgent: meta.userAgent",
+  "browserDecisionResult",
+  "outcome: result.outcome",
+  "result: browserDecisionResult(result)",
   "jsonNoStore",
   'runtime = "nodejs"',
   'dynamic = "force-dynamic"',
@@ -74,23 +79,19 @@ assert(
   ),
   "HOS-only API audience must derive from decision policy",
 );
-
 assert(
   source.decisionService.includes('reviewerRole: "HEAD_OF_SUPERVISION"'),
   "HOS decision service reviewer role drifted",
 );
-
 assert(
   source.decisionRoute.includes("if (!isHosReviewer(auth.ctx.roleName))") &&
     source.decisionRoute.includes("return jsonNoStore(403"),
   "BSC/SISSO/Director must fail at the HOS decision API boundary",
 );
-
 assert(
   source.decisionRoute.includes("export async function POST"),
   "HOS decision POST missing",
 );
-
 for (const forbiddenMethod of [
   "export async function GET",
   "export async function PUT",
@@ -110,14 +111,12 @@ assert(
   ),
   "Decision API must reject browser-supplied authority/evidence fields",
 );
-
 assert(
   source.decisionRoute.includes(
     "TEACHER_SUPERVISORY_HOS_DECISION_POLICY.allowedActions",
   ),
   "Decision API action set must derive from policy",
 );
-
 assert(
   source.decisionRoute.includes(
     '"TEACHER_SUPERVISORY_HOS_DECISION_CONFIRMATION_REQUIRED"',
@@ -150,6 +149,60 @@ for (const browserControlledField of [
   );
 }
 
+const projectionStart = source.decisionRoute.indexOf(
+  "function browserDecisionResult(",
+);
+const projectionEnd = source.decisionRoute.indexOf(
+  "export async function POST",
+  projectionStart,
+);
+assert(
+  projectionStart >= 0 && projectionEnd > projectionStart,
+  "Browser-safe HOS decision response projection must be defined before POST",
+);
+const projectionSource = source.decisionRoute.slice(
+  projectionStart,
+  projectionEnd,
+);
+
+for (const forbiddenBrowserResponseField of [
+  "assessmentId",
+  "assessmentRevision",
+  "assessmentStatus",
+  "cycleId",
+  "cycleStatus",
+  "sourceReviewId",
+  "sourceReviewStage",
+  "sourceReviewDecision",
+  "nextReviewId",
+  "nextReviewStage",
+  "nextReviewDecision",
+  "nextReviewerRole",
+  "revisionRequired",
+  "assessmentHash",
+  "observationContextHash",
+  "sourceReviewEvidenceHash",
+  "nextReviewEvidenceHash",
+  "decisionContractHash",
+  "decisionRequestHash",
+  "decisionEvidenceHash",
+  "decidedAt",
+]) {
+  assert(
+    !projectionSource.includes(forbiddenBrowserResponseField),
+    "HOS decision browser projection exposes server-only lifecycle/integrity field",
+    forbiddenBrowserResponseField,
+  );
+}
+assert(
+  projectionSource.includes("outcome: result.outcome"),
+  "Browser projection must expose only the harmless decision outcome",
+);
+assert(
+  !source.decisionRoute.includes("result,\n    });"),
+  "Thin HOS decision route must not return the rich service result directly",
+);
+
 assert(
   source.shared.includes("maxJsonBodyBytes: 16_384") &&
     source.shared.includes('"Cache-Control": "no-store, max-age=0"') &&
@@ -160,6 +213,9 @@ assert(
 
 for (const serviceMarker of [
   'allowedActions: ["RETURN", "FORWARD"]',
+  "minimumReturnReasonLength: 3",
+  "maximumReturnReasonLength: 2_000",
+  "forwardReasonAllowed: false",
   "readTeacherSupervisoryReviewPackage",
   "verifyTeacherSupervisoryFinalizedAssessmentEvidence",
   "planTeacherSupervisoryReviewAction",
@@ -208,16 +264,15 @@ assert(
     !source.packageRoute.includes("export async function POST"),
   "Immutable package route must remain GET-only",
 );
-
 assert(
   !source.decisionService.includes(
-    "type TeacherSupervisoryReviewPackage,"
+    "type TeacherSupervisoryReviewPackage,",
   ),
   "Unused review-package type import must remain removed",
 );
 
 console.log("");
-console.log("=== N6-E3B GOVERNANCE TEACHER HOS DECISION THIN API ===");
+console.log("=== N6-F1C3A GOVERNANCE TEACHER HOS DECISION THIN API ===");
 console.log("");
 console.log("Endpoint                         : review-queue/{assessmentId}/decision POST");
 console.log("Audience                         : Head of Supervision only");
@@ -227,7 +282,8 @@ console.log("Body                             : application/json + 16 KiB bound"
 console.log("Allowed browser fields           : action / reason / confirm only");
 console.log("Allowed actions                  : Return / Forward");
 console.log("Explicit confirmation            : required");
-console.log("Return reason                    : forwarded to service; service validates");
+console.log("Return reason                    : 3-2000 chars; service validated");
+console.log("Forward reason                   : forbidden");
 console.log("Reviewer identity                : authenticated server context");
 console.log("Reviewer assignment              : server resolved by service");
 console.log("Review stage                     : server resolved by service");
@@ -236,6 +292,9 @@ console.log("Governance scope                 : authenticated scope passed to se
 console.log("Immutable package                : service re-read");
 console.log("Finalized evidence               : service reverified");
 console.log("Decision mutation                : service-owned SERIALIZABLE transaction");
+console.log("Browser response                 : outcome only");
+console.log("Service review ids               : browser excluded");
+console.log("Service proof hashes             : browser excluded");
 console.log("Direct Prisma mutation in route  : absent");
 console.log("Scores / General Comment body    : forbidden");
 console.log("Evidence hashes body             : forbidden");
@@ -244,4 +303,4 @@ console.log("Legacy TeacherAppraisal          : untouched");
 console.log("Notifications/providers          : absent");
 console.log("Database accessed                : source contract only");
 console.log("");
-console.log("RESULT: N6-E3B GOVERNANCE TEACHER HOS DECISION THIN API GREEN");
+console.log("RESULT: N6-F1C3A GOVERNANCE TEACHER HOS DECISION THIN API GREEN");

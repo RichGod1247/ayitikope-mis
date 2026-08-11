@@ -12,6 +12,10 @@ const files = {
     "src/app/governance/appraisals/teacher-supervisory/review/TeacherSupervisoryReviewClient.tsx",
   admissionRoute:
     "src/app/api/governance/appraisals/teacher-supervisory/review-queue/[assessmentId]/start/route.ts",
+  decisionRoute:
+    "src/app/api/governance/appraisals/teacher-supervisory/review-queue/[assessmentId]/decision/route.ts",
+  directorDecisionRoute:
+    "src/app/api/governance/appraisals/teacher-supervisory/review-queue/[assessmentId]/director-decision/route.ts",
 };
 
 function fail(message, detail) {
@@ -85,10 +89,35 @@ for (const requiredClientMarker of [
   "Teacher review · read-only",
   "General Comments",
   "Class Enrollment Data",
+  "HosDecisionAction",
+  "HosDecisionOutcome",
+  "hosDecisionBody",
+  "submitHosDecision",
+  "/decision",
+  '"RETURN"',
+  '"FORWARD"',
+  "Return for correction",
+  "Forward to Director",
+  "3–2,000 characters",
+  'reviewPackage.review.reviewerRole === "HEAD_OF_SUPERVISION"',
+  "result: { outcome: HosDecisionOutcome }",
+  "DirectorDecisionAction",
+  "DirectorDecisionOutcome",
+  "directorDecisionBody",
+  "directorDecisionSuccessMessage",
+  "submitDirectorDecision",
+  "/director-decision",
+  '"RELEASE"',
+  "District Director review decision",
+  "Request assessor correction",
+  "Prior completed review stages remain recorded",
+  "Release result",
+  'reviewPackage.review.reviewerRole === "DISTRICT_DIRECTOR"',
+  "result: { outcome: DirectorDecisionOutcome }",
 ]) {
   assert(
     source.client.includes(requiredClientMarker),
-    "F1C2U Teacher review workspace contract marker missing",
+    "F1C3 Teacher review workspace contract marker missing",
     requiredClientMarker,
   );
 }
@@ -109,6 +138,26 @@ assert(
   "Existing admission endpoint must remain confirmation-only with server-authenticated authority inputs",
 );
 
+assert(
+  source.decisionRoute.includes("browserDecisionResult") &&
+    source.decisionRoute.includes("outcome: result.outcome") &&
+    source.decisionRoute.includes("result: browserDecisionResult(result)") &&
+    source.decisionRoute.includes("actorUserId: auth.ctx.userId") &&
+    source.decisionRoute.includes("actorRoleName: auth.ctx.roleName") &&
+    source.decisionRoute.includes("governanceScope: auth.scope"),
+  "HOS decision API must remain server-authoritative and browser-minimized",
+);
+
+assert(
+  source.directorDecisionRoute.includes("browserDecisionResult") &&
+    source.directorDecisionRoute.includes("outcome: result.outcome") &&
+    source.directorDecisionRoute.includes("result: browserDecisionResult(result)") &&
+    source.directorDecisionRoute.includes("actorUserId: auth.ctx.userId") &&
+    source.directorDecisionRoute.includes("actorRoleName: auth.ctx.roleName") &&
+    source.directorDecisionRoute.includes("governanceScope: auth.scope"),
+  "Director decision API must remain server-authoritative and browser-minimized",
+);
+
 for (const forbiddenAdmissionBodyField of [
   "reviewerUserId",
   "reviewerAssignmentId",
@@ -126,20 +175,56 @@ for (const forbiddenAdmissionBodyField of [
   );
 }
 
+const hosDecisionBodyStart = source.client.indexOf("function hosDecisionBody(");
+const hosDecisionBodyEnd = source.client.indexOf(
+  "function hosDecisionSuccessMessage(",
+  hosDecisionBodyStart,
+);
+assert(
+  hosDecisionBodyStart >= 0 && hosDecisionBodyEnd > hosDecisionBodyStart,
+  "HOS decision browser-body helper must be isolated",
+);
+const hosDecisionBodySource = source.client.slice(
+  hosDecisionBodyStart,
+  hosDecisionBodyEnd,
+);
+for (const requiredDecisionBodyField of ["action", "reason", "confirm"]) {
+  assert(
+    hosDecisionBodySource.includes(requiredDecisionBodyField),
+    "HOS decision body field missing",
+    requiredDecisionBodyField,
+  );
+}
+for (const forbiddenDecisionBodyField of [
+  "reviewerUserId",
+  "reviewerAssignmentId",
+  "reviewStage",
+  "cycleId",
+  "assessmentHash",
+  "observationContextHash",
+  "reviewEvidenceHash",
+  "decisionRequestHash",
+  "decisionContractHash",
+  "decisionEvidenceHash",
+  "nextReviewId",
+  "nextReviewerRole",
+  "scores",
+  "generalComment",
+]) {
+  assert(
+    !hosDecisionBodySource.includes(forbiddenDecisionBodyField),
+    "HOS decision browser body contains authority/evidence field",
+    forbiddenDecisionBodyField,
+  );
+}
+
 for (const forbiddenLaterAction of [
-  "/decision",
-  "/director-decision",
   "/direct-release",
-  '"RETURN"',
-  '"FORWARD"',
-  '"RELEASE"',
-  "Return for correction",
-  "Forward to Director",
-  "Release result",
+  "Release my finalized assessment",
 ]) {
   assert(
     !source.client.includes(forbiddenLaterAction),
-    "F1C2U must not wire later review/release powers",
+    "F1C4 must not wire Director-authored direct release",
     forbiddenLaterAction,
   );
 }
@@ -307,12 +392,125 @@ assert(
   "Read-only official assessment structure must remain visible in the native form",
 );
 
+const textareaCount = (source.client.match(/<textarea/g) || []).length;
 assert(
   !source.client.includes("<input") &&
-    !source.client.includes("<textarea") &&
-    !source.client.includes("<select"),
-  "F1C2U review package must not expose editable assessment controls",
+    !source.client.includes("<select") &&
+    textareaCount === 2 &&
+    source.client.includes("value={returnReason}") &&
+    source.client.includes("maxLength={2000}"),
+  "F1C4 may expose only the mutually exclusive bounded HOS/Director correction-reason textareas; assessment controls must remain read-only",
 );
+assert(
+  !source.client.includes("value={assessment.generalComment}") &&
+    !source.client.includes("setGeneralComment") &&
+    !source.client.includes("chooseItemScore"),
+  "Reviewer UI must not make scores or General Comment editable",
+);
+
+const nativeResultIndex = source.client.indexOf(
+  "Overall Teacher appraisal result",
+);
+const hosDecisionPanelIndex = source.client.indexOf("HOS review decision");
+const directorDecisionPanelIndex = source.client.indexOf(
+  "District Director review decision",
+);
+assert(
+  nativeResultIndex >= 0 &&
+    hosDecisionPanelIndex > nativeResultIndex &&
+    directorDecisionPanelIndex > nativeResultIndex,
+  "HOS and Director decision controls must sit outside and after the native official Teacher form",
+);
+
+for (const hosDecisionMarker of [
+  'currentPackage.review.reviewerRole !== "HEAD_OF_SUPERVISION"',
+  'action === "RETURN"',
+  "normalizedReason.length < 3",
+  "normalizedReason.length > 2000",
+  "JSON.stringify(hosDecisionBody(action, normalizedReason))",
+  'submitHosDecision("RETURN")',
+  'submitHosDecision("FORWARD")',
+  'decisionBusy === "RETURN"',
+  'decisionBusy === "FORWARD"',
+  "setReviewPackage(null)",
+  'setSelectedAssessmentId("")',
+  "await loadQueue()",
+]) {
+  assert(
+    source.client.includes(hosDecisionMarker),
+    "HOS decision workspace behavior marker missing",
+    hosDecisionMarker,
+  );
+}
+
+for (const directorDecisionMarker of [
+  'currentPackage.review.reviewerRole !== "DISTRICT_DIRECTOR"',
+  "JSON.stringify(",
+  "directorDecisionBody(action, normalizedReason)",
+  'submitDirectorDecision("RETURN")',
+  'submitDirectorDecision("RELEASE")',
+  'decisionBusy === "RELEASE"',
+  "Request a correction from the original assessor?",
+  "Prior completed review stages remain recorded.",
+  "Release this locked Teacher appraisal result?",
+  "Releasing does not send this reason.",
+  "Correction requested from the original assessor.",
+  "Teacher appraisal released successfully.",
+  "setReviewPackage(null)",
+  'setSelectedAssessmentId("")',
+  "await loadQueue()",
+]) {
+  assert(
+    source.client.includes(directorDecisionMarker),
+    "Director decision workspace behavior marker missing",
+    directorDecisionMarker,
+  );
+}
+
+const directorDecisionBodyStart = source.client.indexOf(
+  "function directorDecisionBody(",
+);
+const directorDecisionBodyEnd = source.client.indexOf(
+  "function directorDecisionSuccessMessage(",
+  directorDecisionBodyStart,
+);
+assert(
+  directorDecisionBodyStart >= 0 &&
+    directorDecisionBodyEnd > directorDecisionBodyStart,
+  "Director decision browser-body helper must be isolated",
+);
+const directorDecisionBodySource = source.client.slice(
+  directorDecisionBodyStart,
+  directorDecisionBodyEnd,
+);
+for (const requiredDecisionBodyField of ["action", "reason", "confirm"]) {
+  assert(
+    directorDecisionBodySource.includes(requiredDecisionBodyField),
+    "Director decision body field missing",
+    requiredDecisionBodyField,
+  );
+}
+for (const forbiddenDecisionBodyField of [
+  "reviewerUserId",
+  "reviewerAssignmentId",
+  "reviewStage",
+  "cycleId",
+  "assessmentHash",
+  "observationContextHash",
+  "reviewEvidenceHash",
+  "decisionRequestHash",
+  "decisionContractHash",
+  "decisionEvidenceHash",
+  "releaseProofHash",
+  "scores",
+  "generalComment",
+]) {
+  assert(
+    !directorDecisionBodySource.includes(forbiddenDecisionBodyField),
+    "Director decision browser body contains authority/evidence field",
+    forbiddenDecisionBodyField,
+  );
+}
 
 assert(
   source.client.includes('item.state === "READY_TO_REVIEW"') &&
@@ -328,7 +526,7 @@ assert(
 );
 
 console.log("");
-console.log("=== N6-F1C2U GOVERNANCE TEACHER REVIEW WORKSPACE UX ===");
+console.log("=== N6-F1C4 GOVERNANCE TEACHER DIRECTOR RETURN / RELEASE UI ===");
 console.log("");
 console.log("Page                             : separate Teacher review workspace");
 console.log("Audience                         : HOS / District Director only");
@@ -355,14 +553,19 @@ console.log("STARTED                          : supported");
 console.log("EXISTING_REVIEW                  : idempotent retry supported");
 console.log("READY_TO_REVIEW                  : durable reopen preserved");
 console.log("READY_TO_RELEASE                 : mutation still deferred");
-console.log("HOS Return / Forward             : absent");
-console.log("Director Return / Release        : absent");
+console.log("HOS Return / Forward             : preserved outside native form");
+console.log("Return reason                    : 3-2000 chars, bounded");
+console.log("Forward reason                   : omitted");
+console.log("Director release reason          : omitted");
+console.log("Decision responses               : outcome only");
+console.log("Director correction / Release    : wired outside native form");
 console.log("Director direct release          : absent");
 console.log("Score / General Comment editing  : absent");
+console.log("Correction reason textarea       : role-gated HOS / Director input");
 console.log("Authority/proof browser fields   : absent");
 console.log("Background polling               : absent");
 console.log("Persistent browser storage       : absent");
 console.log("Legacy TeacherAppraisal          : untouched");
 console.log("Database accessed                : source contract only");
 console.log("");
-console.log("RESULT: N6-F1C2U GOVERNANCE TEACHER REVIEW WORKSPACE UX GREEN");
+console.log("RESULT: N6-F1C4 GOVERNANCE TEACHER DIRECTOR RETURN / RELEASE UI GREEN");

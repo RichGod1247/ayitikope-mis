@@ -33,6 +33,16 @@ function bodyContainsOnlyAllowedFields(body: Record<string, unknown>) {
   return Object.keys(body).every((key) => ALLOWED_BODY_FIELDS.has(key));
 }
 
+function browserDecisionResult(
+  result: Awaited<
+    ReturnType<typeof executeTeacherSupervisoryDirectorDecision>
+  >,
+) {
+  return {
+    outcome: result.outcome,
+  } as const;
+}
+
 export async function POST(req: NextRequest, context: RouteContext) {
   const meta = requestMeta(req);
 
@@ -123,7 +133,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     return jsonNoStore(200, {
       ok: true,
       reqId: meta.reqId,
-      result,
+      result: browserDecisionResult(result),
     });
   } catch (error) {
     return teacherSupervisoryApiError({

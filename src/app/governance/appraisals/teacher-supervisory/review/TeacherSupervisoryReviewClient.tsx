@@ -123,6 +123,23 @@ type BrowserReviewPackage = {
   readOnly: true;
 };
 
+type HosDecisionAction = "RETURN" | "FORWARD";
+
+type HosDecisionOutcome =
+  | "RETURNED"
+  | "FORWARDED"
+  | "EXISTING_RETURNED"
+  | "EXISTING_FORWARDED";
+
+
+type DirectorDecisionAction = "RETURN" | "RELEASE";
+
+type DirectorDecisionOutcome =
+  | "RETURNED"
+  | "RELEASED"
+  | "EXISTING_RETURNED"
+  | "EXISTING_RELEASED";
+
 type ApiFailure = {
   ok?: false;
   error?: string;
@@ -273,6 +290,33 @@ function sectionApplicableMaximum(section: ReviewPackageSection) {
   );
 }
 
+function hosDecisionBody(action: HosDecisionAction, reason: string) {
+  if (action === "RETURN") {
+    return { action, reason, confirm: true as const };
+  }
+  return { action, confirm: true as const };
+}
+
+function hosDecisionSuccessMessage(outcome: HosDecisionOutcome) {
+  return outcome === "RETURNED" || outcome === "EXISTING_RETURNED"
+    ? "Teacher appraisal returned for correction. The original assessor must create a new revision before review continues."
+    : "Teacher appraisal forwarded to the District Director for review.";
+}
+
+
+function directorDecisionBody(action: DirectorDecisionAction, reason: string) {
+  if (action === "RETURN") {
+    return { action, reason, confirm: true as const };
+  }
+  return { action, confirm: true as const };
+}
+
+function directorDecisionSuccessMessage(outcome: DirectorDecisionOutcome) {
+  return outcome === "RETURNED" || outcome === "EXISTING_RETURNED"
+    ? "Correction requested from the original assessor. Prior completed review stages remain recorded; Director review will resume after the corrected revision is finalized."
+    : "Teacher appraisal released successfully. The locked result is now available through the released-result workflow.";
+}
+
 export default function TeacherSupervisoryReviewClient({
   initialAssessmentId,
 }: ClientProps) {
@@ -289,6 +333,10 @@ export default function TeacherSupervisoryReviewClient({
   const [startReviewBusyId, setStartReviewBusyId] = useState("");
   const [actionError, setActionError] = useState("");
   const [actionNotice, setActionNotice] = useState("");
+  const [returnReason, setReturnReason] = useState("");
+  const [decisionBusy, setDecisionBusy] = useState<
+    HosDecisionAction | DirectorDecisionAction | ""
+  >("");
 
   const loadQueue = useCallback(async () => {
     setQueueLoading(true);
@@ -421,6 +469,172 @@ export default function TeacherSupervisoryReviewClient({
     [loadQueue, loadReviewPackage],
   );
 
+  const submitHosDecision = useCallback(
+    async (action: HosDecisionAction) => {
+      const currentPackage = reviewPackage;
+      if (!currentPackage) return;
+
+      if (currentPackage.review.reviewerRole !== "HEAD_OF_SUPERVISION") {
+        setActionError(
+          "These review actions are available only to the Head of Supervision.",
+        );
+        return;
+      }
+
+      const normalizedReason = returnReason.trim();
+      if (action === "RETURN") {
+        if (normalizedReason.length < 3) {
+          setActionError(
+            "Enter a correction reason of at least 3 characters before returning this report.",
+          );
+          return;
+        }
+        if (normalizedReason.length > 2000) {
+          setActionError(
+            "The correction reason is too long. Keep it within 2,000 characters.",
+          );
+          return;
+        }
+      }
+
+      const confirmed = window.confirm(
+        action === "RETURN"
+          ? "Return this Teacher appraisal for correction? A new revision will be required, while the current scores and observation evidence remain locked."
+          : "Forward this locked Teacher appraisal to the District Director for review?",
+      );
+      if (!confirmed) return;
+
+      setDecisionBusy(action);
+      setActionError("");
+      setActionNotice("");
+      setPackageError("");
+
+      try {
+        const response = await fetch(
+          `/api/governance/appraisals/teacher-supervisory/review-queue/${encodeURIComponent(
+            currentPackage.assessment.id,
+          )}/decision`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(hosDecisionBody(action, normalizedReason)),
+          },
+        );
+
+        const body = (await readApiBody(response)) as
+          | {
+              ok: true;
+              result: { outcome: HosDecisionOutcome };
+            }
+          | ApiFailure;
+
+        if (!response.ok || body.ok !== true) {
+          throw new Error(messageFromFailure(body, response.status));
+        }
+
+        const notice = hosDecisionSuccessMessage(body.result.outcome);
+        setReviewPackage(null);
+        setSelectedAssessmentId("");
+        setReturnReason("");
+        setActionNotice(notice);
+        await loadQueue();
+      } catch (decisionError) {
+        setActionError(
+          decisionError instanceof Error
+            ? decisionError.message
+            : "The review decision could not be completed. Keep this report open and try again.",
+        );
+      } finally {
+        setDecisionBusy("");
+      }
+    },
+    [loadQueue, returnReason, reviewPackage],
+  );
+
+  const submitDirectorDecision = useCallback(
+    async (action: DirectorDecisionAction) => {
+      const currentPackage = reviewPackage;
+      if (!currentPackage) return;
+
+      if (currentPackage.review.reviewerRole !== "DISTRICT_DIRECTOR") {
+        setActionError(
+          "These review actions are available only to the District Director.",
+        );
+        return;
+      }
+
+      const normalizedReason = returnReason.trim();
+      if (action === "RETURN") {
+        if (normalizedReason.length < 3) {
+          setActionError(
+            "Enter a correction reason of at least 3 characters before returning this report.",
+          );
+          return;
+        }
+        if (normalizedReason.length > 2000) {
+          setActionError(
+            "The correction reason is too long. Keep it within 2,000 characters.",
+          );
+          return;
+        }
+      }
+
+      const confirmed = window.confirm(
+        action === "RETURN"
+          ? "Request a correction from the original assessor? Prior completed review stages remain recorded. A new assessor revision will be required, while the locked scores and observation evidence remain preserved."
+          : "Release this locked Teacher appraisal result? This completes the District Director review and makes the released result available through the protected result workflow.",
+      );
+      if (!confirmed) return;
+
+      setDecisionBusy(action);
+      setActionError("");
+      setActionNotice("");
+      setPackageError("");
+
+      try {
+        const response = await fetch(
+          `/api/governance/appraisals/teacher-supervisory/review-queue/${encodeURIComponent(
+            currentPackage.assessment.id,
+          )}/director-decision`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(
+              directorDecisionBody(action, normalizedReason),
+            ),
+          },
+        );
+
+        const body = (await readApiBody(response)) as
+          | {
+              ok: true;
+              result: { outcome: DirectorDecisionOutcome };
+            }
+          | ApiFailure;
+
+        if (!response.ok || body.ok !== true) {
+          throw new Error(messageFromFailure(body, response.status));
+        }
+
+        const notice = directorDecisionSuccessMessage(body.result.outcome);
+        setReviewPackage(null);
+        setSelectedAssessmentId("");
+        setReturnReason("");
+        setActionNotice(notice);
+        await loadQueue();
+      } catch (decisionError) {
+        setActionError(
+          decisionError instanceof Error
+            ? decisionError.message
+            : "The Director review decision could not be completed. Keep this report open and try again.",
+        );
+      } finally {
+        setDecisionBusy("");
+      }
+    },
+    [loadQueue, returnReason, reviewPackage],
+  );
+
   useEffect(() => {
     void loadQueue();
   }, [loadQueue]);
@@ -484,6 +698,8 @@ export default function TeacherSupervisoryReviewClient({
     setReviewPackage(null);
     setPackageError("");
     setSelectedAssessmentId("");
+    setReturnReason("");
+    setActionError("");
   }
 
   function renderWorkCard(item: ReviewWorkItem) {
@@ -589,16 +805,17 @@ export default function TeacherSupervisoryReviewClient({
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
+                  disabled={Boolean(decisionBusy)}
                   onClick={closePackage}
-                  className="min-h-12 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm font-bold text-white hover:bg-white/[0.09]"
+                  className="min-h-12 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm font-bold text-white hover:bg-white/[0.09] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   ← Back to work list
                 </button>
                 <button
                   type="button"
-                  disabled={packageLoading}
+                  disabled={packageLoading || Boolean(decisionBusy)}
                   onClick={() => void loadReviewPackage(assessment.id)}
-                  className="min-h-12 rounded-2xl border border-cyan-300/25 bg-cyan-400/15 px-4 text-sm font-bold text-cyan-50 hover:bg-cyan-400/20 disabled:opacity-50"
+                  className="min-h-12 rounded-2xl border border-cyan-300/25 bg-cyan-400/15 px-4 text-sm font-bold text-cyan-50 hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {packageLoading ? "Refreshing…" : "Refresh report"}
                 </button>
@@ -609,6 +826,11 @@ export default function TeacherSupervisoryReviewClient({
           {packageError ? (
             <div className="rounded-2xl border border-rose-300/25 bg-rose-500/10 p-4 text-sm text-rose-100">
               {packageError}
+            </div>
+          ) : null}
+          {actionError ? (
+            <div className="rounded-2xl border border-rose-300/25 bg-rose-500/10 p-4 text-sm text-rose-100">
+              {actionError}
             </div>
           ) : null}
 
@@ -815,6 +1037,160 @@ export default function TeacherSupervisoryReviewClient({
               </footer>
             </div>
           </section>
+
+          {reviewPackage.review.reviewerRole === "HEAD_OF_SUPERVISION" ? (
+            <section className="rounded-[28px] border border-amber-300/20 bg-amber-400/[0.07] p-4 md:p-5">
+              <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-[#E8C96A]">
+                    HOS review decision
+                  </p>
+                  <h2 className="mt-1 text-xl font-black text-white">
+                    Choose what happens next
+                  </h2>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
+                    The assessment itself stays locked. Return it when the
+                    assessor must correct the scores, or forward the unchanged
+                    report to the District Director for the next review stage.
+                  </p>
+                </div>
+                <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-bold text-slate-200">
+                  Scores remain read-only
+                </span>
+              </div>
+
+              <label className="mt-5 block text-sm font-bold text-slate-100">
+                Reason for correction
+                <span className="ml-2 text-xs font-semibold text-slate-400">
+                  Required only when returning · 3–2,000 characters
+                </span>
+                <textarea
+                  value={returnReason}
+                  maxLength={2000}
+                  disabled={Boolean(decisionBusy)}
+                  onChange={(event) => {
+                    setReturnReason(event.target.value);
+                    setActionError("");
+                  }}
+                  rows={4}
+                  placeholder="State clearly what the original assessor must correct."
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-[#0B1220] p-4 text-base leading-7 text-white outline-none focus:border-amber-300/50 disabled:opacity-50"
+                />
+              </label>
+              <div className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-400">
+                <span>Forwarding does not send this reason.</span>
+                <span className="font-bold">
+                  {returnReason.trim().length}/2000
+                </span>
+              </div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  disabled={
+                    Boolean(decisionBusy) ||
+                    returnReason.trim().length < 3 ||
+                    returnReason.trim().length > 2000
+                  }
+                  onClick={() => void submitHosDecision("RETURN")}
+                  className="min-h-14 rounded-2xl border border-rose-300/25 bg-rose-500/15 px-5 text-base font-black text-rose-50 hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {decisionBusy === "RETURN"
+                    ? "Returning report…"
+                    : "Return for correction"}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={Boolean(decisionBusy)}
+                  onClick={() => void submitHosDecision("FORWARD")}
+                  className="min-h-14 rounded-2xl border border-emerald-300/25 bg-emerald-400/15 px-5 text-base font-black text-emerald-50 hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {decisionBusy === "FORWARD"
+                    ? "Forwarding report…"
+                    : "Forward to Director"}
+                </button>
+              </div>
+            </section>
+          ) : null}
+
+          {reviewPackage.review.reviewerRole === "DISTRICT_DIRECTOR" ? (
+            <section className="rounded-[28px] border border-cyan-300/20 bg-cyan-400/[0.07] p-4 md:p-5">
+              <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-cyan-200">
+                    District Director review decision
+                  </p>
+                  <h2 className="mt-1 text-xl font-black text-white">
+                    Choose the final review action
+                  </h2>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
+                    The assessment stays locked. Request an assessor correction
+                    only when the original assessor must amend the report before
+                    final release. Prior completed review stages remain recorded.
+                    Otherwise, release the unchanged result as the District
+                    Director&apos;s final decision.
+                  </p>
+                </div>
+                <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-bold text-slate-200">
+                  Scores remain read-only
+                </span>
+              </div>
+
+              <label className="mt-5 block text-sm font-bold text-slate-100">
+                Reason for correction
+                <span className="ml-2 text-xs font-semibold text-slate-400">
+                  Required only when returning · 3–2,000 characters
+                </span>
+                <textarea
+                  value={returnReason}
+                  maxLength={2000}
+                  disabled={Boolean(decisionBusy)}
+                  onChange={(event) => {
+                    setReturnReason(event.target.value);
+                    setActionError("");
+                  }}
+                  rows={4}
+                  placeholder="State clearly what the original assessor must correct."
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-[#0B1220] p-4 text-base leading-7 text-white outline-none focus:border-cyan-300/50 disabled:opacity-50"
+                />
+              </label>
+              <div className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-400">
+                <span>Releasing does not send this reason.</span>
+                <span className="font-bold">
+                  {returnReason.trim().length}/2000
+                </span>
+              </div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  disabled={
+                    Boolean(decisionBusy) ||
+                    returnReason.trim().length < 3 ||
+                    returnReason.trim().length > 2000
+                  }
+                  onClick={() => void submitDirectorDecision("RETURN")}
+                  className="min-h-14 rounded-2xl border border-rose-300/25 bg-rose-500/15 px-5 text-base font-black text-rose-50 hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {decisionBusy === "RETURN"
+                    ? "Requesting correction…"
+                    : "Request assessor correction"}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={Boolean(decisionBusy)}
+                  onClick={() => void submitDirectorDecision("RELEASE")}
+                  className="min-h-14 rounded-2xl border border-emerald-300/25 bg-emerald-400/15 px-5 text-base font-black text-emerald-50 hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {decisionBusy === "RELEASE"
+                    ? "Releasing result…"
+                    : "Release result"}
+                </button>
+              </div>
+            </section>
+          ) : null}
 
           <p className="text-xs leading-5 text-slate-400">
             This review form is read-only. No score, General Comment,

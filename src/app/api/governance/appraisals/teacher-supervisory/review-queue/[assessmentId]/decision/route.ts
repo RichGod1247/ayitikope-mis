@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import {
   executeTeacherSupervisoryHosDecision,
   TEACHER_SUPERVISORY_HOS_DECISION_POLICY,
+  type ExecuteTeacherSupervisoryHosDecisionResult,
 } from "@/lib/appraisals/teacherSupervisoryHosReviewDecision";
 import {
   clean,
@@ -38,6 +39,14 @@ function isHosReviewer(value: unknown) {
 
 function bodyContainsOnlyAllowedFields(body: Record<string, unknown>) {
   return Object.keys(body).every((key) => ALLOWED_BODY_FIELDS.has(key));
+}
+
+function browserDecisionResult(
+  result: ExecuteTeacherSupervisoryHosDecisionResult,
+) {
+  return {
+    outcome: result.outcome,
+  };
 }
 
 export async function POST(req: NextRequest, context: RouteContext) {
@@ -135,7 +144,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     return jsonNoStore(200, {
       ok: true,
       reqId: meta.reqId,
-      result,
+      result: browserDecisionResult(result),
     });
   } catch (error) {
     return teacherSupervisoryApiError({

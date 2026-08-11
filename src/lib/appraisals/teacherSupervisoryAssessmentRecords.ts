@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
 import {
   TEACHER_SUPERVISORY_ASSESSMENT_POLICY,
@@ -12,7 +13,10 @@ export const TEACHER_SUPERVISORY_RECORDS_POLICY = {
   instrumentCode: TEACHER_SUPERVISORY_ASSESSMENT_POLICY.instrumentCode,
   instrumentVersion: TEACHER_SUPERVISORY_ASSESSMENT_POLICY.instrumentVersion,
   targetRole: TEACHER_SUPERVISORY_ASSESSMENT_POLICY.targetRole,
-  visibleStatuses: ["DRAFT", "FINALIZED"] as const,
+  visibleStatuses: ["DRAFT", "FINALIZED", "RETURNED"] as const,
+  returnedCorrectionIncluded: true,
+  returnedCorrectionReasonIncluded: true,
+  reviewerIdentityReturned: false,
   actorAssessmentOnly: true,
   currentGovernanceScopeRequired: true,
   progressOnly: true,
@@ -31,6 +35,7 @@ type TeacherSupervisoryRecordStatus =
   (typeof TEACHER_SUPERVISORY_RECORDS_POLICY.visibleStatuses)[number];
 
 export type TeacherSupervisoryAssessmentRecordState =
+  | "NEEDS_CORRECTION"
   | "IN_PROGRESS"
   | "SUBMITTED";
 
@@ -55,6 +60,10 @@ export type TeacherSupervisoryAssessmentRecord = {
   completionPercentage: number;
   overallPercentage: number | null;
   finalizedAt: string | null;
+  correction: {
+    reason: string;
+    revisionRequired: true;
+  } | null;
   workspaceUrl: string;
 };
 
@@ -63,6 +72,7 @@ export type TeacherSupervisoryAssessmentRecords = {
   officeLabel: string;
   summary: {
     total: number;
+    needsCorrection: number;
     inProgress: number;
     submitted: number;
   };
@@ -85,6 +95,19 @@ type ReadTeacherSupervisoryAssessmentRecordsInput = {
   database?: TeacherSupervisoryAssessmentRecordsDatabase;
 };
 
+type ReviewRecord = {
+  id: string;
+  assessmentId: string;
+  cycleId: string;
+  stage: number;
+  decision: string;
+  note: string | null;
+  decidedAt: Date | null;
+  reviewerUserId: string;
+  reviewerAssignmentId: string | null;
+  metadata: unknown;
+};
+
 type AssessmentRecord = {
   id: string;
   cycleId: string;
@@ -101,6 +124,7 @@ type AssessmentRecord = {
   _count: {
     scores: number;
   };
+  reviews: ReviewRecord[];
   cycle: {
     id: string;
     status: string;
@@ -148,6 +172,71 @@ function normalized(value: unknown) {
 function objectValue(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
+}
+
+function stableValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, nested]) => [key, stableValue(nested)]),
+  );
+}
+
+function hashJson(value: unknown) {
+  return createHash("sha256")
+    .update(JSON.stringify(stableValue(value)), "utf8")
+    .digest("hex");
+}
+
+function returnedCorrection(record: AssessmentRecord) {
+  const returnedReviews = record.reviews.filter((review) => {
+    const metadata = objectValue(review.metadata);
+    return (
+      normalized(review.decision) === "RETURNED" &&
+      clean(metadata.decisionAction) === "RETURN"
+    );
+  });
+
+  if (returnedReviews.length !== 1) return null;
+
+  const review = returnedReviews[0];
+  const reviewMetadata = objectValue(review.metadata);
+  const returnMetadata = objectValue(
+    objectValue(record.metadata).teacherSupervisoryReturn,
+  );
+  const reason = clean(review.note);
+  const reasonHash = hashJson(reason);
+  const reviewerRole = normalized(reviewMetadata.decidedByRole);
+
+  if (
+    review.assessmentId !== record.id ||
+    review.cycleId !== record.cycleId ||
+    !review.decidedAt ||
+    reason.length < 3 ||
+    Number(reviewMetadata.reasonLength) !== reason.length ||
+    clean(reviewMetadata.reasonHash).toLowerCase() !== reasonHash ||
+    reviewMetadata.revisionRequired !== true ||
+    (reviewerRole !== "HEAD_OF_SUPERVISION" &&
+      reviewerRole !== "DISTRICT_DIRECTOR") ||
+    clean(returnMetadata.sourceReviewId) !== review.id ||
+    Number(returnMetadata.sourceReviewStage) !== review.stage ||
+    clean(returnMetadata.returningReviewerUserId) !== review.reviewerUserId ||
+    clean(returnMetadata.returningReviewerAssignmentId) !==
+      clean(review.reviewerAssignmentId) ||
+    normalized(returnMetadata.returningReviewerRole) !== reviewerRole ||
+    clean(returnMetadata.reasonHash).toLowerCase() !== reasonHash ||
+    Number(returnMetadata.reasonLength) !== reason.length ||
+    returnMetadata.preserveReturningReviewerForCorrection !== true
+  ) {
+    return null;
+  }
+
+  return {
+    reason,
+    revisionRequired: true as const,
+  };
 }
 
 function isoDateOnly(value: Date | null) {
@@ -258,16 +347,26 @@ function safeRecord(
     ),
   );
   const finalized = status === "FINALIZED";
+  const returned = status === "RETURNED";
+  if (returned && normalized(record.cycle.status) !== "UNDER_REVIEW") return null;
+  const correction = returned ? returnedCorrection(record) : null;
+  if (returned && !correction) return null;
 
   return {
     assessmentId: record.id,
     cycleId: record.cycleId,
     revision: record.revision,
     status,
-    state: finalized ? "SUBMITTED" : "IN_PROGRESS",
-    label: finalized
-      ? "Submitted and locked"
-      : `Continue assessment - ${answeredItems} of ${TEACHER_SUPERVISORY_ASSESSMENT_POLICY.expectedItemCount} indicators saved`,
+    state: returned
+      ? "NEEDS_CORRECTION"
+      : finalized
+        ? "SUBMITTED"
+        : "IN_PROGRESS",
+    label: returned
+      ? `Returned for correction - Revision ${record.revision}`
+      : finalized
+        ? "Submitted and locked"
+        : `Continue assessment - ${answeredItems} of ${TEACHER_SUPERVISORY_ASSESSMENT_POLICY.expectedItemCount} indicators saved`,
     targetUserId: record.cycle.targetUserId,
     targetName: clean(record.cycle.targetNameSnapshot) || null,
     schoolId: clean(record.cycle.targetTenantId),
@@ -281,7 +380,8 @@ function safeRecord(
     totalItems: TEACHER_SUPERVISORY_ASSESSMENT_POLICY.expectedItemCount,
     completionPercentage: completionPercentage(answeredItems),
     overallPercentage: finalized ? record.overallPercentage : null,
-    finalizedAt: finalized ? isoDateTime(record.finalizedAt) : null,
+    finalizedAt: finalized || returned ? isoDateTime(record.finalizedAt) : null,
+    correction,
     workspaceUrl:
       `/governance/appraisals/teacher-supervisory?assessmentId=${encodeURIComponent(
         record.id,
@@ -295,6 +395,7 @@ function emptyRecords(actorRole: string): TeacherSupervisoryAssessmentRecords {
     officeLabel: officeLabel(actorRole),
     summary: {
       total: 0,
+      needsCorrection: 0,
       inProgress: 0,
       submitted: 0,
     },
@@ -377,6 +478,21 @@ export async function readTeacherSupervisoryAssessmentRecords(
           scores: true,
         },
       },
+      reviews: {
+        orderBy: [{ stage: "asc" }, { createdAt: "asc" }],
+        select: {
+          id: true,
+          assessmentId: true,
+          cycleId: true,
+          stage: true,
+          decision: true,
+          note: true,
+          decidedAt: true,
+          reviewerUserId: true,
+          reviewerAssignmentId: true,
+          metadata: true,
+        },
+      },
       cycle: {
         select: {
           id: true,
@@ -439,8 +555,9 @@ export async function readTeacherSupervisoryAssessmentRecords(
     );
 
   const priority: Record<TeacherSupervisoryAssessmentRecordState, number> = {
-    IN_PROGRESS: 0,
-    SUBMITTED: 1,
+    NEEDS_CORRECTION: 0,
+    IN_PROGRESS: 1,
+    SUBMITTED: 2,
   };
 
   items.sort((left, right) => {
@@ -459,6 +576,9 @@ export async function readTeacherSupervisoryAssessmentRecords(
   const result = emptyRecords(actorRole);
   result.items = items;
   result.summary.total = items.length;
+  result.summary.needsCorrection = items.filter(
+    (item) => item.state === "NEEDS_CORRECTION",
+  ).length;
   result.summary.inProgress = items.filter(
     (item) => item.state === "IN_PROGRESS",
   ).length;

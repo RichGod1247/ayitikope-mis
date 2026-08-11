@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 "use strict";
+
 /* eslint-disable @typescript-eslint/no-require-imports -- CommonJS source-contract QA harness. */
 
 const fs = require("fs");
@@ -70,7 +71,6 @@ assert(
   source.revisionRoute.includes("export async function POST"),
   "Teacher revision POST missing",
 );
-
 for (const forbiddenMethod of [
   "export async function GET",
   "export async function PUT",
@@ -90,21 +90,18 @@ assert(
   ),
   "Revision API must reject browser-supplied provenance/evidence fields",
 );
-
 assert(
   source.revisionRoute.includes(
     '"TEACHER_SUPERVISORY_REVISION_CONFIRMATION_REQUIRED"',
   ),
   "Explicit revision confirmation must be required",
 );
-
 assert(
   source.revisionRoute.includes(
     'result.outcome === "CREATED" ? 201 : 200',
   ),
   "Revision API CREATED/idempotent status mapping missing",
 );
-
 assert(
   source.revisionRoute.includes(
     "/governance/appraisals/teacher-supervisory?assessmentId=",
@@ -140,6 +137,40 @@ for (const browserControlledField of [
     browserControlledField,
   );
 }
+
+assert(
+  source.revisionRoute.includes("result: {") &&
+    source.revisionRoute.includes("outcome: result.outcome"),
+  "Revision browser response must explicitly project outcome only",
+);
+assert(
+  !source.revisionRoute.includes("\n      result,\n"),
+  "Revision API must not return the rich internal service result",
+);
+for (const forbiddenResponseProjection of [
+  "originalAssessmentId: result.originalAssessmentId",
+  "originalStatus: result.originalStatus",
+  "returnReason: result.returnReason",
+  "revision: result.revision",
+  "returnReviewId: result",
+  "returnReviewEvidenceHash: result",
+  "returnDecisionRequestHash: result",
+  "returnDecisionEvidenceHash: result",
+  "revisionKey: result",
+  "sourceAssessmentHash: result",
+  "observationContextHash: result",
+  "assessorAssignmentId: result",
+]) {
+  assert(
+    !source.revisionRoute.includes(forbiddenResponseProjection),
+    "Revision API exposes internal service result field",
+    forbiddenResponseProjection,
+  );
+}
+assert(
+  source.revisionRoute.includes("result.revision.id"),
+  "Revision API must use the server-created revision id only to build the workspace handoff",
+);
 
 assert(
   source.shared.includes("maxJsonBodyBytes: 16_384") &&
@@ -210,7 +241,7 @@ for (const forbidden of [
 }
 
 console.log("");
-console.log("=== N6-E4B GOVERNANCE TEACHER ORIGINAL-ASSESSOR REVISION THIN API ===");
+console.log("=== N6-F1C3C GOVERNANCE TEACHER ORIGINAL-ASSESSOR REVISION THIN API ===");
 console.log("");
 console.log("Endpoint                         : teacher-supervisory/{assessmentId}/revision POST");
 console.log("Audience                         : governance assessor auth boundary");
@@ -230,6 +261,8 @@ console.log("New revision                     : service-owned DRAFT revision + 1
 console.log("Correction cycle                 : UNDER_REVIEW unchanged");
 console.log("CREATED response                 : 201");
 console.log("EXISTING_MATCH retry             : 200");
+console.log("Browser response                 : outcome + workspaceUrl only");
+console.log("Internal revision result         : browser excluded");
 console.log("Workspace handoff                : returned revision assessment URL");
 console.log("Direct Prisma mutation in route  : absent");
 console.log("Authority/evidence body fields   : forbidden");
@@ -238,4 +271,4 @@ console.log("Legacy TeacherAppraisal          : untouched");
 console.log("Notifications/providers          : absent");
 console.log("Database accessed                : source contract only");
 console.log("");
-console.log("RESULT: N6-E4B GOVERNANCE TEACHER REVISION THIN API GREEN");
+console.log("RESULT: N6-F1C3C GOVERNANCE TEACHER REVISION THIN API GREEN");

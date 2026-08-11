@@ -130,12 +130,41 @@ assert(client.includes("/comment`"), "Teacher comment endpoint missing");
 assert(client.includes("/finalize`"), "Teacher finalize endpoint missing");
 assert(client.includes("confirmFinalization: true"), "Explicit finalization confirmation body missing");
 assert(client.includes("window.confirm"), "Irreversible finalization confirmation missing");
-assert(!client.includes("/revision"), "Teacher revision UI must remain absent before N6-E");
-assert(!client.includes("createRevision"), "Teacher correction revision control must remain absent before N6-E");
+assert(client.includes("NEEDS_CORRECTION"), "Returned correction work state missing");
+assert(client.includes("Correction notifications"), "BBC correction notification control missing");
+assert(client.includes("Reason for correction"), "Correction reason presentation missing");
+assert(client.includes("createCorrectionRevision"), "Correction revision action missing");
+assert(client.includes("/revision`"), "Teacher correction revision endpoint missing");
+assert(client.includes("confirmRevision: true"), "Explicit correction revision confirmation body missing");
+assert(client.includes('result: { outcome: "CREATED" | "EXISTING_MATCH" }'), "Correction revision idempotent outcome contract missing");
+assert(client.includes("body.workspaceUrl"), "Server workspace handoff missing");
+assert(client.includes("record.correction?.reason"), "Original-assessor correction reason missing");
+assert(client.includes("records?.summary.needsCorrection"), "Correction notification count missing");
+assert(client.includes("correctionNotificationsOpen"), "Ephemeral correction notification state missing");
+assert(client.includes("aria-expanded={correctionNotificationsOpen}"), "Correction notification disclosure contract missing");
+assert(client.includes('aria-label="Correction notifications"'), "Correction notification accessibility label missing");
+assert(!client.includes("Revision {record.revision} remains preserved and locked. The correction button creates a new editable revision with the sealed scores and General Comment copied forward."), "Verbose correction guidance must remain removed");
 assert(!client.includes("headteacher-supervisory"), "Teacher UI must not call Headteacher supervisory APIs");
 assert(!client.includes("staffFeedback"), "Teacher UI must not include confidential Headteacher staff feedback");
 assert(!client.includes("Director’s review queue"), "Premature Director review wording must remain absent");
 assert(!client.includes("Director's review queue"), "Premature Director review wording must remain absent");
+for (const forbiddenCorrectionField of [
+  "reviewerUserId",
+  "reviewerAssignmentId",
+  "returnReviewId",
+  "returnReviewEvidenceHash",
+  "returnDecisionRequestHash",
+  "returnDecisionEvidenceHash",
+  "revisionKey",
+  "sourceAssessmentHash",
+  "observationContextHash",
+]) {
+  assert(
+    !client.includes(forbiddenCorrectionField),
+    `Correction UI must not receive internal authority/proof field: ${forbiddenCorrectionField}`,
+  );
+}
+
 
 assert(client.includes("6-section, 34-indicator"), "Official Teacher form count wording missing");
 assert(client.includes("General Comments"), "General Comments control missing");
@@ -164,7 +193,7 @@ for (const route of [
 }
 
 console.log("");
-console.log("=== N6-D4C1 GOVERNANCE TEACHER BBC-FRIENDLY NATIVE FORM ===");
+console.log("=== N6-F1C3C GOVERNANCE TEACHER BBC-FRIENDLY CORRECTION HANDOFF ===");
 console.log("");
 console.log("Audience                        : SISSO / BSC / HOS / Director");
 console.log("Selection                       : circuit → school → Teacher");
@@ -185,12 +214,16 @@ console.log("Incomplete overall result       : suppressed until 34/34");
 console.log("Mobile progress/navigation      : present");
 console.log("Native final review             : full Teacher paper-form copy");
 console.log("Finalization                    : explicit confirmation + lock");
-console.log("Returned revision controls      : absent until N6-E");
-console.log("Director review controls        : absent until N6-E");
+console.log("Returned correction discovery  : compact notification badge + count");
+console.log("Correction disclosure          : click-to-open, React state only");
+console.log("Correction reason              : compact card; no reviewer identity");
+console.log("Correction revision            : explicit confirmation + server handoff");
+console.log("Prior revision                 : preserved server-side; verbose copy removed");
+console.log("Director review controls       : absent from assessor workspace");
 console.log("Headteacher staff feedback      : absent");
 console.log("Persistent browser storage      : absent");
 console.log("Background polling              : absent");
 console.log("Provider calls                  : absent");
 console.log("Database accessed               : false");
 console.log("");
-console.log("RESULT: N6-D4C1 GOVERNANCE TEACHER BBC-FRIENDLY NATIVE FORM GREEN");
+console.log("RESULT: N6-F1C3C GOVERNANCE TEACHER BBC-FRIENDLY CORRECTION HANDOFF GREEN");

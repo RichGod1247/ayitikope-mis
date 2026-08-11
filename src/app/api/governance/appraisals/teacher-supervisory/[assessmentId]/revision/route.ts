@@ -98,7 +98,9 @@ export async function POST(req: NextRequest, context: RouteContext) {
     return jsonNoStore(result.outcome === "CREATED" ? 201 : 200, {
       ok: true,
       reqId: meta.reqId,
-      result,
+      result: {
+        outcome: result.outcome,
+      },
       workspaceUrl:
         `/governance/appraisals/teacher-supervisory?assessmentId=${encodeURIComponent(result.revision.id)}`,
     });
