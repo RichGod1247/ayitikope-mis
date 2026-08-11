@@ -56,10 +56,6 @@ export default function GovernanceAppraisalHubClient({
   districtLabel,
 }: Props) {
   const [appraisalsOpen, setAppraisalsOpen] = useState(false);
-  const reviewDescription =
-    role === "HEAD_OF_SUPERVISION"
-      ? "Review SISSO and Basic School Coordinator submissions after the staged review contract is verified."
-      : "Review permitted Headteacher and Teacher reports inside the basic-school mandate after the staged review contract is verified.";
 
   return (
     <main
@@ -153,24 +149,34 @@ export default function GovernanceAppraisalHubClient({
                   the official six-section, 34-indicator observation form.
                 </p>
 
-                <Link
-                  href="/governance/appraisals/teacher-supervisory"
-                  className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-3 text-center text-sm font-black text-[#071A3D] transition hover:brightness-105"
-                >
-                  Assess Teacher
-                </Link>
-
                 <div
-                  aria-disabled="true"
-                  className="mt-3 rounded-2xl border border-white/10 bg-black/20 px-3 py-3"
+                  className={`mt-4 grid gap-3 ${
+                    role === "HEAD_OF_SUPERVISION" ? "sm:grid-cols-2" : ""
+                  }`}
                 >
-                  <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
-                    Review reports · next phase
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-slate-300">
-                    {reviewDescription}
-                  </p>
+                  <Link
+                    href="/governance/appraisals/teacher-supervisory"
+                    className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-3 text-center text-sm font-black text-[#071A3D] transition hover:brightness-105"
+                  >
+                    Assess Teacher
+                  </Link>
+
+                  {role === "HEAD_OF_SUPERVISION" ? (
+                    <Link
+                      href="/governance/appraisals/teacher-supervisory/review"
+                      className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl border border-sky-300/30 bg-sky-400/15 px-4 py-3 text-center text-sm font-black text-sky-50 transition hover:bg-sky-400/25"
+                    >
+                      Review Teacher
+                    </Link>
+                  ) : null}
                 </div>
+
+                {role === "HEAD_OF_SUPERVISION" ? (
+                  <p className="mt-3 text-xs leading-5 text-sky-100/75">
+                    Review finalized SISSO and Basic School Coordinator Teacher
+                    reports assigned to the Head of Supervision.
+                  </p>
+                ) : null}
               </article>
 
               <article className="rounded-3xl border border-indigo-300/25 bg-indigo-400/10 p-4">
@@ -206,7 +212,8 @@ export default function GovernanceAppraisalHubClient({
                     Review reports · next phase
                   </p>
                   <p className="mt-1 text-xs leading-5 text-slate-300">
-                    {reviewDescription}
+                    Headteacher report review stays locked until its exact
+                    authorized queue is grounded for this dashboard.
                   </p>
                 </div>
               </article>

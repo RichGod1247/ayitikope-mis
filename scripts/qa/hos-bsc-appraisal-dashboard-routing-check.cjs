@@ -122,7 +122,7 @@ requireMarkers(files.bscPage, [
   'roleLabel="Basic School Coordinator"',
 ]);
 
-requireMarkers(files.hub, [
+const hubSource = requireMarkers(files.hub, [
   'data-appraisal-dashboard-role={role}',
   'className="text-sm font-bold uppercase tracking-[0.2em] text-[#E8C96A]"',
   "EduLife OS · Governance Dashboard",
@@ -133,15 +133,35 @@ requireMarkers(files.hub, [
   'href="/governance/appraisals/teacher-supervisory"',
   "Assess Teacher",
   "official six-section, 34-indicator observation form.",
+  'role === "HEAD_OF_SUPERVISION"',
+  'href="/governance/appraisals/teacher-supervisory/review"',
+  "Review Teacher",
+  "Review finalized SISSO and Basic School Coordinator Teacher",
   'href="/governance/appraisals/headteacher-supervisory"',
   "Assess Headteacher",
   "Assessment active",
-  "Review reports · next phase",
+  "Headteacher report review stays locked until its exact",
   "Not yet active",
   "District Director remains the ultimate district review and release authority.",
   "no background polling",
   "no persistent browser storage",
 ]);
+
+assert(
+  hubSource.includes(
+    '{role === "HEAD_OF_SUPERVISION" ? (\n                    <Link',
+  ) &&
+    hubSource.includes(
+      'href="/governance/appraisals/teacher-supervisory/review"',
+    ),
+  "N6_F1C6A_HOS_TEACHER_REVIEW_ENTRY_MUST_BE_ROLE_GATED",
+);
+
+assert(
+  !hubSource.includes('role === "BASIC_SCHOOL_COORDINATOR" ? (\n                    <Link') &&
+    !hubSource.includes("BSC Review Teacher"),
+  "N6_F1C6A_BSC_TEACHER_REVIEW_ENTRY_MUST_REMAIN_ABSENT",
+);
 
 forbidMarkers(files.hub, [
   "Assess Teachers and review authorized finalized reports when the governance assessor and staged-review transactions are completed.",
@@ -389,7 +409,7 @@ try {
 }
 
 console.log("");
-console.log("=== N6-D4C3A HOS/BSC APPRAISAL HUB TEACHER ACTIVATION ===");
+console.log("=== N6-F1C6A HOS/BSC TEACHER APPRAISAL DASHBOARD INTEGRATION ===");
 console.log("");
 console.log("HOS default destination       : /district/hos/dashboard");
 console.log("BSC default destination       : /district/bsc/dashboard");
@@ -398,8 +418,11 @@ console.log("Dashboard role gates          : exact role + district assignment");
 console.log("Director command dashboard    : HOS/BSC excluded");
 console.log("Teacher assessment            : active governance workspace");
 console.log("Teacher assessment route      : /governance/appraisals/teacher-supervisory");
-console.log("Teacher report review         : deferred to staged review phase");
+console.log("HOS Teacher review            : active shared review workspace");
+console.log("HOS Teacher review route      : /governance/appraisals/teacher-supervisory/review");
+console.log("BSC Teacher review            : absent");
 console.log("Headteacher assessment        : existing supervisory workspace");
+console.log("Headteacher review            : still locked pending exact queue grounding");
 console.log("Governance My Appraisal       : visible, truthfully locked");
 console.log("Director review/release       : Director-only");
 console.log("Anonymous Teacher forms       : absent from HOS/BSC hub");
@@ -407,4 +430,4 @@ console.log("Background polling/storage    : absent");
 console.log("Schema/database mutation      : absent");
 console.log("Database accessed             : false");
 console.log("");
-console.log("RESULT: N6-D4C3A HOS/BSC TEACHER APPRAISAL HUB ENTRY GREEN");
+console.log("RESULT: N6-F1C6A HOS/BSC TEACHER APPRAISAL DASHBOARD INTEGRATION GREEN");
