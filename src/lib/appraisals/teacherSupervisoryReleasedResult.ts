@@ -55,6 +55,7 @@ export const TEACHER_SUPERVISORY_RELEASED_RESULT_POLICY = {
   legacyTeacherAppraisalIncluded: false,
   combinedWeightingDefined: false,
   correctionLineageVerified: true,
+  releaseProofHashVerified: true,
   scoreMutationAllowed: false,
   readOnly: true,
   databaseWritesAllowed: false,
@@ -62,6 +63,10 @@ export const TEACHER_SUPERVISORY_RELEASED_RESULT_POLICY = {
   databaseReadMode: "SEQUENTIAL",
   notificationsSeeded: false,
   providerCallsAllowed: false,
+  releaseProofHashIncluded: false,
+  releaseModeIncluded: false,
+  reviewStageIncluded: false,
+  internalIntegrityDetailsIncluded: false,
 } as const;
 
 const RELEASE_METADATA_KEY = "teacherSupervisoryRelease";
@@ -113,12 +118,6 @@ export type TeacherSupervisoryReleasedResult = {
     releasedAt: string;
   };
   release: {
-    proofSchemaVersion: 1;
-    releaseMode:
-      | "REVIEWED_DIRECTOR_RELEASE"
-      | "DIRECTOR_AUTHORED_DIRECT_RELEASE";
-    releaseProofHash: string;
-    reviewStage: number | null;
     integrityVerified: true;
   };
   assessment: {
@@ -158,28 +157,6 @@ export type TeacherSupervisoryReleasedResult = {
     rawEvidenceSnapshotIncluded: false;
     rawMetadataIncluded: false;
     contactDetailsIncluded: false;
-  };
-  integrity: {
-    finalizedAssessmentEvidenceVerified: true;
-    assessmentHashVerified: true;
-    observationContextHashVerified: true;
-    releaseModeVerified: true;
-    reviewEvidenceHashVerified: true | null;
-    reviewChainHashVerified: true | null;
-    directReleaseAuthorityVerified: true | null;
-    decisionContractHashVerified: true;
-    releaseRequestHashVerified: true;
-    releaseEvidenceHashVerified: true;
-    releaseProofHashVerified: true;
-    cycleReviewReleaseAnchorsVerified: true;
-    correctionLineageVerified: true;
-    officialFormProjectionVerified: true;
-    generalCommentIncludedInAssessmentHash: true;
-    reviewerMayRewriteScores: false;
-    reviewerMayRewriteComment: false;
-    legacyTeacherAppraisalIncluded: false;
-    combinedWeightingDefined: false;
-    scoreMutationAllowed: false;
   };
 };
 
@@ -2219,20 +2196,21 @@ export async function readTeacherSupervisoryReleasedResult(
     );
   }
 
-  const releaseVerification =
-    storedReleaseMode === DIRECT_RELEASE_MODE
-      ? verifyDirectorAuthoredDirectRelease({
-          cycle,
-          record,
-          evidence,
-          release,
-        })
-      : verifyReviewedDirectorRelease({
-          cycle,
-          record,
-          evidence,
-          release,
-        });
+  if (storedReleaseMode === DIRECT_RELEASE_MODE) {
+    verifyDirectorAuthoredDirectRelease({
+      cycle,
+      record,
+      evidence,
+      release,
+    });
+  } else {
+    verifyReviewedDirectorRelease({
+      cycle,
+      record,
+      evidence,
+      release,
+    });
+  }
 
   await verifyCorrectionLineage({
     database,
@@ -2265,10 +2243,6 @@ export async function readTeacherSupervisoryReleasedResult(
       releasedAt: cycle.releasedAt.toISOString(),
     },
     release: {
-      proofSchemaVersion: 1,
-      releaseMode: releaseVerification.releaseMode,
-      releaseProofHash: releaseVerification.releaseProofHash,
-      reviewStage: releaseVerification.reviewStage,
       integrityVerified: true,
     },
     assessment: {
@@ -2293,31 +2267,6 @@ export async function readTeacherSupervisoryReleasedResult(
       rawEvidenceSnapshotIncluded: false,
       rawMetadataIncluded: false,
       contactDetailsIncluded: false,
-    },
-    integrity: {
-      finalizedAssessmentEvidenceVerified: true,
-      assessmentHashVerified: true,
-      observationContextHashVerified: true,
-      releaseModeVerified: true,
-      reviewEvidenceHashVerified:
-        releaseVerification.reviewEvidenceHashVerified,
-      reviewChainHashVerified:
-        releaseVerification.reviewChainHashVerified,
-      directReleaseAuthorityVerified:
-        releaseVerification.directReleaseAuthorityVerified,
-      decisionContractHashVerified: true,
-      releaseRequestHashVerified: true,
-      releaseEvidenceHashVerified: true,
-      releaseProofHashVerified: true,
-      cycleReviewReleaseAnchorsVerified: true,
-      correctionLineageVerified: true,
-      officialFormProjectionVerified: true,
-      generalCommentIncludedInAssessmentHash: true,
-      reviewerMayRewriteScores: false,
-      reviewerMayRewriteComment: false,
-      legacyTeacherAppraisalIncluded: false,
-      combinedWeightingDefined: false,
-      scoreMutationAllowed: false,
     },
   };
 }

@@ -86,6 +86,99 @@ type GroupedScoreSection = {
 type ListResponse = { ok: true; items: AppraisalSummary[] } | { ok: false; error: string };
 type DetailResponse = { ok: true; item: AppraisalDetail } | { ok: false; error: string };
 
+type GovernanceReleasedSummary = {
+  cycleId: string;
+  teacherName: string;
+  schoolName: string;
+  circuitName: string;
+  districtName: string;
+  dateObserved: string;
+  releasedAt: string;
+  assessorOffice: string;
+  overallPercentage: number | null;
+};
+
+type GovernanceReleasedResult = {
+  schemaVersion: 1;
+  audience: "RELEASED_TEACHER";
+  lifecycleState: "RELEASED";
+  cycle: {
+    id: string;
+    teacherName: string;
+    schoolName: string;
+    circuitName: string;
+    districtName: string;
+    releasedAt: string;
+  };
+  release: {
+    integrityVerified: true;
+  };
+  assessment: {
+    revision: number;
+    dateObserved: string;
+    finalizedAt: string;
+    assessorOffice: string;
+    instrumentCode: string;
+    instrumentVersion: number;
+    overallPercentage: number | null;
+    sectionPercentages: Record<string, number | null>;
+    generalComment: string | null;
+    sections: Array<{
+      sectionKey: string;
+      sectionTitle: string;
+      sectionDescription: string | null;
+      sectionOrder: number;
+      sectionMaxScore: number;
+      percentage: number | null;
+      items: Array<{
+        itemKey: string;
+        itemLabel: string;
+        itemOrder: number;
+        itemMaxScore: number;
+        score: number | null;
+        notApplicable: boolean;
+      }>;
+    }>;
+  };
+  observation: {
+    contextSchemaVersion: 1 | 2;
+    teacherName: string;
+    schoolName: string;
+    circuitName: string;
+    districtName: string;
+    dateObserved: string;
+    yearsInService: number | null;
+    yearsInPresentSchool: number | null;
+    subjectBeingObserved: string | null;
+    subStrand: string | null;
+    classTaught: string | null;
+    durationMinutes: number | null;
+    totalEnrolment: number | null;
+    girls: number | null;
+    boys: number | null;
+    teacherAssignmentVerified: boolean;
+    curriculumSelectionVerified: boolean;
+  };
+  privacy: {
+    assessorIdentityIncluded: false;
+    reviewerIdentityIncluded: false;
+    reviewerAssignmentIncluded: false;
+    reviewNotesIncluded: false;
+    returnReasonsIncluded: false;
+    rawEvidenceSnapshotIncluded: false;
+    rawMetadataIncluded: false;
+    contactDetailsIncluded: false;
+  };
+};
+
+type GovernanceReleasedListResponse =
+  | { ok: true; items: GovernanceReleasedSummary[] }
+  | { ok: false; error: string };
+
+type GovernanceReleasedDetailResponse =
+  | { ok: true; result: GovernanceReleasedResult }
+  | { ok: false; error: string };
+
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
@@ -123,6 +216,11 @@ function fmtDateTime(v: string | null) {
 function pct(v: number | null | undefined) {
   return typeof v === "number" && Number.isFinite(v) ? `${v.toFixed(1)}%` : "—";
 }
+
+function governancePct(v: number | null | undefined) {
+  return typeof v === "number" && Number.isFinite(v) ? `${v.toFixed(2)}%` : "—";
+}
+
 
 function scoreText(row: ScoreRow) {
   if (row.notApplicable) return "N/A";
@@ -383,7 +481,7 @@ function TeacherOfficialAppraisalForm({
                 </div>
 
                 <div className="hidden overflow-x-auto md:block">
-                  <table className="w-full min-w-[780px] border-collapse text-left text-xs">
+                  <table className="w-full min-w-[720px] border-collapse text-left text-[11px] sm:text-xs">
                     <thead>
                       <tr className="bg-slate-100">
                         <th className="w-[52px] border border-slate-300 px-2 py-2">
@@ -578,6 +676,473 @@ function TeacherOfficialAppraisalForm({
   );
 }
 
+
+function governanceScoreText(
+  item: GovernanceReleasedResult["assessment"]["sections"][number]["items"][number],
+) {
+  if (item.notApplicable) return "N/A";
+  return typeof item.score === "number" ? String(item.score) : "—";
+}
+
+function governanceSelectedChoice(
+  item: GovernanceReleasedResult["assessment"]["sections"][number]["items"][number],
+  value: number | "N/A",
+) {
+  if (value === "N/A") return item.notApplicable;
+  return !item.notApplicable && item.score === value;
+}
+
+function governanceChoiceTone(
+  item: GovernanceReleasedResult["assessment"]["sections"][number]["items"][number],
+  value: number | "N/A",
+) {
+  if (!governanceSelectedChoice(item, value)) {
+    return "border-slate-200 bg-white text-slate-300";
+  }
+  if (value === "N/A") {
+    return "border-slate-400 bg-slate-200 text-slate-950";
+  }
+  return paperScoreTone(value, false);
+}
+
+function governanceSectionTotal(
+  section: GovernanceReleasedResult["assessment"]["sections"][number],
+) {
+  return section.items.reduce((sum, item) => {
+    if (item.notApplicable || typeof item.score !== "number") return sum;
+    return sum + item.score;
+  }, 0);
+}
+
+function governanceSectionMaximum(
+  section: GovernanceReleasedResult["assessment"]["sections"][number],
+) {
+  return section.items.filter((item) => !item.notApplicable).length * 5;
+}
+
+function GovernanceReleasedOfficialForm({
+  result,
+}: {
+  result: GovernanceReleasedResult;
+}) {
+  const { observation, assessment, cycle } = result;
+
+  return (
+    <article className="overflow-hidden rounded-[24px] border border-slate-300 bg-white text-slate-950 shadow-[0_20px_60px_rgba(0,0,0,0.24)]">
+      <header className="border-b border-slate-300 px-4 py-5 text-center md:px-6">
+        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-600">
+          {observation.districtName}
+        </p>
+        <h2 className="mt-2 text-base font-black uppercase md:text-lg">
+          Monitoring and Inspection Sheet (Teachers)
+        </h2>
+        <p className="mt-2 text-xs font-bold uppercase tracking-[0.12em] text-cyan-800">
+          Governance Teacher Observation · Released Result
+        </p>
+      </header>
+
+      <section className="grid border-b border-slate-300 text-xs md:grid-cols-2">
+        {[
+          ["Name of Teacher", observation.teacherName],
+          ["Number of Years in the Service", formatNumber(observation.yearsInService)],
+          ["Name of School", observation.schoolName],
+          ["Number of Years in Present School", formatNumber(observation.yearsInPresentSchool)],
+          ["Name of Circuit", observation.circuitName],
+          ["Subject Being Observed", observation.subjectBeingObserved || "—"],
+          ["Date Observed", fmtDate(observation.dateObserved)],
+          ["Sub-strand", observation.subStrand || "—"],
+          ["Class Taught", observation.classTaught || "—"],
+          [
+            "Duration of Lesson",
+            observation.durationMinutes != null
+              ? `${observation.durationMinutes} minutes`
+              : "—",
+          ],
+        ].map(([label, value]) => (
+          <div
+            key={String(label)}
+            className="grid grid-cols-[minmax(132px,42%)_1fr] border-b border-slate-200"
+          >
+            <div className="border-r border-slate-200 bg-slate-100 px-3 py-2 font-bold uppercase leading-5">
+              {label}
+            </div>
+            <div className="min-w-0 break-words px-3 py-2 leading-5">
+              {value}
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <section className="border-b border-slate-300 bg-cyan-50 px-4 py-4 md:px-6">
+        <p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-900">
+          Class Enrolment Data
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          {[
+            ["Total enrolment", observation.totalEnrolment],
+            ["Girls", observation.girls],
+            ["Boys", observation.boys],
+          ].map(([label, value]) => (
+            <div
+              key={String(label)}
+              className="border border-cyan-200 bg-white px-4 py-3"
+            >
+              <p className="text-[11px] font-black uppercase text-cyan-900">
+                {label}
+              </p>
+              <p className="mt-1 text-sm font-black">{formatNumber(value as number | null)}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div>
+        {assessment.sections
+          .slice()
+          .sort((a, b) => a.sectionOrder - b.sectionOrder)
+          .map((section) => {
+            const items = section.items
+              .slice()
+              .sort((a, b) => a.itemOrder - b.itemOrder);
+            const total = governanceSectionTotal(section);
+            const maximum =
+              governanceSectionMaximum(section) || section.sectionMaxScore;
+
+            return (
+              <section
+                key={section.sectionKey}
+                className="border-b border-slate-300 last:border-b-0"
+              >
+                <div className="bg-[#34577E] px-4 py-3 text-white md:px-6">
+                  <p className="text-xs font-black uppercase leading-5">
+                    {section.sectionOrder}.0 {section.sectionTitle}
+                  </p>
+                </div>
+
+                <div className="overflow-x-auto overscroll-x-contain">
+                  <table className="w-full min-w-[780px] border-collapse text-left text-xs">
+                    <thead>
+                      <tr className="bg-slate-100">
+                        <th className="w-[52px] border border-slate-300 px-2 py-2">
+                          S/N
+                        </th>
+                        <th className="border border-slate-300 px-2 py-2">
+                          Behavioural competence
+                        </th>
+                        <th className="w-[48px] border border-slate-300 px-2 py-2 text-center">
+                          N/A
+                        </th>
+                        {[1, 2, 3, 4, 5].map((score) => (
+                          <th
+                            key={score}
+                            className="w-[42px] border border-slate-300 px-2 py-2 text-center"
+                          >
+                            {score}
+                          </th>
+                        ))}
+                        <th className="w-[90px] border border-slate-300 px-2 py-2 text-center">
+                          Final score
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((item) => (
+                        <tr key={item.itemKey}>
+                          <td className="border border-slate-300 px-2 py-2 font-bold">
+                            {item.itemKey}
+                          </td>
+                          <td className="border border-slate-300 px-2 py-2 leading-5">
+                            {item.itemLabel}
+                          </td>
+                          <td
+                            className={cx(
+                              "border px-2 py-2 text-center font-black",
+                              governanceChoiceTone(item, "N/A"),
+                            )}
+                          >
+                            {governanceSelectedChoice(item, "N/A") ? "✓" : ""}
+                          </td>
+                          {[1, 2, 3, 4, 5].map((score) => (
+                            <td
+                              key={score}
+                              className={cx(
+                                "border px-2 py-2 text-center font-black",
+                                governanceChoiceTone(item, score),
+                              )}
+                            >
+                              {governanceSelectedChoice(item, score) ? "✓" : ""}
+                            </td>
+                          ))}
+                          <td
+                            className={cx(
+                              "border px-2 py-2 text-center font-black",
+                              paperScoreTone(item.score, item.notApplicable),
+                            )}
+                          >
+                            {governanceScoreText(item)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="grid gap-2 border-t border-slate-200 bg-slate-50 p-3 text-xs font-bold sm:grid-cols-[1fr_auto_auto] sm:items-center md:px-6">
+                  <span>SECTION {section.sectionOrder} TOTAL</span>
+                  <span>
+                    {total}/{maximum}
+                  </span>
+                  <span
+                    className={cx(
+                      "rounded-full border px-3 py-1 text-center",
+                      paperPercentTone(section.percentage),
+                    )}
+                  >
+                    {governancePct(section.percentage)}
+                  </span>
+                </div>
+              </section>
+            );
+          })}
+      </div>
+
+      <section className="border-t border-slate-300 bg-slate-50 px-4 py-5 md:px-6">
+        <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-700">
+          General Comments
+        </p>
+        <p className="mt-3 whitespace-pre-line text-sm leading-7">
+          {assessment.generalComment || "No General Comment entered."}
+        </p>
+      </section>
+
+      <section className="grid border-t border-slate-300 bg-cyan-50 text-sm font-black sm:grid-cols-[1fr_280px] sm:items-stretch">
+        <div className="px-4 py-5 text-right uppercase md:px-6">
+          Overall Teacher Appraisal Result
+        </div>
+        <div className="border-t border-slate-400 px-4 py-5 text-center text-2xl text-cyan-900 sm:border-l sm:border-t-0">
+          {governancePct(assessment.overallPercentage)}
+        </div>
+      </section>
+
+      <footer className="border-t border-slate-300 bg-slate-100 px-4 py-3 text-[11px] leading-5 text-slate-700 md:px-6">
+        Released {fmtDateTime(cycle.releasedAt)} · Assessed by{" "}
+        {assessment.assessorOffice}. This is the released, read-only result.
+      </footer>
+    </article>
+  );
+}
+
+function GovernanceReleasedResultsPanel() {
+  const [items, setItems] = useState<GovernanceReleasedSummary[]>([]);
+  const [selectedCycleId, setSelectedCycleId] = useState("");
+  const [result, setResult] = useState<GovernanceReleasedResult | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function loadGovernanceList() {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await apiJson<GovernanceReleasedListResponse>(
+        "/api/teacher/appraisals/governance-released",
+      );
+
+      if (!response.ok) {
+        throw new Error(response.error || "Could not load governance appraisals.");
+      }
+
+      setItems(response.items);
+
+      if (
+        selectedCycleId &&
+        !response.items.some((item) => item.cycleId === selectedCycleId)
+      ) {
+        setSelectedCycleId("");
+        setResult(null);
+      }
+    } catch (e) {
+      setItems([]);
+      setSelectedCycleId("");
+      setResult(null);
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Could not load governance appraisals.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadGovernanceDetail(cycleId: string) {
+    if (!cycleId) {
+      setResult(null);
+      return;
+    }
+
+    setDetailLoading(true);
+    setError(null);
+
+    try {
+      const response = await apiJson<GovernanceReleasedDetailResponse>(
+        `/api/teacher/appraisals/governance-released/${encodeURIComponent(cycleId)}`,
+      );
+
+      if (!response.ok) {
+        throw new Error(response.error || "Could not load released result.");
+      }
+
+      setResult(response.result);
+    } catch (e) {
+      setResult(null);
+      setError(
+        e instanceof Error ? e.message : "Could not load released result.",
+      );
+    } finally {
+      setDetailLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadGovernanceList();
+  }, []);
+
+  return (
+    <section className={cx(cardShell, "p-4 md:p-5")}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
+              Governance appraisals
+            </h2>
+            <span className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-2.5 py-1 text-xs font-bold text-emerald-100">
+              {items.length} released
+            </span>
+          </div>
+          <p className="mt-1 text-xs leading-5 text-[#AEB6C4]">
+            District-released governance observations appear here. They remain
+            separate from Headteacher appraisals and their scores are never combined.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={loadGovernanceList}
+          className={outlineBtn}
+          disabled={loading}
+        >
+          {loading ? "Refreshing..." : "Refresh governance"}
+        </button>
+      </div>
+
+      {error ? (
+        <div className="mt-4 rounded-2xl border border-rose-300/20 bg-rose-400/10 p-4 text-sm text-rose-100">
+          {error}
+        </div>
+      ) : null}
+
+      <div
+        className={cx(
+          "mt-4 grid grid-cols-1 gap-4",
+          selectedCycleId ? "xl:grid-cols-[330px_1fr]" : "",
+        )}
+      >
+        <aside className="space-y-2">
+          {loading ? (
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-[#C9CDD6]">
+              Loading released governance appraisals...
+            </div>
+          ) : items.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-6 text-[#C9CDD6]">
+              No released governance appraisal yet.
+            </div>
+          ) : (
+            items.map((item) => {
+              const active = item.cycleId === selectedCycleId;
+
+              return (
+                <button
+                  key={item.cycleId}
+                  type="button"
+                  aria-expanded={active}
+                  aria-controls={
+                    active
+                      ? `governance-result-${item.cycleId}`
+                      : undefined
+                  }
+                  onClick={() => {
+                    if (active) {
+                      setSelectedCycleId("");
+                      setResult(null);
+                      setError(null);
+                      return;
+                    }
+
+                    setSelectedCycleId(item.cycleId);
+                    void loadGovernanceDetail(item.cycleId);
+                  }}
+                  className={cx(
+                    "w-full rounded-2xl border p-3 text-left transition",
+                    active
+                      ? "border-emerald-300/35 bg-emerald-400/10"
+                      : "border-white/10 bg-[#0C1730]/70 hover:bg-white/8",
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-[#F7F4ED]">
+                        Governance Teacher Appraisal
+                      </p>
+                      <p className="mt-1 text-xs text-[#AEB6C4]">
+                        {fmtDate(item.dateObserved)} · {item.assessorOffice}
+                      </p>
+                      <p className="mt-1 truncate text-xs text-[#8F98A8]">
+                        {item.schoolName}
+                      </p>
+                      <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.08em] text-emerald-200">
+                        {active ? "Hide result" : "View result"}
+                      </p>
+                    </div>
+                    <span
+                      className={cx(
+                        "shrink-0 rounded-full border px-2.5 py-1 text-xs font-bold",
+                        percentTone(item.overallPercentage),
+                      )}
+                    >
+                      {governancePct(item.overallPercentage)}
+                    </span>
+                  </div>
+                </button>
+              );
+            })
+          )}
+        </aside>
+
+        {selectedCycleId ? (
+          <main
+            id={`governance-result-${selectedCycleId}`}
+            className="min-w-0"
+          >
+            {detailLoading ? (
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-[#C9CDD6]">
+                Loading released result...
+              </div>
+            ) : result ? (
+              <GovernanceReleasedOfficialForm result={result} />
+            ) : (
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm leading-7 text-[#C9CDD6]">
+                Could not display this released result. Try the appraisal again.
+              </div>
+            )}
+          </main>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
 export default function TeacherAppraisalsClient() {
   const [items, setItems] = useState<AppraisalSummary[]>([]);
   const [selectedId, setSelectedId] = useState("");
@@ -677,7 +1242,7 @@ export default function TeacherAppraisalsClient() {
               My Appraisals
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-7 text-[#C9CDD6]">
-              View finalized appraisal feedback from observed lessons. Use it as a growth map for your next lesson.
+              View released governance appraisals and finalized Headteacher feedback in one place. The two appraisal streams remain separate and their scores are never combined.
             </p>
           </div>
 
@@ -693,15 +1258,17 @@ export default function TeacherAppraisalsClient() {
         </div>
       ) : null}
 
+      <GovernanceReleasedResultsPanel />
+
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-[360px_1fr]">
         <aside className={cx(cardShell, "p-4 md:p-5")}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
-                Finalized feedback
+                Headteacher appraisals
               </h2>
               <p className="mt-1 text-xs text-[#AEB6C4]">
-                Only finalized appraisals are shown here.
+                Finalized Headteacher appraisals remain a separate feedback stream.
               </p>
             </div>
             <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-[#F7F4ED]">
@@ -716,7 +1283,7 @@ export default function TeacherAppraisalsClient() {
               </div>
             ) : items.length === 0 ? (
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-6 text-[#C9CDD6]">
-                No finalized appraisal feedback yet. When your headteacher finalizes one, it will appear here.
+                No finalized Headteacher appraisal feedback yet.
               </div>
             ) : (
               items.map((item) => {

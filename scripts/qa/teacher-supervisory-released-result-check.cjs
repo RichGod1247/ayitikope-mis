@@ -73,6 +73,10 @@ for (const marker of [
   "correctionLineageVerified: true",
   "databaseWritesAllowed: false",
   "providerCallsAllowed: false",
+  "releaseProofHashIncluded: false",
+  "releaseModeIncluded: false",
+  "reviewStageIncluded: false",
+  "internalIntegrityDetailsIncluded: false",
 ]) {
   assert(
     source.released.includes(marker),
@@ -112,32 +116,6 @@ for (const marker of [
   assert(
     source.released.includes(marker),
     "Released-result verification marker missing",
-    marker,
-  );
-}
-
-for (const marker of [
-  "releaseModeVerified: true",
-  "reviewEvidenceHashVerified:",
-  "reviewChainHashVerified:",
-  "directReleaseAuthorityVerified:",
-  "decisionContractHashVerified: true",
-  "releaseRequestHashVerified: true",
-  "releaseEvidenceHashVerified: true",
-  "releaseProofHashVerified: true",
-  "cycleReviewReleaseAnchorsVerified: true",
-  "correctionLineageVerified: true",
-  "officialFormProjectionVerified: true",
-  "generalCommentIncludedInAssessmentHash: true",
-  "reviewerMayRewriteScores: false",
-  "reviewerMayRewriteComment: false",
-  "legacyTeacherAppraisalIncluded: false",
-  "combinedWeightingDefined: false",
-  "scoreMutationAllowed: false",
-]) {
-  assert(
-    source.released.includes(marker),
-    "Released-result integrity projection marker missing",
     marker,
   );
 }
@@ -275,8 +253,6 @@ for (const marker of [
   "reviewRowsPresent !== false",
   "selfReviewPerformed !== false",
   "releaserAssignmentId !== input.evidence.assessorAssignmentId",
-  "releaseVerification.releaseMode",
-  "releaseVerification.reviewStage",
 ]) {
   assert(
     source.released.includes(marker),
@@ -326,10 +302,8 @@ assert(
   source.released.includes("generalComment: record.generalComment") &&
     source.released.includes("score: score.score") &&
     source.released.includes("notApplicable: score.notApplicable") &&
-    source.released.includes(
-      "releaseMode: releaseVerification.releaseMode",
-    ),
-  "Released official Teacher form must include sealed scores, General Comment, and verified release mode",
+    source.released.includes("integrityVerified: true"),
+  "Released official Teacher form must include sealed scores, General Comment, and a minimized verified-release signal",
 );
 
 const publicProjectionStart = source.released.lastIndexOf(
@@ -350,6 +324,10 @@ for (const forbiddenPublicField of [
   "reviewNote:",
   "rawMetadata:",
   "evidenceSnapshotJson:",
+  "releaseProofHash:",
+  "releaseMode:",
+  "reviewStage:",
+  "integrity:",
 ]) {
   assert(
     !publicProjection.includes(forbiddenPublicField),
@@ -413,6 +391,8 @@ console.log("Direct revision                  : revision 1 only");
 console.log("Reviewer identity                : excluded from result");
 console.log("Assessor identity                : excluded; office label only");
 console.log("Review notes / Return reasons    : excluded from result");
+console.log("Release proof/internal hashes    : excluded from browser result");
+console.log("Internal integrity details       : excluded from browser result");
 console.log("Raw evidence / metadata          : excluded from result");
 console.log("Legacy TeacherAppraisal          : excluded");
 console.log("Combined weighting               : undefined");
