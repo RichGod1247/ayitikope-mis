@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 "use strict";
+
 /* eslint-disable @typescript-eslint/no-require-imports -- CommonJS source-contract QA harness. */
 
 const fs = require("fs");
@@ -8,12 +9,16 @@ const path = require("path");
 const repoRoot = path.resolve(__dirname, "..", "..");
 
 const files = {
-  shared: "src/app/api/governance/appraisals/teacher-supervisory/_shared.ts",
-  assessmentRoot: "src/app/api/governance/appraisals/teacher-supervisory/route.ts",
+  shared:
+    "src/app/api/governance/appraisals/teacher-supervisory/_shared.ts",
+  assessmentRoot:
+    "src/app/api/governance/appraisals/teacher-supervisory/route.ts",
   reviewRoute:
     "src/app/api/governance/appraisals/teacher-supervisory/review-queue/route.ts",
-  reviewQueue: "src/lib/appraisals/teacherSupervisoryReviewQueue.ts",
-  reviewPolicy: "src/lib/appraisals/teacherSupervisoryReview.ts",
+  reviewQueue:
+    "src/lib/appraisals/teacherSupervisoryReviewQueue.ts",
+  reviewPolicy:
+    "src/lib/appraisals/teacherSupervisoryReview.ts",
 };
 
 function fail(message, detail) {
@@ -29,7 +34,22 @@ function assert(condition, message, detail) {
 function read(relativePath) {
   const absolutePath = path.join(repoRoot, relativePath);
   if (!fs.existsSync(absolutePath)) fail("Required file missing", relativePath);
-  return fs.readFileSync(absolutePath, "utf8");
+  return fs
+    .readFileSync(absolutePath, "utf8")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n");
+}
+
+function blockBetween(source, startMarker, endMarker) {
+  const start = source.indexOf(startMarker);
+  const end = source.indexOf(endMarker, start + startMarker.length);
+
+  assert(start >= 0 && end > start, "Required source block missing", {
+    startMarker,
+    endMarker,
+  });
+
+  return source.slice(start, end);
 }
 
 const source = Object.fromEntries(
@@ -82,7 +102,9 @@ for (const required of [
 }
 
 assert(
-  source.reviewRoute.includes("TEACHER_SUPERVISORY_REVIEW_POLICY.reviewerRoles"),
+  source.reviewRoute.includes(
+    "TEACHER_SUPERVISORY_REVIEW_POLICY.reviewerRoles",
+  ),
   "Review queue endpoint must derive its narrow HOS/Director audience from review policy",
 );
 
@@ -109,7 +131,7 @@ assert(
     !source.reviewRoute.includes("export async function PUT") &&
     !source.reviewRoute.includes("export async function PATCH") &&
     !source.reviewRoute.includes("export async function DELETE"),
-  "N6-E1B2 review discovery must expose GET only",
+  "N6-F1B review work discovery must expose GET only",
 );
 
 assert(
@@ -141,13 +163,147 @@ for (const forbiddenPayload of [
   );
 }
 
+for (const requiredQueueContract of [
+  "schemaVersion: 2",
+  '"READY_TO_START"',
+  '"READY_TO_REVIEW"',
+  '"READY_TO_RELEASE"',
+  '"START_REVIEW"',
+  '"CONTINUE_REVIEW"',
+  '"DIRECT_RELEASE"',
+  "assessmentEvidenceIncluded: false",
+  "scoresIncluded: false",
+  "generalCommentIncluded: false",
+  "observationDetailsIncluded: false",
+  "classEnrolmentEvidenceIncluded: false",
+  "contactDetailsIncluded: false",
+  "assessorUserIdIncluded: false",
+  "targetUserIdIncluded: false",
+  "reviewIdIncluded: false",
+  "assignmentIdsIncluded: false",
+  "proofHashesIncluded: false",
+  "legacyTeacherAppraisalIncluded: false",
+  "noBackgroundPolling: true",
+  "providerCalled: false",
+]) {
+  assert(
+    source.reviewQueue.includes(requiredQueueContract),
+    "Durable review work queue browser contract marker missing",
+    requiredQueueContract,
+  );
+}
+
 assert(
-  source.reviewQueue.includes("assessmentEvidenceIncluded: false") &&
-    source.reviewQueue.includes("scoresIncluded: false") &&
-    source.reviewQueue.includes("generalCommentIncluded: false") &&
-    source.reviewQueue.includes("observationDetailsIncluded: false") &&
-    source.reviewQueue.includes("classEnrolmentEvidenceIncluded: false"),
-  "Read-only review service evidence-minimization contract missing",
+  source.reviewQueue.includes('state: "READY_TO_START"') &&
+    source.reviewQueue.includes('nextAction: "START_REVIEW"'),
+  "READY_TO_START must map only to START_REVIEW",
+);
+
+assert(
+  source.reviewQueue.includes('state: "READY_TO_REVIEW"') &&
+    source.reviewQueue.includes('nextAction: "CONTINUE_REVIEW"'),
+  "READY_TO_REVIEW must map only to CONTINUE_REVIEW",
+);
+
+assert(
+  source.reviewQueue.includes('state: "READY_TO_RELEASE"') &&
+    source.reviewQueue.includes('nextAction: "DIRECT_RELEASE"'),
+  "READY_TO_RELEASE must map only to DIRECT_RELEASE",
+);
+
+const publicItemType = blockBetween(
+  source.reviewQueue,
+  "export type TeacherSupervisoryReviewQueueItem = {",
+  "export type TeacherSupervisoryReviewQueue = {",
+);
+
+for (const forbiddenPublicField of [
+  "assessorUserId:",
+  "targetUserId:",
+  "reviewId:",
+  "reviewerUserId:",
+  "reviewerAssignmentId:",
+  "assessorAssignmentId:",
+  "assessmentHash:",
+  "observationContextHash:",
+  "reviewEvidenceHash:",
+  "releaseProofHash:",
+]) {
+  assert(
+    !publicItemType.includes(forbiddenPublicField),
+    "Browser review-work item exposes forbidden authority/evidence field",
+    forbiddenPublicField,
+  );
+}
+
+const publicQueueItemFunction = blockBetween(
+  source.reviewQueue,
+  "function publicQueueItem(",
+  "function statePriority(",
+);
+
+for (const forbiddenProjection of [
+  "assessorUserId:",
+  "targetUserId:",
+  "reviewId:",
+  "reviewerUserId:",
+  "reviewerAssignmentId:",
+  "assessorAssignmentId:",
+  "assessmentHash:",
+  "observationContextHash:",
+  "reviewEvidenceHash:",
+  "releaseProofHash:",
+]) {
+  assert(
+    !publicQueueItemFunction.includes(forbiddenProjection),
+    "Public review-work projection emits forbidden authority/evidence field",
+    forbiddenProjection,
+  );
+}
+
+for (const requiredPublicField of [
+  "cycleId:",
+  "assessmentId:",
+  "revision:",
+  "dateObserved:",
+  "targetName:",
+  "schoolId:",
+  "schoolName:",
+  "circuitId:",
+  "circuitName:",
+  "districtId:",
+  "districtName:",
+  "assessorRole:",
+  "assessorOfficeLabel:",
+  "state:",
+  "nextAction:",
+  "eligible:",
+]) {
+  assert(
+    publicItemType.includes(requiredPublicField),
+    "Required compact browser work-item field missing",
+    requiredPublicField,
+  );
+}
+
+assert(
+  source.reviewQueue.includes("currentPendingReviewForActor") &&
+    source.reviewQueue.includes("directReleaseReadyForActor"),
+  "Durable review/direct-release custody readers missing",
+);
+
+assert(
+  source.reviewQueue.includes(
+    'status: { in: ["OPEN", "UNDER_REVIEW"] }',
+  ),
+  "Queue must discover both initial OPEN work and durable UNDER_REVIEW custody",
+);
+
+assert(
+  source.reviewQueue.includes(
+    "fullAssessmentHashReverificationDeferredToAction: true",
+  ),
+  "Queue must remain read-only and defer full proof to the authoritative action",
 );
 
 assert(
@@ -162,14 +318,23 @@ assert(
 );
 
 console.log("");
-console.log("=== N6-E1B2 GOVERNANCE TEACHER REVIEW QUEUE THIN API ===");
+console.log("=== N6-F1B GOVERNANCE TEACHER DURABLE REVIEW WORK QUEUE THIN API ===");
 console.log("");
 console.log("Endpoint                         : governance Teacher review queue GET");
 console.log("Audience                         : HOS / District Director only");
 console.log("Broader assessor auth helper     : retained + narrowed at route boundary");
 console.log("SISSO/BSC review access          : forbidden");
 console.log("Verified governance scope        : passed to read-only review service");
+console.log("READY_TO_START                   : START_REVIEW");
+console.log("READY_TO_REVIEW                  : CONTINUE_REVIEW");
+console.log("READY_TO_RELEASE                 : DIRECT_RELEASE");
+console.log("nextAction                       : presentation/navigation hint only");
+console.log("Mutation authority               : re-established by action endpoints");
 console.log("Response                         : compact reviewQueue metadata");
+console.log("Browser assessor user id         : excluded");
+console.log("Browser target user id           : excluded");
+console.log("Browser review/assignment ids    : excluded");
+console.log("Browser proof hashes             : excluded");
 console.log("Scores / General Comment         : excluded");
 console.log("Observation / enrolment evidence : excluded");
 console.log("Assessment hash                  : not exposed");
@@ -184,4 +349,4 @@ console.log("Notifications/providers          : absent");
 console.log("Database writes                  : absent");
 console.log("Database accessed                : source contract only");
 console.log("");
-console.log("RESULT: N6-E1B2 GOVERNANCE TEACHER REVIEW QUEUE THIN API GREEN");
+console.log("RESULT: N6-F1B GOVERNANCE TEACHER DURABLE REVIEW WORK QUEUE THIN API GREEN");

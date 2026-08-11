@@ -13,45 +13,72 @@ import {
 import type { GovernanceScope } from "@/lib/governance/scope";
 
 export const TEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   workflow: TEACHER_SUPERVISORY_ASSESSMENT_POLICY.workflow,
   evidenceStream: TEACHER_SUPERVISORY_ASSESSMENT_POLICY.evidenceStream,
   instrumentCode: TEACHER_SUPERVISORY_ASSESSMENT_POLICY.instrumentCode,
   instrumentVersion: TEACHER_SUPERVISORY_ASSESSMENT_POLICY.instrumentVersion,
   targetRole: "TEACHER",
   reviewerRoles: TEACHER_SUPERVISORY_REVIEW_POLICY.reviewerRoles,
-  readOnlyDiscovery: true,
-  requiredAssessmentStatus: "FINALIZED",
-  requiredCycleStatus: "OPEN",
-  requiredReviewCount: 0,
+  states: [
+    "READY_TO_START",
+    "READY_TO_REVIEW",
+    "READY_TO_RELEASE",
+  ] as const,
+  nextActions: [
+    "START_REVIEW",
+    "CONTINUE_REVIEW",
+    "DIRECT_RELEASE",
+  ] as const,
+  initialAssessmentStatus: "FINALIZED",
+  initialCycleStatus: "OPEN",
+  initialReviewCount: 0,
+  activeAssessmentStatus: "FINALIZED",
+  activeCycleStatus: "UNDER_REVIEW",
+  activeReviewDecision: "PENDING",
+  directReleaseAssessorRole: "DISTRICT_DIRECTOR",
+  directReleaseActorRole: "DISTRICT_DIRECTOR",
+  directReleaseReviewCount: 0,
+  directReleaseSelfReviewAllowed: false,
+  directReleaseReviewRowsRequired: false,
   activeTargetMembershipRequired: true,
   activeTargetTenantRequired: true,
   activeCircuitRequired: true,
   activeDistrictRequired: true,
   currentReviewerAssignmentRequired: true,
+  currentReviewCustodyRequired: true,
   reviewerAuthorityRecheckedPerAssessment: true,
+  directReleaseAuthorityRecheckedPerAssessment: true,
   immutableAssessmentHashRequired: true,
-  fullAssessmentHashReverificationDeferredToReviewAdmission: true,
+  fullAssessmentHashReverificationDeferredToAction: true,
   assessmentEvidenceIncluded: false,
   scoresIncluded: false,
   generalCommentIncluded: false,
   observationDetailsIncluded: false,
   classEnrolmentEvidenceIncluded: false,
   contactDetailsIncluded: false,
+  assessorUserIdIncluded: false,
+  targetUserIdIncluded: false,
+  reviewIdIncluded: false,
+  assignmentIdsIncluded: false,
+  proofHashesIncluded: false,
   legacyTeacherAppraisalIncluded: false,
   databaseWritesAllowed: false,
   providerCallsAllowed: false,
   backgroundPollingAllowed: false,
 } as const;
 
-export type TeacherSupervisoryReviewQueueState = "READY_TO_START";
+export type TeacherSupervisoryReviewQueueState =
+  (typeof TEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY.states)[number];
+
+export type TeacherSupervisoryReviewQueueNextAction =
+  (typeof TEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY.nextActions)[number];
 
 export type TeacherSupervisoryReviewQueueItem = {
   cycleId: string;
   assessmentId: string;
   revision: number;
   dateObserved: string;
-  targetUserId: string;
   targetName: string | null;
   schoolId: string;
   schoolName: string;
@@ -59,12 +86,10 @@ export type TeacherSupervisoryReviewQueueItem = {
   circuitName: string;
   districtId: string;
   districtName: string;
-  assessorUserId: string;
   assessorRole: TeacherSupervisoryReviewOriginRole;
   assessorOfficeLabel: string;
-  requiredReviewStage: number;
-  reviewerRole: TeacherSupervisoryReviewerRole;
   state: TeacherSupervisoryReviewQueueState;
+  nextAction: TeacherSupervisoryReviewQueueNextAction;
   eligible: true;
 };
 
@@ -73,6 +98,9 @@ export type TeacherSupervisoryReviewQueue = {
   officeLabel: string;
   summary: {
     assessments: number;
+    readyToStart: number;
+    readyToReview: number;
+    readyToRelease: number;
     circuits: number;
     schools: number;
   };
@@ -84,6 +112,11 @@ export type TeacherSupervisoryReviewQueue = {
   observationDetailsIncluded: false;
   classEnrolmentEvidenceIncluded: false;
   contactDetailsIncluded: false;
+  assessorUserIdIncluded: false;
+  targetUserIdIncluded: false;
+  reviewIdIncluded: false;
+  assignmentIdsIncluded: false;
+  proofHashesIncluded: false;
   legacyTeacherAppraisalIncluded: false;
   noBackgroundPolling: true;
   providerCalled: false;
@@ -99,6 +132,20 @@ export type ReadTeacherSupervisoryReviewQueueInput = {
 
 type ScopeAssignment = GovernanceScope["assignments"][number];
 
+type CandidateReviewRecord = {
+  id: string;
+  cycleId: string;
+  assessmentId: string;
+  reviewerUserId: string;
+  reviewerAssignmentId: string | null;
+  stage: number;
+  decision: string;
+  note: string | null;
+  decidedAt: Date | null;
+  metadata: unknown;
+  createdAt: Date;
+};
+
 type CandidateAssessmentRecord = {
   id: string;
   cycleId: string;
@@ -112,6 +159,7 @@ type CandidateAssessmentRecord = {
   finalizedByUserId: string | null;
   finalizedAt: Date | null;
   metadata: unknown;
+  reviews: CandidateReviewRecord[];
   _count: { reviews: number };
   instrumentVersion: {
     id: string;
@@ -278,6 +326,9 @@ function emptyQueue(actorRole: string): TeacherSupervisoryReviewQueue {
     officeLabel: officeLabel(actorRole),
     summary: {
       assessments: 0,
+      readyToStart: 0,
+      readyToReview: 0,
+      readyToRelease: 0,
       circuits: 0,
       schools: 0,
     },
@@ -289,6 +340,11 @@ function emptyQueue(actorRole: string): TeacherSupervisoryReviewQueue {
     observationDetailsIncluded: false,
     classEnrolmentEvidenceIncluded: false,
     contactDetailsIncluded: false,
+    assessorUserIdIncluded: false,
+    targetUserIdIncluded: false,
+    reviewIdIncluded: false,
+    assignmentIdsIncluded: false,
+    proofHashesIncluded: false,
     legacyTeacherAppraisalIncluded: false,
     noBackgroundPolling: true,
     providerCalled: false,
@@ -329,25 +385,20 @@ function parseObservationContext(
   return context;
 }
 
-function cycleReadyForReview(record: CandidateAssessmentRecord) {
+function commonAssessmentContract(record: CandidateAssessmentRecord) {
   const cycleMetadata = objectValue(record.cycle.metadata);
+
   return Boolean(
-    normalized(record.status) ===
-      TEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY.requiredAssessmentStatus &&
-      normalized(record.cycle.status) ===
-        TEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY.requiredCycleStatus &&
+    normalized(record.status) === "FINALIZED" &&
+      record.cycle.id === record.cycleId &&
       record.cycle.instrumentVersionId === record.instrumentVersion.id &&
       record.cycle.openedAt &&
       record.cycle.deadlineAt === null &&
-      record.cycle.closedAt === null &&
-      record.cycle.reviewStartedAt === null &&
       record.cycle.releasedAt === null &&
       record.cycle.cancelledAt === null &&
       record.cycle.responseWindowDays === 0 &&
       record.cycle.minimumResponses === 0 &&
       record.cycle._count.participants === 0 &&
-      record._count.reviews ===
-        TEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY.requiredReviewCount &&
       record.finalizedAt &&
       record.finalizedByUserId === record.assessorUserId &&
       isSha256(record.assessmentHash) &&
@@ -368,7 +419,28 @@ function cycleReadyForReview(record: CandidateAssessmentRecord) {
       record.instrumentVersion.instrument.purpose === "TEACHER_OBSERVATION" &&
       record.instrumentVersion.instrument.subjectType === "TEACHER" &&
       record.instrumentVersion.instrument.isActive === true &&
-      isSha256(record.instrumentVersion.contentHash),
+      isSha256(record.instrumentVersion.contentHash) &&
+      record._count.reviews === record.reviews.length,
+  );
+}
+
+function cycleReadyForInitialWork(record: CandidateAssessmentRecord) {
+  return Boolean(
+    commonAssessmentContract(record) &&
+      normalized(record.cycle.status) === "OPEN" &&
+      record.cycle.closedAt === null &&
+      record.cycle.reviewStartedAt === null &&
+      record._count.reviews === 0,
+  );
+}
+
+function cycleReadyForActiveReview(record: CandidateAssessmentRecord) {
+  return Boolean(
+    commonAssessmentContract(record) &&
+      normalized(record.cycle.status) === "UNDER_REVIEW" &&
+      record.cycle.closedAt &&
+      record.cycle.reviewStartedAt &&
+      record.cycle.closedAt.getTime() === record.cycle.reviewStartedAt.getTime(),
   );
 }
 
@@ -416,7 +488,8 @@ function reviewerAssignmentForDistrict(input: {
       normalized(assignment.role) === input.actorRole &&
       assignment.zoneLevel ===
         TEACHER_SUPERVISORY_ASSESSMENT_POLICY.districtZoneLevel &&
-      clean(assignment.zoneId) === input.districtId,
+      clean(assignment.zoneId) === input.districtId &&
+      clean(assignment.id),
   );
 
   return matches.length === 1 ? matches[0] : null;
@@ -438,6 +511,168 @@ function scopeContainsTarget(input: {
     input.governanceScope.zoneIds.map(clean).filter(Boolean),
   );
   return zoneIds.has(input.circuitId) || zoneIds.has(input.districtId);
+}
+
+function currentPendingReviewForActor(input: {
+  record: CandidateAssessmentRecord;
+  actorUserId: string;
+  actorRole: TeacherSupervisoryReviewerRole;
+  assessorRole: TeacherSupervisoryReviewOriginRole;
+  reviewerAssignment: ScopeAssignment;
+}) {
+  const pending = input.record.reviews.filter(
+    (review) => normalized(review.decision) === "PENDING",
+  );
+
+  if (pending.length !== 1) return null;
+
+  const review = pending[0];
+  if (
+    review.cycleId !== input.record.cycleId ||
+    review.assessmentId !== input.record.id ||
+    review.reviewerUserId !== input.actorUserId ||
+    clean(review.reviewerAssignmentId) !== clean(input.reviewerAssignment.id) ||
+    clean(review.note) ||
+    review.decidedAt
+  ) {
+    return null;
+  }
+
+  const authority = decideTeacherSupervisoryReviewAuthority({
+    actorUserId: input.actorUserId,
+    actorRoleName: input.actorRole,
+    assessorUserId: input.record.assessorUserId,
+    assessorRoleName: input.assessorRole,
+    stage: review.stage,
+  });
+  if (!authority.allowed) return null;
+
+  const expectedStage = teacherSupervisoryReviewChainForAssessor(
+    input.assessorRole,
+  )?.stages.find((candidate) => candidate.stage === review.stage);
+
+  if (
+    !expectedStage ||
+    expectedStage.reviewerRole !== input.actorRole ||
+    authority.stage !== review.stage
+  ) {
+    return null;
+  }
+
+  const reviewMetadata = objectValue(review.metadata);
+  const cycleReviewMetadata = objectValue(
+    objectValue(input.record.cycle.metadata).teacherSupervisoryReview,
+  );
+  const observationContextHash = clean(
+    objectValue(input.record.metadata).observationContextHash,
+  ).toLowerCase();
+  const reviewEvidenceHash = clean(
+    reviewMetadata.reviewEvidenceHash,
+  ).toLowerCase();
+
+  if (
+    !isSha256(reviewEvidenceHash) ||
+    clean(reviewMetadata.workflow) !==
+      TEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY.workflow ||
+    clean(reviewMetadata.evidenceStream) !==
+      TEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY.evidenceStream ||
+    Number(reviewMetadata.reviewStage) !== review.stage ||
+    clean(reviewMetadata.reviewerRole) !== input.actorRole ||
+    clean(reviewMetadata.assessmentId) !== input.record.id ||
+    Number(reviewMetadata.assessmentRevision) !== input.record.revision ||
+    clean(reviewMetadata.assessmentHash).toLowerCase() !==
+      clean(input.record.assessmentHash).toLowerCase() ||
+    clean(reviewMetadata.observationContextHash).toLowerCase() !==
+      observationContextHash ||
+    clean(cycleReviewMetadata.currentReviewId) !== review.id ||
+    Number(cycleReviewMetadata.currentReviewStage) !== review.stage ||
+    clean(cycleReviewMetadata.currentReviewerRole) !== input.actorRole ||
+    clean(cycleReviewMetadata.currentReviewerAssignmentId) !==
+      clean(input.reviewerAssignment.id) ||
+    clean(cycleReviewMetadata.reviewEvidenceHash).toLowerCase() !==
+      reviewEvidenceHash ||
+    clean(cycleReviewMetadata.admittedAssessmentId) !== input.record.id ||
+    Number(cycleReviewMetadata.admittedAssessmentRevision) !==
+      input.record.revision ||
+    clean(cycleReviewMetadata.assessmentHash).toLowerCase() !==
+      clean(input.record.assessmentHash).toLowerCase() ||
+    clean(cycleReviewMetadata.observationContextHash).toLowerCase() !==
+      observationContextHash
+  ) {
+    return null;
+  }
+
+  return review;
+}
+
+function directReleaseReadyForActor(input: {
+  record: CandidateAssessmentRecord;
+  actorUserId: string;
+  actorRole: TeacherSupervisoryReviewerRole;
+  assessorRole: TeacherSupervisoryReviewOriginRole;
+  reviewerAssignment: ScopeAssignment;
+}) {
+  if (
+    input.actorRole !== "DISTRICT_DIRECTOR" ||
+    input.assessorRole !== "DISTRICT_DIRECTOR" ||
+    input.record.assessorUserId !== input.actorUserId ||
+    clean(input.record.assessorAssignmentId) !==
+      clean(input.reviewerAssignment.id) ||
+    input.record.revision !== 1 ||
+    input.record._count.reviews !== 0
+  ) {
+    return false;
+  }
+
+  const chain = teacherSupervisoryReviewChainForAssessor(input.assessorRole);
+  return Boolean(
+    chain &&
+      chain.assessorRole === "DISTRICT_DIRECTOR" &&
+      chain.requiresReviewRows === false &&
+      chain.selfReviewAllowed === false &&
+      chain.stages.length === 0 &&
+      chain.terminalAuthorityRole === "DISTRICT_DIRECTOR",
+  );
+}
+
+function publicQueueItem(input: {
+  record: CandidateAssessmentRecord;
+  membership: TargetMembershipRecord;
+  context: ObservationContext;
+  assessorRole: TeacherSupervisoryReviewOriginRole;
+  state: TeacherSupervisoryReviewQueueState;
+  nextAction: TeacherSupervisoryReviewQueueNextAction;
+}): TeacherSupervisoryReviewQueueItem {
+  return {
+    cycleId: input.record.cycleId,
+    assessmentId: input.record.id,
+    revision: input.record.revision,
+    dateObserved: isoDateOnly(input.record.dateObserved!),
+    targetName:
+      clean(input.context.target?.name) || displayName(input.membership.user),
+    schoolId: input.membership.tenant.id,
+    schoolName: clean(input.context.target?.schoolName),
+    circuitId: clean(input.record.cycle.targetZoneId),
+    circuitName: clean(input.context.jurisdiction?.circuitName),
+    districtId: input.record.cycle.scopeZoneId,
+    districtName: clean(input.context.jurisdiction?.districtName),
+    assessorRole: input.assessorRole,
+    assessorOfficeLabel: officeLabel(input.assessorRole),
+    state: input.state,
+    nextAction: input.nextAction,
+    eligible: true,
+  };
+}
+
+function statePriority(state: TeacherSupervisoryReviewQueueState) {
+  switch (state) {
+    case "READY_TO_REVIEW":
+      return 0;
+    case "READY_TO_RELEASE":
+      return 1;
+    case "READY_TO_START":
+      return 2;
+  }
 }
 
 export async function readTeacherSupervisoryReviewQueue(
@@ -465,7 +700,7 @@ export async function readTeacherSupervisoryReviewQueue(
     where: {
       status: "FINALIZED",
       cycle: {
-        status: "OPEN",
+        status: { in: ["OPEN", "UNDER_REVIEW"] },
         targetTenantId: { in: tenantIds },
       },
       instrumentVersion: {
@@ -492,6 +727,22 @@ export async function readTeacherSupervisoryReviewQueue(
       finalizedByUserId: true,
       finalizedAt: true,
       metadata: true,
+      reviews: {
+        select: {
+          id: true,
+          cycleId: true,
+          assessmentId: true,
+          reviewerUserId: true,
+          reviewerAssignmentId: true,
+          stage: true,
+          decision: true,
+          note: true,
+          decidedAt: true,
+          metadata: true,
+          createdAt: true,
+        },
+        orderBy: [{ stage: "asc" }, { createdAt: "asc" }],
+      },
       _count: { select: { reviews: true } },
       instrumentVersion: {
         select: {
@@ -602,26 +853,17 @@ export async function readTeacherSupervisoryReviewQueue(
   const items: TeacherSupervisoryReviewQueueItem[] = [];
 
   for (const record of assessments) {
-    if (!cycleReadyForReview(record)) continue;
+    if (!commonAssessmentContract(record)) continue;
 
     const context = parseObservationContext(record);
     if (!context) continue;
 
-    const assessorRole = canonicalTeacherSupervisoryAssessorRole(
+    const canonicalAssessorRole = canonicalTeacherSupervisoryAssessorRole(
       context.assessor?.role,
-    ) as TeacherSupervisoryReviewOriginRole;
-    const chain = teacherSupervisoryReviewChainForAssessor(assessorRole);
-    const firstStage = chain?.stages[0];
-    if (!chain || !firstStage) continue;
-
-    const authority = decideTeacherSupervisoryReviewAuthority({
-      actorUserId,
-      actorRoleName: actorRole,
-      assessorUserId: record.assessorUserId,
-      assessorRoleName: assessorRole,
-      stage: firstStage.stage,
-    });
-    if (!authority.allowed) continue;
+    );
+    if (!canonicalAssessorRole) continue;
+    const assessorRole =
+      canonicalAssessorRole as TeacherSupervisoryReviewOriginRole;
 
     const targetTenantId = clean(record.cycle.targetTenantId);
     const circuitId = clean(record.cycle.targetZoneId);
@@ -654,7 +896,6 @@ export async function readTeacherSupervisoryReviewQueue(
     const contextDistrictName = clean(context.jurisdiction?.districtName);
     const contextCircuitName = clean(context.jurisdiction?.circuitName);
     const contextSchoolName = clean(context.target?.schoolName);
-    const contextTargetName = clean(context.target?.name) || null;
 
     if (
       !contextDistrictName ||
@@ -666,30 +907,83 @@ export async function readTeacherSupervisoryReviewQueue(
       continue;
     }
 
-    items.push({
-      cycleId: record.cycleId,
-      assessmentId: record.id,
-      revision: record.revision,
-      dateObserved: isoDateOnly(record.dateObserved!),
-      targetUserId: membership.userId,
-      targetName: contextTargetName ?? displayName(membership.user),
-      schoolId: membership.tenant.id,
-      schoolName: contextSchoolName,
-      circuitId,
-      circuitName: contextCircuitName,
-      districtId,
-      districtName: contextDistrictName,
+    if (cycleReadyForActiveReview(record)) {
+      const currentReview = currentPendingReviewForActor({
+        record,
+        actorUserId,
+        actorRole,
+        assessorRole,
+        reviewerAssignment,
+      });
+      if (!currentReview) continue;
+
+      items.push(
+        publicQueueItem({
+          record,
+          membership,
+          context,
+          assessorRole,
+          state: "READY_TO_REVIEW",
+          nextAction: "CONTINUE_REVIEW",
+        }),
+      );
+      continue;
+    }
+
+    if (!cycleReadyForInitialWork(record)) continue;
+
+    if (
+      directReleaseReadyForActor({
+        record,
+        actorUserId,
+        actorRole,
+        assessorRole,
+        reviewerAssignment,
+      })
+    ) {
+      items.push(
+        publicQueueItem({
+          record,
+          membership,
+          context,
+          assessorRole,
+          state: "READY_TO_RELEASE",
+          nextAction: "DIRECT_RELEASE",
+        }),
+      );
+      continue;
+    }
+
+    const chain = teacherSupervisoryReviewChainForAssessor(assessorRole);
+    const firstStage = chain?.stages[0];
+    if (!chain || !chain.requiresReviewRows || !firstStage) continue;
+
+    const authority = decideTeacherSupervisoryReviewAuthority({
+      actorUserId,
+      actorRoleName: actorRole,
       assessorUserId: record.assessorUserId,
-      assessorRole: authority.assessorRole,
-      assessorOfficeLabel: officeLabel(authority.assessorRole),
-      requiredReviewStage: authority.stage,
-      reviewerRole: authority.reviewerRole,
-      state: "READY_TO_START",
-      eligible: true,
+      assessorRoleName: assessorRole,
+      stage: firstStage.stage,
     });
+    if (!authority.allowed) continue;
+
+    items.push(
+      publicQueueItem({
+        record,
+        membership,
+        context,
+        assessorRole: authority.assessorRole,
+        state: "READY_TO_START",
+        nextAction: "START_REVIEW",
+      }),
+    );
   }
 
   items.sort((left, right) => {
+    const stateDifference =
+      statePriority(left.state) - statePriority(right.state);
+    if (stateDifference !== 0) return stateDifference;
+
     const districtDifference = left.districtName.localeCompare(
       right.districtName,
     );
@@ -719,6 +1013,9 @@ export async function readTeacherSupervisoryReviewQueue(
     officeLabel: officeLabel(actorRole),
     summary: {
       assessments: items.length,
+      readyToStart: items.filter((item) => item.state === "READY_TO_START").length,
+      readyToReview: items.filter((item) => item.state === "READY_TO_REVIEW").length,
+      readyToRelease: items.filter((item) => item.state === "READY_TO_RELEASE").length,
       circuits: new Set(items.map((item) => item.circuitId)).size,
       schools: new Set(items.map((item) => item.schoolId)).size,
     },
@@ -730,6 +1027,11 @@ export async function readTeacherSupervisoryReviewQueue(
     observationDetailsIncluded: false,
     classEnrolmentEvidenceIncluded: false,
     contactDetailsIncluded: false,
+    assessorUserIdIncluded: false,
+    targetUserIdIncluded: false,
+    reviewIdIncluded: false,
+    assignmentIdsIncluded: false,
+    proofHashesIncluded: false,
     legacyTeacherAppraisalIncluded: false,
     noBackgroundPolling: true,
     providerCalled: false,

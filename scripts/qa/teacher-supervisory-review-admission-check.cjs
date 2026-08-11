@@ -160,9 +160,14 @@ assert(
 
 assert(
   source.reviewQueue.includes(
-    "fullAssessmentHashReverificationDeferredToReviewAdmission: true",
-  ),
-  "Read-only queue must continue deferring full proof to admission",
+    "fullAssessmentHashReverificationDeferredToAction: true",
+  ) &&
+    source.reviewQueue.includes('state: "READY_TO_START"') &&
+    source.reviewQueue.includes('nextAction: "START_REVIEW"') &&
+    !source.reviewQueue.includes(
+      "verifyTeacherSupervisoryFinalizedAssessmentEvidence",
+    ),
+  "READY_TO_START discovery must remain read-only and defer full proof to admission",
 );
 
 console.log("");
