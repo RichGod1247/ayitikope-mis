@@ -172,17 +172,6 @@ function stateLabel(state: WorkState) {
   }
 }
 
-function stateHelp(state: WorkState) {
-  switch (state) {
-    case "READY_TO_START":
-      return "This finalized assessment is waiting for you to begin its independent review.";
-    case "READY_TO_REVIEW":
-      return "This review is already in your custody and can be reopened safely after a browser or network interruption.";
-    case "READY_TO_RELEASE":
-      return "This is your own finalized Director assessment. It does not enter self-review.";
-  }
-}
-
 function stateTone(state: WorkState) {
   switch (state) {
     case "READY_TO_START":
@@ -191,22 +180,6 @@ function stateTone(state: WorkState) {
       return "border-amber-300/25 bg-amber-400/10 text-amber-100";
     case "READY_TO_RELEASE":
       return "border-emerald-300/25 bg-emerald-400/10 text-emerald-100";
-  }
-}
-
-function officeLabel(role: string) {
-  switch (role) {
-    case "HEAD_OF_SUPERVISION":
-      return "Head of Supervision";
-    case "DISTRICT_DIRECTOR":
-      return "District Director";
-    default:
-      return clean(role)
-        .toLowerCase()
-        .split("_")
-        .filter(Boolean)
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(" ");
   }
 }
 
@@ -264,6 +237,42 @@ function scoreLabel(item: ReviewPackageItem) {
   return item.notApplicable ? "N/A" : String(item.score ?? "—");
 }
 
+function nativeScoreTone(
+  score: number | null | undefined,
+  notApplicable: boolean,
+) {
+  if (notApplicable) return "bg-slate-200 text-slate-900";
+  switch (score) {
+    case 1:
+      return "bg-rose-100 text-rose-950";
+    case 2:
+      return "bg-orange-100 text-orange-950";
+    case 3:
+      return "bg-amber-100 text-amber-950";
+    case 4:
+      return "bg-cyan-100 text-cyan-950";
+    case 5:
+      return "bg-emerald-100 text-emerald-950";
+    default:
+      return "bg-white text-slate-700";
+  }
+}
+
+function sectionRawScore(section: ReviewPackageSection) {
+  return section.items.reduce(
+    (sum, item) =>
+      item.notApplicable || item.score == null ? sum : sum + item.score,
+    0,
+  );
+}
+
+function sectionApplicableMaximum(section: ReviewPackageSection) {
+  return section.items.reduce(
+    (sum, item) => (item.notApplicable ? sum : sum + item.maxScore),
+    0,
+  );
+}
+
 export default function TeacherSupervisoryReviewClient({
   initialAssessmentId,
 }: ClientProps) {
@@ -277,6 +286,9 @@ export default function TeacherSupervisoryReviewClient({
     useState<BrowserReviewPackage | null>(null);
   const [packageLoading, setPackageLoading] = useState(false);
   const [packageError, setPackageError] = useState("");
+  const [startReviewBusyId, setStartReviewBusyId] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [actionNotice, setActionNotice] = useState("");
 
   const loadQueue = useCallback(async () => {
     setQueueLoading(true);
@@ -342,6 +354,73 @@ export default function TeacherSupervisoryReviewClient({
     }
   }, []);
 
+  const startReview = useCallback(
+    async (item: ReviewWorkItem) => {
+      if (item.state !== "READY_TO_START" || item.nextAction !== "START_REVIEW") {
+        setActionError(
+          "This report is no longer waiting to start review. Refresh the work list.",
+        );
+        return;
+      }
+
+      const confirmed = window.confirm(
+        "Start independent review of this Teacher appraisal? This places the locked report in your review custody. It does not change any score or General Comment.",
+      );
+
+      if (!confirmed) return;
+
+      setStartReviewBusyId(item.assessmentId);
+      setSelectedAssessmentId(item.assessmentId);
+      setActionError("");
+      setActionNotice("");
+      setPackageError("");
+
+      try {
+        const response = await fetch(
+          `/api/governance/appraisals/teacher-supervisory/review-queue/${encodeURIComponent(
+            item.assessmentId,
+          )}/start`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ confirm: true }),
+          },
+        );
+
+        const body = (await readApiBody(response)) as
+          | {
+              ok: true;
+              result: {
+                outcome: "STARTED" | "EXISTING_REVIEW";
+              };
+            }
+          | ApiFailure;
+
+        if (!response.ok || body.ok !== true) {
+          throw new Error(messageFromFailure(body, response.status));
+        }
+
+        setActionNotice(
+          body.result.outcome === "EXISTING_REVIEW"
+            ? "Your review was already started. Reopening the locked report."
+            : "Review started securely. Opening the locked report.",
+        );
+
+        await loadQueue();
+        await loadReviewPackage(item.assessmentId);
+      } catch (startError) {
+        setActionError(
+          startError instanceof Error
+            ? startError.message
+            : "The review could not be started. Refresh the work list before trying again.",
+        );
+      } finally {
+        setStartReviewBusyId("");
+      }
+    },
+    [loadQueue, loadReviewPackage],
+  );
+
   useEffect(() => {
     void loadQueue();
   }, [loadQueue]);
@@ -369,20 +448,20 @@ export default function TeacherSupervisoryReviewClient({
   const workGroups = useMemo(
     () => [
       {
-        state: "READY_TO_REVIEW" as const,
-        title: "Continue review",
-        description:
-          "Reports already in your custody. Open these first if you were interrupted.",
-        items:
-          queue?.items.filter((item) => item.state === "READY_TO_REVIEW") ?? [],
-      },
-      {
         state: "READY_TO_START" as const,
         title: "New reports",
         description:
-          "Finalized assessments waiting for independent review admission.",
+          "Finalized assessments waiting for you to begin independent review.",
         items:
           queue?.items.filter((item) => item.state === "READY_TO_START") ?? [],
+      },
+      {
+        state: "READY_TO_REVIEW" as const,
+        title: "Continue review",
+        description:
+          "Reports already in your custody. Reopen them safely after an interruption.",
+        items:
+          queue?.items.filter((item) => item.state === "READY_TO_REVIEW") ?? [],
       },
       {
         state: "READY_TO_RELEASE" as const,
@@ -396,10 +475,89 @@ export default function TeacherSupervisoryReviewClient({
     [queue],
   );
 
+  const activeWorkGroups = useMemo(
+    () => workGroups.filter((group) => group.items.length > 0),
+    [workGroups],
+  );
+
   function closePackage() {
     setReviewPackage(null);
     setPackageError("");
     setSelectedAssessmentId("");
+  }
+
+  function renderWorkCard(item: ReviewWorkItem) {
+    return (
+      <article
+        key={item.assessmentId}
+        className="w-full rounded-[22px] border border-white/10 bg-[linear-gradient(135deg,rgba(13,20,31,0.96),rgba(7,12,20,0.96))] p-4 shadow-[0_14px_36px_rgba(0,0,0,0.2)] md:p-4"
+      >
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px_minmax(190px,230px)] lg:items-center">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-base font-black text-white md:text-lg">
+                {item.targetName || "Teacher"}
+              </p>
+              <span
+                className={cx(
+                  "rounded-full border px-2.5 py-1 text-[11px] font-bold",
+                  stateTone(item.state),
+                )}
+              >
+                {stateLabel(item.state)}
+              </span>
+            </div>
+            <p className="mt-1 text-sm font-semibold leading-5 text-slate-200">
+              {item.schoolName}
+            </p>
+            <p className="mt-1 text-xs leading-5 text-slate-400">
+              {item.circuitName} · {item.dateObserved}
+            </p>
+          </div>
+
+          <div className="border-t border-white/10 pt-3 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">
+              Assessed by
+            </p>
+            <p className="mt-1 text-sm font-black text-white">
+              {item.assessorOfficeLabel}
+            </p>
+          </div>
+
+          <div className="lg:justify-self-stretch">
+            {item.state === "READY_TO_START" ? (
+              <button
+                type="button"
+                disabled={
+                  Boolean(startReviewBusyId) || packageLoading || queueLoading
+                }
+                onClick={() => void startReview(item)}
+                className="min-h-12 w-full rounded-2xl border border-cyan-300/25 bg-cyan-400/15 px-4 text-sm font-black text-cyan-50 hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {startReviewBusyId === item.assessmentId
+                  ? "Starting review…"
+                  : "Start review"}
+              </button>
+            ) : item.state === "READY_TO_REVIEW" ? (
+              <button
+                type="button"
+                disabled={packageLoading || Boolean(startReviewBusyId)}
+                onClick={() => void loadReviewPackage(item.assessmentId)}
+                className="min-h-12 w-full rounded-2xl border border-amber-300/25 bg-amber-400/15 px-4 text-sm font-black text-amber-50 hover:bg-amber-400/20 disabled:opacity-50"
+              >
+                {packageLoading && selectedAssessmentId === item.assessmentId
+                  ? "Opening report…"
+                  : "Open report"}
+              </button>
+            ) : (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-center text-xs font-semibold leading-5 text-slate-300">
+                Direct release wiring comes in a later controlled step.
+              </div>
+            )}
+          </div>
+        </div>
+      </article>
+    );
   }
 
   if (reviewPackage) {
@@ -421,10 +579,10 @@ export default function TeacherSupervisoryReviewClient({
                 <p className="mt-1 text-sm text-slate-300">
                   {observation.schoolName} · {observation.circuitName}
                 </p>
-                <p className="mt-2 text-sm leading-6 text-slate-300">
-                  Assessed by {assessment.assessorOffice}. You are reviewing a
-                  locked official assessment. Nothing on this screen changes
-                  the Teacher&apos;s scores or General Comment.
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
+                  Assessed by {assessment.assessorOffice}. Review the familiar
+                  official Teacher form below. This copy is locked: no score,
+                  observation particular or General Comment can be changed here.
                 </p>
               </div>
 
@@ -474,178 +632,195 @@ export default function TeacherSupervisoryReviewClient({
             ))}
           </section>
 
-          <section className="grid gap-4 xl:grid-cols-[340px_1fr]">
-            <aside className="space-y-4">
-              <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4">
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#E8C96A]">
-                  Observation record
+          <section className="overflow-x-auto rounded-[24px] border border-slate-300 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.28)]">
+            <div className="min-w-[1120px] bg-white text-slate-950">
+              <header className="border-b-2 border-slate-900 px-8 py-7 text-center">
+                <p className="text-sm font-black uppercase tracking-[0.18em]">
+                  {observation.districtName}
                 </p>
+                <h2 className="mt-2 text-xl font-black uppercase">
+                  Monitoring and Inspection Sheet (Teachers)
+                </h2>
+                <p className="mt-2 text-xs font-black uppercase tracking-[0.14em] text-cyan-800">
+                  Governance Teacher observation · independent review copy
+                </p>
+              </header>
 
-                <div className="mt-4 space-y-2">
-                  {[
-                    ["Teacher", observation.teacherName || "Teacher"],
-                    ["School", observation.schoolName],
-                    ["Circuit", observation.circuitName],
-                    ["District", observation.districtName],
-                    ["Years in service", observation.yearsInService],
-                    ["Years in present school", observation.yearsInPresentSchool],
-                    ["Subject observed", observation.subjectBeingObserved],
-                    ["Sub-strand", observation.subStrand],
-                    ["Class taught", observation.classTaught],
-                    [
-                      "Lesson duration",
-                      observation.durationMinutes == null
-                        ? null
-                        : `${observation.durationMinutes} minutes`,
-                    ],
-                  ].map(([label, value]) => (
-                    <div
-                      key={String(label)}
-                      className="rounded-2xl border border-white/10 bg-black/20 p-3"
-                    >
-                      <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">
-                        {label}
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-white">
-                        {displayValue(value)}
-                      </p>
+              <div className="grid grid-cols-[190px_1fr_210px_1fr] border-b border-slate-300 text-sm">
+                {[
+                  ["Name of Teacher", observation.teacherName || "Teacher"],
+                  ["Number of Years in the Service", observation.yearsInService],
+                  ["Name of School", observation.schoolName],
+                  ["Number of Years in Present School", observation.yearsInPresentSchool],
+                  ["Name of Circuit", observation.circuitName],
+                  ["Subject Being Observed", observation.subjectBeingObserved],
+                  ["Date Observed", observation.dateObserved],
+                  ["Sub-strand", observation.subStrand],
+                  ["Class Taught", observation.classTaught],
+                  [
+                    "Duration of Lesson",
+                    observation.durationMinutes == null
+                      ? null
+                      : `${observation.durationMinutes} minutes`,
+                  ],
+                ].map(([label, value], index) => (
+                  <div key={`${String(label)}:${index}`} className="contents">
+                    <div className="border-b border-r border-slate-300 bg-slate-100 px-4 py-3 text-xs font-black uppercase">
+                      {label}
                     </div>
-                  ))}
-                </div>
-
-                <div className="mt-4 rounded-2xl border border-cyan-300/20 bg-cyan-400/10 p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-cyan-100">
-                    Class enrolment
-                  </p>
-                  {observation.contextSchemaVersion === 2 ? (
-                    <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                      {[
-                        ["Total", observation.totalEnrolment],
-                        ["Girls", observation.girls],
-                        ["Boys", observation.boys],
-                      ].map(([label, value]) => (
-                        <div
-                          key={String(label)}
-                          className="rounded-xl border border-white/10 bg-black/20 p-2"
-                        >
-                          <p className="text-[9px] uppercase tracking-[0.08em] text-slate-400">
-                            {label}
-                          </p>
-                          <p className="mt-1 font-bold text-white">
-                            {String(value ?? "—")}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="mt-2 text-xs leading-5 text-cyan-50/80">
-                      This older immutable assessment did not capture the
-                      enrolment breakdown.
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-[28px] border border-emerald-300/20 bg-emerald-400/10 p-4">
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-100">
-                  Review custody
-                </p>
-                <p className="mt-2 text-sm font-semibold text-white">
-                  {officeLabel(reviewPackage.review.reviewerRole)}
-                </p>
-                <p className="mt-2 text-xs leading-5 text-emerald-50/85">
-                  This slice is deliberately read-only. Return, Forward and
-                  Release controls will be wired only through their existing
-                  server-authoritative decision endpoints.
-                </p>
-              </div>
-            </aside>
-
-            <main className="space-y-4">
-              {assessment.sections.map((section) => (
-                <section
-                  key={section.sectionKey}
-                  className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4 md:p-5"
-                >
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#E8C96A]">
-                        Section {section.order}
-                      </p>
-                      <h2 className="mt-1 text-lg font-bold text-white">
-                        {section.title}
-                      </h2>
-                      {section.description ? (
-                        <p className="mt-1 text-sm leading-6 text-slate-400">
-                          {section.description}
-                        </p>
-                      ) : null}
-                    </div>
-
-                    <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-center">
-                      <p className="text-[9px] uppercase tracking-[0.08em] text-slate-400">
-                        Section result
-                      </p>
-                      <p className="mt-1 font-bold text-white">
-                        {formatPercent(section.percentage)}
-                      </p>
+                    <div className="border-b border-r border-slate-300 px-4 py-3 font-semibold">
+                      {displayValue(value)}
                     </div>
                   </div>
+                ))}
+              </div>
 
-                  <div className="mt-4 space-y-2">
-                    {section.items.map((item) => (
-                      <article
-                        key={item.itemKey}
-                        className="grid gap-3 rounded-2xl border border-white/10 bg-black/20 p-3 sm:grid-cols-[1fr_auto] sm:items-center"
+              <div className="border-b-2 border-slate-900 bg-cyan-50 px-6 py-4">
+                <p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-900">
+                  Class Enrollment Data
+                </p>
+                {observation.contextSchemaVersion === 2 ? (
+                  <div className="mt-3 grid grid-cols-3 gap-3 text-sm">
+                    {[
+                      ["Total enrolment", observation.totalEnrolment],
+                      ["Girls", observation.girls],
+                      ["Boys", observation.boys],
+                    ].map(([label, value]) => (
+                      <div
+                        key={String(label)}
+                        className="border border-cyan-200 bg-white px-4 py-3"
                       >
-                        <div>
-                          <p className="text-xs font-bold text-[#E8C96A]">
-                            {item.itemKey}
-                          </p>
-                          <p className="mt-1 text-sm font-semibold leading-6 text-slate-100">
-                            {item.label}
-                          </p>
-                        </div>
-
-                        <div
-                          className={cx(
-                            "min-w-20 rounded-xl border px-3 py-2 text-center text-sm font-black",
-                            item.notApplicable
-                              ? "border-slate-300/20 bg-slate-300/10 text-slate-100"
-                              : "border-cyan-300/25 bg-cyan-400/10 text-cyan-50",
-                          )}
-                        >
-                          {scoreLabel(item)}
-                        </div>
-                      </article>
+                        <p className="text-[11px] font-black uppercase text-cyan-900">
+                          {label}
+                        </p>
+                        <p className="mt-1 text-base font-black text-slate-950">
+                          {String(value ?? "—")}
+                        </p>
+                      </div>
                     ))}
                   </div>
-                </section>
+                ) : (
+                  <p className="mt-2 text-sm font-semibold text-slate-700">
+                    Legacy v1 assessment — enrolment breakdown was not captured
+                    in this immutable version.
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-[68px_1fr_62px_repeat(5,62px)_78px] border-b-2 border-slate-900 bg-slate-100 text-center text-sm font-black">
+                <div className="border-r border-slate-300 px-2 py-4">S/N</div>
+                <div className="border-r border-slate-300 px-4 py-4 text-left">
+                  Behavioural competence
+                  <span className="mt-1 block text-[11px] font-semibold">
+                    1—Very Poor · 2—Poor · 3—Acceptable · 4—Good · 5—Very Good
+                  </span>
+                </div>
+                {["N/A", "1", "2", "3", "4", "5", "Final score"].map(
+                  (label) => (
+                    <div
+                      key={label}
+                      className="border-r border-slate-300 px-2 py-4 last:border-r-0"
+                    >
+                      {label}
+                    </div>
+                  ),
+                )}
+              </div>
+
+              {assessment.sections.map((section) => (
+                <div key={`native-review:${section.sectionKey}`}>
+                  <div className="grid grid-cols-[68px_1fr_62px_repeat(5,62px)_78px] bg-[#304C6E] text-sm font-black text-white">
+                    <div className="border-r border-white/20 px-3 py-3 text-center">
+                      {section.order}.0
+                    </div>
+                    <div className="col-span-8 px-4 py-3 uppercase">
+                      {section.title}
+                    </div>
+                  </div>
+
+                  {section.items.map((item) => (
+                    <div
+                      key={`native-review:${section.sectionKey}:${item.itemKey}`}
+                      className="grid grid-cols-[68px_1fr_62px_repeat(5,62px)_78px] border-b border-slate-300 text-sm"
+                    >
+                      <div className="border-r border-slate-300 px-3 py-3 text-center font-bold">
+                        {item.itemKey}
+                      </div>
+                      <div className="border-r border-slate-300 px-4 py-3 font-medium">
+                        {item.label}
+                      </div>
+                      {[null, 1, 2, 3, 4, 5].map((score) => {
+                        const selected =
+                          score == null
+                            ? item.notApplicable
+                            : !item.notApplicable && item.score === score;
+                        return (
+                          <div
+                            key={`${item.itemKey}:${score ?? "NA"}`}
+                            className={cx(
+                              "border-r border-slate-300 px-2 py-3 text-center text-xl font-black",
+                              selected
+                                ? nativeScoreTone(item.score, item.notApplicable)
+                                : "bg-white text-slate-300",
+                            )}
+                          >
+                            {selected ? "✓" : ""}
+                          </div>
+                        );
+                      })}
+                      <div
+                        className={cx(
+                          "px-2 py-3 text-center text-base font-black",
+                          nativeScoreTone(item.score, item.notApplicable),
+                        )}
+                      >
+                        {scoreLabel(item)}
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="grid grid-cols-[1fr_260px] border-b-2 border-slate-900 bg-slate-50 text-sm">
+                    <div className="px-4 py-3 text-right font-black uppercase">
+                      Section {section.order} total
+                    </div>
+                    <div className="grid grid-cols-2">
+                      <div className="border-l border-slate-300 px-4 py-3 text-center font-black">
+                        {sectionRawScore(section)}/{sectionApplicableMaximum(section)}
+                      </div>
+                      <div className="border-l border-slate-300 px-4 py-3 text-center font-black">
+                        {formatPercent(section.percentage)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               ))}
 
-              <section className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4 md:p-5">
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#E8C96A]">
-                  General Comment
+              <div className="border-t-2 border-slate-900 bg-slate-50 px-6 py-5">
+                <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-600">
+                  General Comments
                 </p>
-                <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-100">
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-900">
                   {assessment.generalComment?.trim() ||
-                    "No General Comment was entered."}
+                    "No General Comment entered."}
                 </p>
-              </section>
+              </div>
 
-              <section className="rounded-[28px] border border-amber-300/20 bg-amber-400/10 p-4">
-                <p className="text-sm font-bold text-amber-50">
-                  Read-only review shell
-                </p>
-                <p className="mt-1 text-xs leading-5 text-amber-50/85">
-                  No review decision is changed in this step. The next phase
-                  will connect the correct HOS or District Director action to
-                  the existing server-side decision service with explicit
-                  confirmation.
-                </p>
-              </section>
-            </main>
+              <footer className="grid grid-cols-[1fr_320px] border-t-2 border-slate-900 bg-cyan-50">
+                <div className="px-6 py-5 text-right text-base font-black uppercase">
+                  Overall Teacher appraisal result
+                </div>
+                <div className="border-l-2 border-slate-900 px-6 py-5 text-center text-2xl font-black text-cyan-900">
+                  {formatPercent(assessment.overallPercentage)}
+                </div>
+              </footer>
+            </div>
           </section>
+
+          <p className="text-xs leading-5 text-slate-400">
+            This review form is read-only. No score, General Comment,
+            observation particular, review authority ID or integrity hash is
+            editable or displayed here.
+          </p>
         </div>
       </div>
     );
@@ -664,9 +839,8 @@ export default function TeacherSupervisoryReviewClient({
                 Review Teacher Reports
               </h1>
               <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-300">
-                See what needs your attention. This work list restores your
-                responsibility after a browser restart or weak-network
-                interruption without storing review data in the browser.
+                New reports appear first. Review custody remains durable on the
+                server after a browser restart or weak-network interruption.
               </p>
             </div>
 
@@ -694,10 +868,19 @@ export default function TeacherSupervisoryReviewClient({
             {queueError}
           </div>
         ) : null}
-
         {packageError ? (
           <div className="rounded-2xl border border-rose-300/25 bg-rose-500/10 p-4 text-sm text-rose-100">
             {packageError}
+          </div>
+        ) : null}
+        {actionError ? (
+          <div className="rounded-2xl border border-rose-300/25 bg-rose-500/10 p-4 text-sm text-rose-100">
+            {actionError}
+          </div>
+        ) : null}
+        {actionNotice ? (
+          <div className="rounded-2xl border border-emerald-300/25 bg-emerald-500/10 p-4 text-sm text-emerald-100">
+            {actionNotice}
           </div>
         ) : null}
 
@@ -726,114 +909,54 @@ export default function TeacherSupervisoryReviewClient({
             <p className="text-sm text-slate-300">Loading your review work…</p>
           </section>
         ) : queue?.items.length ? (
-          <div className="space-y-5">
-            {workGroups.map((group) => (
+          <div className="space-y-4">
+            {activeWorkGroups.map((group) => (
               <section
                 key={group.state}
-                className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4 md:p-5"
+                className={cx(
+                  "rounded-[28px] border bg-white/[0.04] p-4 md:p-5",
+                  group.state === "READY_TO_START"
+                    ? "border-cyan-300/15"
+                    : "border-white/10",
+                )}
               >
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div className="flex items-end justify-between gap-3">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#E8C96A]">
+                    <p className="text-xs font-black uppercase tracking-[0.14em] text-[#E8C96A]">
                       {group.title}
                     </p>
                     <p className="mt-1 text-sm leading-6 text-slate-300">
                       {group.description}
                     </p>
                   </div>
-                  <span className="text-sm font-bold text-white">
+                  <span className="text-sm font-black text-white">
                     {group.items.length}
                   </span>
                 </div>
 
-                {group.items.length ? (
-                  <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                    {group.items.map((item) => (
-                      <article
-                        key={item.assessmentId}
-                        className="rounded-[22px] border border-white/10 bg-black/20 p-4"
-                      >
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="text-lg font-bold text-white">
-                              {item.targetName || "Teacher"}
-                            </p>
-                            <p className="mt-1 text-sm text-slate-300">
-                              {item.schoolName}
-                            </p>
-                            <p className="mt-1 text-xs text-slate-400">
-                              {item.circuitName} · {item.dateObserved}
-                            </p>
-                          </div>
-
-                          <span
-                            className={cx(
-                              "rounded-full border px-3 py-1 text-xs font-bold",
-                              stateTone(item.state),
-                            )}
-                          >
-                            {stateLabel(item.state)}
-                          </span>
-                        </div>
-
-                        <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">
-                            Assessed by
-                          </p>
-                          <p className="mt-1 text-sm font-semibold text-white">
-                            {item.assessorOfficeLabel}
-                          </p>
-                          <p className="mt-2 text-xs leading-5 text-slate-400">
-                            {stateHelp(item.state)}
-                          </p>
-                        </div>
-
-                        {item.state === "READY_TO_REVIEW" ? (
-                          <button
-                            type="button"
-                            disabled={packageLoading}
-                            onClick={() =>
-                              void loadReviewPackage(item.assessmentId)
-                            }
-                            className="mt-4 min-h-12 w-full rounded-2xl border border-amber-300/25 bg-amber-400/15 px-4 text-sm font-bold text-amber-50 hover:bg-amber-400/20 disabled:opacity-50"
-                          >
-                            {packageLoading &&
-                            selectedAssessmentId === item.assessmentId
-                              ? "Opening report…"
-                              : "Open report"}
-                          </button>
-                        ) : (
-                          <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-center text-xs font-semibold text-slate-300">
-                            Action wiring comes in the next controlled step.
-                          </div>
-                        )}
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="mt-4 rounded-2xl border border-dashed border-white/15 bg-black/10 p-4 text-sm text-slate-400">
-                    Nothing in this group right now.
-                  </p>
-                )}
+                <div className="mt-4 space-y-3">
+                  {group.items.map((item) => renderWorkCard(item))}
+                </div>
               </section>
             ))}
           </div>
-        ) : (
+        ) : queue ? (
           <section className="rounded-[28px] border border-white/10 bg-white/[0.04] p-6">
             <h2 className="text-lg font-bold text-white">No review work waiting</h2>
             <p className="mt-2 text-sm leading-6 text-slate-300">
               Use Refresh work list when you expect a newly finalized or
-              forwarded Teacher report. This page does not poll in the
-              background.
+              forwarded Teacher report. This page does not poll in the background.
             </p>
           </section>
-        )}
+        ) : null}
 
         <p className="text-xs leading-5 text-slate-400">
           Work-list responses contain compact responsibility metadata only.
-          Scores and General Comments load only after an existing review is
-          opened through the read-only package endpoint. No persistent browser
-          storage or background polling is used.
+          Starting review sends only explicit confirmation; reviewer identity,
+          assignment, stage and evidence authority are re-established by the
+          server. Scores and General Comments load only through the read-only
+          package endpoint. No persistent browser storage or background polling
+          is used.
         </p>
       </div>
     </div>
