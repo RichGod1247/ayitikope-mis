@@ -10,12 +10,16 @@ const files = {
     "src/app/governance/appraisals/teacher-supervisory/review/page.tsx",
   client:
     "src/app/governance/appraisals/teacher-supervisory/review/TeacherSupervisoryReviewClient.tsx",
+  assessmentClient:
+    "src/app/governance/appraisals/teacher-supervisory/TeacherSupervisoryAssessmentClient.tsx",
   admissionRoute:
     "src/app/api/governance/appraisals/teacher-supervisory/review-queue/[assessmentId]/start/route.ts",
   decisionRoute:
     "src/app/api/governance/appraisals/teacher-supervisory/review-queue/[assessmentId]/decision/route.ts",
   directorDecisionRoute:
     "src/app/api/governance/appraisals/teacher-supervisory/review-queue/[assessmentId]/director-decision/route.ts",
+  directReleaseRoute:
+    "src/app/api/governance/appraisals/teacher-supervisory/[assessmentId]/direct-release/route.ts",
 };
 
 function fail(message, detail) {
@@ -103,6 +107,7 @@ for (const requiredClientMarker of [
   "result: { outcome: HosDecisionOutcome }",
   "DirectorDecisionAction",
   "DirectorDecisionOutcome",
+  "DirectReleaseOutcome",
   "directorDecisionBody",
   "directorDecisionSuccessMessage",
   "submitDirectorDecision",
@@ -114,6 +119,23 @@ for (const requiredClientMarker of [
   "Release result",
   'reviewPackage.review.reviewerRole === "DISTRICT_DIRECTOR"',
   "result: { outcome: DirectorDecisionOutcome }",
+  "directRelease",
+  "/direct-release",
+  "Final inspections before release",
+  "Supervision day",
+  "Back to supervision days",
+  "Back to circuits",
+  "Back to schools",
+  "Choose a Teacher to inspect the complete locked appraisal.",
+  "DirectInspectionWorkspace",
+  "reviewControlsIncluded",
+  '"READY_FOR_DIRECT_RELEASE"',
+  "Final inspection · read-only",
+  "Governance Teacher observation · final inspection copy",
+  "Release only after checking the form above",
+  "Release my finalized assessment",
+  "Releasing assessment…",
+  '"RELEASED" | "EXISTING_RELEASED"',
 ]) {
   assert(
     source.client.includes(requiredClientMarker),
@@ -157,6 +179,38 @@ assert(
     source.directorDecisionRoute.includes("governanceScope: auth.scope"),
   "Director decision API must remain server-authoritative and browser-minimized",
 );
+
+assert(
+  source.directReleaseRoute.includes(
+    'const ALLOWED_BODY_FIELDS = new Set(["confirm"])',
+  ) &&
+    source.directReleaseRoute.includes(
+      'normalized(auth.ctx.roleName) !== "DISTRICT_DIRECTOR"',
+    ) &&
+    source.directReleaseRoute.includes("bodyContainsOnlyAllowedFields(parsed.body)") &&
+    source.directReleaseRoute.includes("parsed.body.confirm !== true") &&
+    source.directReleaseRoute.includes(
+      "executeTeacherSupervisoryDirectorDirectRelease",
+    ) &&
+    source.directReleaseRoute.includes("actorUserId: auth.ctx.userId") &&
+    source.directReleaseRoute.includes("actorRoleName: auth.ctx.roleName") &&
+    source.directReleaseRoute.includes("governanceScope: auth.scope") &&
+    source.directReleaseRoute.includes("confirm: true"),
+  "Director direct-release API must remain confirmation-only and server-authoritative",
+);
+
+for (const forbiddenDirectReleaseMethod of [
+  "export async function GET",
+  "export async function PUT",
+  "export async function PATCH",
+  "export async function DELETE",
+]) {
+  assert(
+    !source.directReleaseRoute.includes(forbiddenDirectReleaseMethod),
+    "Director direct-release route exposes forbidden HTTP method",
+    forbiddenDirectReleaseMethod,
+  );
+}
 
 for (const forbiddenAdmissionBodyField of [
   "reviewerUserId",
@@ -218,17 +272,6 @@ for (const forbiddenDecisionBodyField of [
   );
 }
 
-for (const forbiddenLaterAction of [
-  "/direct-release",
-  "Release my finalized assessment",
-]) {
-  assert(
-    !source.client.includes(forbiddenLaterAction),
-    "F1C4 must not wire Director-authored direct release",
-    forbiddenLaterAction,
-  );
-}
-
 for (const forbiddenMethod of [
   'method: "PUT"',
   'method: "PATCH"',
@@ -250,6 +293,11 @@ for (const forbiddenBrowserStorage of [
   assert(
     !source.client.includes(forbiddenBrowserStorage),
     "Teacher review workspace contains forbidden browser persistence/polling marker",
+    forbiddenBrowserStorage,
+  );
+  assert(
+    !source.assessmentClient.includes(forbiddenBrowserStorage),
+    "Teacher final-inspection bridge contains forbidden browser persistence/polling marker",
     forbiddenBrowserStorage,
   );
 }
@@ -301,33 +349,52 @@ const workGroupsIndex = source.client.indexOf("const workGroups = useMemo(");
 const activeWorkGroupsIndex = source.client.indexOf(
   "const activeWorkGroups = useMemo(",
 );
+const directReleaseItemsIndex = source.client.indexOf(
+  "const directReleaseItems = useMemo(",
+);
+const directReleaseDayGroupsIndex = source.client.indexOf(
+  "const directReleaseDayGroups = useMemo(",
+);
 assert(
-  workGroupsIndex >= 0 && activeWorkGroupsIndex > workGroupsIndex,
-  "Teacher review work groups must be defined before automatic active-group filtering",
+  workGroupsIndex >= 0 &&
+    activeWorkGroupsIndex > workGroupsIndex &&
+    directReleaseItemsIndex > activeWorkGroupsIndex &&
+    directReleaseDayGroupsIndex > directReleaseItemsIndex,
+  "Teacher review work and Director final-inspection groups must have a stable source order",
 );
 
 for (const automaticVisibilityMarker of [
   'state: "READY_TO_START" as const',
   'state: "READY_TO_REVIEW" as const',
-  'state: "READY_TO_RELEASE" as const',
   "workGroups.filter((group) => group.items.length > 0)",
   "activeWorkGroups.map((group)",
+  'item.state === "READY_TO_RELEASE"',
+  'item.nextAction === "DIRECT_RELEASE"',
+  "buildDirectReleaseDayGroups(directReleaseItems)",
+  "directReleaseDayGroups.map((day)",
+  "selectedDirectReleaseDay.circuits.map((circuit)",
+  "selectedDirectReleaseCircuit.schools.map((school)",
+  "selectedDirectReleaseSchool.items.map((item)",
 ]) {
   assert(
     source.client.includes(automaticVisibilityMarker),
-    "Automatic Teacher review work visibility marker missing",
+    "Teacher review/final-inspection visibility marker missing",
     automaticVisibilityMarker,
   );
 }
 
 const newStateIndex = source.client.indexOf('state: "READY_TO_START" as const');
 const reviewStateIndex = source.client.indexOf('state: "READY_TO_REVIEW" as const');
-const releaseStateIndex = source.client.indexOf('state: "READY_TO_RELEASE" as const');
 assert(
-  newStateIndex >= 0 &&
-    reviewStateIndex > newStateIndex &&
-    releaseStateIndex > reviewStateIndex,
-  "Automatic Teacher review groups must retain New -> Continue -> Ready to release order",
+  newStateIndex >= 0 && reviewStateIndex > newStateIndex,
+  "Independent review groups must retain New -> Continue order",
+);
+
+assert(
+  !source.client
+    .slice(workGroupsIndex, activeWorkGroupsIndex)
+    .includes('state: "READY_TO_RELEASE" as const'),
+  "Director-authored direct-release work must be separated from independent review groups",
 );
 
 for (const forbiddenDisclosureMarker of [
@@ -392,6 +459,73 @@ assert(
   "Read-only official assessment structure must remain visible in the native form",
 );
 
+assert(
+  !source.assessmentClient.includes("finalInspectionRequested") &&
+    !source.assessmentClient.includes('params.get("finalInspection")') &&
+    !source.assessmentClient.includes("?inspected=") &&
+    !source.assessmentClient.includes("/direct-release"),
+  "Teacher assessment client must remain on the established assessor workspace; Director final inspection now stays inside the review workspace",
+);
+
+const directInspectionLoaderStart = source.client.indexOf(
+  "const loadDirectReleaseInspectionPackage = useCallback(",
+);
+const directInspectionLoaderEnd = source.client.indexOf(
+  "const startReview = useCallback(",
+  directInspectionLoaderStart,
+);
+assert(
+  directInspectionLoaderStart >= 0 &&
+    directInspectionLoaderEnd > directInspectionLoaderStart,
+  "Director final-inspection package loader must be isolated",
+);
+const directInspectionLoaderSource = source.client.slice(
+  directInspectionLoaderStart,
+  directInspectionLoaderEnd,
+);
+for (const marker of [
+  'item.state !== "READY_TO_RELEASE"',
+  'item.nextAction !== "DIRECT_RELEASE"',
+  "/api/governance/appraisals/teacher-supervisory/${encodeURIComponent(",
+  '{ cache: "no-store" }',
+  "DirectInspectionWorkspace",
+  'workspace.assessment.status !== "FINALIZED"',
+  "workspace.lifecycle.originalAssessorOnly !== true",
+  "workspace.lifecycle.reviewControlsIncluded !== false",
+  'workspace.observation.assessorRole !== "DISTRICT_DIRECTOR"',
+  '"READY_FOR_DIRECT_RELEASE"',
+  "inspection: {",
+  'actorRole: "DISTRICT_DIRECTOR"',
+]) {
+  assert(
+    directInspectionLoaderSource.includes(marker),
+    "Director final-inspection loader marker missing",
+    marker,
+  );
+}
+for (const forbidden of [
+  'method: "POST"',
+  "purpose=direct-release-inspection",
+  "reviewerUserId",
+  "reviewerAssignmentId",
+  "assessorUserId",
+  "assessorAssignmentId",
+  "assessmentHash",
+  "reviewEvidenceHash",
+  "releaseProofHash",
+]) {
+  assert(
+    !directInspectionLoaderSource.includes(forbidden),
+    "Director final-inspection loader must remain read-only and authority-minimized",
+    forbidden,
+  );
+}
+
+assert(
+  !directInspectionLoaderSource.includes("review.reviewerRole"),
+  "Director final-inspection loader must consume inspection authority, not fake review metadata",
+);
+
 const textareaCount = (source.client.match(/<textarea/g) || []).length;
 assert(
   !source.client.includes("<input") &&
@@ -420,6 +554,12 @@ assert(
     hosDecisionPanelIndex > nativeResultIndex &&
     directorDecisionPanelIndex > nativeResultIndex,
   "HOS and Director decision controls must sit outside and after the native official Teacher form",
+);
+
+const directReleasePanelIndex = source.client.indexOf("Final release");
+assert(
+  directReleasePanelIndex > nativeResultIndex,
+  "Director own-assessment direct release must sit outside and after the native official Teacher form",
 );
 
 for (const hosDecisionMarker of [
@@ -512,6 +652,144 @@ for (const forbiddenDecisionBodyField of [
   );
 }
 
+const directReleaseStart = source.client.indexOf(
+  "const directRelease = useCallback(",
+);
+const directReleaseEnd = source.client.indexOf(
+  "useEffect(() => {",
+  directReleaseStart,
+);
+assert(
+  directReleaseStart >= 0 && directReleaseEnd > directReleaseStart,
+  "Director direct-release browser action must be isolated",
+);
+const directReleaseSource = source.client.slice(
+  directReleaseStart,
+  directReleaseEnd,
+);
+
+for (const directReleaseMarker of [
+  'item.state !== "READY_TO_RELEASE"',
+  'item.nextAction !== "DIRECT_RELEASE"',
+  "You have inspected the locked form above.",
+  "This is a direct release, not a review or approval.",
+  "/direct-release",
+  'method: "POST"',
+  "JSON.stringify({ confirm: true })",
+  'result: { outcome: DirectReleaseOutcome }',
+  '"EXISTING_RELEASED"',
+  "await loadQueue()",
+]) {
+  assert(
+    directReleaseSource.includes(directReleaseMarker),
+    "Director direct-release browser behavior marker missing",
+    directReleaseMarker,
+  );
+}
+
+for (const forbiddenDirectReleaseBrowserMarker of [
+  "reviewerUserId",
+  "reviewerAssignmentId",
+  "reviewStage",
+  "assessorUserId",
+  "assessorAssignmentId",
+  "targetUserId",
+  "cycleId:",
+  "assessmentHash",
+  "observationContextHash",
+  "reviewEvidenceHash",
+  "releaseProofHash",
+  "scores",
+  "generalComment:",
+  "returnReason",
+  "reason:",
+  "loadReviewPackage",
+  "directorDecisionBody",
+  "hosDecisionBody",
+]) {
+  assert(
+    !directReleaseSource.includes(forbiddenDirectReleaseBrowserMarker),
+    "Director direct-release browser action contains forbidden review/authority/evidence marker",
+    forbiddenDirectReleaseBrowserMarker,
+  );
+}
+
+assert(
+  source.client.includes(
+    'reviewPackage.lifecycleState === "READY_FOR_DIRECT_RELEASE"',
+  ) &&
+    source.client.includes("currentDirectReleaseItem") &&
+    source.client.includes(
+      "void directRelease(currentDirectReleaseItem)",
+    ) &&
+    source.client.includes(
+      'directReleaseBusyId === assessment.id',
+    ) &&
+    !source.client.includes(
+      'onClick={() => void directRelease(item)}',
+    ),
+  "READY_TO_RELEASE must expose direct release only after the native final-inspection package is open",
+);
+
+for (const finalInspectionHierarchyMarker of [
+  "buildDirectReleaseDayGroups",
+  "selectedReleaseDay",
+  "selectedReleaseCircuitId",
+  "selectedReleaseSchoolId",
+  "showReleaseDays",
+  "showReleaseCircuits",
+  "showReleaseSchools",
+  "showReleaseTeachers",
+  "Supervision day",
+  "Back to supervision days",
+  "Back to circuits",
+  "Back to schools",
+  "Choose a Teacher to inspect the complete locked appraisal.",
+  "formatPercent(item.overallPercentage)",
+  "!selectedReleaseDay",
+  "selectedDirectReleaseDay && !selectedReleaseCircuitId",
+  "selectedDirectReleaseCircuit && !selectedReleaseSchoolId",
+  "selectedDirectReleaseSchool",
+]) {
+  assert(
+    source.client.includes(finalInspectionHierarchyMarker),
+    "Director progressive final-inspection hierarchy marker missing",
+    finalInspectionHierarchyMarker,
+  );
+}
+
+for (const forbiddenOverbuiltMarker of [
+  "Inspect finalized assessment",
+  "finalInspection=1",
+  'params.get("inspected")',
+  "Release unlocks after you return from the final-inspection form.",
+]) {
+  assert(
+    !source.client.includes(forbiddenOverbuiltMarker),
+    "Obsolete bulky final-inspection bridge must be absent",
+    forbiddenOverbuiltMarker,
+  );
+}
+
+assert(
+  source.client.includes('!directReleaseInspection ? (') &&
+    source.client.includes('"← Back to Teachers"'),
+  "Director final inspection must show the native form as the only current step with a simple return action",
+);
+
+for (const forbiddenSelfReviewLabel of [
+  "Review my assessment",
+  "Approve my assessment",
+  "Return my assessment",
+  "Return to myself",
+]) {
+  assert(
+    !source.client.includes(forbiddenSelfReviewLabel),
+    "Director-authored assessment must not be presented as self-review",
+    forbiddenSelfReviewLabel,
+  );
+}
+
 assert(
   source.client.includes('item.state === "READY_TO_REVIEW"') &&
     source.client.includes("loadReviewPackage(item.assessmentId)"),
@@ -519,53 +797,43 @@ assert(
 );
 
 assert(
-  source.client.includes(
+  !source.client.includes(
     "Direct release wiring comes in a later controlled step.",
   ),
-  "READY_TO_RELEASE must remain non-mutating in F1C2U",
+  "READY_TO_RELEASE must no longer remain deferred after F1C5 wiring",
 );
 
 console.log("");
-console.log("=== N6-F1C4 GOVERNANCE TEACHER DIRECTOR RETURN / RELEASE UI ===");
+console.log("=== N6-F1C5K GOVERNANCE TEACHER BBC PROGRESSIVE FINAL INSPECTION ===");
 console.log("");
 console.log("Page                             : separate Teacher review workspace");
 console.log("Audience                         : HOS / District Director only");
-console.log("New Reports priority             : first and primary");
-console.log("Work cards                       : wide, low-profile and responsive");
-console.log("Work-group visibility            : automatic from non-empty server queue state");
-console.log("Zero-count detailed groups       : hidden automatically");
-console.log("Manual disclosure                : absent");
-console.log("Native official form             : read-only 6-section / 34-item table");
-console.log("Redundant review banner          : removed");
-console.log("Observation particulars          : native paper-style presentation");
-console.log("Class enrolment                  : native paper-style presentation");
-console.log("General Comment                  : read-only");
-console.log("Overall result                   : read-only");
+console.log("Independent review groups        : New -> Continue");
+console.log("Director own finalized work      : progressive one-level-at-a-time drilldown");
+console.log("Hierarchy level 1                : supervision day");
+console.log("Hierarchy level 2                : circuit");
+console.log("Hierarchy level 3                : school");
+console.log("Hierarchy level 4                : Teacher");
+console.log("Final inspection form            : native locked 6-section / 34-item form");
+console.log("Final inspection mutation        : absent");
+console.log("Final inspection source          : existing original-assessor workspace GET");
+console.log("Native form location             : same review workspace; no route handoff");
+console.log("Hierarchy visibility             : one current level only");
+console.log("Inspection browser storage       : absent");
 console.log("READY_TO_START                   : Start review preserved");
-console.log("Admission confirmation           : explicit window confirmation");
-console.log("Browser mutation body            : confirm=true only");
-console.log("Reviewer identity                : server authenticated");
-console.log("Reviewer assignment              : server resolved");
-console.log("Review stage                     : server resolved");
-console.log("Governance scope                 : server authenticated");
-console.log("Immutable evidence               : admission service reverified");
-console.log("STARTED                          : supported");
-console.log("EXISTING_REVIEW                  : idempotent retry supported");
-console.log("READY_TO_REVIEW                  : durable reopen preserved");
-console.log("READY_TO_RELEASE                 : mutation still deferred");
-console.log("HOS Return / Forward             : preserved outside native form");
-console.log("Return reason                    : 3-2000 chars, bounded");
-console.log("Forward reason                   : omitted");
-console.log("Director release reason          : omitted");
-console.log("Decision responses               : outcome only");
-console.log("Director correction / Release    : wired outside native form");
-console.log("Director direct release          : absent");
-console.log("Score / General Comment editing  : absent");
-console.log("Correction reason textarea       : role-gated HOS / Director input");
+console.log("READY_TO_REVIEW                  : immutable review package reopen preserved");
+console.log("Reviewed HOS Return / Forward    : preserved");
+console.log("Reviewed Director Return/Release : preserved");
+console.log("READY_TO_RELEASE                 : day -> circuit -> school -> Teacher -> native form -> release");
+console.log("Director direct release          : confirm-only + no self-review");
+console.log("Direct-release browser body      : confirm=true only");
+console.log("Direct-release retry             : RELEASED / EXISTING_RELEASED");
+console.log("Direct-release review row        : none");
+console.log("Score / General Comment editing  : absent from review/final inspection");
 console.log("Authority/proof browser fields   : absent");
 console.log("Background polling               : absent");
 console.log("Persistent browser storage       : absent");
 console.log("Legacy TeacherAppraisal          : untouched");
 console.log("Database accessed                : source contract only");
 console.log("");
-console.log("RESULT: N6-F1C4 GOVERNANCE TEACHER DIRECTOR RETURN / RELEASE UI GREEN");
+console.log("RESULT: N6-F1C5K GOVERNANCE TEACHER BBC PROGRESSIVE FINAL INSPECTION GREEN");

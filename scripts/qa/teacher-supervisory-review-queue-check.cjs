@@ -98,6 +98,7 @@ for (const required of [
   "fullAssessmentHashReverificationDeferredToAction: true",
   "assessmentEvidenceIncluded: false",
   "scoresIncluded: false",
+  "directReleaseOverallPercentageIncluded: true",
   "generalCommentIncluded: false",
   "observationDetailsIncluded: false",
   "classEnrolmentEvidenceIncluded: false",
@@ -130,6 +131,7 @@ for (const required of [
   "scopeContainsTarget",
   "reviewerAssignmentForDistrict",
   "currentPendingReviewForActor",
+  "overallPercentage: true",
   "directReleaseReadyForActor",
   'state: "READY_TO_START"',
   'nextAction: "START_REVIEW"',
@@ -238,6 +240,11 @@ for (const forbiddenPublicField of [
   );
 }
 
+assert(
+  publicItemType.includes("overallPercentage: number | null"),
+  "Compact review-work item must expose only the final overall percentage needed by the Director Teacher list",
+);
+
 const publicQueueItemFunction = blockBetween(
   source,
   "function publicQueueItem(",
@@ -264,13 +271,21 @@ for (const forbiddenProjection of [
 }
 
 assert(
+  publicQueueItemFunction.includes(
+    'input.state === "READY_TO_RELEASE" ? input.record.overallPercentage : null',
+  ),
+  "Overall percentage must be projected only for Director direct-release rows",
+);
+
+assert(
   !source.includes("generalComment: record.generalComment"),
   "General Comment must not be emitted by queue",
 );
 
 assert(
-  !source.includes("scores: record.scores"),
-  "Scores must not be emitted by queue",
+  !source.includes("scores: record.scores") &&
+    !source.includes("sectionPercentagesJson: record.sectionPercentagesJson"),
+  "Item/section score evidence must not be emitted by queue",
 );
 
 assert(
@@ -313,7 +328,8 @@ console.log("Browser assessor user id         : excluded");
 console.log("Browser target user id           : excluded");
 console.log("Browser review/assignment ids    : excluded");
 console.log("Browser proof hashes             : excluded");
-console.log("Scores / General Comment         : excluded");
+console.log("Overall percentage               : direct-release rows only");
+console.log("Item/section scores / Comment    : excluded");
 console.log("Observation / enrolment details  : excluded");
 console.log("Legacy TeacherAppraisal          : excluded");
 console.log("Database writes                  : absent");

@@ -416,6 +416,7 @@ type PanelKey =
   | "scheme-coverage"
   | "appraisals"
   | "teacher-appraisal"
+  | "teacher-appraisal-headteacher"
   | "lesson"
   | "students-assessment"
   | "sector"
@@ -2368,7 +2369,8 @@ const mockCommandTile = (
         tone="info"
         active={
           activePanel === "appraisals" ||
-          activePanel === "teacher-appraisal"
+          activePanel === "teacher-appraisal" ||
+          activePanel === "teacher-appraisal-headteacher"
         }
         onClick={() => openPanel("appraisals")}
       />
@@ -2491,7 +2493,8 @@ const mockCommandTile = (
         tone="info"
         active={
           activePanel === "appraisals" ||
-          activePanel === "teacher-appraisal"
+          activePanel === "teacher-appraisal" ||
+          activePanel === "teacher-appraisal-headteacher"
         }
         onClick={() => openPanel("appraisals")}
       />
@@ -3021,10 +3024,68 @@ const mockCommandTile = (
 ) : null}
 
 {activePanel === "teacher-appraisal" ? (
-  <GovernanceAppraisalDrilldownPanel
-    isDistrictView={isDistrictView}
-    isCircuitView={isCircuitView}
-  />
+  isDistrictView ? (
+    <section className="rounded-[28px] border border-emerald-300/20 bg-emerald-400/10 p-4 md:p-5">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200">
+        Teacher Appraisal Reports
+      </p>
+      <h2 className="mt-1 text-lg font-bold text-white">
+        Choose the report source
+      </h2>
+      <p className="mt-1 max-w-3xl text-sm leading-6 text-emerald-100/80">
+        Headteacher appraisals and governance Teacher appraisals remain separate. Choose the one you want to inspect.
+      </p>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={() => openPanel("teacher-appraisal-headteacher")}
+          className="min-h-20 rounded-2xl border border-white/10 bg-black/20 px-4 py-4 text-left transition hover:bg-black/30"
+        >
+          <span className="block text-base font-black text-white">
+            Headteacher → Teacher reports
+          </span>
+          <span className="mt-1 block text-xs leading-5 text-slate-300">
+            Teacher appraisal reports completed by Headteachers.
+          </span>
+        </button>
+
+        <a
+          href="/governance/appraisals/teacher-supervisory/review"
+          className="min-h-20 rounded-2xl border border-emerald-300/25 bg-emerald-400/10 px-4 py-4 text-left transition hover:bg-emerald-400/15"
+        >
+          <span className="block text-base font-black text-white">
+            Governance Teacher reports
+          </span>
+          <span className="mt-1 block text-xs leading-5 text-emerald-100/80">
+            Reports from SISSO, BSC, HOS and District Director governance assessments.
+          </span>
+        </a>
+      </div>
+    </section>
+  ) : (
+    <GovernanceAppraisalDrilldownPanel
+      isDistrictView={isDistrictView}
+      isCircuitView={isCircuitView}
+    />
+  )
+) : null}
+
+{activePanel === "teacher-appraisal-headteacher" && isDistrictView ? (
+  <div className="space-y-3">
+    <button
+      type="button"
+      onClick={() => openPanel("teacher-appraisal")}
+      className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-bold text-white transition hover:bg-white/[0.09]"
+    >
+      ← Report sources
+    </button>
+
+    <GovernanceAppraisalDrilldownPanel
+      isDistrictView={isDistrictView}
+      isCircuitView={isCircuitView}
+    />
+  </div>
 ) : null}
 
       {activePanel === "lesson" ? (

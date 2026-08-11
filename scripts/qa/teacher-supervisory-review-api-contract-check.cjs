@@ -173,6 +173,7 @@ for (const requiredQueueContract of [
   '"DIRECT_RELEASE"',
   "assessmentEvidenceIncluded: false",
   "scoresIncluded: false",
+  "directReleaseOverallPercentageIncluded: true",
   "generalCommentIncluded: false",
   "observationDetailsIncluded: false",
   "classEnrolmentEvidenceIncluded: false",
@@ -275,6 +276,7 @@ for (const requiredPublicField of [
   "districtName:",
   "assessorRole:",
   "assessorOfficeLabel:",
+  "overallPercentage:",
   "state:",
   "nextAction:",
   "eligible:",
@@ -290,6 +292,13 @@ assert(
   source.reviewQueue.includes("currentPendingReviewForActor") &&
     source.reviewQueue.includes("directReleaseReadyForActor"),
   "Durable review/direct-release custody readers missing",
+);
+
+assert(
+  source.reviewQueue.includes(
+    'input.state === "READY_TO_RELEASE" ? input.record.overallPercentage : null',
+  ),
+  "Overall percentage must be exposed only as the compact Director direct-release list aggregate",
 );
 
 assert(
@@ -335,7 +344,8 @@ console.log("Browser assessor user id         : excluded");
 console.log("Browser target user id           : excluded");
 console.log("Browser review/assignment ids    : excluded");
 console.log("Browser proof hashes             : excluded");
-console.log("Scores / General Comment         : excluded");
+console.log("Overall percentage               : direct-release rows only");
+console.log("Item/section scores / Comment    : excluded");
 console.log("Observation / enrolment evidence : excluded");
 console.log("Assessment hash                  : not exposed");
 console.log("Review creation                  : absent");

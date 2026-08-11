@@ -53,6 +53,7 @@ export const TEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY = {
   fullAssessmentHashReverificationDeferredToAction: true,
   assessmentEvidenceIncluded: false,
   scoresIncluded: false,
+  directReleaseOverallPercentageIncluded: true,
   generalCommentIncluded: false,
   observationDetailsIncluded: false,
   classEnrolmentEvidenceIncluded: false,
@@ -88,6 +89,7 @@ export type TeacherSupervisoryReviewQueueItem = {
   districtName: string;
   assessorRole: TeacherSupervisoryReviewOriginRole;
   assessorOfficeLabel: string;
+  overallPercentage: number | null;
   state: TeacherSupervisoryReviewQueueState;
   nextAction: TeacherSupervisoryReviewQueueNextAction;
   eligible: true;
@@ -154,6 +156,7 @@ type CandidateAssessmentRecord = {
   status: string;
   revision: number;
   dateObserved: Date | null;
+  overallPercentage: number | null;
   evidenceSnapshotJson: unknown;
   assessmentHash: string | null;
   finalizedByUserId: string | null;
@@ -658,6 +661,8 @@ function publicQueueItem(input: {
     districtName: clean(input.context.jurisdiction?.districtName),
     assessorRole: input.assessorRole,
     assessorOfficeLabel: officeLabel(input.assessorRole),
+    overallPercentage:
+      input.state === "READY_TO_RELEASE" ? input.record.overallPercentage : null,
     state: input.state,
     nextAction: input.nextAction,
     eligible: true,
@@ -722,6 +727,7 @@ export async function readTeacherSupervisoryReviewQueue(
       status: true,
       revision: true,
       dateObserved: true,
+      overallPercentage: true,
       evidenceSnapshotJson: true,
       assessmentHash: true,
       finalizedByUserId: true,

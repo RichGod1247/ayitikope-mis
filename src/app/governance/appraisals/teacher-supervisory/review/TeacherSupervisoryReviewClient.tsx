@@ -32,6 +32,7 @@ type ReviewWorkItem = {
   districtName: string;
   assessorRole: string;
   assessorOfficeLabel: string;
+  overallPercentage: number | null;
   state: WorkState;
   nextAction: NextAction;
   eligible: true;
@@ -85,12 +86,8 @@ type ReviewPackageSection = {
   items: ReviewPackageItem[];
 };
 
-type BrowserReviewPackage = {
+type BrowserPackageBase = {
   schemaVersion: 1;
-  lifecycleState: "READY_FOR_REVIEW_DECISION";
-  review: {
-    reviewerRole: string;
-  };
   assessment: {
     id: string;
     cycleId: string;
@@ -123,6 +120,82 @@ type BrowserReviewPackage = {
   readOnly: true;
 };
 
+type BrowserReviewDecisionPackage = BrowserPackageBase & {
+  lifecycleState: "READY_FOR_REVIEW_DECISION";
+  review: {
+    reviewerRole: string;
+  };
+};
+
+type BrowserDirectInspectionPackage = BrowserPackageBase & {
+  lifecycleState: "READY_FOR_DIRECT_RELEASE";
+  inspection: {
+    actorRole: "DISTRICT_DIRECTOR";
+  };
+};
+
+type BrowserReviewPackage =
+  | BrowserReviewDecisionPackage
+  | BrowserDirectInspectionPackage;
+
+type DirectInspectionWorkspace = {
+  assessment: {
+    assessmentId: string;
+    cycleId: string;
+    revision: number;
+    status: string;
+    canEdit: boolean;
+    canFinalize: boolean;
+    sectionPercentages: Record<string, number | null>;
+    overallPercentage: number | null;
+    finalizedAt: string | null;
+  };
+  lifecycle: {
+    assessmentId: string;
+    cycleId: string;
+    revision: number;
+    status: string;
+    originalAssessorOnly: true;
+    canEdit: boolean;
+    canFinalize: boolean;
+    reviewControlsIncluded: false;
+  };
+  observation: {
+    contextSchemaVersion: 1 | 2;
+    targetName: string | null;
+    schoolName: string;
+    circuitName: string;
+    districtName: string;
+    assessorRole: string;
+    dateObserved: string;
+    yearsInService: number | null;
+    yearsInPresentSchool: number | null;
+    subjectBeingObserved: string | null;
+    subStrand: string | null;
+    classTaught: string | null;
+    durationMinutes: number | null;
+    totalEnrolment: number | null;
+    girls: number | null;
+    boys: number | null;
+  };
+  generalComment: string | null;
+  sections: Array<{
+    sectionKey: string;
+    title: string;
+    description: string | null;
+    order: number;
+    maxScore: number;
+    items: Array<{
+      itemKey: string;
+      label: string;
+      order: number;
+      maxScore: number;
+      score: number | null;
+      notApplicable: boolean;
+    }>;
+  }>;
+};
+
 type HosDecisionAction = "RETURN" | "FORWARD";
 
 type HosDecisionOutcome =
@@ -140,6 +213,8 @@ type DirectorDecisionOutcome =
   | "EXISTING_RETURNED"
   | "EXISTING_RELEASED";
 
+type DirectReleaseOutcome = "RELEASED" | "EXISTING_RELEASED";
+
 type ApiFailure = {
   ok?: false;
   error?: string;
@@ -148,6 +223,23 @@ type ApiFailure = {
 
 type ClientProps = {
   initialAssessmentId: string;
+};
+
+type DirectReleaseSchoolGroup = {
+  schoolId: string;
+  schoolName: string;
+  items: ReviewWorkItem[];
+};
+
+type DirectReleaseCircuitGroup = {
+  circuitId: string;
+  circuitName: string;
+  schools: DirectReleaseSchoolGroup[];
+};
+
+type DirectReleaseDayGroup = {
+  dateObserved: string;
+  circuits: DirectReleaseCircuitGroup[];
 };
 
 function clean(value: unknown) {
@@ -198,6 +290,81 @@ function stateTone(state: WorkState) {
     case "READY_TO_RELEASE":
       return "border-emerald-300/25 bg-emerald-400/10 text-emerald-100";
   }
+}
+
+function formatObservationDay(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value || "Date not provided";
+  const date = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
+}
+
+function buildDirectReleaseDayGroups(
+  items: ReviewWorkItem[],
+): DirectReleaseDayGroup[] {
+  const dayMap = new Map<
+    string,
+    Map<
+      string,
+      {
+        circuitId: string;
+        circuitName: string;
+        schools: Map<string, DirectReleaseSchoolGroup>;
+      }
+    >
+  >();
+
+  for (const item of items) {
+    if (item.state !== "READY_TO_RELEASE" || item.nextAction !== "DIRECT_RELEASE") {
+      continue;
+    }
+
+    const dateKey = item.dateObserved || "Date not provided";
+    const circuits = dayMap.get(dateKey) ?? new Map();
+    const circuit = circuits.get(item.circuitId) ?? {
+      circuitId: item.circuitId,
+      circuitName: item.circuitName,
+      schools: new Map<string, DirectReleaseSchoolGroup>(),
+    };
+    const school = circuit.schools.get(item.schoolId) ?? {
+      schoolId: item.schoolId,
+      schoolName: item.schoolName,
+      items: [],
+    };
+
+    school.items.push(item);
+    circuit.schools.set(item.schoolId, school);
+    circuits.set(item.circuitId, circuit);
+    dayMap.set(dateKey, circuits);
+  }
+
+  return Array.from(dayMap.entries())
+    .sort(([left], [right]) => right.localeCompare(left))
+    .map(([dateObserved, circuits]) => ({
+      dateObserved,
+      circuits: Array.from(circuits.values())
+        .sort((left, right) => left.circuitName.localeCompare(right.circuitName))
+        .map((circuit) => ({
+          circuitId: circuit.circuitId,
+          circuitName: circuit.circuitName,
+          schools: Array.from(circuit.schools.values())
+            .sort((left, right) => left.schoolName.localeCompare(right.schoolName))
+            .map((school) => ({
+              ...school,
+              items: [...school.items].sort((left, right) =>
+                (left.targetName || "Teacher").localeCompare(
+                  right.targetName || "Teacher",
+                ),
+              ),
+            })),
+        })),
+    }));
 }
 
 function displayValue(value: unknown) {
@@ -331,6 +498,10 @@ export default function TeacherSupervisoryReviewClient({
   const [packageLoading, setPackageLoading] = useState(false);
   const [packageError, setPackageError] = useState("");
   const [startReviewBusyId, setStartReviewBusyId] = useState("");
+  const [directReleaseBusyId, setDirectReleaseBusyId] = useState("");
+  const [selectedReleaseDay, setSelectedReleaseDay] = useState("");
+  const [selectedReleaseCircuitId, setSelectedReleaseCircuitId] = useState("");
+  const [selectedReleaseSchoolId, setSelectedReleaseSchoolId] = useState("");
   const [actionError, setActionError] = useState("");
   const [actionNotice, setActionNotice] = useState("");
   const [returnReason, setReturnReason] = useState("");
@@ -401,6 +572,139 @@ export default function TeacherSupervisoryReviewClient({
       setPackageLoading(false);
     }
   }, []);
+
+  const loadDirectReleaseInspectionPackage = useCallback(
+    async (item: ReviewWorkItem) => {
+      if (
+        item.state !== "READY_TO_RELEASE" ||
+        item.nextAction !== "DIRECT_RELEASE"
+      ) {
+        setPackageError(
+          "This assessment is no longer waiting for direct release. Refresh the work list.",
+        );
+        return;
+      }
+
+      setPackageLoading(true);
+      setSelectedAssessmentId(item.assessmentId);
+      setPackageError("");
+      setActionError("");
+      setActionNotice("");
+
+      try {
+        const response = await fetch(
+          `/api/governance/appraisals/teacher-supervisory/${encodeURIComponent(
+            item.assessmentId,
+          )}`,
+          { cache: "no-store" },
+        );
+
+        const body = (await readApiBody(response)) as
+          | { ok: true; workspace: DirectInspectionWorkspace }
+          | ApiFailure;
+
+        if (!response.ok || body.ok !== true) {
+          throw new Error(messageFromFailure(body, response.status));
+        }
+
+        const workspace = body.workspace;
+        if (
+          workspace.assessment.assessmentId !== item.assessmentId ||
+          workspace.lifecycle.assessmentId !== item.assessmentId ||
+          workspace.assessment.cycleId !== item.cycleId ||
+          workspace.lifecycle.cycleId !== item.cycleId ||
+          workspace.assessment.revision !== item.revision ||
+          workspace.lifecycle.revision !== item.revision ||
+          workspace.assessment.status !== "FINALIZED" ||
+          workspace.lifecycle.status !== "FINALIZED" ||
+          workspace.assessment.canEdit !== false ||
+          workspace.assessment.canFinalize !== false ||
+          workspace.lifecycle.canEdit !== false ||
+          workspace.lifecycle.canFinalize !== false ||
+          workspace.lifecycle.originalAssessorOnly !== true ||
+          workspace.lifecycle.reviewControlsIncluded !== false ||
+          workspace.observation.assessorRole !== "DISTRICT_DIRECTOR" ||
+          workspace.observation.dateObserved !== item.dateObserved ||
+          !workspace.assessment.finalizedAt
+        ) {
+          throw new Error(
+            "The finalized assessment changed before final inspection. Refresh the work list.",
+          );
+        }
+
+        const inspectionPackage: BrowserDirectInspectionPackage = {
+          schemaVersion: 1,
+          lifecycleState: "READY_FOR_DIRECT_RELEASE",
+          inspection: {
+            actorRole: "DISTRICT_DIRECTOR",
+          },
+          assessment: {
+            id: workspace.assessment.assessmentId,
+            cycleId: workspace.assessment.cycleId,
+            revision: workspace.assessment.revision,
+            finalizedAt: workspace.assessment.finalizedAt,
+            assessorOffice: item.assessorOfficeLabel,
+            dateObserved: workspace.observation.dateObserved,
+            overallPercentage: workspace.assessment.overallPercentage,
+            sectionPercentages: workspace.assessment.sectionPercentages,
+            generalComment: workspace.generalComment,
+            sections: workspace.sections.map((section) => ({
+              sectionKey: section.sectionKey,
+              title: section.title,
+              description: section.description,
+              order: section.order,
+              maxScore: section.maxScore,
+              percentage:
+                workspace.assessment.sectionPercentages[section.sectionKey] ??
+                null,
+              items: section.items.map((scoreItem) => ({
+                itemKey: scoreItem.itemKey,
+                label: scoreItem.label,
+                order: scoreItem.order,
+                maxScore: scoreItem.maxScore,
+                score: scoreItem.score,
+                notApplicable: scoreItem.notApplicable,
+              })),
+            })),
+          },
+          observation: {
+            contextSchemaVersion: workspace.observation.contextSchemaVersion,
+            teacherName: workspace.observation.targetName,
+            schoolName: workspace.observation.schoolName,
+            circuitName: workspace.observation.circuitName,
+            districtName: workspace.observation.districtName,
+            dateObserved: workspace.observation.dateObserved,
+            yearsInService: workspace.observation.yearsInService,
+            yearsInPresentSchool:
+              workspace.observation.yearsInPresentSchool,
+            subjectBeingObserved:
+              workspace.observation.subjectBeingObserved,
+            subStrand: workspace.observation.subStrand,
+            classTaught: workspace.observation.classTaught,
+            durationMinutes: workspace.observation.durationMinutes,
+            totalEnrolment: workspace.observation.totalEnrolment,
+            girls: workspace.observation.girls,
+            boys: workspace.observation.boys,
+          },
+          readOnly: true,
+        };
+
+        setReviewPackage(inspectionPackage);
+        setSelectedAssessmentId(item.assessmentId);
+      } catch (loadError) {
+        setReviewPackage(null);
+        setSelectedAssessmentId("");
+        setPackageError(
+          loadError instanceof Error
+            ? loadError.message
+            : "The finalized Teacher assessment could not be opened for inspection.",
+        );
+      } finally {
+        setPackageLoading(false);
+      }
+    },
+    [],
+  );
 
   const startReview = useCallback(
     async (item: ReviewWorkItem) => {
@@ -474,7 +778,10 @@ export default function TeacherSupervisoryReviewClient({
       const currentPackage = reviewPackage;
       if (!currentPackage) return;
 
-      if (currentPackage.review.reviewerRole !== "HEAD_OF_SUPERVISION") {
+      if (
+        currentPackage.lifecycleState !== "READY_FOR_REVIEW_DECISION" ||
+        currentPackage.review.reviewerRole !== "HEAD_OF_SUPERVISION"
+      ) {
         setActionError(
           "These review actions are available only to the Head of Supervision.",
         );
@@ -556,7 +863,10 @@ export default function TeacherSupervisoryReviewClient({
       const currentPackage = reviewPackage;
       if (!currentPackage) return;
 
-      if (currentPackage.review.reviewerRole !== "DISTRICT_DIRECTOR") {
+      if (
+        currentPackage.lifecycleState !== "READY_FOR_REVIEW_DECISION" ||
+        currentPackage.review.reviewerRole !== "DISTRICT_DIRECTOR"
+      ) {
         setActionError(
           "These review actions are available only to the District Director.",
         );
@@ -635,6 +945,74 @@ export default function TeacherSupervisoryReviewClient({
     [loadQueue, returnReason, reviewPackage],
   );
 
+  const directRelease = useCallback(
+    async (item: ReviewWorkItem) => {
+      if (
+        item.state !== "READY_TO_RELEASE" ||
+        item.nextAction !== "DIRECT_RELEASE"
+      ) {
+        setActionError(
+          "This finalized assessment is no longer ready for direct release. Refresh the work list.",
+        );
+        return;
+      }
+
+      const confirmed = window.confirm(
+        "Release your own finalized Teacher appraisal now? You have inspected the locked form above. This is a direct release, not a review or approval. No review record will be created, and no score or General Comment will be changed.",
+      );
+      if (!confirmed) return;
+
+      setDirectReleaseBusyId(item.assessmentId);
+      setActionError("");
+      setActionNotice("");
+      setPackageError("");
+
+      try {
+        const response = await fetch(
+          `/api/governance/appraisals/teacher-supervisory/${encodeURIComponent(
+            item.assessmentId,
+          )}/direct-release`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ confirm: true }),
+          },
+        );
+
+        const body = (await readApiBody(response)) as
+          | {
+              ok: true;
+              result: { outcome: DirectReleaseOutcome };
+            }
+          | ApiFailure;
+
+        if (!response.ok || body.ok !== true) {
+          throw new Error(messageFromFailure(body, response.status));
+        }
+
+        setActionNotice(
+          body.result.outcome === "EXISTING_RELEASED"
+            ? "This finalized Teacher appraisal was already released. The work list has been refreshed."
+            : "Your finalized Teacher appraisal was released successfully. The Teacher can now view the protected released result.",
+        );
+
+        setReviewPackage(null);
+        setSelectedAssessmentId("");
+        setSelectedReleaseSchoolId("");
+        await loadQueue();
+      } catch (releaseError) {
+        setActionError(
+          releaseError instanceof Error
+            ? releaseError.message
+            : "The finalized Teacher appraisal could not be released. Refresh the work list before trying again.",
+        );
+      } finally {
+        setDirectReleaseBusyId("");
+      }
+    },
+    [loadQueue],
+  );
+
   useEffect(() => {
     void loadQueue();
   }, [loadQueue]);
@@ -677,14 +1055,6 @@ export default function TeacherSupervisoryReviewClient({
         items:
           queue?.items.filter((item) => item.state === "READY_TO_REVIEW") ?? [],
       },
-      {
-        state: "READY_TO_RELEASE" as const,
-        title: "Ready to release",
-        description:
-          "Director-authored finalized assessments that bypass self-review.",
-        items:
-          queue?.items.filter((item) => item.state === "READY_TO_RELEASE") ?? [],
-      },
     ],
     [queue],
   );
@@ -693,6 +1063,74 @@ export default function TeacherSupervisoryReviewClient({
     () => workGroups.filter((group) => group.items.length > 0),
     [workGroups],
   );
+
+  const directReleaseItems = useMemo(
+    () =>
+      queue?.items.filter(
+        (item) =>
+          item.state === "READY_TO_RELEASE" &&
+          item.nextAction === "DIRECT_RELEASE",
+      ) ?? [],
+    [queue],
+  );
+
+  const directReleaseDayGroups = useMemo(
+    () => buildDirectReleaseDayGroups(directReleaseItems),
+    [directReleaseItems],
+  );
+
+  const selectedDirectReleaseDay = useMemo(
+    () =>
+      directReleaseDayGroups.find(
+        (day) => day.dateObserved === selectedReleaseDay,
+      ) ?? null,
+    [directReleaseDayGroups, selectedReleaseDay],
+  );
+
+  const selectedDirectReleaseCircuit = useMemo(
+    () =>
+      selectedDirectReleaseDay?.circuits.find(
+        (circuit) => circuit.circuitId === selectedReleaseCircuitId,
+      ) ?? null,
+    [selectedDirectReleaseDay, selectedReleaseCircuitId],
+  );
+
+  const selectedDirectReleaseSchool = useMemo(
+    () =>
+      selectedDirectReleaseCircuit?.schools.find(
+        (school) => school.schoolId === selectedReleaseSchoolId,
+      ) ?? null,
+    [selectedDirectReleaseCircuit, selectedReleaseSchoolId],
+  );
+
+  const currentDirectReleaseItem = useMemo(
+    () =>
+      directReleaseItems.find(
+        (item) => item.assessmentId === selectedAssessmentId,
+      ) ?? null,
+    [directReleaseItems, selectedAssessmentId],
+  );
+
+  function showReleaseDays() {
+    setSelectedReleaseDay("");
+    setSelectedReleaseCircuitId("");
+    setSelectedReleaseSchoolId("");
+  }
+
+  function showReleaseCircuits(dateObserved: string) {
+    setSelectedReleaseDay(dateObserved);
+    setSelectedReleaseCircuitId("");
+    setSelectedReleaseSchoolId("");
+  }
+
+  function showReleaseSchools(circuitId: string) {
+    setSelectedReleaseCircuitId(circuitId);
+    setSelectedReleaseSchoolId("");
+  }
+
+  function showReleaseTeachers(schoolId: string) {
+    setSelectedReleaseSchoolId(schoolId);
+  }
 
   function closePackage() {
     setReviewPackage(null);
@@ -745,7 +1183,10 @@ export default function TeacherSupervisoryReviewClient({
               <button
                 type="button"
                 disabled={
-                  Boolean(startReviewBusyId) || packageLoading || queueLoading
+                  Boolean(startReviewBusyId) ||
+                  Boolean(directReleaseBusyId) ||
+                  packageLoading ||
+                  queueLoading
                 }
                 onClick={() => void startReview(item)}
                 className="min-h-12 w-full rounded-2xl border border-cyan-300/25 bg-cyan-400/15 px-4 text-sm font-black text-cyan-50 hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
@@ -757,7 +1198,11 @@ export default function TeacherSupervisoryReviewClient({
             ) : item.state === "READY_TO_REVIEW" ? (
               <button
                 type="button"
-                disabled={packageLoading || Boolean(startReviewBusyId)}
+                disabled={
+                  packageLoading ||
+                  Boolean(startReviewBusyId) ||
+                  Boolean(directReleaseBusyId)
+                }
                 onClick={() => void loadReviewPackage(item.assessmentId)}
                 className="min-h-12 w-full rounded-2xl border border-amber-300/25 bg-amber-400/15 px-4 text-sm font-black text-amber-50 hover:bg-amber-400/20 disabled:opacity-50"
               >
@@ -766,9 +1211,9 @@ export default function TeacherSupervisoryReviewClient({
                   : "Open report"}
               </button>
             ) : (
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-center text-xs font-semibold leading-5 text-slate-300">
-                Direct release wiring comes in a later controlled step.
-              </div>
+              <span className="block rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-center text-xs font-bold text-slate-300">
+                Final inspection required
+              </span>
             )}
           </div>
         </div>
@@ -779,6 +1224,8 @@ export default function TeacherSupervisoryReviewClient({
   if (reviewPackage) {
     const observation = reviewPackage.observation;
     const assessment = reviewPackage.assessment;
+    const directReleaseInspection =
+      reviewPackage.lifecycleState === "READY_FOR_DIRECT_RELEASE";
 
     return (
       <div className="min-h-screen bg-[#070B12] px-4 py-6 text-[#F7F4ED] md:px-8">
@@ -787,7 +1234,9 @@ export default function TeacherSupervisoryReviewClient({
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
-                  Teacher review · read-only
+                  {directReleaseInspection
+                    ? "Final inspection · read-only"
+                    : "Teacher review · read-only"}
                 </p>
                 <h1 className="mt-2 text-2xl font-bold text-white md:text-3xl">
                   {observation.teacherName || "Teacher"}
@@ -796,9 +1245,9 @@ export default function TeacherSupervisoryReviewClient({
                   {observation.schoolName} · {observation.circuitName}
                 </p>
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
-                  Assessed by {assessment.assessorOffice}. Review the familiar
-                  official Teacher form below. This copy is locked: no score,
-                  observation particular or General Comment can be changed here.
+                  Assessed by {assessment.assessorOffice}. {directReleaseInspection
+                    ? "Inspect your complete locked assessment below before making the separate release decision."
+                    : "Review the familiar official Teacher form below."} This copy is locked: no score, observation particular or General Comment can be changed here.
                 </p>
               </div>
 
@@ -809,16 +1258,20 @@ export default function TeacherSupervisoryReviewClient({
                   onClick={closePackage}
                   className="min-h-12 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm font-bold text-white hover:bg-white/[0.09] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  ← Back to work list
+                  {directReleaseInspection
+                    ? "← Back to Teachers"
+                    : "← Back to work list"}
                 </button>
-                <button
-                  type="button"
-                  disabled={packageLoading || Boolean(decisionBusy)}
-                  onClick={() => void loadReviewPackage(assessment.id)}
-                  className="min-h-12 rounded-2xl border border-cyan-300/25 bg-cyan-400/15 px-4 text-sm font-bold text-cyan-50 hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {packageLoading ? "Refreshing…" : "Refresh report"}
-                </button>
+                {!directReleaseInspection ? (
+                  <button
+                    type="button"
+                    disabled={packageLoading || Boolean(decisionBusy)}
+                    onClick={() => void loadReviewPackage(assessment.id)}
+                    className="min-h-12 rounded-2xl border border-cyan-300/25 bg-cyan-400/15 px-4 text-sm font-bold text-cyan-50 hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {packageLoading ? "Refreshing…" : "Refresh report"}
+                  </button>
+                ) : null}
               </div>
             </div>
           </section>
@@ -834,25 +1287,27 @@ export default function TeacherSupervisoryReviewClient({
             </div>
           ) : null}
 
-          <section className="grid grid-cols-3 gap-2 md:gap-4">
-            {[
-              ["Revision", assessment.revision],
-              ["Observed", observation.dateObserved],
-              ["Overall", formatPercent(assessment.overallPercentage)],
-            ].map(([label, value]) => (
-              <div
-                key={String(label)}
-                className="rounded-[20px] border border-white/10 bg-white/[0.04] p-3 text-center md:rounded-[26px] md:p-4"
-              >
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 md:text-xs">
-                  {label}
-                </p>
-                <p className="mt-1 text-sm font-bold text-white md:text-xl">
-                  {String(value)}
-                </p>
-              </div>
-            ))}
-          </section>
+          {!directReleaseInspection ? (
+            <section className="grid grid-cols-3 gap-2 md:gap-4">
+              {[
+                ["Revision", assessment.revision],
+                ["Observed", observation.dateObserved],
+                ["Overall", formatPercent(assessment.overallPercentage)],
+              ].map(([label, value]) => (
+                <div
+                  key={String(label)}
+                  className="rounded-[20px] border border-white/10 bg-white/[0.04] p-3 text-center md:rounded-[26px] md:p-4"
+                >
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 md:text-xs">
+                    {label}
+                  </p>
+                  <p className="mt-1 text-sm font-bold text-white md:text-xl">
+                    {String(value)}
+                  </p>
+                </div>
+              ))}
+            </section>
+          ) : null}
 
           <section className="overflow-x-auto rounded-[24px] border border-slate-300 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.28)]">
             <div className="min-w-[1120px] bg-white text-slate-950">
@@ -864,7 +1319,9 @@ export default function TeacherSupervisoryReviewClient({
                   Monitoring and Inspection Sheet (Teachers)
                 </h2>
                 <p className="mt-2 text-xs font-black uppercase tracking-[0.14em] text-cyan-800">
-                  Governance Teacher observation · independent review copy
+                  {directReleaseInspection
+                    ? "Governance Teacher observation · final inspection copy"
+                    : "Governance Teacher observation · independent review copy"}
                 </p>
               </header>
 
@@ -1038,7 +1495,8 @@ export default function TeacherSupervisoryReviewClient({
             </div>
           </section>
 
-          {reviewPackage.review.reviewerRole === "HEAD_OF_SUPERVISION" ? (
+          {reviewPackage.lifecycleState === "READY_FOR_REVIEW_DECISION" &&
+          reviewPackage.review.reviewerRole === "HEAD_OF_SUPERVISION" ? (
             <section className="rounded-[28px] border border-amber-300/20 bg-amber-400/[0.07] p-4 md:p-5">
               <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                 <div>
@@ -1114,7 +1572,8 @@ export default function TeacherSupervisoryReviewClient({
             </section>
           ) : null}
 
-          {reviewPackage.review.reviewerRole === "DISTRICT_DIRECTOR" ? (
+          {reviewPackage.lifecycleState === "READY_FOR_REVIEW_DECISION" &&
+          reviewPackage.review.reviewerRole === "DISTRICT_DIRECTOR" ? (
             <section className="rounded-[28px] border border-cyan-300/20 bg-cyan-400/[0.07] p-4 md:p-5">
               <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                 <div>
@@ -1192,8 +1651,44 @@ export default function TeacherSupervisoryReviewClient({
             </section>
           ) : null}
 
+          {directReleaseInspection ? (
+            <section className="rounded-[28px] border border-emerald-300/25 bg-emerald-400/[0.07] p-4 md:p-5">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-200">
+                Final release
+              </p>
+              <h2 className="mt-1 text-xl font-black text-white">
+                Release only after checking the form above
+              </h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
+                This is your own finalized assessment. Releasing it does not
+                create a review or approval record, and the locked scores and
+                General Comment will not be changed.
+              </p>
+
+              <button
+                type="button"
+                disabled={
+                  !currentDirectReleaseItem ||
+                  Boolean(directReleaseBusyId) ||
+                  packageLoading ||
+                  queueLoading
+                }
+                onClick={() => {
+                  if (currentDirectReleaseItem) {
+                    void directRelease(currentDirectReleaseItem);
+                  }
+                }}
+                className="mt-5 min-h-14 w-full rounded-2xl border border-emerald-300/30 bg-emerald-400/15 px-5 text-base font-black text-emerald-50 hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {directReleaseBusyId === assessment.id
+                  ? "Releasing assessment…"
+                  : "Release my finalized assessment"}
+              </button>
+            </section>
+          ) : null}
+
           <p className="text-xs leading-5 text-slate-400">
-            This review form is read-only. No score, General Comment,
+            This {directReleaseInspection ? "final-inspection" : "review"} form is read-only. No score, General Comment,
             observation particular, review authority ID or integrity hash is
             editable or displayed here.
           </p>
@@ -1260,25 +1755,31 @@ export default function TeacherSupervisoryReviewClient({
           </div>
         ) : null}
 
-        <section className="grid grid-cols-3 gap-2 md:gap-4">
-          {[
-            ["New", queue?.summary.readyToStart ?? 0],
-            ["In review", queue?.summary.readyToReview ?? 0],
-            ["Ready to release", queue?.summary.readyToRelease ?? 0],
-          ].map(([label, value]) => (
-            <div
-              key={String(label)}
-              className="rounded-[20px] border border-white/10 bg-white/[0.04] p-3 text-center md:rounded-[26px] md:p-4"
-            >
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 md:text-xs">
-                {label}
-              </p>
-              <p className="mt-1 text-lg font-black text-white md:text-2xl">
-                {String(value)}
-              </p>
-            </div>
-          ))}
-        </section>
+        {!(
+          queue?.actorRole === "DISTRICT_DIRECTOR" &&
+          directReleaseDayGroups.length > 0 &&
+          activeWorkGroups.length === 0
+        ) ? (
+          <section className="grid grid-cols-3 gap-2 md:gap-4">
+            {[
+              ["New", queue?.summary.readyToStart ?? 0],
+              ["In review", queue?.summary.readyToReview ?? 0],
+              ["Ready to release", queue?.summary.readyToRelease ?? 0],
+            ].map(([label, value]) => (
+              <div
+                key={String(label)}
+                className="rounded-[20px] border border-white/10 bg-white/[0.04] p-3 text-center md:rounded-[26px] md:p-4"
+              >
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 md:text-xs">
+                  {label}
+                </p>
+                <p className="mt-1 text-lg font-black text-white md:text-2xl">
+                  {String(value)}
+                </p>
+              </div>
+            ))}
+          </section>
+        ) : null}
 
         {queueLoading && !queue ? (
           <section className="rounded-[28px] border border-white/10 bg-white/[0.04] p-6">
@@ -1316,7 +1817,200 @@ export default function TeacherSupervisoryReviewClient({
               </section>
             ))}
           </div>
-        ) : queue ? (
+        ) : queue ? null : null}
+
+        {queue?.actorRole === "DISTRICT_DIRECTOR" &&
+        directReleaseDayGroups.length > 0 ? (
+          <section className="overflow-hidden rounded-[24px] border border-emerald-300/20 bg-[#091414]">
+            <div className="border-b border-white/10 px-4 py-4 md:px-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.12em] text-emerald-200">
+                    Final inspections before release
+                  </p>
+                  <h2 className="mt-1 text-lg font-black text-white md:text-xl">
+                    My finalized Teacher assessments
+                  </h2>
+                </div>
+                <span className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-sm font-black text-emerald-100">
+                  {directReleaseItems.length}
+                </span>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-slate-300">
+                Choose one item at a time. Only the current step is shown.
+              </p>
+            </div>
+
+            {!selectedReleaseDay ? (
+              <div className="divide-y divide-white/10">
+                {directReleaseDayGroups.map((day) => {
+                  const reportCount = day.circuits.reduce(
+                    (circuitTotal, circuit) =>
+                      circuitTotal +
+                      circuit.schools.reduce(
+                        (schoolTotal, school) =>
+                          schoolTotal + school.items.length,
+                        0,
+                      ),
+                    0,
+                  );
+
+                  return (
+                    <button
+                      key={day.dateObserved}
+                      type="button"
+                      onClick={() => showReleaseCircuits(day.dateObserved)}
+                      className="flex min-h-16 w-full items-center justify-between gap-4 px-4 py-4 text-left hover:bg-white/[0.05] md:px-5"
+                    >
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">
+                          Supervision day
+                        </p>
+                        <p className="mt-1 text-base font-black text-white md:text-lg">
+                          {formatObservationDay(day.dateObserved)}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-sm font-bold text-emerald-100">
+                        {reportCount} {reportCount === 1 ? "report" : "reports"} ›
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : selectedDirectReleaseDay && !selectedReleaseCircuitId ? (
+              <div>
+                <div className="border-b border-white/10 px-4 py-3 md:px-5">
+                  <button
+                    type="button"
+                    onClick={showReleaseDays}
+                    className="text-sm font-bold text-cyan-100 hover:text-white"
+                  >
+                    ← Back to supervision days
+                  </button>
+                  <p className="mt-3 text-lg font-black text-white">
+                    {formatObservationDay(selectedDirectReleaseDay.dateObserved)}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Choose a circuit visited on this day.
+                  </p>
+                </div>
+
+                <div className="divide-y divide-white/10">
+                  {selectedDirectReleaseDay.circuits.map((circuit) => {
+                    const reportCount = circuit.schools.reduce(
+                      (sum, school) => sum + school.items.length,
+                      0,
+                    );
+                    return (
+                      <button
+                        key={circuit.circuitId}
+                        type="button"
+                        onClick={() => showReleaseSchools(circuit.circuitId)}
+                        className="flex min-h-16 w-full items-center justify-between gap-4 px-4 py-4 text-left hover:bg-white/[0.05] md:px-5"
+                      >
+                        <span className="text-base font-black text-white">
+                          {circuit.circuitName}
+                        </span>
+                        <span className="shrink-0 text-sm font-bold text-slate-300">
+                          {reportCount} {reportCount === 1 ? "report" : "reports"} ›
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : selectedDirectReleaseCircuit && !selectedReleaseSchoolId ? (
+              <div>
+                <div className="border-b border-white/10 px-4 py-3 md:px-5">
+                  <button
+                    type="button"
+                    onClick={() => showReleaseCircuits(selectedReleaseDay)}
+                    className="text-sm font-bold text-cyan-100 hover:text-white"
+                  >
+                    ← Back to circuits
+                  </button>
+                  <p className="mt-3 text-lg font-black text-white">
+                    {selectedDirectReleaseCircuit.circuitName}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Choose a school visited in this circuit.
+                  </p>
+                </div>
+
+                <div className="divide-y divide-white/10">
+                  {selectedDirectReleaseCircuit.schools.map((school) => (
+                    <button
+                      key={school.schoolId}
+                      type="button"
+                      onClick={() => showReleaseTeachers(school.schoolId)}
+                      className="flex min-h-16 w-full items-center justify-between gap-4 px-4 py-4 text-left hover:bg-white/[0.05] md:px-5"
+                    >
+                      <span className="text-base font-black text-white">
+                        {school.schoolName}
+                      </span>
+                      <span className="shrink-0 text-sm font-bold text-slate-300">
+                        {school.items.length} {school.items.length === 1 ? "Teacher" : "Teachers"} ›
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : selectedDirectReleaseSchool ? (
+              <div>
+                <div className="border-b border-white/10 px-4 py-3 md:px-5">
+                  <button
+                    type="button"
+                    onClick={() => showReleaseSchools(selectedReleaseCircuitId)}
+                    className="text-sm font-bold text-cyan-100 hover:text-white"
+                  >
+                    ← Back to schools
+                  </button>
+                  <p className="mt-3 text-lg font-black text-white">
+                    {selectedDirectReleaseSchool.schoolName}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Choose a Teacher to inspect the complete locked appraisal.
+                  </p>
+                </div>
+
+                <div className="divide-y divide-white/10">
+                  {selectedDirectReleaseSchool.items.length ? (
+                    selectedDirectReleaseSchool.items.map((item) => (
+                      <button
+                        key={item.assessmentId}
+                        type="button"
+                        disabled={packageLoading}
+                        onClick={() =>
+                          void loadDirectReleaseInspectionPackage(item)
+                        }
+                        className="flex min-h-16 w-full items-center justify-between gap-4 px-4 py-4 text-left hover:bg-white/[0.05] disabled:cursor-wait disabled:opacity-50 md:px-5"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-base font-black text-white">
+                            {packageLoading &&
+                            selectedAssessmentId === item.assessmentId
+                              ? "Opening appraisal…"
+                              : item.targetName || "Teacher"}
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-base font-black text-emerald-100">
+                          {formatPercent(item.overallPercentage)} ›
+                        </span>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-4 py-5 text-sm text-slate-300 md:px-5">
+                      No finalized Teacher assessment remains in this school.
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+
+        {queue &&
+        queue.items.length === 0 ? (
           <section className="rounded-[28px] border border-white/10 bg-white/[0.04] p-6">
             <h2 className="text-lg font-bold text-white">No review work waiting</h2>
             <p className="mt-2 text-sm leading-6 text-slate-300">
