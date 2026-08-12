@@ -70,6 +70,8 @@ export const HEADTEACHER_DIRECTOR_CORRECTION_CONTINUATION_POLICY = {
   requiredSourceAssessmentStatus: "SUPERSEDED",
   minimumCorrectionRevision: 2,
   reviewStage: 1,
+  reviewStageMode: "SOURCE_RETURN_STAGE",
+  preserveSourceReviewStage: true,
   reviewDecision: "PENDING",
   sourceReviewDecision: "RETURNED",
   preserveOriginalReviewer: true,
@@ -138,6 +140,13 @@ export type StartHeadteacherDirectorReviewResult = {
   reviewStartedAt: string;
   reviewEvidenceHash: string;
   evidence: HeadteacherDirectorReviewEvidenceReadiness;
+};
+
+type HeadteacherDirectorRunStartResult = Omit<
+  StartHeadteacherDirectorReviewResult,
+  "reviewStage"
+> & {
+  reviewStage: number;
 };
 
 
@@ -1078,10 +1087,17 @@ type HeadteacherDirectorAdmissionContext =
       };
     }
   | {
-      kind: "DIRECTOR_CORRECTION_STAGE_1";
-      reviewStage: 1;
+      kind: "DIRECTOR_CORRECTION";
+      reviewStage: number;
       assessorRole: string;
       hosForward: null;
+      correction: {
+        sourceAssessmentId: string;
+        sourceAssessmentRevision: number;
+        sourceReviewId: string;
+        sourceReviewStage: number;
+        returnEvidenceHash: string;
+      };
     };
 
 function frozenSupervisoryAssessorRole(
@@ -1477,6 +1493,18 @@ function reviewEvidenceHash(input: {
       decisionEvidenceHash: input.admission.hosForward.decisionEvidenceHash,
       decidedAt: input.admission.hosForward.decidedAt,
     };
+  } else if (input.admission?.kind === "DIRECTOR_CORRECTION") {
+    payload.admission = {
+      type: "CORRECTED_ASSESSMENT",
+      reviewStage: input.admission.reviewStage,
+      sourceAssessmentId: input.admission.correction.sourceAssessmentId,
+      sourceAssessmentRevision:
+        input.admission.correction.sourceAssessmentRevision,
+      sourceReviewId: input.admission.correction.sourceReviewId,
+      sourceReviewStage: input.admission.correction.sourceReviewStage,
+      returnEvidenceHash: input.admission.correction.returnEvidenceHash,
+      preserveSourceReviewStage: true,
+    };
   }
   return hashJson(payload);
 }
@@ -1498,6 +1526,13 @@ function reviewMetadata(input: {
         : input.admission.kind === "HOS_AUTHORED_STAGE_1"
           ? "HOS_AUTHORED"
           : "CORRECTED_ASSESSMENT",
+    ...(input.admission.kind === "DIRECTOR_CORRECTION"
+      ? {
+          preserveSourceReviewStage: true,
+          correctedFromReviewStage:
+            input.admission.correction.sourceReviewStage,
+        }
+      : {}),
     ...(input.admission.kind === "HOS_FORWARDED_STAGE_2"
       ? {
           admittedFromReviewId: input.admission.hosForward.reviewId,
@@ -1612,12 +1647,29 @@ type HeadteacherDirectorRunStartOptions = {
 function correctionAdmissionContext(
   assessment: AssessmentRecord,
   cycle: CycleRecord,
+  continuation: NonNullable<HeadteacherDirectorRunStartOptions["continuation"]>,
 ): HeadteacherDirectorAdmissionContext {
+  if (
+    !Number.isInteger(continuation.sourceReviewStage) ||
+    continuation.sourceReviewStage < 1 ||
+    !isSha256(continuation.returnEvidenceHash)
+  ) {
+    fail("HEADTEACHER_DIRECTOR_REVIEW_CONTINUATION_STAGE_INVALID", 409, {
+      sourceReviewStage: continuation.sourceReviewStage,
+    });
+  }
   return {
-    kind: "DIRECTOR_CORRECTION_STAGE_1",
-    reviewStage: 1,
+    kind: "DIRECTOR_CORRECTION",
+    reviewStage: continuation.sourceReviewStage,
     assessorRole: frozenSupervisoryAssessorRole(assessment, cycle),
     hosForward: null,
+    correction: {
+      sourceAssessmentId: continuation.sourceAssessmentId,
+      sourceAssessmentRevision: continuation.sourceAssessmentRevision,
+      sourceReviewId: continuation.sourceReviewId,
+      sourceReviewStage: continuation.sourceReviewStage,
+      returnEvidenceHash: continuation.returnEvidenceHash,
+    },
   };
 }
 
@@ -1914,6 +1966,34 @@ async function readCorrectionContinuationContext(
     );
   }
 
+  const sourceReviewMetadata = objectValue(sourceReview.metadata);
+  const sourceAssessmentMetadata = objectValue(sourceAssessment.metadata);
+  if (
+    !Number.isInteger(sourceReview.stage) ||
+    sourceReview.stage < 1 ||
+    normalized(sourceReviewMetadata.decision) !== "RETURN" ||
+    !isSha256(sourceReviewMetadata.decisionContractHash) ||
+    !isSha256(sourceReviewMetadata.decisionRequestHash) ||
+    sourceReviewMetadata.releasePerformed !== false ||
+    sourceReviewMetadata.scoreMutationPerformed !== false ||
+    sourceReviewMetadata.respondentIdentitiesAccessed !== false ||
+    sourceReviewMetadata.individualStaffResponsesAccessed !== false ||
+    sourceReviewMetadata.providerCalled !== false ||
+    clean(sourceAssessmentMetadata.returnedByDirectorReviewId) !==
+      sourceReview.id ||
+    Number(sourceAssessmentMetadata.returnedByDirectorReviewStage) !==
+      sourceReview.stage ||
+    clean(sourceAssessmentMetadata.returnDecisionContractHash).toLowerCase() !==
+      clean(sourceReviewMetadata.decisionContractHash).toLowerCase() ||
+    clean(sourceAssessmentMetadata.returnDecisionRequestHash).toLowerCase() !==
+      clean(sourceReviewMetadata.decisionRequestHash).toLowerCase()
+  ) {
+    fail(
+      "HEADTEACHER_DIRECTOR_REVIEW_CONTINUATION_DIRECTOR_RETURN_PROVENANCE_INVALID",
+      409,
+    );
+  }
+
   const returnEvidenceHash = assertContinuationMetadata({
     metadata: assessment.metadata,
     sourceAssessment,
@@ -1985,7 +2065,7 @@ async function runStart(
   database: HeadteacherDirectorReviewDatabase,
   allowCreate: boolean,
   options: HeadteacherDirectorRunStartOptions = {},
-): Promise<StartHeadteacherDirectorReviewResult> {
+): Promise<HeadteacherDirectorRunStartResult> {
   const actorUserId = requireIdentifier(input.actorUserId, "actorUserId");
   const cycleId = requireIdentifier(input.cycleId, "cycleId");
   const actorRole = effectiveRole(input.actorRoleName);
@@ -2101,7 +2181,11 @@ async function runStart(
       }
       const verified = verifySupervisoryAssessment(assessment);
       const admission = options.continuation
-        ? correctionAdmissionContext(assessment, cycle)
+        ? correctionAdmissionContext(
+            assessment,
+            cycle,
+            options.continuation,
+          )
         : await resolveInitialDirectorAdmission({
             tx,
             cycle,
@@ -2179,6 +2263,7 @@ async function runStart(
               continuedFromReviewId: options.continuation.sourceReviewId,
               continuedFromReviewStage: options.continuation.sourceReviewStage,
               returnEvidenceHash: options.continuation.returnEvidenceHash,
+              preserveSourceReviewStage: true,
               scoreMutationPerformed: false,
             }
           : {}),
@@ -2270,6 +2355,7 @@ async function runStart(
                     continuedFromReviewStage:
                       options.continuation.sourceReviewStage,
                     returnEvidenceHash: options.continuation.returnEvidenceHash,
+                    preserveSourceReviewStage: true,
                     scoreMutationPerformed: false,
                     providerCalled: false,
                   }
@@ -2349,6 +2435,7 @@ async function runStart(
                   sourceReturnReviewId: options.continuation.sourceReviewId,
                   sourceReturnReviewStage: options.continuation.sourceReviewStage,
                   returnEvidenceHash: options.continuation.returnEvidenceHash,
+                  preserveSourceReviewStage: true,
                   scoreMutationPerformed: false,
                 }
               : {}),
@@ -2385,16 +2472,30 @@ async function runStart(
   );
 }
 
+function initialReviewStartResult(
+  result: HeadteacherDirectorRunStartResult,
+): StartHeadteacherDirectorReviewResult {
+  if (result.reviewStage !== 1 && result.reviewStage !== 2) {
+    fail("HEADTEACHER_DIRECTOR_REVIEW_INITIAL_STAGE_INVALID", 409, {
+      reviewStage: result.reviewStage,
+    });
+  }
+  return {
+    ...result,
+    reviewStage: result.reviewStage,
+  };
+}
+
 export async function startHeadteacherDirectorReview(
   input: StartHeadteacherDirectorReviewInput,
 ): Promise<StartHeadteacherDirectorReviewResult> {
   const database =
     input.database ?? (prisma as unknown as HeadteacherDirectorReviewDatabase);
   try {
-    return await runStart(input, database, true);
+    return initialReviewStartResult(await runStart(input, database, true));
   } catch (error) {
     if (!isUniqueViolation(error)) throw error;
-    return runStart(input, database, false);
+    return initialReviewStartResult(await runStart(input, database, false));
   }
 }
 
@@ -2459,7 +2560,7 @@ export async function ensureHeadteacherDirectorCorrectionReviewContinuation(
     },
   };
 
-  let result: StartHeadteacherDirectorReviewResult;
+  let result: HeadteacherDirectorRunStartResult;
   try {
     result = await runStart(startInput, database, true, options);
   } catch (error) {

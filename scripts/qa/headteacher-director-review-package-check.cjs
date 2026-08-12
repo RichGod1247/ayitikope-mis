@@ -862,6 +862,131 @@ function makeHosAuthoredAssessment() {
   return assessment;
 }
 
+
+function makeDirectorCorrectionFixture({ reviewStage = 2 } = {}) {
+  const sourceAssessment = makeAssessment({
+    id: "assessment-source-001",
+    status: "SUPERSEDED",
+    revision: 1,
+    priorAssessmentId: null,
+  });
+  sourceAssessment.assessmentHash = hashJson(
+    assessmentHashPayload(
+      sourceAssessment,
+      sourceAssessment.instrumentVersion.sections,
+      sourceAssessment.sectionPercentagesJson,
+      sourceAssessment.overallPercentage,
+    ),
+  );
+
+  const returnEvidenceHash = "f".repeat(64);
+  const sourceReviewId = `director-return-review-${reviewStage}`;
+  const assessment = makeAssessment({
+    id: "assessment-corrected-002",
+    revision: 2,
+    priorAssessmentId: sourceAssessment.id,
+  });
+  assessment.metadata = {
+    ...assessment.metadata,
+    sourceAssessmentId: sourceAssessment.id,
+    sourceAssessmentHash: sourceAssessment.assessmentHash,
+    returnReviewId: sourceReviewId,
+    returnReviewStage: reviewStage,
+    returnEvidenceHash,
+    preserveVisitContext: true,
+    returnedAssessmentRequiresRevision: true,
+    reviewerMayRewriteScores: false,
+    separateFromStaffFeedback: true,
+    combinedWeightingDefined: false,
+    providerCalled: false,
+  };
+  assessment.assessmentHash = hashJson(
+    assessmentHashPayload(
+      assessment,
+      assessment.instrumentVersion.sections,
+      assessment.sectionPercentagesJson,
+      assessment.overallPercentage,
+    ),
+  );
+
+  const evidence = reviewEvidence(assessment);
+  const reviewEvidenceHash = hashJson({
+    schemaVersion: HEADTEACHER_DIRECTOR_REVIEW_POLICY.schemaVersion,
+    workflow: HEADTEACHER_DIRECTOR_REVIEW_POLICY.workflow,
+    cycleId: assessment.cycleId,
+    reviewerUserId: "director-user-001",
+    reviewerAssignmentId: "director-assignment-001",
+    staffFeedback: {
+      snapshotId: evidence.staffFeedback.snapshotId,
+      snapshotVersion: evidence.staffFeedback.snapshotVersion,
+      sourceHash: evidence.staffFeedback.sourceHash,
+      finalizedResponses: evidence.staffFeedback.finalizedResponses,
+      minimumResponses: evidence.staffFeedback.minimumResponses,
+    },
+    supervisoryAssessment: {
+      assessmentId: evidence.supervisoryAssessment.assessmentId,
+      revision: evidence.supervisoryAssessment.revision,
+      assessmentHash: evidence.supervisoryAssessment.assessmentHash,
+      assessorAssignmentId: evidence.supervisoryAssessment.assessorAssignmentId,
+      directorAuthored: false,
+    },
+    separateEvidenceStreams: true,
+    combinedWeightingDefined: false,
+    respondentIdentitiesAccessed: false,
+    individualStaffResponsesAccessed: false,
+    reviewerMayRewriteScores: false,
+    admission: {
+      type: "CORRECTED_ASSESSMENT",
+      reviewStage,
+      sourceAssessmentId: sourceAssessment.id,
+      sourceAssessmentRevision: sourceAssessment.revision,
+      sourceReviewId,
+      sourceReviewStage: reviewStage,
+      returnEvidenceHash,
+      preserveSourceReviewStage: true,
+    },
+  });
+
+  const review = {
+    id: "review-corrected-002",
+    cycleId: assessment.cycleId,
+    assessmentId: assessment.id,
+    reviewerUserId: "director-user-001",
+    reviewerAssignmentId: "director-assignment-001",
+    stage: reviewStage,
+    decision: "PENDING",
+    note: null,
+    decidedAt: null,
+    metadata: {
+      schemaVersion: 1,
+      workflow: "HEADTEACHER_CONFIDENTIAL_STAFF_FEEDBACK",
+      reviewStage,
+      reviewEvidenceHash,
+      evidence,
+      admissionType: "CORRECTED_ASSESSMENT",
+      preserveSourceReviewStage: true,
+      correctedFromReviewStage: reviewStage,
+      continuationSchemaVersion: 1,
+      continuationType: "CORRECTED_ASSESSMENT",
+      continuedFromAssessmentId: sourceAssessment.id,
+      continuedFromAssessmentRevision: sourceAssessment.revision,
+      continuedFromReviewId: sourceReviewId,
+      continuedFromReviewStage: reviewStage,
+      returnEvidenceHash,
+      scoreMutationPerformed: false,
+      respondentIdentitiesAccessed: false,
+      individualStaffResponsesAccessed: false,
+      reviewerMayRewriteScores: false,
+      separateEvidenceStreams: true,
+      combinedWeightingDefined: false,
+      providerCalled: false,
+    },
+    createdAt: new Date("2026-07-30T10:00:00.000Z"),
+  };
+
+  return { sourceAssessment, assessment, review };
+}
+
 function createDatabase(options = {}) {
   const assessment = options.assessment ?? makeAssessment();
   const state = {
@@ -1335,11 +1460,22 @@ async function main() {
   continuedReview.decidedAt = null;
   continuedReview.createdAt = new Date("2026-07-29T14:00:01.000Z");
   continuedReview.metadata = {
-    ...continuedReview.metadata,
+    schemaVersion: 1,
+    workflow: "HEADTEACHER_CONFIDENTIAL_STAFF_FEEDBACK",
     reviewStage: 3,
+    reviewEvidenceHash: heldReview.metadata.reviewEvidenceHash,
+    evidence: heldReview.metadata.evidence,
     continuedFromReviewId: heldReview.id,
     continuedFromStage: 2,
     priorDecision: "HELD",
+    holdDecisionContractHash: "1".repeat(64),
+    holdDecisionRequestHash: "2".repeat(64),
+    respondentIdentitiesAccessed: false,
+    individualStaffResponsesAccessed: false,
+    reviewerMayRewriteScores: false,
+    separateEvidenceStreams: true,
+    combinedWeightingDefined: false,
+    providerCalled: false,
   };
   const continuedFixture = createDatabase({
     reviews: [heldChain.hosReview, heldReview, continuedReview],
@@ -1352,6 +1488,87 @@ async function main() {
     continuedPackage.review.stage,
     3,
     "Latest pending hold-continuation stage must be selected",
+  );
+
+  const correction = makeDirectorCorrectionFixture({ reviewStage: 2 });
+  const correctionFixture = createDatabase({
+    assessment: correction.assessment,
+    assessments: [correction.sourceAssessment, correction.assessment],
+    reviews: [correction.review],
+  });
+  const correctionPackage = await readHeadteacherDirectorReviewPackage({
+    ...baseInput(),
+    database: correctionFixture.db,
+  });
+  assertEqual(
+    correctionPackage.review.stage,
+    2,
+    "Director-return correction must resume the source Director stage",
+  );
+
+  const correctionHeld = deepClone(correction.review);
+  correctionHeld.decision = "HELD";
+  correctionHeld.note = "Awaiting accountable clarification.";
+  correctionHeld.decidedAt = new Date("2026-07-30T11:00:00.000Z");
+  const correctionContinued = {
+    id: "review-corrected-003",
+    cycleId: correctionHeld.cycleId,
+    assessmentId: correctionHeld.assessmentId,
+    reviewerUserId: correctionHeld.reviewerUserId,
+    reviewerAssignmentId: correctionHeld.reviewerAssignmentId,
+    stage: 3,
+    decision: "PENDING",
+    note: null,
+    decidedAt: null,
+    metadata: {
+      schemaVersion: 1,
+      workflow: "HEADTEACHER_CONFIDENTIAL_STAFF_FEEDBACK",
+      reviewStage: 3,
+      reviewEvidenceHash: correctionHeld.metadata.reviewEvidenceHash,
+      evidence: correctionHeld.metadata.evidence,
+      continuedFromReviewId: correctionHeld.id,
+      continuedFromStage: 2,
+      priorDecision: "HELD",
+      holdDecisionContractHash: "3".repeat(64),
+      holdDecisionRequestHash: "4".repeat(64),
+      respondentIdentitiesAccessed: false,
+      individualStaffResponsesAccessed: false,
+      reviewerMayRewriteScores: false,
+      separateEvidenceStreams: true,
+      combinedWeightingDefined: false,
+      providerCalled: false,
+    },
+    createdAt: new Date("2026-07-30T11:00:01.000Z"),
+  };
+  const correctionHeldPackage = await readHeadteacherDirectorReviewPackage({
+    ...baseInput(),
+    database: createDatabase({
+      assessment: correction.assessment,
+      assessments: [correction.sourceAssessment, correction.assessment],
+      reviews: [correctionHeld, correctionContinued],
+    }).db,
+  });
+  assertEqual(
+    correctionHeldPackage.review.stage,
+    3,
+    "Hold after a resumed correction stage must advance to the next Director stage",
+  );
+
+  await expectReject(
+    () => {
+      const drift = makeDirectorCorrectionFixture({ reviewStage: 2 });
+      drift.review.metadata.continuedFromReviewStage = 1;
+      return readHeadteacherDirectorReviewPackage({
+        ...baseInput(),
+        database: createDatabase({
+          assessment: drift.assessment,
+          assessments: [drift.sourceAssessment, drift.assessment],
+          reviews: [drift.review],
+        }).db,
+      });
+    },
+    "HEADTEACHER_DIRECTOR_REVIEW_PACKAGE_CORRECTION_PROVENANCE_DRIFT",
+    "Correction package must fail closed when the returned Director stage drifts",
   );
 
   const returnPlan = planHeadteacherDirectorReviewDecision({
@@ -1478,7 +1695,8 @@ async function main() {
   console.log("");
   console.log("Review audience                 : District Director only");
   console.log("Institutional chain             : HOS acceptance preserved before Director Stage 2");
-  console.log("Lifecycle boundary              : HOS Stage 1 ACCEPTED -> Director Stage 2 PENDING or HOS-authored Stage 1");
+  console.log("Correction custody              : Director RETURN resumes the same Director stage");
+  console.log("Lifecycle boundary              : initial admission + stage-preserving Director correction");
   console.log("Staff evidence                  : immutable aggregate snapshot V1");
   console.log("Supervisory evidence            : one finalized current assessment");
   console.log("Supervisory scores/hash          : recalculated and verified");
