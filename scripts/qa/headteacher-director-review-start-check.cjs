@@ -116,7 +116,6 @@ const {
 } = reviewModule;
 
 const NOW = new Date("2026-07-29T12:00:00.000Z");
-const REVIEW_STARTED = new Date("2026-07-29T12:00:00.000Z");
 const STAFF_HASH = "a".repeat(64);
 const STAFF_SOURCE_HASH = "b".repeat(64);
 const VISIT_HASH = "c".repeat(64);
@@ -252,6 +251,13 @@ function makeAssessment(overrides = {}) {
     generalComment: null,
     evidenceSnapshotJson: {
       target: { userId: "headteacher-001" },
+      assessor: {
+        userId: "sisso-user-001",
+        role: "SISSO",
+        assignmentId: "sisso-assignment-001",
+        assignmentRole: "SISSO",
+        scopeLevel: "CIRCUIT",
+      },
       jurisdiction: { districtZoneId: "district-001" },
     },
     assessmentHash: null,
@@ -289,6 +295,169 @@ function makeAssessment(overrides = {}) {
     ),
   );
   return { ...assessment, ...overrides };
+}
+
+function withAssessorOrigin(assessment, input) {
+  const next = deepClone(assessment);
+  next.assessorUserId = input.userId;
+  next.assessorAssignmentId = input.assignmentId;
+  next.finalizedByUserId = input.userId;
+  next.evidenceSnapshotJson = {
+    ...objectValue(next.evidenceSnapshotJson),
+    assessor: {
+      userId: input.userId,
+      role: input.role,
+      assignmentId: input.assignmentId,
+      assignmentRole: input.role,
+      scopeLevel: input.scopeLevel,
+    },
+    jurisdiction: { districtZoneId: "district-001" },
+  };
+  const calculated = calculateAppraisalScores(
+    calculationRows(next.instrumentVersion.sections, next.scores),
+    { requireComplete: true },
+  );
+  assert(calculated.ok, "Role-aware fixture must calculate");
+  next.assessmentHash = hashJson(
+    assessmentHashPayload(
+      next,
+      next.instrumentVersion.sections,
+      calculated.value.sectionPercentages,
+      calculated.value.overallPercentage,
+    ),
+  );
+  return next;
+}
+
+function makeHosAuthoredAssessment() {
+  return withAssessorOrigin(makeAssessment(), {
+    userId: "hos-user-001",
+    assignmentId: "hos-assignment-001",
+    role: "HEAD_OF_SUPERVISION",
+    scopeLevel: "DISTRICT",
+  });
+}
+
+function hosReviewEvidenceHash(assessment, review) {
+  return hashJson({
+    schemaVersion: 1,
+    workflow: "HEADTEACHER_GOVERNANCE_SUPERVISORY_ASSESSMENT",
+    evidenceStream: "GOVERNANCE_SUPERVISORY_ASSESSMENT",
+    assessment: {
+      id: assessment.id,
+      cycleId: assessment.cycleId,
+      revision: assessment.revision,
+      assessmentHash: assessment.assessmentHash,
+      visitContextHash: VISIT_HASH,
+      assessorUserId: assessment.assessorUserId,
+      assessorAssignmentId: assessment.assessorAssignmentId,
+    },
+    review: {
+      stage: 1,
+      reviewerUserId: review.reviewerUserId,
+      reviewerAssignmentId: review.reviewerAssignmentId,
+      reviewerRole: "HEAD_OF_SUPERVISION",
+    },
+    jurisdiction: {
+      districtZoneId: "district-001",
+      targetTenantId: "tenant-001",
+    },
+    staffFeedbackIncluded: false,
+    respondentIdentitiesIncluded: false,
+    reviewerMayRewriteScores: false,
+    scoreMutationAllowed: false,
+  });
+}
+
+function makeHosForwardedReview(assessment) {
+  const review = {
+    id: "hos-review-001",
+    cycleId: assessment.cycleId,
+    assessmentId: assessment.id,
+    reviewerUserId: "hos-user-001",
+    reviewerAssignmentId: "hos-assignment-001",
+    stage: 1,
+    decision: "ACCEPTED",
+    note: null,
+    decidedAt: new Date("2026-07-29T11:00:00.000Z"),
+    metadata: {},
+    createdAt: new Date("2026-07-29T10:00:00.000Z"),
+  };
+  const reviewHash = hosReviewEvidenceHash(assessment, review);
+  const requestHash = hashJson({
+    schemaVersion: 1,
+    workflow: "HEADTEACHER_GOVERNANCE_SUPERVISORY_ASSESSMENT",
+    evidenceStream: "GOVERNANCE_SUPERVISORY_ASSESSMENT",
+    assessment: {
+      id: assessment.id,
+      cycleId: assessment.cycleId,
+      revision: assessment.revision,
+      assessmentHash: assessment.assessmentHash,
+      visitContextHash: VISIT_HASH,
+    },
+    review: {
+      id: review.id,
+      stage: 1,
+      reviewerUserId: review.reviewerUserId,
+      reviewerAssignmentId: review.reviewerAssignmentId,
+      reviewEvidenceHash: reviewHash,
+    },
+    jurisdiction: {
+      districtZoneId: "district-001",
+      targetTenantId: "tenant-001",
+    },
+    action: "FORWARD",
+    reason: null,
+    returnAssessmentStatus: "FINALIZED",
+    reviewDecision: "ACCEPTED",
+    nextReviewCreated: false,
+    reviewerMayRewriteScores: false,
+    scoreMutationAllowed: false,
+  });
+  const decisionHash = hashJson({
+    schemaVersion: 1,
+    decisionRequestHash: requestHash,
+    sourceReviewEvidenceHash: reviewHash,
+    action: "FORWARD",
+    nextReviewCreated: false,
+  });
+  review.metadata = {
+    schemaVersion: 1,
+    workflow: "HEADTEACHER_GOVERNANCE_SUPERVISORY_ASSESSMENT",
+    evidenceStream: "GOVERNANCE_SUPERVISORY_ASSESSMENT",
+    reviewType: "HOS_SUPERVISORY_REVIEW",
+    reviewStage: 1,
+    reviewerRole: "HEAD_OF_SUPERVISION",
+    reviewEvidenceHash: reviewHash,
+    assessmentId: assessment.id,
+    assessmentRevision: assessment.revision,
+    assessmentHash: assessment.assessmentHash,
+    immutableEvidenceReverified: true,
+    staffFeedbackIncluded: false,
+    respondentIdentitiesIncluded: false,
+    reviewerMayRewriteScores: false,
+    scoreMutationAllowed: false,
+    assessmentMutationAllowed: false,
+    notificationsSeeded: false,
+    providerCalled: false,
+    reviewerAssignmentZoneId: "district-001",
+    decisionSchemaVersion: 1,
+    decisionAction: "FORWARD",
+    decisionRequestHash: requestHash,
+    decisionEvidenceHash: decisionHash,
+    decidedByRole: "HEAD_OF_SUPERVISION",
+    decidedAt: review.decidedAt.toISOString(),
+    reasonHash: null,
+    reasonLength: 0,
+    revisionRequired: false,
+    nextReviewCreated: false,
+    nextReviewerRole: null,
+    preserveReturningReviewerForCorrection: false,
+    reviewerMayRewriteVisitEvidence: false,
+    scoreMutationPerformed: false,
+    visitEvidenceMutationPerformed: false,
+  };
+  return { review, reviewHash, requestHash, decisionHash };
 }
 
 function makeCycle(overrides = {}) {
@@ -378,6 +547,62 @@ function makeAssignment(overrides = {}) {
   };
 }
 
+function makeHosAssignment(overrides = {}) {
+  return {
+    id: "hos-assignment-001",
+    userId: "hos-user-001",
+    role: "HEAD_OF_SUPERVISION",
+    status: "ACTIVE",
+    revokedAt: null,
+    startsAt: new Date("2026-01-01T00:00:00.000Z"),
+    endsAt: null,
+    zoneId: "district-001",
+    zone: {
+      id: "district-001",
+      name: "Akatsi South",
+      isActive: true,
+      zoneType: { level: 2, countryCode: "GH" },
+    },
+    ...overrides,
+  };
+}
+
+function makeHosForwardCycle(assessment, hosForward) {
+  return makeCycle({
+    status: "UNDER_REVIEW",
+    reviewStartedAt: new Date("2026-07-29T10:00:00.000Z"),
+    metadata: {
+      workflow: "HEADTEACHER_CONFIDENTIAL_STAFF_FEEDBACK",
+      headteacherSupervisoryReview: {
+        schemaVersion: 1,
+        state: "HOS_REVIEW_ACCEPTED_AWAITING_DIRECTOR",
+        currentReviewId: hosForward.review.id,
+        currentReviewStage: 1,
+        currentReviewerRole: "HEAD_OF_SUPERVISION",
+        currentReviewerAssignmentId: hosForward.review.reviewerAssignmentId,
+        sourceReviewDecision: "ACCEPTED",
+        reviewEvidenceHash: hosForward.reviewHash,
+        admittedAssessmentId: assessment.id,
+        admittedAssessmentRevision: assessment.revision,
+        assessmentHash: assessment.assessmentHash,
+        decisionRequestHash: hosForward.requestHash,
+        decisionEvidenceHash: hosForward.decisionHash,
+        awaitingRevision: false,
+        awaitingDirectorAdmission: true,
+        directorReviewCreated: false,
+        preserveReturningReviewerForCorrection: false,
+        reviewerMayRewriteScores: false,
+        scoreMutationAllowed: false,
+        staffFeedbackIncluded: false,
+        respondentIdentitiesIncluded: false,
+        notificationsSeeded: false,
+        providerCalled: false,
+        decidedAt: hosForward.review.decidedAt.toISOString(),
+      },
+    },
+  });
+}
+
 function makeSnapshot(overrides = {}) {
   return {
     id: "snapshot-001",
@@ -421,7 +646,7 @@ function createDatabase(options = {}) {
     cycle: makeCycle(options.cycle),
     membership: makeMembership(options.membership),
     assignments: options.assignments ?? [makeAssignment()],
-    assessments: options.assessments ?? [makeAssessment()],
+    assessments: options.assessments ?? [makeHosAuthoredAssessment()],
     snapshots:
       options.snapshots === undefined ? [makeSnapshot()] : options.snapshots,
     reviews: options.reviews ?? [],
@@ -483,6 +708,16 @@ function createDatabase(options = {}) {
               review.stage === key.stage,
           ) ?? null
         );
+      },
+      async findMany(args) {
+        const assessmentId = args?.where?.assessmentId;
+        return state.reviews
+          .filter((review) => !assessmentId || review.assessmentId === assessmentId)
+          .sort(
+            (left, right) =>
+              left.stage - right.stage ||
+              left.createdAt.getTime() - right.createdAt.getTime(),
+          );
       },
       async create(args) {
         state.creates += 1;
@@ -745,47 +980,119 @@ async function main() {
     "Assessment evidence hash drift must fail closed",
   );
 
-  const directorAuthored = createDatabase({
-    assessments: [
-      makeAssessment({
-        assessorUserId: "director-user-001",
-        finalizedByUserId: "director-user-001",
-        assessorAssignmentId: "director-assignment-001",
-      }),
-    ],
+  const directHos = createDatabase({
+    assessments: [makeHosAuthoredAssessment()],
   });
-  // Recompute the hash after changing assessor identity.
-  {
-    const a = directorAuthored.state.assessments[0];
-    const sections = a.instrumentVersion.sections;
-    const calculated = calculateAppraisalScores(
-      calculationRows(sections, a.scores),
-      { requireComplete: true },
-    );
-    assert(calculated.ok, "Director-authored fixture must calculate");
-    a.assessmentHash = hashJson(
-      assessmentHashPayload(
-        a,
-        sections,
-        calculated.value.sectionPercentages,
-        calculated.value.overallPercentage,
-      ),
-    );
-  }
-  const directorResult = await startHeadteacherDirectorReview({
+  const directHosResult = await startHeadteacherDirectorReview({
     ...baseInput(),
-    database: directorAuthored.db,
+    database: directHos.db,
   });
+  assertEqual(directHosResult.reviewStage, 1, "HOS-authored evidence enters Director Stage 1");
   assertEqual(
-    directorResult.evidence.supervisoryAssessment.directorAuthored,
-    true,
-    "Director-authored assessment must be marked truthfully",
+    directHos.state.reviews[0].metadata.admissionType,
+    "HOS_AUTHORED",
+    "HOS-authored admission must be explicit",
+  );
+
+  const sissoAssessment = makeAssessment();
+  const hosForward = makeHosForwardedReview(sissoAssessment);
+  const forwarded = createDatabase({
+    cycle: makeHosForwardCycle(sissoAssessment, hosForward),
+    assessments: [sissoAssessment],
+    assignments: [makeAssignment(), makeHosAssignment()],
+    reviews: [hosForward.review],
+  });
+  const forwardedResult = await startHeadteacherDirectorReview({
+    ...baseInput(),
+    database: forwarded.db,
+  });
+  assertEqual(forwardedResult.reviewStage, 2, "HOS-forwarded evidence enters Director Stage 2");
+  assertEqual(forwarded.state.reviews.length, 2, "HOS Stage 1 must be preserved with Director Stage 2");
+  assertEqual(forwarded.state.reviews[0].decision, "ACCEPTED", "HOS Stage 1 remains accepted");
+  assertEqual(forwarded.state.reviews[1].decision, "PENDING", "Director Stage 2 starts pending");
+  assertEqual(
+    forwarded.state.reviews[1].metadata.admissionType,
+    "HOS_FORWARDED",
+    "Director Stage 2 must bind HOS-forward provenance",
   );
   assertEqual(
-    HEADTEACHER_DIRECTOR_REVIEW_POLICY
-      .directorAuthoredAssessmentNeedsSeparateReviewer,
+    forwarded.state.cycle.metadata.headteacherSupervisoryReview.directorReviewCreated,
+    true,
+    "Cycle must record Director admission",
+  );
+  const forwardedRetry = await startHeadteacherDirectorReview({
+    ...baseInput(),
+    database: forwarded.db,
+  });
+  assertEqual(forwardedRetry.outcome, "EXISTING_REVIEW", "Stage-2 retry must be idempotent");
+  assertEqual(forwarded.state.reviews.length, 2, "Stage-2 retry must not duplicate review");
+
+  const bscAssessment = withAssessorOrigin(makeAssessment(), {
+    userId: "bsc-user-001",
+    assignmentId: "bsc-assignment-001",
+    role: "BASIC_SCHOOL_COORDINATOR",
+    scopeLevel: "DISTRICT",
+  });
+  const bscForward = makeHosForwardedReview(bscAssessment);
+  const bscFixture = createDatabase({
+    cycle: makeHosForwardCycle(bscAssessment, bscForward),
+    assessments: [bscAssessment],
+    assignments: [makeAssignment(), makeHosAssignment()],
+    reviews: [bscForward.review],
+  });
+  const bscResult = await startHeadteacherDirectorReview({
+    ...baseInput(),
+    database: bscFixture.db,
+  });
+  assertEqual(bscResult.reviewStage, 2, "BSC evidence must enter Director Stage 2 only after HOS forward");
+
+  await expectReject(
+    () =>
+      startHeadteacherDirectorReview({
+        ...baseInput(),
+        database: createDatabase({
+          cycle: makeHosForwardCycle(sissoAssessment, hosForward),
+          assessments: [sissoAssessment],
+          assignments: [
+            makeAssignment(),
+            makeHosAssignment({ status: "REVOKED" }),
+          ],
+          reviews: [hosForward.review],
+        }).db,
+      }),
+    "HEADTEACHER_DIRECTOR_REVIEW_HOS_FORWARD_ASSIGNMENT_INVALID",
+    "HOS-forward admission must revalidate the exact active HOS district assignment",
+  );
+
+  await expectReject(
+    () =>
+      startHeadteacherDirectorReview({
+        ...baseInput(),
+        database: createDatabase({ assessments: [makeAssessment()] }).db,
+      }),
+    "HEADTEACHER_DIRECTOR_REVIEW_HOS_FORWARD_REQUIRED",
+    "SISSO/BSC evidence cannot bypass HOS Stage 1",
+  );
+
+  const directorAssessment = withAssessorOrigin(makeAssessment(), {
+    userId: "director-user-001",
+    assignmentId: "director-assignment-001",
+    role: "DISTRICT_DIRECTOR",
+    scopeLevel: "DISTRICT",
+  });
+  await expectReject(
+    () =>
+      startHeadteacherDirectorReview({
+        ...baseInput(),
+        database: createDatabase({ assessments: [directorAssessment] }).db,
+      }),
+    "HEADTEACHER_DIRECTOR_REVIEW_SELF_REVIEW_FORBIDDEN",
+    "Director-authored assessment must never enter Director self-review",
+  );
+  assertEqual(
+    HEADTEACHER_DIRECTOR_REVIEW_POLICY.directorAuthoredAssessmentSelfReviewAllowed,
     false,
-    "Current roadmap requires no separate reviewer for Director-authored assessment",
+    "Director self-review must be policy-forbidden",
   );
 
   const raced = createDatabase({ uniqueRace: true });
@@ -842,13 +1149,13 @@ async function main() {
   console.log("Review authority                : District Director only");
   console.log("Active assignment               : exact district required");
   console.log("SISSO office                    : one office; Circuit Supervisor is legacy alias");
-  console.log("Cycle start boundary            : CLOSED only");
+  console.log("Director admission boundaries    : HOS-authored Stage 1 / HOS-forwarded Stage 2");
   console.log("Staff-feedback evidence         : immutable snapshot V1 required");
   console.log("Supervisory evidence            : exactly one finalized current assessment");
   console.log("Assessment calculations/hash    : recomputed and verified");
   console.log("Unresolved/multiple assessments : fail closed");
-  console.log("Review record                   : stage 1 / PENDING");
-  console.log("Cycle transition                : CLOSED -> UNDER_REVIEW");
+  console.log("Review records                  : Stage 1 or Stage 2 / PENDING by origin");
+  console.log("Cycle transition                : CLOSED -> UNDER_REVIEW or preserved UNDER_REVIEW");
   console.log("Explicit confirmation           : required");
   console.log("Same-evidence retry             : EXISTING_REVIEW");
   console.log("Concurrent create race          : idempotently recovered");
@@ -857,7 +1164,7 @@ async function main() {
   console.log("Reviewer score rewriting        : forbidden");
   console.log("Respondent identity access      : absent");
   console.log("Individual staff forms          : not selected");
-  console.log("Director-authored assessment    : no separate reviewer for now");
+  console.log("Director-authored assessment    : self-review forbidden");
   console.log("Transaction                     : serializable and bounded");
   console.log("Notifications/providers         : absent");
   console.log("Database accessed               : false");

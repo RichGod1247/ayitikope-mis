@@ -17,8 +17,15 @@ import {
 } from "@/lib/appraisals/headteacherFeedbackAggregateReadiness";
 import {
   HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY,
+  canonicalHeadteacherSupervisoryAssessorRole,
   inspectHeadteacherSupervisoryInstrument,
 } from "@/lib/appraisals/headteacherSupervisoryAssessment";
+import {
+  HEADTEACHER_SUPERVISORY_HOS_REVIEW_START_POLICY,
+} from "@/lib/appraisals/headteacherSupervisoryReviewAdmission";
+import {
+  HEADTEACHER_SUPERVISORY_HOS_DECISION_POLICY,
+} from "@/lib/appraisals/headteacherSupervisoryReviewDecision";
 import { calculateAppraisalScores } from "@/lib/appraisals/scoring";
 import { effectiveRole } from "@/lib/roleRouting";
 
@@ -28,6 +35,14 @@ export const HEADTEACHER_DIRECTOR_REVIEW_POLICY = {
   reviewerRole: "DISTRICT_DIRECTOR",
   requiredCapability: "REVIEW_HEADTEACHER_APPRAISAL",
   reviewStage: 1,
+  directReviewStage: 1,
+  hosForwardedReviewStage: 2,
+  directEligibleAssessorRoles: ["HEAD_OF_SUPERVISION"] as const,
+  hosForwardedEligibleAssessorRoles: [
+    "SISSO",
+    "BASIC_SCHOOL_COORDINATOR",
+  ] as const,
+  hosForwardRequiredForSissoBsc: true,
   cycleFromStatus: "CLOSED",
   cycleToStatus: "UNDER_REVIEW",
   reviewDecisionAtStart: "PENDING",
@@ -40,6 +55,7 @@ export const HEADTEACHER_DIRECTOR_REVIEW_POLICY = {
   separateEvidenceStreams: true,
   combinedWeightingDefined: false,
   directorAuthoredAssessmentNeedsSeparateReviewer: false,
+  directorAuthoredAssessmentSelfReviewAllowed: false,
   explicitConfirmationRequired: true,
   providerCallsAllowed: false,
   transactionIsolation: "SERIALIZABLE",
@@ -115,7 +131,7 @@ export type StartHeadteacherDirectorReviewResult = {
   cycleId: string;
   cycleStatus: "UNDER_REVIEW";
   reviewId: string;
-  reviewStage: 1;
+  reviewStage: 1 | 2;
   reviewDecision: "PENDING";
   reviewerUserId: string;
   reviewerAssignmentId: string;
@@ -150,7 +166,7 @@ export type EnsureHeadteacherDirectorCorrectionReviewContinuationResult = {
   sourceReviewId: string | null;
   sourceReviewStage: number | null;
   reviewId: string | null;
-  reviewStage: 1 | null;
+  reviewStage: number | null;
   reviewDecision: "PENDING" | null;
   reviewerUserId: string | null;
   reviewerAssignmentId: string | null;
@@ -1039,13 +1055,385 @@ function reviewEvidence(input: {
   };
 }
 
+type HeadteacherDirectorAdmissionContext =
+  | {
+      kind: "HOS_AUTHORED_STAGE_1";
+      reviewStage: 1;
+      assessorRole: "HEAD_OF_SUPERVISION";
+      hosForward: null;
+    }
+  | {
+      kind: "HOS_FORWARDED_STAGE_2";
+      reviewStage: 2;
+      assessorRole: "SISSO" | "BASIC_SCHOOL_COORDINATOR";
+      hosForward: {
+        reviewId: string;
+        reviewStage: 1;
+        reviewerUserId: string;
+        reviewerAssignmentId: string;
+        reviewEvidenceHash: string;
+        decisionRequestHash: string;
+        decisionEvidenceHash: string;
+        decidedAt: string;
+      };
+    }
+  | {
+      kind: "DIRECTOR_CORRECTION_STAGE_1";
+      reviewStage: 1;
+      assessorRole: string;
+      hosForward: null;
+    };
+
+function frozenSupervisoryAssessorRole(
+  assessment: AssessmentRecord,
+  cycle: CycleRecord,
+) {
+  const context = objectValue(assessment.evidenceSnapshotJson);
+  const assessor = objectValue(context.assessor);
+  const jurisdiction = objectValue(context.jurisdiction);
+  const frozenRole = canonicalHeadteacherSupervisoryAssessorRole(
+    clean(assessor.role) || clean(assessor.assignmentRole),
+  );
+  if (
+    clean(assessor.userId) !== assessment.assessorUserId ||
+    clean(assessor.assignmentId) !== clean(assessment.assessorAssignmentId) ||
+    clean(jurisdiction.districtZoneId) !== cycle.scopeZoneId
+  ) {
+    fail("HEADTEACHER_DIRECTOR_REVIEW_ASSESSOR_PROVENANCE_DRIFT", 409, {
+      assessmentId: assessment.id,
+    });
+  }
+  return frozenRole;
+}
+
+function hosReviewEvidenceHash(input: {
+  assessment: AssessmentRecord;
+  cycle: CycleRecord;
+  review: ReviewRecord;
+  visitContextHash: string;
+}) {
+  return hashJson({
+    schemaVersion: HEADTEACHER_SUPERVISORY_HOS_REVIEW_START_POLICY.schemaVersion,
+    workflow: HEADTEACHER_SUPERVISORY_HOS_REVIEW_START_POLICY.workflow,
+    evidenceStream: HEADTEACHER_SUPERVISORY_HOS_REVIEW_START_POLICY.evidenceStream,
+    assessment: {
+      id: input.assessment.id,
+      cycleId: input.assessment.cycleId,
+      revision: input.assessment.revision,
+      assessmentHash: clean(input.assessment.assessmentHash).toLowerCase(),
+      visitContextHash: input.visitContextHash,
+      assessorUserId: input.assessment.assessorUserId,
+      assessorAssignmentId: input.assessment.assessorAssignmentId,
+    },
+    review: {
+      stage: 1,
+      reviewerUserId: input.review.reviewerUserId,
+      reviewerAssignmentId: input.review.reviewerAssignmentId,
+      reviewerRole: "HEAD_OF_SUPERVISION",
+    },
+    jurisdiction: {
+      districtZoneId: input.cycle.scopeZoneId,
+      targetTenantId: input.cycle.targetTenantId,
+    },
+    staffFeedbackIncluded: false,
+    respondentIdentitiesIncluded: false,
+    reviewerMayRewriteScores: false,
+    scoreMutationAllowed: false,
+  });
+}
+
+function hosDecisionRequestHash(input: {
+  assessment: AssessmentRecord;
+  cycle: CycleRecord;
+  review: ReviewRecord;
+  visitContextHash: string;
+  sourceReviewEvidenceHash: string;
+}) {
+  return hashJson({
+    schemaVersion: HEADTEACHER_SUPERVISORY_HOS_DECISION_POLICY.schemaVersion,
+    workflow: HEADTEACHER_SUPERVISORY_HOS_DECISION_POLICY.workflow,
+    evidenceStream: HEADTEACHER_SUPERVISORY_HOS_DECISION_POLICY.evidenceStream,
+    assessment: {
+      id: input.assessment.id,
+      cycleId: input.assessment.cycleId,
+      revision: input.assessment.revision,
+      assessmentHash: clean(input.assessment.assessmentHash).toLowerCase(),
+      visitContextHash: input.visitContextHash,
+    },
+    review: {
+      id: input.review.id,
+      stage: input.review.stage,
+      reviewerUserId: input.review.reviewerUserId,
+      reviewerAssignmentId: input.review.reviewerAssignmentId,
+      reviewEvidenceHash: input.sourceReviewEvidenceHash,
+    },
+    jurisdiction: {
+      districtZoneId: input.cycle.scopeZoneId,
+      targetTenantId: input.cycle.targetTenantId,
+    },
+    action: "FORWARD",
+    reason: null,
+    returnAssessmentStatus: "FINALIZED",
+    reviewDecision: "ACCEPTED",
+    nextReviewCreated: false,
+    reviewerMayRewriteScores: false,
+    scoreMutationAllowed: false,
+  });
+}
+
+function hosDecisionEvidenceHash(input: {
+  decisionRequestHash: string;
+  sourceReviewEvidenceHash: string;
+}) {
+  return hashJson({
+    schemaVersion: HEADTEACHER_SUPERVISORY_HOS_DECISION_POLICY.schemaVersion,
+    decisionRequestHash: input.decisionRequestHash,
+    sourceReviewEvidenceHash: input.sourceReviewEvidenceHash,
+    action: "FORWARD",
+    nextReviewCreated: false,
+  });
+}
+
+async function resolveInitialDirectorAdmission(input: {
+  tx: HeadteacherDirectorReviewTransactionClient;
+  cycle: CycleRecord;
+  assessment: AssessmentRecord;
+  actorUserId: string;
+  now: Date;
+}): Promise<HeadteacherDirectorAdmissionContext> {
+  const assessorRole = frozenSupervisoryAssessorRole(
+    input.assessment,
+    input.cycle,
+  );
+  if (
+    input.assessment.assessorUserId === input.actorUserId ||
+    assessorRole === "DISTRICT_DIRECTOR"
+  ) {
+    fail("HEADTEACHER_DIRECTOR_REVIEW_SELF_REVIEW_FORBIDDEN", 403, {
+      assessmentId: input.assessment.id,
+    });
+  }
+
+  if (assessorRole === "HEAD_OF_SUPERVISION") {
+    const reviews = await input.tx.appraisalReview.findMany({
+      where: { assessmentId: input.assessment.id },
+      select: reviewSelect,
+      orderBy: [{ stage: "asc" }, { createdAt: "asc" }],
+    });
+    if (
+      reviews.length > 1 ||
+      reviews.some((review) => review.stage !== 1)
+    ) {
+      fail("HEADTEACHER_DIRECTOR_REVIEW_HOS_AUTHORED_REVIEW_DRIFT", 409);
+    }
+    if (
+      (reviews.length === 0 &&
+        (normalized(input.cycle.status) !== "CLOSED" ||
+          input.cycle.reviewStartedAt)) ||
+      (reviews.length === 1 &&
+        (normalized(input.cycle.status) !== "UNDER_REVIEW" ||
+          !input.cycle.reviewStartedAt))
+    ) {
+      fail("HEADTEACHER_DIRECTOR_REVIEW_HOS_AUTHORED_CYCLE_NOT_READY", 409);
+    }
+    return {
+      kind: "HOS_AUTHORED_STAGE_1",
+      reviewStage: 1,
+      assessorRole: "HEAD_OF_SUPERVISION",
+      hosForward: null,
+    };
+  }
+
+  if (!(["SISSO", "BASIC_SCHOOL_COORDINATOR"] as const).includes(
+    assessorRole as "SISSO" | "BASIC_SCHOOL_COORDINATOR",
+  )) {
+    fail("HEADTEACHER_DIRECTOR_REVIEW_ASSESSOR_ORIGIN_FORBIDDEN", 409, {
+      assessorRole,
+    });
+  }
+  if (
+    normalized(input.cycle.status) !== "UNDER_REVIEW" ||
+    !input.cycle.reviewStartedAt
+  ) {
+    fail("HEADTEACHER_DIRECTOR_REVIEW_HOS_FORWARD_REQUIRED", 409, {
+      assessorRole,
+    });
+  }
+
+  const reviews = await input.tx.appraisalReview.findMany({
+    where: { assessmentId: input.assessment.id },
+    select: reviewSelect,
+    orderBy: [{ stage: "asc" }, { createdAt: "asc" }],
+  });
+  const sourceReview = reviews.find((review) => review.stage === 1);
+  const stage2 = reviews.find((review) => review.stage === 2);
+  if (
+    !sourceReview ||
+    reviews.some((review) => ![1, 2].includes(review.stage)) ||
+    reviews.filter((review) => review.stage === 1).length !== 1 ||
+    reviews.filter((review) => review.stage === 2).length > 1 ||
+    normalized(sourceReview.decision) !== "ACCEPTED" ||
+    clean(sourceReview.note) ||
+    !sourceReview.decidedAt ||
+    !clean(sourceReview.reviewerAssignmentId)
+  ) {
+    fail("HEADTEACHER_DIRECTOR_REVIEW_HOS_FORWARD_REVIEW_INVALID", 409);
+  }
+
+  const reviewMetadata = objectValue(sourceReview.metadata);
+  const visitContextHash = clean(
+    objectValue(input.assessment.metadata).visitContextHash,
+  ).toLowerCase();
+  const expectedReviewEvidenceHash = hosReviewEvidenceHash({
+    assessment: input.assessment,
+    cycle: input.cycle,
+    review: sourceReview,
+    visitContextHash,
+  });
+  const expectedRequestHash = hosDecisionRequestHash({
+    assessment: input.assessment,
+    cycle: input.cycle,
+    review: sourceReview,
+    visitContextHash,
+    sourceReviewEvidenceHash: expectedReviewEvidenceHash,
+  });
+  const expectedDecisionEvidenceHash = hosDecisionEvidenceHash({
+    decisionRequestHash: expectedRequestHash,
+    sourceReviewEvidenceHash: expectedReviewEvidenceHash,
+  });
+  if (
+    clean(reviewMetadata.reviewType) !== "HOS_SUPERVISORY_REVIEW" ||
+    Number(reviewMetadata.reviewStage) !== 1 ||
+    clean(reviewMetadata.reviewerRole) !== "HEAD_OF_SUPERVISION" ||
+    clean(reviewMetadata.decisionAction) !== "FORWARD" ||
+    clean(reviewMetadata.decidedByRole) !== "HEAD_OF_SUPERVISION" ||
+    clean(reviewMetadata.reviewEvidenceHash).toLowerCase() !==
+      expectedReviewEvidenceHash ||
+    clean(reviewMetadata.decisionRequestHash).toLowerCase() !==
+      expectedRequestHash ||
+    clean(reviewMetadata.decisionEvidenceHash).toLowerCase() !==
+      expectedDecisionEvidenceHash ||
+    reviewMetadata.nextReviewCreated !== false ||
+    reviewMetadata.reviewerMayRewriteScores !== false ||
+    reviewMetadata.scoreMutationPerformed !== false ||
+    reviewMetadata.visitEvidenceMutationPerformed !== false ||
+    reviewMetadata.staffFeedbackIncluded !== false ||
+    reviewMetadata.respondentIdentitiesIncluded !== false ||
+    reviewMetadata.providerCalled !== false
+  ) {
+    fail("HEADTEACHER_DIRECTOR_REVIEW_HOS_FORWARD_PROVENANCE_DRIFT", 409);
+  }
+
+  const hosAssignments = await input.tx.governanceOfficerAssignment.findMany({
+    where: { userId: sourceReview.reviewerUserId },
+    select: assignmentSelect,
+  });
+  const activeHosAssignments = hosAssignments.filter(
+    (assignment) =>
+      assignment.id === sourceReview.reviewerAssignmentId &&
+      effectiveRole(assignment.role) === "HEAD_OF_SUPERVISION" &&
+      assignment.zoneId === input.cycle.scopeZoneId &&
+      assignment.zone.id === input.cycle.scopeZoneId &&
+      assignment.zone.zoneType.level === 2 &&
+      assignmentWindowIsActive(assignment, input.now),
+  );
+  if (activeHosAssignments.length !== 1) {
+    fail("HEADTEACHER_DIRECTOR_REVIEW_HOS_FORWARD_ASSIGNMENT_INVALID", 409, {
+      activeAssignments: activeHosAssignments.length,
+    });
+  }
+
+  const cycleReview = objectValue(
+    objectValue(input.cycle.metadata).headteacherSupervisoryReview,
+  );
+  const baseCycleProvenanceValid =
+    clean(cycleReview.currentReviewId) === sourceReview.id &&
+    Number(cycleReview.currentReviewStage) === 1 &&
+    clean(cycleReview.currentReviewerRole) === "HEAD_OF_SUPERVISION" &&
+    clean(cycleReview.currentReviewerAssignmentId) ===
+      sourceReview.reviewerAssignmentId &&
+    clean(cycleReview.sourceReviewDecision) === "ACCEPTED" &&
+    clean(cycleReview.reviewEvidenceHash).toLowerCase() ===
+      expectedReviewEvidenceHash &&
+    clean(cycleReview.admittedAssessmentId) === input.assessment.id &&
+    Number(cycleReview.admittedAssessmentRevision) === input.assessment.revision &&
+    clean(cycleReview.assessmentHash).toLowerCase() ===
+      clean(input.assessment.assessmentHash).toLowerCase() &&
+    clean(cycleReview.decisionRequestHash).toLowerCase() ===
+      expectedRequestHash &&
+    clean(cycleReview.decisionEvidenceHash).toLowerCase() ===
+      expectedDecisionEvidenceHash &&
+    cycleReview.awaitingRevision === false &&
+    cycleReview.reviewerMayRewriteScores === false &&
+    cycleReview.scoreMutationAllowed === false &&
+    cycleReview.staffFeedbackIncluded === false &&
+    cycleReview.respondentIdentitiesIncluded === false &&
+    cycleReview.providerCalled === false;
+
+  if (!baseCycleProvenanceValid) {
+    fail("HEADTEACHER_DIRECTOR_REVIEW_HOS_FORWARD_CYCLE_DRIFT", 409);
+  }
+
+  if (!stage2) {
+    if (
+      clean(cycleReview.state) !== "HOS_REVIEW_ACCEPTED_AWAITING_DIRECTOR" ||
+      cycleReview.awaitingDirectorAdmission !== true ||
+      cycleReview.directorReviewCreated !== false
+    ) {
+      fail("HEADTEACHER_DIRECTOR_REVIEW_HOS_FORWARD_CYCLE_DRIFT", 409);
+    }
+  } else {
+    const directorReviewRecord = objectValue(
+      objectValue(input.cycle.metadata).directorReview,
+    );
+    if (
+      clean(cycleReview.state) !== "DIRECTOR_REVIEW_PENDING" ||
+      cycleReview.awaitingDirectorAdmission !== false ||
+      cycleReview.directorReviewCreated !== true ||
+      clean(cycleReview.directorReviewId) !== stage2.id ||
+      Number(cycleReview.directorReviewStage) !== 2 ||
+      clean(directorReviewRecord.reviewId) !== stage2.id ||
+      Number(directorReviewRecord.reviewStage) !== 2 ||
+      clean(directorReviewRecord.admissionType) !== "HOS_FORWARDED" ||
+      clean(directorReviewRecord.admittedFromReviewId) !== sourceReview.id ||
+      Number(directorReviewRecord.admittedFromReviewStage) !== 1 ||
+      clean(directorReviewRecord.admittedFromReviewEvidenceHash).toLowerCase() !==
+        expectedReviewEvidenceHash ||
+      clean(directorReviewRecord.admittedFromDecisionRequestHash).toLowerCase() !==
+        expectedRequestHash ||
+      clean(directorReviewRecord.admittedFromDecisionEvidenceHash).toLowerCase() !==
+        expectedDecisionEvidenceHash ||
+      directorReviewRecord.hosForwardVerified !== true
+    ) {
+      fail("HEADTEACHER_DIRECTOR_REVIEW_HOS_FORWARD_CYCLE_DRIFT", 409);
+    }
+  }
+
+  return {
+    kind: "HOS_FORWARDED_STAGE_2",
+    reviewStage: 2,
+    assessorRole: assessorRole as "SISSO" | "BASIC_SCHOOL_COORDINATOR",
+    hosForward: {
+      reviewId: sourceReview.id,
+      reviewStage: 1,
+      reviewerUserId: sourceReview.reviewerUserId,
+      reviewerAssignmentId: clean(sourceReview.reviewerAssignmentId),
+      reviewEvidenceHash: expectedReviewEvidenceHash,
+      decisionRequestHash: expectedRequestHash,
+      decisionEvidenceHash: expectedDecisionEvidenceHash,
+      decidedAt: sourceReview.decidedAt.toISOString(),
+    },
+  };
+}
+
 function reviewEvidenceHash(input: {
   cycleId: string;
   reviewerUserId: string;
   reviewerAssignmentId: string;
   evidence: HeadteacherDirectorReviewEvidenceReadiness;
+  admission?: HeadteacherDirectorAdmissionContext | null;
 }) {
-  return hashJson({
+  const payload: Record<string, unknown> = {
     schemaVersion: HEADTEACHER_DIRECTOR_REVIEW_POLICY.schemaVersion,
     workflow: HEADTEACHER_DIRECTOR_REVIEW_POLICY.workflow,
     cycleId: input.cycleId,
@@ -1072,22 +1460,65 @@ function reviewEvidenceHash(input: {
     respondentIdentitiesAccessed: false,
     individualStaffResponsesAccessed: false,
     reviewerMayRewriteScores: false,
-  });
+  };
+  if (input.admission?.kind === "HOS_FORWARDED_STAGE_2") {
+    payload.admission = {
+      type: "HOS_FORWARDED",
+      reviewStage: 2,
+      assessorRole: input.admission.assessorRole,
+      sourceReviewId: input.admission.hosForward.reviewId,
+      sourceReviewStage: input.admission.hosForward.reviewStage,
+      sourceReviewerUserId: input.admission.hosForward.reviewerUserId,
+      sourceReviewerAssignmentId:
+        input.admission.hosForward.reviewerAssignmentId,
+      sourceReviewEvidenceHash:
+        input.admission.hosForward.reviewEvidenceHash,
+      decisionRequestHash: input.admission.hosForward.decisionRequestHash,
+      decisionEvidenceHash: input.admission.hosForward.decisionEvidenceHash,
+      decidedAt: input.admission.hosForward.decidedAt,
+    };
+  }
+  return hashJson(payload);
 }
 
 function reviewMetadata(input: {
   evidence: HeadteacherDirectorReviewEvidenceReadiness;
   reviewEvidenceHash: string;
+  admission: HeadteacherDirectorAdmissionContext;
 }) {
   return {
     schemaVersion: HEADTEACHER_DIRECTOR_REVIEW_POLICY.schemaVersion,
     workflow: HEADTEACHER_DIRECTOR_REVIEW_POLICY.workflow,
-    reviewStage: HEADTEACHER_DIRECTOR_REVIEW_POLICY.reviewStage,
+    reviewStage: input.admission.reviewStage,
     reviewEvidenceHash: input.reviewEvidenceHash,
     evidence: input.evidence,
+    admissionType:
+      input.admission.kind === "HOS_FORWARDED_STAGE_2"
+        ? "HOS_FORWARDED"
+        : input.admission.kind === "HOS_AUTHORED_STAGE_1"
+          ? "HOS_AUTHORED"
+          : "CORRECTED_ASSESSMENT",
+    ...(input.admission.kind === "HOS_FORWARDED_STAGE_2"
+      ? {
+          admittedFromReviewId: input.admission.hosForward.reviewId,
+          admittedFromReviewStage: 1,
+          admittedFromReviewerRole: "HEAD_OF_SUPERVISION",
+          admittedFromReviewerUserId: input.admission.hosForward.reviewerUserId,
+          admittedFromReviewerAssignmentId:
+            input.admission.hosForward.reviewerAssignmentId,
+          admittedFromReviewEvidenceHash:
+            input.admission.hosForward.reviewEvidenceHash,
+          admittedFromDecisionRequestHash:
+            input.admission.hosForward.decisionRequestHash,
+          admittedFromDecisionEvidenceHash:
+            input.admission.hosForward.decisionEvidenceHash,
+          hosForwardVerified: true,
+        }
+      : {}),
     directorAuthoredAssessmentNeedsSeparateReviewer:
       HEADTEACHER_DIRECTOR_REVIEW_POLICY
         .directorAuthoredAssessmentNeedsSeparateReviewer,
+    directorAuthoredAssessmentSelfReviewAllowed: false,
     respondentIdentitiesAccessed: false,
     individualStaffResponsesAccessed: false,
     reviewerMayRewriteScores: false,
@@ -1104,6 +1535,7 @@ function existingReviewResult(input: {
   assignmentId: string;
   evidence: HeadteacherDirectorReviewEvidenceReadiness;
   expectedEvidenceHash: string;
+  admission: HeadteacherDirectorAdmissionContext;
 }) {
   const metadata = objectValue(input.review.metadata);
   if (
@@ -1114,10 +1546,11 @@ function existingReviewResult(input: {
       input.evidence.supervisoryAssessment.assessmentId ||
     input.review.reviewerUserId !== input.actorUserId ||
     input.review.reviewerAssignmentId !== input.assignmentId ||
-    input.review.stage !== 1 ||
+    input.review.stage !== input.admission.reviewStage ||
     normalized(input.review.decision) !== "PENDING" ||
     clean(input.review.note) ||
     input.review.decidedAt ||
+    Number(metadata.reviewStage) !== input.admission.reviewStage ||
     clean(metadata.reviewEvidenceHash).toLowerCase() !==
       input.expectedEvidenceHash ||
     metadata.respondentIdentitiesAccessed !== false ||
@@ -1128,12 +1561,30 @@ function existingReviewResult(input: {
   ) {
     fail("HEADTEACHER_DIRECTOR_REVIEW_EXISTING_RECORD_DRIFT", 409);
   }
+  if (
+    input.admission.kind === "HOS_FORWARDED_STAGE_2" &&
+    (
+      clean(metadata.admissionType) !== "HOS_FORWARDED" ||
+      clean(metadata.admittedFromReviewId) !== input.admission.hosForward.reviewId ||
+      Number(metadata.admittedFromReviewStage) !== 1 ||
+      clean(metadata.admittedFromReviewerRole) !== "HEAD_OF_SUPERVISION" ||
+      clean(metadata.admittedFromReviewEvidenceHash).toLowerCase() !==
+        input.admission.hosForward.reviewEvidenceHash ||
+      clean(metadata.admittedFromDecisionRequestHash).toLowerCase() !==
+        input.admission.hosForward.decisionRequestHash ||
+      clean(metadata.admittedFromDecisionEvidenceHash).toLowerCase() !==
+        input.admission.hosForward.decisionEvidenceHash ||
+      metadata.hosForwardVerified !== true
+    )
+  ) {
+    fail("HEADTEACHER_DIRECTOR_REVIEW_EXISTING_ADMISSION_DRIFT", 409);
+  }
   return {
     outcome: "EXISTING_REVIEW" as const,
     cycleId: input.cycle.id,
     cycleStatus: "UNDER_REVIEW" as const,
     reviewId: input.review.id,
-    reviewStage: 1 as const,
+    reviewStage: input.admission.reviewStage,
     reviewDecision: "PENDING" as const,
     reviewerUserId: input.actorUserId,
     reviewerAssignmentId: input.assignmentId,
@@ -1142,7 +1593,6 @@ function existingReviewResult(input: {
     evidence: input.evidence,
   };
 }
-
 
 type HeadteacherDirectorRunStartOptions = {
   allowUnderReviewCreate?: boolean;
@@ -1158,6 +1608,18 @@ type HeadteacherDirectorRunStartOptions = {
     returnEvidenceHash: string;
   };
 };
+
+function correctionAdmissionContext(
+  assessment: AssessmentRecord,
+  cycle: CycleRecord,
+): HeadteacherDirectorAdmissionContext {
+  return {
+    kind: "DIRECTOR_CORRECTION_STAGE_1",
+    reviewStage: 1,
+    assessorRole: frozenSupervisoryAssessorRole(assessment, cycle),
+    hosForward: null,
+  };
+}
 
 type HeadteacherDirectorCorrectionContinuationContext =
   | {
@@ -1537,10 +1999,7 @@ async function runStart(
     fail("HEADTEACHER_DIRECTOR_REVIEW_ROLE_FORBIDDEN", 403, { actorRole });
   }
   assertAppraisalAuthority(
-    {
-      actorUserId,
-      roleName: actorRole,
-    },
+    { actorUserId, roleName: actorRole },
     HEADTEACHER_DIRECTOR_REVIEW_POLICY.requiredCapability,
   );
   assertHeadteacherFeedbackInstrumentReady();
@@ -1558,9 +2017,7 @@ async function runStart(
 
       const cycleStatus = normalized(cycle.status);
       if (!["CLOSED", "UNDER_REVIEW"].includes(cycleStatus)) {
-        fail("HEADTEACHER_DIRECTOR_REVIEW_CYCLE_NOT_READY", 409, {
-          cycleStatus,
-        });
+        fail("HEADTEACHER_DIRECTOR_REVIEW_CYCLE_NOT_READY", 409, { cycleStatus });
       }
       if (cycleStatus === "CLOSED" && cycle.reviewStartedAt) {
         fail("HEADTEACHER_DIRECTOR_REVIEW_START_TIMESTAMP_DRIFT", 409);
@@ -1569,10 +2026,7 @@ async function runStart(
         fail("HEADTEACHER_DIRECTOR_REVIEW_START_TIMESTAMP_MISSING", 409);
       }
 
-      const targetTenantId = requireIdentifier(
-        cycle.targetTenantId,
-        "targetTenantId",
-      );
+      const targetTenantId = requireIdentifier(cycle.targetTenantId, "targetTenantId");
       assertHeadteacherFeedbackTargetInGovernanceScope({
         governanceScope: input.governanceScope,
         targetTenantId,
@@ -1636,12 +2090,25 @@ async function runStart(
         options.requiredAssessmentId &&
         assessment.id !== options.requiredAssessmentId
       ) {
-        fail("HEADTEACHER_DIRECTOR_REVIEW_CONTINUATION_CURRENT_ASSESSMENT_DRIFT", 409, {
-          expectedAssessmentId: options.requiredAssessmentId,
-          currentAssessmentId: assessment.id,
-        });
+        fail(
+          "HEADTEACHER_DIRECTOR_REVIEW_CONTINUATION_CURRENT_ASSESSMENT_DRIFT",
+          409,
+          {
+            expectedAssessmentId: options.requiredAssessmentId,
+            currentAssessmentId: assessment.id,
+          },
+        );
       }
       const verified = verifySupervisoryAssessment(assessment);
+      const admission = options.continuation
+        ? correctionAdmissionContext(assessment, cycle)
+        : await resolveInitialDirectorAdmission({
+            tx,
+            cycle,
+            assessment,
+            actorUserId,
+            now,
+          });
       const evidence = reviewEvidence({
         readiness,
         assessment,
@@ -1653,13 +2120,14 @@ async function runStart(
         reviewerUserId: actorUserId,
         reviewerAssignmentId: assignment.id,
         evidence,
+        admission,
       });
 
       const existing = await tx.appraisalReview.findUnique({
         where: {
           assessmentId_stage: {
             assessmentId: assessment.id,
-            stage: HEADTEACHER_DIRECTOR_REVIEW_POLICY.reviewStage,
+            stage: admission.reviewStage,
           },
         },
         select: reviewSelect,
@@ -1673,6 +2141,7 @@ async function runStart(
           assignmentId: assignment.id,
           evidence,
           expectedEvidenceHash: evidenceHash,
+          admission,
         });
         if (options.continuation) {
           assertExistingContinuationMetadata(existing, options.continuation);
@@ -1680,10 +2149,10 @@ async function runStart(
         return result;
       }
 
-      if (
-        cycleStatus === "UNDER_REVIEW" &&
-        !options.allowUnderReviewCreate
-      ) {
+      const mayCreateUnderReview =
+        options.allowUnderReviewCreate === true ||
+        admission.kind === "HOS_FORWARDED_STAGE_2";
+      if (cycleStatus === "UNDER_REVIEW" && !mayCreateUnderReview) {
         fail("HEADTEACHER_DIRECTOR_REVIEW_RECORD_MISSING", 409);
       }
       if (cycleStatus === "CLOSED" && existing) {
@@ -1697,19 +2166,18 @@ async function runStart(
         ...reviewMetadata({
           evidence,
           reviewEvidenceHash: evidenceHash,
+          admission,
         }),
         ...(options.continuation
           ? {
               continuationSchemaVersion:
                 HEADTEACHER_DIRECTOR_CORRECTION_CONTINUATION_POLICY.schemaVersion,
               continuationType: "CORRECTED_ASSESSMENT",
-              continuedFromAssessmentId:
-                options.continuation.sourceAssessmentId,
+              continuedFromAssessmentId: options.continuation.sourceAssessmentId,
               continuedFromAssessmentRevision:
                 options.continuation.sourceAssessmentRevision,
               continuedFromReviewId: options.continuation.sourceReviewId,
-              continuedFromReviewStage:
-                options.continuation.sourceReviewStage,
+              continuedFromReviewStage: options.continuation.sourceReviewStage,
               returnEvidenceHash: options.continuation.returnEvidenceHash,
               scoreMutationPerformed: false,
             }
@@ -1721,7 +2189,7 @@ async function runStart(
           assessmentId: assessment.id,
           reviewerUserId: actorUserId,
           reviewerAssignmentId: assignment.id,
-          stage: HEADTEACHER_DIRECTOR_REVIEW_POLICY.reviewStage,
+          stage: admission.reviewStage,
           decision: "PENDING",
           note: null,
           decidedAt: null,
@@ -1732,18 +2200,53 @@ async function runStart(
 
       const effectiveReviewStartedAt =
         cycleStatus === "UNDER_REVIEW" ? cycle.reviewStartedAt! : now;
+      const cycleMetadata = objectValue(cycle.metadata);
+      const hosReviewMetadata = objectValue(cycleMetadata.headteacherSupervisoryReview);
       const updatedCycle = await tx.appraisalCycle.update({
         where: { id: cycleId },
         data: {
           status: "UNDER_REVIEW",
           reviewStartedAt: effectiveReviewStartedAt,
           metadata: {
-            ...objectValue(cycle.metadata),
+            ...cycleMetadata,
+            ...(admission.kind === "HOS_FORWARDED_STAGE_2"
+              ? {
+                  headteacherSupervisoryReview: {
+                    ...hosReviewMetadata,
+                    state: "DIRECTOR_REVIEW_PENDING",
+                    awaitingDirectorAdmission: false,
+                    directorReviewCreated: true,
+                    directorReviewId: review.id,
+                    directorReviewStage: 2,
+                    directorAdmittedAt: now.toISOString(),
+                  },
+                }
+              : {}),
             directorReview: {
               schemaVersion: HEADTEACHER_DIRECTOR_REVIEW_POLICY.schemaVersion,
               reviewId: review.id,
-              reviewStage: 1,
+              reviewStage: admission.reviewStage,
               reviewEvidenceHash: evidenceHash,
+              admissionType:
+                admission.kind === "HOS_FORWARDED_STAGE_2"
+                  ? "HOS_FORWARDED"
+                  : admission.kind === "HOS_AUTHORED_STAGE_1"
+                    ? "HOS_AUTHORED"
+                    : "CORRECTED_ASSESSMENT",
+              ...(admission.kind === "HOS_FORWARDED_STAGE_2"
+                ? {
+                    admittedFromReviewId: admission.hosForward.reviewId,
+                    admittedFromReviewStage: 1,
+                    admittedFromReviewerRole: "HEAD_OF_SUPERVISION",
+                    admittedFromReviewEvidenceHash:
+                      admission.hosForward.reviewEvidenceHash,
+                    admittedFromDecisionRequestHash:
+                      admission.hosForward.decisionRequestHash,
+                    admittedFromDecisionEvidenceHash:
+                      admission.hosForward.decisionEvidenceHash,
+                    hosForwardVerified: true,
+                  }
+                : {}),
               staffFeedbackSnapshotId: evidence.staffFeedback.snapshotId,
               staffFeedbackSourceHash: evidence.staffFeedback.sourceHash,
               supervisoryAssessmentId:
@@ -1763,12 +2266,10 @@ async function runStart(
                       options.continuation.sourceAssessmentId,
                     continuedFromAssessmentRevision:
                       options.continuation.sourceAssessmentRevision,
-                    continuedFromReviewId:
-                      options.continuation.sourceReviewId,
+                    continuedFromReviewId: options.continuation.sourceReviewId,
                     continuedFromReviewStage:
                       options.continuation.sourceReviewStage,
-                    returnEvidenceHash:
-                      options.continuation.returnEvidenceHash,
+                    returnEvidenceHash: options.continuation.returnEvidenceHash,
                     scoreMutationPerformed: false,
                     providerCalled: false,
                   }
@@ -1808,34 +2309,46 @@ async function runStart(
             workflow: HEADTEACHER_DIRECTOR_REVIEW_POLICY.workflow,
             cycleId,
             reviewId: review.id,
-            reviewStage: 1,
+            reviewStage: admission.reviewStage,
+            admissionType:
+              admission.kind === "HOS_FORWARDED_STAGE_2"
+                ? "HOS_FORWARDED"
+                : admission.kind === "HOS_AUTHORED_STAGE_1"
+                  ? "HOS_AUTHORED"
+                  : "CORRECTED_ASSESSMENT",
+            ...(admission.kind === "HOS_FORWARDED_STAGE_2"
+              ? {
+                  sourceHosReviewId: admission.hosForward.reviewId,
+                  sourceHosReviewStage: 1,
+                  sourceHosReviewEvidenceHash:
+                    admission.hosForward.reviewEvidenceHash,
+                  sourceHosDecisionRequestHash:
+                    admission.hosForward.decisionRequestHash,
+                  sourceHosDecisionEvidenceHash:
+                    admission.hosForward.decisionEvidenceHash,
+                }
+              : {}),
             reviewerAssignmentId: assignment.id,
             staffFeedbackSnapshotId: evidence.staffFeedback.snapshotId,
             staffFeedbackSourceHash: evidence.staffFeedback.sourceHash,
-            finalizedStaffResponses:
-              evidence.staffFeedback.finalizedResponses,
+            finalizedStaffResponses: evidence.staffFeedback.finalizedResponses,
             supervisoryAssessmentId:
               evidence.supervisoryAssessment.assessmentId,
             supervisoryAssessmentRevision:
               evidence.supervisoryAssessment.revision,
             supervisoryAssessmentHash:
               evidence.supervisoryAssessment.assessmentHash,
-            directorAuthoredAssessment:
-              evidence.supervisoryAssessment.directorAuthored,
+            directorAuthoredAssessment: false,
             reviewEvidenceHash: evidenceHash,
             ...(options.continuation
               ? {
                   continuationType: "CORRECTED_ASSESSMENT",
-                  sourceAssessmentId:
-                    options.continuation.sourceAssessmentId,
+                  sourceAssessmentId: options.continuation.sourceAssessmentId,
                   sourceAssessmentRevision:
                     options.continuation.sourceAssessmentRevision,
-                  sourceReturnReviewId:
-                    options.continuation.sourceReviewId,
-                  sourceReturnReviewStage:
-                    options.continuation.sourceReviewStage,
-                  returnEvidenceHash:
-                    options.continuation.returnEvidenceHash,
+                  sourceReturnReviewId: options.continuation.sourceReviewId,
+                  sourceReturnReviewStage: options.continuation.sourceReviewStage,
+                  returnEvidenceHash: options.continuation.returnEvidenceHash,
                   scoreMutationPerformed: false,
                 }
               : {}),
@@ -1855,7 +2368,7 @@ async function runStart(
         cycleId,
         cycleStatus: "UNDER_REVIEW",
         reviewId: review.id,
-        reviewStage: 1,
+        reviewStage: admission.reviewStage,
         reviewDecision: "PENDING",
         reviewerUserId: actorUserId,
         reviewerAssignmentId: assignment.id,
