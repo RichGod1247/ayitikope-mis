@@ -25,6 +25,10 @@ export const HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY = {
   requiredAssessmentStatus: "FINALIZED",
   requiredCycleStatus: "CLOSED",
   requiredReviewCount: 0,
+  activeCycleStatus: "UNDER_REVIEW",
+  activeReviewCount: 1,
+  activeReviewStage: 1,
+  activeReviewDecision: "PENDING",
   expectedSectionCount: 4,
   expectedItemCount: 34,
   expectedSectionMaximums: [55, 45, 40, 30] as const,
@@ -45,14 +49,19 @@ export const HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY = {
 export type HeadteacherSupervisoryReviewPackage = {
   schemaVersion: 1;
   audience: "HEAD_OF_SUPERVISION";
-  lifecycleState: "READY_TO_START";
+  lifecycleState: "READY_TO_START" | "READY_TO_REVIEW";
   cycle: {
     id: string;
-    status: "CLOSED";
+    status: "CLOSED" | "UNDER_REVIEW";
     targetName: string;
     schoolName: string;
     circuitName: string;
     districtName: string;
+  };
+  review: null | {
+    stage: 1;
+    decision: "PENDING";
+    startedAt: string;
   };
   assessment: {
     id: string;
@@ -119,7 +128,8 @@ export type HeadteacherSupervisoryReviewPackage = {
     instrumentVerified: true;
     currentTargetScopeVerified: true;
     currentHosAssignmentVerified: true;
-    noExistingReviewCustody: true;
+    noExistingReviewCustody: boolean;
+    activeReviewCustodyVerified: boolean;
     reviewerMayRewriteScores: false;
     scoreMutationAllowed: false;
     separateFromStaffFeedback: true;
@@ -536,44 +546,123 @@ function resolveReviewerAssignment(input: {
   return matches[0];
 }
 
-function assertCycleContract(record: AssessmentRecord) {
+function resolveLifecycle(record: AssessmentRecord) {
   const cycle = record.cycle;
   const metadata = objectValue(cycle.metadata);
   const staffVersion = cycle.instrumentVersion;
+  const cycleStatus = normalized(cycle.status);
 
-  if (
-    cycle.id !== record.cycleId ||
-    normalized(cycle.status) !==
-      HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.requiredCycleStatus ||
-    !cycle.openedAt ||
-    !cycle.closedAt ||
-    cycle.reviewStartedAt ||
-    cycle.releasedAt ||
-    cycle.cancelledAt ||
-    normalized(cycle.targetRoleSnapshot) !== "HEADTEACHER" ||
-    clean(metadata.workflow) !== HEADTEACHER_FEEDBACK_POLICY.workflow ||
-    !clean(cycle.targetTenantId) ||
-    !clean(cycle.targetZoneId) ||
-    !clean(cycle.scopeZoneId) ||
-    cycle.instrumentVersionId !== staffVersion.id ||
-    staffVersion.version !== HEADTEACHER_FEEDBACK_POLICY.instrumentVersion ||
-    normalized(staffVersion.status) !== "ACTIVE" ||
-    staffVersion.instrument.code !== HEADTEACHER_FEEDBACK_POLICY.instrumentCode ||
-    staffVersion.instrument.purpose !== "HEADTEACHER_STAFF_FEEDBACK" ||
-    staffVersion.instrument.subjectType !== "HEADTEACHER" ||
-    staffVersion.instrument.isActive !== true ||
-    !isSha256(staffVersion.contentHash)
-  ) {
+  const commonValid =
+    cycle.id === record.cycleId &&
+    Boolean(cycle.openedAt) &&
+    Boolean(cycle.closedAt) &&
+    !cycle.releasedAt &&
+    !cycle.cancelledAt &&
+    normalized(cycle.targetRoleSnapshot) === "HEADTEACHER" &&
+    clean(metadata.workflow) === HEADTEACHER_FEEDBACK_POLICY.workflow &&
+    Boolean(clean(cycle.targetTenantId)) &&
+    Boolean(clean(cycle.targetZoneId)) &&
+    Boolean(clean(cycle.scopeZoneId)) &&
+    cycle.instrumentVersionId === staffVersion.id &&
+    staffVersion.version === HEADTEACHER_FEEDBACK_POLICY.instrumentVersion &&
+    normalized(staffVersion.status) === "ACTIVE" &&
+    staffVersion.instrument.code === HEADTEACHER_FEEDBACK_POLICY.instrumentCode &&
+    staffVersion.instrument.purpose === "HEADTEACHER_STAFF_FEEDBACK" &&
+    staffVersion.instrument.subjectType === "HEADTEACHER" &&
+    staffVersion.instrument.isActive === true &&
+    isSha256(staffVersion.contentHash);
+
+  if (!commonValid) {
     fail("HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_CYCLE_CONTRACT_INVALID", 409, {
       cycleId: cycle.id,
-      status: normalized(cycle.status),
+      status: cycleStatus,
     });
   }
+
+  if (
+    cycleStatus ===
+      HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.requiredCycleStatus
+  ) {
+    if (cycle.reviewStartedAt) {
+      fail("HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_CYCLE_CONTRACT_INVALID", 409, {
+        cycleId: cycle.id,
+        status: cycleStatus,
+      });
+    }
+    return {
+      lifecycleState: "READY_TO_START" as const,
+      review: null,
+    };
+  }
+
+  if (
+    cycleStatus ===
+      HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.activeCycleStatus
+  ) {
+    if (
+      !cycle.reviewStartedAt ||
+      record.reviews.length !==
+        HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.activeReviewCount
+    ) {
+      fail("HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_CYCLE_CONTRACT_INVALID", 409, {
+        cycleId: cycle.id,
+        status: cycleStatus,
+      });
+    }
+
+    const review = record.reviews[0];
+    const reviewMetadata = objectValue(review.metadata);
+    if (
+      review.cycleId !== record.cycleId ||
+      review.assessmentId !== record.id ||
+      review.stage !==
+        HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.activeReviewStage ||
+      normalized(review.decision) !==
+        HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.activeReviewDecision ||
+      clean(review.note) ||
+      review.decidedAt ||
+      normalized(reviewMetadata.reviewerRole) !==
+        HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.audience ||
+      clean(reviewMetadata.workflow) !==
+        HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.workflow ||
+      clean(reviewMetadata.evidenceStream) !==
+        HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.evidenceStream ||
+      Number(reviewMetadata.reviewStage) !==
+        HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.activeReviewStage ||
+      reviewMetadata.reviewerMayRewriteScores !== false ||
+      reviewMetadata.staffFeedbackIncluded !== false ||
+      reviewMetadata.respondentIdentitiesIncluded !== false ||
+      reviewMetadata.providerCalled !== false
+    ) {
+      fail(
+        "HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_ACTIVE_REVIEW_CONTRACT_INVALID",
+        409,
+      );
+    }
+
+    return {
+      lifecycleState: "READY_TO_REVIEW" as const,
+      review,
+    };
+  }
+
+  fail("HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_CYCLE_CONTRACT_INVALID", 409, {
+    cycleId: cycle.id,
+    status: cycleStatus,
+  });
 }
 
-function assertAssessmentBaseContract(record: AssessmentRecord) {
+
+function assertAssessmentBaseContract(
+  record: AssessmentRecord,
+  lifecycle: ReturnType<typeof resolveLifecycle>,
+) {
   const metadata = objectValue(record.metadata);
   const version = record.instrumentVersion;
+  const expectedReviewCount =
+    lifecycle.lifecycleState === "READY_TO_START"
+      ? HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.requiredReviewCount
+      : HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.activeReviewCount;
 
   if (
     normalized(record.status) !==
@@ -604,8 +693,7 @@ function assertAssessmentBaseContract(record: AssessmentRecord) {
     version.instrument.subjectType !== "HEADTEACHER" ||
     version.instrument.isActive !== true ||
     !isSha256(version.contentHash) ||
-    record.reviews.length !==
-      HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.requiredReviewCount
+    record.reviews.length !== expectedReviewCount
   ) {
     fail(
       "HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_ASSESSMENT_CONTRACT_INVALID",
@@ -1279,8 +1367,8 @@ export async function readHeadteacherSupervisoryReviewPackage(
     fail("HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_NOT_FOUND", 404);
   }
 
-  assertCycleContract(record);
-  assertAssessmentBaseContract(record);
+  const lifecycle = resolveLifecycle(record);
+  assertAssessmentBaseContract(record, lifecycle);
 
   const current = await database.appraisalAssessment.findMany({
     where: {
@@ -1337,13 +1425,24 @@ export async function readHeadteacherSupervisoryReviewPackage(
     },
   });
 
-  resolveReviewerAssignment({
+  const reviewerAssignment = resolveReviewerAssignment({
     assignments,
     actorUserId,
     districtId,
     governanceScope: input.governanceScope,
     now,
   });
+
+  if (
+    lifecycle.review &&
+    (lifecycle.review.reviewerUserId !== actorUserId ||
+      clean(lifecycle.review.reviewerAssignmentId) !== reviewerAssignment.id)
+  ) {
+    fail(
+      "HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_ACTIVE_REVIEW_CUSTODY_DRIFT",
+      409,
+    );
+  }
 
   const membership = assertTargetMembership(
     await database.membership.findFirst({
@@ -1428,15 +1527,25 @@ export async function readHeadteacherSupervisoryReviewPackage(
   return {
     schemaVersion: 1,
     audience: "HEAD_OF_SUPERVISION",
-    lifecycleState: "READY_TO_START",
+    lifecycleState: lifecycle.lifecycleState,
     cycle: {
       id: record.cycleId,
-      status: "CLOSED",
+      status:
+        lifecycle.lifecycleState === "READY_TO_START"
+          ? "CLOSED"
+          : "UNDER_REVIEW",
       targetName: contextTargetName || displayName(membership.user),
       schoolName: contextSchoolName,
       circuitName: contextCircuitName,
       districtName: contextDistrictName,
     },
+    review: lifecycle.review
+      ? {
+          stage: 1,
+          decision: "PENDING",
+          startedAt: lifecycle.review.createdAt.toISOString(),
+        }
+      : null,
     assessment: {
       id: record.id,
       revision: record.revision,
@@ -1488,7 +1597,15 @@ export async function readHeadteacherSupervisoryReviewPackage(
       instrumentVerified: true,
       currentTargetScopeVerified: true,
       currentHosAssignmentVerified: true,
-      noExistingReviewCustody: true,
+      ...(lifecycle.review
+        ? {
+            noExistingReviewCustody: false,
+            activeReviewCustodyVerified: true,
+          }
+        : {
+            noExistingReviewCustody: true,
+            activeReviewCustodyVerified: false,
+          }),
       reviewerMayRewriteScores: false,
       scoreMutationAllowed: false,
       separateFromStaffFeedback: true,

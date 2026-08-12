@@ -22,6 +22,11 @@ export const HEADTEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY = {
   requiredReviewCount: 0,
   state: "READY_TO_START",
   nextAction: "START_REVIEW",
+  activeCycleStatus: "UNDER_REVIEW",
+  activeReviewStage: 1,
+  activeReviewDecision: "PENDING",
+  activeState: "READY_TO_REVIEW",
+  activeNextAction: "CONTINUE_REVIEW",
   activeTargetMembershipRequired: true,
   activeTargetTenantRequired: true,
   activeCircuitRequired: true,
@@ -61,8 +66,8 @@ export type HeadteacherSupervisoryReviewQueueItem = {
   districtName: string;
   assessorRole: HeadteacherSupervisoryReviewOriginRole;
   assessorOfficeLabel: string;
-  state: "READY_TO_START";
-  nextAction: "START_REVIEW";
+  state: "READY_TO_START" | "READY_TO_REVIEW";
+  nextAction: "START_REVIEW" | "CONTINUE_REVIEW";
   eligible: true;
 };
 
@@ -410,6 +415,59 @@ function commonAssessmentContract(record: CandidateAssessmentRecord) {
   );
 }
 
+
+function activeReviewForActor(
+  record: CandidateAssessmentRecord,
+  actorUserId: string,
+) {
+  if (
+    normalized(record.status) !==
+      HEADTEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY.requiredAssessmentStatus ||
+    normalized(record.cycle.status) !==
+      HEADTEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY.activeCycleStatus ||
+    !record.cycle.openedAt ||
+    !record.cycle.closedAt ||
+    !record.cycle.reviewStartedAt ||
+    record.cycle.releasedAt ||
+    record.cycle.cancelledAt ||
+    record.reviews.length !== 1 ||
+    record._count.reviews !== 1
+  ) {
+    return null;
+  }
+
+  const review = record.reviews[0];
+  const metadata = objectValue(review.metadata);
+
+  if (
+    review.cycleId !== record.cycleId ||
+    review.assessmentId !== record.id ||
+    review.reviewerUserId !== actorUserId ||
+    review.stage !==
+      HEADTEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY.activeReviewStage ||
+    normalized(review.decision) !==
+      HEADTEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY.activeReviewDecision ||
+    clean(review.note) ||
+    review.decidedAt ||
+    clean(metadata.workflow) !==
+      HEADTEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY.workflow ||
+    clean(metadata.evidenceStream) !==
+      HEADTEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY.evidenceStream ||
+    normalized(metadata.reviewerRole) !==
+      HEADTEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY.reviewerRole ||
+    Number(metadata.reviewStage) !==
+      HEADTEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY.activeReviewStage ||
+    metadata.reviewerMayRewriteScores !== false ||
+    metadata.staffFeedbackIncluded !== false ||
+    metadata.respondentIdentitiesIncluded !== false ||
+    metadata.providerCalled !== false
+  ) {
+    return null;
+  }
+
+  return review;
+}
+
 function membershipKey(userId: string, tenantId: string) {
   return `${tenantId}:${userId}`;
 }
@@ -484,6 +542,7 @@ function publicQueueItem(input: {
   membership: TargetMembershipRecord;
   context: VisitContext;
   assessorRole: HeadteacherSupervisoryReviewOriginRole;
+  state: "READY_TO_START" | "READY_TO_REVIEW";
 }): HeadteacherSupervisoryReviewQueueItem {
   return {
     cycleId: input.record.cycleId,
@@ -505,8 +564,9 @@ function publicQueueItem(input: {
       input.membership.tenant.zone!.parentZone!.name,
     assessorRole: input.assessorRole,
     assessorOfficeLabel: officeLabel(input.assessorRole),
-    state: "READY_TO_START",
-    nextAction: "START_REVIEW",
+    state: input.state,
+    nextAction:
+      input.state === "READY_TO_START" ? "START_REVIEW" : "CONTINUE_REVIEW",
     eligible: true,
   };
 }
@@ -648,8 +708,120 @@ export async function readHeadteacherSupervisoryReviewQueue(
     take: 200,
   });
 
+  const activeAssessments = await database.appraisalAssessment.findMany({
+    where: {
+      status: HEADTEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY.requiredAssessmentStatus,
+      cycle: {
+        status: HEADTEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY.activeCycleStatus,
+        targetTenantId: { in: tenantIds },
+        targetRoleSnapshot: "HEADTEACHER",
+        reviewStartedAt: { not: null },
+        releasedAt: null,
+        cancelledAt: null,
+      },
+      instrumentVersion: {
+        version: HEADTEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY.instrumentVersion,
+        status: "ACTIVE",
+        instrument: {
+          code: HEADTEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY.instrumentCode,
+          purpose: "HEADTEACHER_SUPERVISORY_ASSESSMENT",
+          subjectType: "HEADTEACHER",
+          isActive: true,
+        },
+      },
+    },
+    select: {
+      id: true,
+      cycleId: true,
+      assessorUserId: true,
+      assessorAssignmentId: true,
+      status: true,
+      revision: true,
+      dateObserved: true,
+      evidenceSnapshotJson: true,
+      assessmentHash: true,
+      finalizedByUserId: true,
+      finalizedAt: true,
+      metadata: true,
+      reviews: {
+        select: {
+          id: true,
+          cycleId: true,
+          assessmentId: true,
+          reviewerUserId: true,
+          reviewerAssignmentId: true,
+          stage: true,
+          decision: true,
+          note: true,
+          decidedAt: true,
+          metadata: true,
+          createdAt: true,
+        },
+        orderBy: [{ stage: "asc" }, { createdAt: "asc" }],
+      },
+      _count: { select: { reviews: true } },
+      instrumentVersion: {
+        select: {
+          id: true,
+          version: true,
+          status: true,
+          contentHash: true,
+          instrument: {
+            select: {
+              code: true,
+              purpose: true,
+              subjectType: true,
+              isActive: true,
+            },
+          },
+        },
+      },
+      cycle: {
+        select: {
+          id: true,
+          scopeZoneId: true,
+          targetUserId: true,
+          targetTenantId: true,
+          targetZoneId: true,
+          targetNameSnapshot: true,
+          targetSchoolNameSnapshot: true,
+          targetZoneNameSnapshot: true,
+          targetRoleSnapshot: true,
+          status: true,
+          openedAt: true,
+          closedAt: true,
+          reviewStartedAt: true,
+          releasedAt: true,
+          cancelledAt: true,
+          metadata: true,
+          scopeZone: {
+            select: {
+              id: true,
+              name: true,
+              isActive: true,
+              zoneType: { select: { level: true } },
+            },
+          },
+          targetZone: {
+            select: {
+              id: true,
+              name: true,
+              isActive: true,
+              parentZoneId: true,
+              zoneType: { select: { level: true } },
+            },
+          },
+        },
+      },
+    },
+    orderBy: [{ finalizedAt: "asc" }, { createdAt: "asc" }],
+    take: 200,
+  });
+
+  const candidates = [...assessments, ...activeAssessments];
+
   const targetUserIds = [
-    ...new Set(assessments.map((record) => clean(record.cycle.targetUserId))),
+    ...new Set(candidates.map((record) => clean(record.cycle.targetUserId))),
   ].filter(Boolean);
 
   const memberships = targetUserIds.length
@@ -716,8 +888,13 @@ export async function readHeadteacherSupervisoryReviewQueue(
 
   const items: HeadteacherSupervisoryReviewQueueItem[] = [];
 
-  for (const record of assessments) {
-    if (!commonAssessmentContract(record)) continue;
+  for (const record of candidates) {
+    const readyToStart = commonAssessmentContract(record);
+    const activeReview = readyToStart
+      ? null
+      : activeReviewForActor(record, actorUserId);
+
+    if (!readyToStart && !activeReview) continue;
 
     const context = parseVisitContext(record);
     if (!context) continue;
@@ -755,6 +932,13 @@ export async function readHeadteacherSupervisoryReviewQueue(
     });
     if (!reviewerAssignment) continue;
 
+    if (
+      activeReview &&
+      clean(activeReview.reviewerAssignmentId) !== clean(reviewerAssignment.id)
+    ) {
+      continue;
+    }
+
     const membership = membershipByTarget.get(
       membershipKey(record.cycle.targetUserId, targetTenantId),
     );
@@ -784,6 +968,7 @@ export async function readHeadteacherSupervisoryReviewQueue(
         membership,
         context,
         assessorRole: assessorRole as HeadteacherSupervisoryReviewOriginRole,
+        state: readyToStart ? "READY_TO_START" : "READY_TO_REVIEW",
       }),
     );
   }
