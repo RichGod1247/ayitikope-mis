@@ -1,6 +1,6 @@
 //src/app/api/governance/appraisals/headteacher-supervisory/[assessmentId]/finalize/route.ts
 import { NextRequest } from "next/server";
-import { ensureHeadteacherDirectorCorrectionReviewContinuation } from "@/lib/appraisals/headteacherDirectorReview";
+import { ensureHeadteacherSupervisoryCorrectionReviewContinuation } from "@/lib/appraisals/headteacherSupervisoryCorrectionReviewContinuation";
 import { finalizeHeadteacherSupervisoryAssessment } from "@/lib/appraisals/headteacherSupervisoryAssessmentScoring";
 import {
   clean,
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     try {
       const continuation =
-        await ensureHeadteacherDirectorCorrectionReviewContinuation({
+        await ensureHeadteacherSupervisoryCorrectionReviewContinuation({
           actorUserId: auth.ctx.userId,
           actorRoleName: auth.ctx.roleName,
           assessmentId,

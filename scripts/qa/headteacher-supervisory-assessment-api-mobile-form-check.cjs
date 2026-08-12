@@ -69,9 +69,15 @@ assert(source.finalize.includes("finalizeHeadteacherSupervisoryAssessment"), "F3
 assert(source.finalize.includes("confirmFinalization"), "Explicit finalization confirmation missing");
 assert(
   source.finalize.includes(
+    "ensureHeadteacherSupervisoryCorrectionReviewContinuation",
+  ),
+  "Correction finalization provenance dispatcher not wired",
+);
+assert(
+  !source.finalize.includes(
     "ensureHeadteacherDirectorCorrectionReviewContinuation",
   ),
-  "Correction finalization continuation not wired",
+  "Finalize route must not bypass return-provenance dispatch",
 );
 assert(
   !source.finalize.includes("auth.scope"),
@@ -366,7 +372,7 @@ console.log("Draft creation                 : F2 transaction wired");
 console.log("Assessment load                : owner-bound workspace");
 console.log("Section save                   : F3 transaction wired");
 console.log("Finalization                   : explicit confirmation + F3");
-console.log("Correction continuation        : post-finalization Director Stage 1 bridge");
+console.log("Correction continuation        : post-finalization return-provenance dispatcher");
 console.log("Continuation retry             : finalization-committed and retry-safe");
 console.log("Returned revision              : explicit confirmation + F4");
 console.log("Revision workspace switch      : stale prior revision cleared");
