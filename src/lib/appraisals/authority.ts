@@ -1,4 +1,3 @@
-//src/lib/appraisals/authority.ts
 import { effectiveRole } from "@/lib/roleRouting";
 
 export const APPRAISAL_CAPABILITIES = [
@@ -51,7 +50,6 @@ const ROLE_CAPABILITIES = {
     "ASSESS_TEACHER",
     "REVIEW_TEACHER_APPRAISAL",
     "ASSESS_HEADTEACHER",
-    "REVIEW_HEADTEACHER_APPRAISAL",
     "VIEW_OWN_GOVERNANCE_APPRAISAL",
   ],
 
