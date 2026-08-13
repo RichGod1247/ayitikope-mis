@@ -1,4 +1,3 @@
-//src/app/headteacher/my-appraisal/HeadteacherReleasedResultClient.tsx
 "use client";
 
 import { Fragment, useState } from "react";
@@ -84,7 +83,7 @@ function panelClass(extra = "") {
 }
 
 function percentage(value: number) {
-  return `${Number(value).toFixed(1)}%`;
+  return `${Math.round(Number(value))}%`;
 }
 
 function difference(value: number) {

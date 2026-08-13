@@ -11,6 +11,7 @@ import {
   assertHeadteacherFeedbackInstrumentReady,
   type HeadteacherFeedbackGovernanceScope,
 } from "@/lib/appraisals/headteacherFeedback";
+import { readHeadteacherFeedbackDeadlineExtensionMetadata } from "@/lib/appraisals/headteacherFeedbackDeadlineExtension";
 import { effectiveRole } from "@/lib/roleRouting";
 
 export const HEADTEACHER_FEEDBACK_READ_ONLY_ROUTES = {
@@ -120,6 +121,11 @@ export type DirectorHeadteacherAppraisalReadItem = {
   cancelledAt: string | null;
   participantCount: number;
   finalizedResponseCount: number;
+  feedbackWindowExpired: boolean;
+  feedbackDeadlineExtensionCount: 0 | 1;
+  canExtendFeedbackWindow: boolean;
+  canDirectReleaseOwnAssessment: boolean;
+  directReleaseAssessmentId: string | null;
 };
 
 export type DirectorHeadteacherAppraisalReadState = {
@@ -177,6 +183,17 @@ type ReadParticipantRecord = {
   cycle: ReadCycleRecord;
 };
 
+type ReadDirectorAssessmentActionRecord = {
+  id: string;
+  cycleId: string;
+  assessorUserId: string;
+  status: string;
+  revision: number;
+  priorAssessmentId: string | null;
+  finalizedByUserId: string | null;
+  finalizedAt: Date | null;
+};
+
 export type HeadteacherFeedbackReadOnlyDatabase = {
   membership: {
     findFirst(args: unknown): Promise<ActiveMembershipRecord | null>;
@@ -187,6 +204,9 @@ export type HeadteacherFeedbackReadOnlyDatabase = {
   };
   appraisalParticipant: {
     findFirst(args: unknown): Promise<ReadParticipantRecord | null>;
+  };
+  appraisalAssessment?: {
+    findMany(args: unknown): Promise<ReadDirectorAssessmentActionRecord[]>;
   };
 };
 
@@ -210,6 +230,7 @@ export type ReadDirectorHeadteacherAppraisalStatesInput = {
   actorRoleName: unknown;
   governanceScope: HeadteacherFeedbackGovernanceScope;
   limit?: number;
+  now?: Date;
   database?: HeadteacherFeedbackReadOnlyDatabase;
 };
 
@@ -474,6 +495,8 @@ export function buildTeacherHeadteacherAppraisalAssignmentReadState(
 
 export function buildDirectorHeadteacherAppraisalReadItem(
   cycle: ReadCycleRecord,
+  now = new Date(),
+  directReleaseAssessmentId: string | null = null,
 ): DirectorHeadteacherAppraisalReadItem {
   const targetTenantId = clean(cycle.targetTenantId);
   const schoolName = clean(cycle.targetSchoolNameSnapshot);
@@ -493,6 +516,17 @@ export function buildDirectorHeadteacherAppraisalReadItem(
       : clean(metadata.requestKey)
         ? "HEADTEACHER_REQUEST"
         : "UNKNOWN";
+  const deadlineExtension =
+    readHeadteacherFeedbackDeadlineExtensionMetadata(cycle.metadata);
+  const feedbackWindowExpired =
+    cycle.status === "OPEN" &&
+    !!cycle.deadlineAt &&
+    cycle.deadlineAt.getTime() <= now.getTime();
+  const unfinishedParticipantCount = cycle.participants.filter(
+    (participant) =>
+      participant.status === "NOT_STARTED" ||
+      participant.status === "IN_PROGRESS",
+  ).length;
 
   return {
     audience: "DIRECTOR",
@@ -520,6 +554,16 @@ export function buildDirectorHeadteacherAppraisalReadItem(
     finalizedResponseCount: cycle.participants.filter(
       (participant) => participant.status === "FINALIZED",
     ).length,
+    feedbackWindowExpired,
+    feedbackDeadlineExtensionCount: deadlineExtension ? 1 : 0,
+    canExtendFeedbackWindow:
+      feedbackWindowExpired &&
+      !deadlineExtension &&
+      unfinishedParticipantCount > 0,
+    canDirectReleaseOwnAssessment:
+      cycle.status === "CLOSED" && !!clean(directReleaseAssessmentId),
+    directReleaseAssessmentId:
+      cycle.status === "CLOSED" ? clean(directReleaseAssessmentId) || null : null,
   };
 }
 
@@ -692,6 +736,11 @@ export async function readDirectorHeadteacherAppraisalStates(
   const actorUserId = requireIdentifier(input.actorUserId, "actorUserId");
   const actorRole = effectiveRole(input.actorRoleName);
   const limit = Math.min(Math.max(Number(input.limit ?? 50), 1), 100);
+  const now = input.now ? new Date(input.now) : new Date();
+
+  if (Number.isNaN(now.getTime())) {
+    fail("HEADTEACHER_FEEDBACK_READ_TIME_INVALID", 400);
+  }
 
   if (actorRole !== "DISTRICT_DIRECTOR" && actorRole !== "SUPERADMIN") {
     fail("HEADTEACHER_FEEDBACK_READ_DIRECTOR_ONLY", 403, {
@@ -758,6 +807,66 @@ export async function readDirectorHeadteacherAppraisalStates(
     },
   });
 
+  const directReleaseAssessmentIdsByCycle = new Map<string, string>();
+  const closedCycleIds =
+    actorRole === "DISTRICT_DIRECTOR"
+      ? cycles
+          .filter((cycle) => cycle.status === "CLOSED")
+          .map((cycle) => cycle.id)
+      : [];
+
+  const appraisalAssessment = database.appraisalAssessment;
+  if (closedCycleIds.length > 0 && appraisalAssessment) {
+    const directReleaseCandidates = await appraisalAssessment.findMany({
+      where: {
+        cycleId: { in: closedCycleIds },
+        assessorUserId: actorUserId,
+        status: "FINALIZED",
+        revision: 1,
+        priorAssessmentId: null,
+        finalizedByUserId: actorUserId,
+      },
+      select: {
+        id: true,
+        cycleId: true,
+        assessorUserId: true,
+        status: true,
+        revision: true,
+        priorAssessmentId: true,
+        finalizedByUserId: true,
+        finalizedAt: true,
+      },
+    });
+
+    const candidateIdsByCycle = new Map<string, string[]>();
+    for (const assessment of directReleaseCandidates) {
+      if (
+        assessment.assessorUserId !== actorUserId ||
+        assessment.status !== "FINALIZED" ||
+        assessment.revision !== 1 ||
+        assessment.priorAssessmentId !== null ||
+        assessment.finalizedByUserId !== actorUserId ||
+        !assessment.finalizedAt ||
+        !closedCycleIds.includes(assessment.cycleId)
+      ) {
+        continue;
+      }
+
+      const ids = candidateIdsByCycle.get(assessment.cycleId) ?? [];
+      ids.push(assessment.id);
+      candidateIdsByCycle.set(assessment.cycleId, ids);
+    }
+
+    for (const [candidateCycleId, assessmentIds] of candidateIdsByCycle) {
+      if (assessmentIds.length === 1) {
+        directReleaseAssessmentIdsByCycle.set(
+          candidateCycleId,
+          assessmentIds[0],
+        );
+      }
+    }
+  }
+
   const items = cycles.map((cycle) => {
     const targetTenantId = clean(cycle.targetTenantId);
 
@@ -769,7 +878,11 @@ export async function readDirectorHeadteacherAppraisalStates(
       governanceScope: input.governanceScope,
     });
 
-    return buildDirectorHeadteacherAppraisalReadItem(cycle);
+    return buildDirectorHeadteacherAppraisalReadItem(
+      cycle,
+      now,
+      directReleaseAssessmentIdsByCycle.get(cycle.id) ?? null,
+    );
   });
 
   return {

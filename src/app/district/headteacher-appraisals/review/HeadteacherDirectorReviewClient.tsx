@@ -32,6 +32,11 @@ type DirectorQueueItem = {
   releasedAt: string | null;
   participantCount: number;
   finalizedResponseCount: number;
+  feedbackWindowExpired: boolean;
+  feedbackDeadlineExtensionCount: 0 | 1;
+  canExtendFeedbackWindow: boolean;
+  canDirectReleaseOwnAssessment: boolean;
+  directReleaseAssessmentId: string | null;
 };
 
 type DirectorQueue = {
@@ -42,6 +47,18 @@ type DirectorQueue = {
 
 type DirectorQueueApiResponse =
   | { ok: true; reqId: string; queue: DirectorQueue }
+  | { ok: false; reqId?: string; error: string; details?: unknown };
+
+type DeadlineExtensionApiResponse =
+  | {
+      ok: true;
+      reqId: string;
+      result: {
+        outcome: "EXTENDED" | "EXISTING_EXTENDED";
+        newDeadlineAt: string;
+        extensionDays: number;
+      };
+    }
   | { ok: false; reqId?: string; error: string; details?: unknown };
 
 type ReviewPackageApiResponse =
@@ -98,6 +115,9 @@ const DIRECTOR_REVIEW_UI_POLICY = Object.freeze({
   reviewerMayRewriteScores: false,
   combinedScoreIncluded: false,
   providerDeliveryIncluded: false,
+  stageSelectionMode: "SERVER_QUEUE_DERIVED_ON_LOAD",
+  attentionBadgeDoesNotSelectStage: true,
+  directorAuthoredDecisionPath: "DIRECT_RELEASE_NO_SELF_REVIEW",
 });
 
 function panel(extra = "") {
@@ -223,6 +243,38 @@ function buildSupervisorySections(
   );
 }
 
+function deriveQueuePanel(queue: DirectorQueue): QueuePanel {
+  const pendingApproval = queue.items.some(
+    (item) => item.cycleStatus === "PENDING_APPROVAL",
+  );
+  if (pendingApproval) return "APPROVAL";
+
+  const openItems = queue.items.filter((item) => item.cycleStatus === "OPEN");
+  const collecting = openItems.some(
+    (item) =>
+      item.feedbackWindowExpired ||
+      item.participantCount < 1 ||
+      item.finalizedResponseCount !== item.participantCount,
+  );
+  if (collecting) return "OPEN";
+
+  const completedOpen = openItems.some(
+    (item) =>
+      !item.feedbackWindowExpired &&
+      item.participantCount > 0 &&
+      item.finalizedResponseCount === item.participantCount,
+  );
+  if (completedOpen) return "COMPLETE";
+
+  const ready = queue.items.some(
+    (item) =>
+      item.cycleStatus === "CLOSED" || item.cycleStatus === "UNDER_REVIEW",
+  );
+  if (ready) return "READY";
+
+  return "ALL";
+}
+
 function SummaryCard(props: {
   label: string;
   value: number;
@@ -241,7 +293,7 @@ function SummaryCard(props: {
         props.active
           ? "min-h-[144px] rounded-[22px] border border-amber-300/45 bg-amber-300/12 p-4 text-left shadow-[0_14px_35px_rgba(245,196,69,0.10)]"
           : hasAttention
-            ? "min-h-[144px] rounded-[22px] border border-amber-300/40 bg-[linear-gradient(145deg,rgba(245,196,69,0.15),rgba(15,23,42,0.94))] p-4 text-left shadow-[0_16px_40px_rgba(245,196,69,0.12)] transition hover:border-amber-200/60"
+            ? "min-h-[144px] rounded-[22px] border border-white/10 bg-slate-900/85 p-4 text-left transition hover:border-amber-200/45 hover:bg-slate-900"
             : "min-h-[144px] rounded-[22px] border border-white/10 bg-slate-900/85 p-4 text-left transition hover:border-white/20 hover:bg-slate-900"
       }
     >
@@ -296,15 +348,20 @@ function QueueRecord(props: {
   selected: boolean;
   busy: boolean;
   onApprove: () => void;
+  onExtend: () => void;
   onCloseEarly: () => void;
   onWait: () => void;
   onReviewStaff: () => void;
   onStart: () => void;
+  onDirectRelease: () => void;
   onLoad: () => void;
 }) {
   const { item } = props;
+  const feedbackWindowExpired =
+    item.cycleStatus === "OPEN" && item.feedbackWindowExpired;
   const allResponsesFinalized =
     item.cycleStatus === "OPEN" &&
+    !feedbackWindowExpired &&
     item.participantCount > 0 &&
     item.finalizedResponseCount === item.participantCount;
   return (
@@ -333,11 +390,16 @@ function QueueRecord(props: {
             {item.cycleStatus === "PENDING_APPROVAL"
               ? `Requested ${formatDate(item.requestedAt)}`
               : item.cycleStatus === "OPEN"
-                ? allResponsesFinalized
-                  ? `All ${item.finalizedResponseCount} responses finalized · deadline ${formatDate(item.deadlineAt)}`
-                  : `${item.finalizedResponseCount} of ${item.participantCount} responses finalized · deadline ${formatDate(item.deadlineAt)}`
+                ? feedbackWindowExpired
+                  ? `Deadline reached · ${item.finalizedResponseCount} of ${item.participantCount} responses finalized${item.feedbackDeadlineExtensionCount > 0 ? " · extension already used" : ""}`
+                  : allResponsesFinalized
+                    ? `All ${item.finalizedResponseCount} responses finalized · deadline ${formatDate(item.deadlineAt)}`
+                    : `${item.finalizedResponseCount} of ${item.participantCount} responses finalized · deadline ${formatDate(item.deadlineAt)}`
                 : item.cycleStatus === "CLOSED"
-                  ? `Responses closed ${formatDate(item.closedAt)}`
+                  ? item.canDirectReleaseOwnAssessment &&
+                    item.directReleaseAssessmentId
+                    ? `Responses closed ${formatDate(item.closedAt)} · your finalized Director assessment is ready for direct release`
+                    : `Responses closed ${formatDate(item.closedAt)}`
                   : item.cycleStatus === "UNDER_REVIEW"
                     ? "Director review already started"
                     : item.releasedAt
@@ -354,6 +416,15 @@ function QueueRecord(props: {
               onClick={props.onApprove}
             >
               Approve and open
+            </ActionButton>
+          ) : null}
+          {feedbackWindowExpired && item.canExtendFeedbackWindow ? (
+            <ActionButton
+              primary
+              disabled={props.busy}
+              onClick={props.onExtend}
+            >
+              Extend feedback 7 days
             </ActionButton>
           ) : null}
           {allResponsesFinalized ? (
@@ -382,12 +453,22 @@ function QueueRecord(props: {
               >
                 Review staff feedback
               </ActionButton>
-              <ActionButton
-                disabled={props.busy}
-                onClick={props.onStart}
-              >
-                Start full decision review
-              </ActionButton>
+              {item.canDirectReleaseOwnAssessment &&
+              item.directReleaseAssessmentId ? (
+                <ActionButton
+                  disabled={props.busy}
+                  onClick={props.onDirectRelease}
+                >
+                  Release my assessment
+                </ActionButton>
+              ) : (
+                <ActionButton
+                  disabled={props.busy}
+                  onClick={props.onStart}
+                >
+                  Start full decision review
+                </ActionButton>
+              )}
             </>
           ) : null}
           {item.cycleStatus === "UNDER_REVIEW" ? (
@@ -1575,7 +1656,7 @@ export default function HeadteacherDirectorReviewClient({
 }) {
   const [cycleId, setCycleId] = useState(initialCycleId);
   const [queue, setQueue] = useState<DirectorQueue | null>(null);
-  const [queuePanel, setQueuePanel] = useState<QueuePanel>("READY");
+  const [queuePanel, setQueuePanel] = useState<QueuePanel>("ALL");
   const [queueLoading, setQueueLoading] = useState(false);
   const [queueFailure, setQueueFailure] = useState("");
   const [reviewPackage, setReviewPackage] =
@@ -1669,6 +1750,7 @@ export default function HeadteacherDirectorReviewClient({
         return;
       }
       setQueue(payload.queue);
+      setQueuePanel(deriveQueuePanel(payload.queue));
     } catch {
       setQueue(null);
       setQueueFailure(
@@ -1731,6 +1813,78 @@ export default function HeadteacherDirectorReviewClient({
     } catch {
       setFailure(
         "Network interrupted. Nothing was changed. Check the connection and load the package again.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function directReleaseOwnAssessment(item: DirectorQueueItem) {
+    const assessmentId = clean(item.directReleaseAssessmentId);
+    clearMessages();
+    if (!item.canDirectReleaseOwnAssessment || !assessmentId) {
+      setFailure(
+        "This record is not eligible for the Director-authored direct-release path.",
+      );
+      return;
+    }
+
+    if (
+      !window.confirm(
+        "Release your finalized Headteacher assessment now? No self-review will be created. The separate confidential staff evidence remains preserved.",
+      )
+    ) {
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const response = await fetch(
+        `/api/governance/appraisals/headteacher-supervisory/${encodeURIComponent(assessmentId)}/direct-release`,
+        {
+          method: "POST",
+          cache: "no-store",
+          credentials: "include",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ confirm: true }),
+        },
+      );
+      const payload = await readJson<ApiFailure>(response);
+
+      if (!response.ok) {
+        if (
+          payload?.error ===
+            "HEADTEACHER_RELEASE_NOTIFICATION_SEEDING_RETRY_REQUIRED" &&
+          payload.releaseCommitted === true
+        ) {
+          setFailure(
+            "Your assessment was released, but the Headteacher notification still needs retrying. Use Release my assessment again; the official result will not be duplicated.",
+          );
+          return;
+        }
+        setFailure(
+          errorText(
+            payload,
+            "Your finalized Director assessment could not be released.",
+          ),
+        );
+        return;
+      }
+
+      setCycleId(item.cycleId);
+      setReviewPackage(null);
+      setAnonymousResponses(null);
+      setReviewMode("HOME");
+      setNotice(
+        "Your finalized assessment was released directly. No self-review was created, and the Headteacher notification was queued safely.",
+      );
+      await loadQueue();
+    } catch {
+      setFailure(
+        "Network interrupted. Do not repeat the release blindly. Refresh the work queue first; the protected endpoint is retry-safe.",
       );
     } finally {
       setBusy(false);
@@ -1819,6 +1973,60 @@ export default function HeadteacherDirectorReviewClient({
     } catch {
       setFailure(
         "Network interrupted. Refresh the queue before repeating the approval.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function extendFeedbackWindow(cycleIdToExtend: string) {
+    const selectedCycleId = clean(cycleIdToExtend);
+    clearMessages();
+    if (!selectedCycleId) return;
+
+    if (
+      !window.confirm(
+        "The original response deadline has passed. Extend this same frozen Teacher feedback window by seven days? Existing saved and finalized responses will be preserved.",
+      )
+    ) {
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const response = await fetch(
+        `${API_BASE}/${encodeURIComponent(selectedCycleId)}/extend-feedback`,
+        {
+          method: "POST",
+          cache: "no-store",
+          credentials: "include",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ confirm: true }),
+        },
+      );
+      const payload = await readJson<DeadlineExtensionApiResponse>(response);
+
+      if (!response.ok || !payload?.ok) {
+        setFailure(
+          errorText(
+            payload,
+            "The expired staff-feedback window could not be extended.",
+          ),
+        );
+        return;
+      }
+
+      setNotice(
+        `Feedback reopened until ${formatDate(payload.result.newDeadlineAt)}. The same frozen Teachers and any saved responses were preserved.`,
+      );
+      setQueuePanel("OPEN");
+      await loadQueue();
+    } catch {
+      setFailure(
+        "Network interrupted. Refresh the queue to confirm the current deadline before repeating the extension.",
       );
     } finally {
       setBusy(false);
@@ -2103,7 +2311,7 @@ export default function HeadteacherDirectorReviewClient({
           <SummaryCard
             label="Feedback in progress"
             value={collectingOpenItems.length}
-            description="Open cycles still waiting for one or more responses."
+            description="Open cycles collecting responses or awaiting a deadline extension."
             active={queuePanel === "OPEN"}
             onClick={() => setQueuePanel("OPEN")}
           />
@@ -2163,12 +2371,14 @@ export default function HeadteacherDirectorReviewClient({
                   selected={item.cycleId === cycleId}
                   busy={busy}
                   onApprove={() => void approveAndOpen(item.cycleId)}
+                  onExtend={() => void extendFeedbackWindow(item.cycleId)}
                   onCloseEarly={() => void closeCompletedEarly(item.cycleId)}
                   onWait={() => waitUntilDeadline(item)}
                   onReviewStaff={() =>
                     void loadAnonymousResponses(undefined, item.cycleId)
                   }
                   onStart={() => void startReview(item.cycleId)}
+                  onDirectRelease={() => void directReleaseOwnAssessment(item)}
                   onLoad={() => void loadPackage(item.cycleId)}
                 />
               ))

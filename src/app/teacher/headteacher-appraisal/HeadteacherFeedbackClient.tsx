@@ -1100,6 +1100,11 @@ export default function HeadteacherFeedbackClient() {
   }
 
   const formLocked = !view.canEdit;
+  const deadlineExpiredWhileOpen =
+    assignment.state === "CLOSED" &&
+    assignment.cycleStatus === "OPEN" &&
+    (assignment.participantStatus === "NOT_STARTED" ||
+      assignment.participantStatus === "IN_PROGRESS");
   const currentAutosaveStatus = currentSection
     ? (autosaveStates[currentSection.sectionKey] ?? "IDLE")
     : "IDLE";
@@ -1193,27 +1198,58 @@ export default function HeadteacherFeedbackClient() {
 
             {formLocked ? (
               <div className="mt-5 rounded-2xl border border-amber-300/20 bg-amber-400/8 p-4 text-sm leading-6 text-amber-50">
-                This response is read-only because it has been submitted or the
-                response period has closed.
+                {deadlineExpiredWhileOpen
+                  ? "The response window has ended. Wait for the Director to extend the feedback period, then refresh availability. Your saved answers remain protected."
+                  : "This response is read-only because it has been submitted or the response period has closed."}
               </div>
             ) : null}
 
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <button
-                type="button"
-                className={primaryButton}
-                onClick={() =>
-                  setScreen(
-                    view.responseStatus === "FINALIZED" ? "REVIEW" : "FORM",
-                  )
-                }
-              >
-                {view.responseStatus === "FINALIZED"
-                  ? "View submitted response"
-                  : view.progress.answeredItems > 0
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              {view.responseStatus === "FINALIZED" ? (
+                <button
+                  type="button"
+                  className={primaryButton}
+                  onClick={() => setScreen("REVIEW")}
+                >
+                  View submitted response
+                </button>
+              ) : deadlineExpiredWhileOpen ? (
+                <>
+                  <button
+                    type="button"
+                    className={primaryButton}
+                    disabled
+                  >
+                    Response window closed
+                  </button>
+                  <button
+                    type="button"
+                    className={secondaryButton}
+                    disabled={busy !== null}
+                    onClick={() => void loadAssignment()}
+                  >
+                    Refresh availability
+                  </button>
+                </>
+              ) : formLocked ? (
+                <button
+                  type="button"
+                  className={primaryButton}
+                  disabled
+                >
+                  Read-only
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={primaryButton}
+                  onClick={() => setScreen("FORM")}
+                >
+                  {view.progress.answeredItems > 0
                     ? "Continue appraisal"
                     : "Start appraisal"}
-              </button>
+                </button>
+              )}
             </div>
           </section>
         </div>

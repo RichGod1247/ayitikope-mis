@@ -1,5 +1,3 @@
-"use server";
-
 import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { hasAppraisalCapability } from "@/lib/appraisals/authority";

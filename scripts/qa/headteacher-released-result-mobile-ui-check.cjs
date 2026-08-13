@@ -124,9 +124,15 @@ for (const marker of [
   "percentage. A positive value means the supervisory percentage is",
   "overflow-x-auto",
   "min-w-[1040px]",
+  "Math.round(Number(value))",
 ]) {
   assert(client.includes(marker), "H3 native client contract missing", marker);
 }
+
+assert(
+  !client.includes("Number(value).toFixed(1)"),
+  "Released-result score percentages must use BBC-friendly whole-number presentation",
+);
 
 for (const forbidden of [
   "useEffect(",
@@ -259,6 +265,7 @@ console.log("Network behavior               : explicit load, no polling");
 console.log("Staff evidence                 : aggregate overall + four sections");
 console.log("Supervisory evidence           : native 4-section / 34-item sheet");
 console.log("Supervisory scores             : verified and read-only");
+console.log("Percentage presentation        : rounded whole numbers");
 console.log("Comparison direction           : supervisory minus staff");
 console.log("Thresholds/combined score      : absent");
 console.log("Response counts                : absent");

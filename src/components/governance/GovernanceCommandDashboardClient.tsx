@@ -2931,32 +2931,48 @@ const mockCommandTile = (
         </div>
       </article>
 
-      <a
-        href={
-          isDistrictView
-            ? "/district/headteacher-appraisals/review"
-            : "/governance/appraisals/headteacher-supervisory"
-        }
-        className="rounded-2xl border border-indigo-300/25 bg-indigo-400/10 p-4 text-left transition hover:-translate-y-0.5 hover:bg-indigo-400/15"
-      >
+      <article className="rounded-2xl border border-indigo-300/25 bg-indigo-400/10 p-4 text-left">
         <div className="flex items-start justify-between gap-3">
           <span className="text-xl">🏫</span>
           <span className="rounded-full border border-indigo-300/25 bg-black/20 px-2.5 py-1 text-[11px] font-bold text-indigo-100">
             Available
           </span>
         </div>
+
         <p className="mt-3 text-sm font-bold text-white">
           Headteacher Appraisal
         </p>
         <p className="mt-1 text-xs leading-5 text-indigo-100/80">
           {isDistrictView
-            ? "Approve requests and review completed Headteacher appraisals."
+            ? "Assess authorized Headteachers or review Headteacher appraisal requests and completed review work."
             : "Complete authorized Headteacher supervisory assessments within your circuit."}
         </p>
-        <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-indigo-100">
-          Open workspace
-        </p>
-      </a>
+
+        {isDistrictView ? (
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <a
+              href="/governance/appraisals/headteacher-supervisory"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-center text-xs font-bold text-[#071A3D] transition hover:brightness-105"
+            >
+              Assess Headteacher
+            </a>
+
+            <a
+              href="/district/headteacher-appraisals/review"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-indigo-300/30 bg-indigo-400/10 px-4 py-2 text-center text-xs font-bold text-indigo-50 transition hover:bg-indigo-400/20"
+            >
+              Review Headteacher requests
+            </a>
+          </div>
+        ) : (
+          <a
+            href="/governance/appraisals/headteacher-supervisory"
+            className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-center text-xs font-bold text-[#071A3D] transition hover:brightness-105"
+          >
+            Assess Headteacher
+          </a>
+        )}
+      </article>
 
       {canRequestDirectorFeedback ? (
         <div className="rounded-2xl border border-cyan-300/25 bg-cyan-400/10 p-4">

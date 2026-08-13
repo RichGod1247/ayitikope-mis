@@ -5,11 +5,11 @@ import { assertAppraisalAuthority } from "@/lib/appraisals/authority";
 import {
   HEADTEACHER_FEEDBACK_POLICY,
   assertHeadteacherFeedbackInstrumentReady,
-  headteacherFeedbackDeadline,
   assertHeadteacherFeedbackTargetInGovernanceScope,
   type HeadteacherFeedbackGovernanceScope,
 } from "@/lib/appraisals/headteacherFeedback";
 import { HEADTEACHER_DIRECTOR_REVIEW_POLICY } from "@/lib/appraisals/headteacherDirectorReview";
+import { resolveHeadteacherFeedbackDeadlineContract } from "@/lib/appraisals/headteacherFeedbackDeadlineExtension";
 import { effectiveRole } from "@/lib/roleRouting";
 
 export const HEADTEACHER_FEEDBACK_DEADLINE_CLOSURE_POLICY = {
@@ -479,14 +479,14 @@ export async function closeCompletedHeadteacherFeedbackCycleEarly(
         });
       }
 
-      const expectedDeadline = headteacherFeedbackDeadline(cycle.openedAt);
-      if (expectedDeadline.getTime() !== cycle.deadlineAt.getTime()) {
-        fail("HEADTEACHER_FEEDBACK_CLOSURE_DEADLINE_CONTRACT_INVALID", 409, {
-          cycleId,
-        });
-      }
+      const deadlineContract = resolveHeadteacherFeedbackDeadlineContract({
+        cycleId,
+        openedAt: cycle.openedAt,
+        deadlineAt: cycle.deadlineAt,
+        metadata: cycle.metadata,
+      });
 
-      if (now.getTime() >= cycle.deadlineAt.getTime()) {
+      if (now.getTime() >= deadlineContract.effectiveDeadlineAt.getTime()) {
         fail(
           "HEADTEACHER_FEEDBACK_EARLY_CLOSURE_DEADLINE_REACHED_USE_SYSTEM_CLOSURE",
           409,
@@ -536,6 +536,8 @@ export async function closeCompletedHeadteacherFeedbackCycleEarly(
             closureMode:
               HEADTEACHER_FEEDBACK_DEADLINE_CLOSURE_POLICY.earlyClosureMode,
             deadlineAt: cycle.deadlineAt.toISOString(),
+            deadlineMode: deadlineContract.mode,
+            deadlineExtensionCount: deadlineContract.extensionCount,
             closedAt: now.toISOString(),
             participantCount: cycle.participants.length,
             eligibleParticipantCount: eligible.length,
@@ -583,6 +585,8 @@ export async function closeCompletedHeadteacherFeedbackCycleEarly(
             priorStatus: "OPEN",
             nextStatus: "CLOSED",
             deadlineAt: cycle.deadlineAt.toISOString(),
+            deadlineMode: deadlineContract.mode,
+            deadlineExtensionCount: deadlineContract.extensionCount,
             closedAt: now.toISOString(),
             participantCount: cycle.participants.length,
             eligibleParticipantCount: eligible.length,
@@ -671,14 +675,14 @@ export async function closeExpiredHeadteacherFeedbackCycle(
         });
       }
 
-      const expectedDeadline = headteacherFeedbackDeadline(cycle.openedAt);
-      if (expectedDeadline.getTime() !== cycle.deadlineAt.getTime()) {
-        fail("HEADTEACHER_FEEDBACK_CLOSURE_DEADLINE_CONTRACT_INVALID", 409, {
-          cycleId,
-        });
-      }
+      const deadlineContract = resolveHeadteacherFeedbackDeadlineContract({
+        cycleId,
+        openedAt: cycle.openedAt,
+        deadlineAt: cycle.deadlineAt,
+        metadata: cycle.metadata,
+      });
 
-      if (now.getTime() < cycle.deadlineAt.getTime()) {
+      if (now.getTime() < deadlineContract.effectiveDeadlineAt.getTime()) {
         fail("HEADTEACHER_FEEDBACK_CLOSURE_DEADLINE_NOT_REACHED", 409, {
           cycleId,
           deadlineAt: cycle.deadlineAt.toISOString(),
@@ -739,6 +743,8 @@ export async function closeExpiredHeadteacherFeedbackCycle(
             closureMode:
               HEADTEACHER_FEEDBACK_DEADLINE_CLOSURE_POLICY.closureMode,
             deadlineAt: cycle.deadlineAt.toISOString(),
+            deadlineMode: deadlineContract.mode,
+            deadlineExtensionCount: deadlineContract.extensionCount,
             closedAt: now.toISOString(),
             participantCount: cycle.participants.length,
             finalizedResponseCount,
@@ -781,6 +787,8 @@ export async function closeExpiredHeadteacherFeedbackCycle(
             priorStatus: "OPEN",
             nextStatus: "CLOSED",
             deadlineAt: cycle.deadlineAt.toISOString(),
+            deadlineMode: deadlineContract.mode,
+            deadlineExtensionCount: deadlineContract.extensionCount,
             closedAt: now.toISOString(),
             participantCount: cycle.participants.length,
             finalizedResponseCount,

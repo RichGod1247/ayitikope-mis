@@ -107,6 +107,20 @@ function makeParticipant(cycle, overrides = {}) {
   };
 }
 
+function makeAssessment(overrides = {}) {
+  return {
+    id: "00000000-0000-4000-8000-000000000701",
+    cycleId: "00000000-0000-4000-8000-000000000506",
+    assessorUserId: "director-user",
+    status: "FINALIZED",
+    revision: 1,
+    priorAssessmentId: null,
+    finalizedByUserId: "director-user",
+    finalizedAt: new Date("2026-07-28T08:00:00.000Z"),
+    ...overrides,
+  };
+}
+
 function makeDatabase(options = {}) {
   const state = {
     memberships: options.memberships ?? [
@@ -129,10 +143,12 @@ function makeDatabase(options = {}) {
     ],
     cycles: options.cycles ?? [],
     participants: options.participants ?? [],
+    assessments: options.assessments ?? [],
     membershipQueries: [],
     cycleFindFirstQueries: [],
     cycleFindManyQueries: [],
     participantQueries: [],
+    assessmentQueries: [],
     writeCalls: 0,
   };
 
@@ -193,6 +209,24 @@ function makeDatabase(options = {}) {
             row.cycle.targetTenantId === where.cycle?.targetTenantId,
         );
         return clone(rows[0] ?? null);
+      },
+    },
+    appraisalAssessment: {
+      async findMany(args) {
+        state.assessmentQueries.push(clone(args));
+        const where = args?.where ?? {};
+        const cycleIds = where.cycleId?.in ?? [];
+        return clone(
+          state.assessments.filter(
+            (row) =>
+              cycleIds.includes(row.cycleId) &&
+              row.assessorUserId === where.assessorUserId &&
+              row.status === where.status &&
+              row.revision === where.revision &&
+              row.priorAssessmentId === where.priorAssessmentId &&
+              row.finalizedByUserId === where.finalizedByUserId,
+          ),
+        );
       },
     },
   };
@@ -459,6 +493,7 @@ async function main() {
         isSuperAdmin: false,
         tenantIds: ["school-one"],
       },
+      now: new Date("2026-07-28T09:00:00.000Z"),
       database: directorDb,
     });
 
@@ -480,7 +515,236 @@ async function main() {
     1,
     "Director sees aggregate finalized count",
   );
+  assertEqual(
+    directorState.items[0].feedbackWindowExpired,
+    false,
+    "Future Director feedback window is not expired",
+  );
+  assertEqual(
+    directorState.items[0].feedbackDeadlineExtensionCount,
+    0,
+    "Unextended Director feedback window reports zero extensions",
+  );
+  assertEqual(
+    directorState.items[0].canExtendFeedbackWindow,
+    false,
+    "Future Director feedback window cannot be extended early",
+  );
   assertNoConfidentialTeacherIdentity(directorState);
+  assertEqual(
+    directorDb.state.assessmentQueries.length,
+    0,
+    "No CLOSED cycle means no Director direct-release assessment query",
+  );
+
+  const directReleaseCycle = makeCycle({
+    id: "00000000-0000-4000-8000-000000000506",
+    status: "CLOSED",
+    requestedAt: new Date("2026-07-28T08:00:00.000Z"),
+    approvedAt: new Date("2026-07-28T08:05:00.000Z"),
+    openedAt: new Date("2026-07-28T08:05:00.000Z"),
+    deadlineAt: new Date("2026-08-04T08:05:00.000Z"),
+    closedAt: new Date("2026-07-28T08:45:00.000Z"),
+    participants: [{ status: "FINALIZED" }, { status: "FINALIZED" }],
+  });
+  const directReleaseAssessment = makeAssessment({
+    cycleId: directReleaseCycle.id,
+  });
+  const directReleaseDb = makeDatabase({
+    cycles: [directReleaseCycle],
+    assessments: [directReleaseAssessment],
+  });
+  const directReleaseState =
+    await readStates.readDirectorHeadteacherAppraisalStates({
+      actorUserId: "director-user",
+      actorRoleName: "DISTRICT_DIRECTOR",
+      governanceScope: {
+        isSuperAdmin: false,
+        tenantIds: ["school-one"],
+      },
+      now,
+      database: directReleaseDb,
+    });
+  assertEqual(directReleaseState.items.length, 1, "Direct-release cycle visible");
+  assertEqual(
+    directReleaseState.items[0].canDirectReleaseOwnAssessment,
+    true,
+    "Exact Director-authored finalized assessment enables direct-release presentation hint",
+  );
+  assertEqual(
+    directReleaseState.items[0].directReleaseAssessmentId,
+    directReleaseAssessment.id,
+    "Direct-release UI receives only the exact own assessment identifier",
+  );
+  assertEqual(
+    directReleaseDb.state.assessmentQueries.length,
+    1,
+    "Closed Director queue performs one batched direct-release hint query",
+  );
+  const directWhere = directReleaseDb.state.assessmentQueries[0].where;
+  assertEqual(
+    JSON.stringify(directWhere.cycleId.in),
+    JSON.stringify([directReleaseCycle.id]),
+    "Direct-release hint query is cycle-scoped",
+  );
+  assertEqual(
+    directWhere.assessorUserId,
+    "director-user",
+    "Direct-release hint query is exact actor-owned",
+  );
+  assertEqual(directWhere.status, "FINALIZED", "Direct-release hint requires finalized assessment");
+  assertEqual(directWhere.revision, 1, "Direct-release hint requires initial revision");
+  assertEqual(directWhere.priorAssessmentId, null, "Direct-release hint excludes correction revisions");
+  assertEqual(
+    directWhere.finalizedByUserId,
+    "director-user",
+    "Direct-release hint requires exact finalizer",
+  );
+  assertNoConfidentialTeacherIdentity(directReleaseState);
+
+  const ambiguousDirectReleaseDb = makeDatabase({
+    cycles: [directReleaseCycle],
+    assessments: [
+      directReleaseAssessment,
+      makeAssessment({
+        id: "00000000-0000-4000-8000-000000000702",
+        cycleId: directReleaseCycle.id,
+      }),
+    ],
+  });
+  const ambiguousDirectReleaseState =
+    await readStates.readDirectorHeadteacherAppraisalStates({
+      actorUserId: "director-user",
+      actorRoleName: "DISTRICT_DIRECTOR",
+      governanceScope: {
+        isSuperAdmin: false,
+        tenantIds: ["school-one"],
+      },
+      now,
+      database: ambiguousDirectReleaseDb,
+    });
+  assertEqual(
+    ambiguousDirectReleaseState.items[0].canDirectReleaseOwnAssessment,
+    false,
+    "Multiple own finalized assessments fail closed at the presentation layer",
+  );
+  assertEqual(
+    ambiguousDirectReleaseState.items[0].directReleaseAssessmentId,
+    null,
+    "Ambiguous own assessment IDs are not exposed",
+  );
+
+  const otherAssessorDb = makeDatabase({
+    cycles: [directReleaseCycle],
+    assessments: [
+      makeAssessment({
+        id: "00000000-0000-4000-8000-000000000703",
+        cycleId: directReleaseCycle.id,
+        assessorUserId: "hos-user",
+        finalizedByUserId: "hos-user",
+      }),
+    ],
+  });
+  const otherAssessorState =
+    await readStates.readDirectorHeadteacherAppraisalStates({
+      actorUserId: "director-user",
+      actorRoleName: "DISTRICT_DIRECTOR",
+      governanceScope: {
+        isSuperAdmin: false,
+        tenantIds: ["school-one"],
+      },
+      now,
+      database: otherAssessorDb,
+    });
+  assertEqual(
+    otherAssessorState.items[0].canDirectReleaseOwnAssessment,
+    false,
+    "Another officer's assessment never becomes Director direct-release",
+  );
+  assertEqual(
+    otherAssessorState.items[0].directReleaseAssessmentId,
+    null,
+    "Another officer's assessment ID is not exposed by the direct-release hint",
+  );
+
+  const expiredOpenCycle = makeCycle({
+    id: "00000000-0000-4000-8000-000000000504",
+    status: "OPEN",
+    requestedAt: new Date("2026-07-20T09:00:00.000Z"),
+    approvedAt: new Date("2026-07-20T09:00:00.000Z"),
+    openedAt: new Date("2026-07-20T09:00:00.000Z"),
+    deadlineAt: new Date("2026-07-27T09:00:00.000Z"),
+    participants: [
+      { status: "NOT_STARTED" },
+      { status: "IN_PROGRESS" },
+    ],
+  });
+  const expiredItem = readStates.buildDirectorHeadteacherAppraisalReadItem(
+    expiredOpenCycle,
+    new Date("2026-07-28T09:00:00.000Z"),
+  );
+  assertEqual(
+    expiredItem.feedbackWindowExpired,
+    true,
+    "Expired OPEN cycle is explicit to Director",
+  );
+  assertEqual(
+    expiredItem.canExtendFeedbackWindow,
+    true,
+    "Expired unextended OPEN cycle can be recovered",
+  );
+  assertEqual(
+    expiredItem.feedbackDeadlineExtensionCount,
+    0,
+    "Expired unextended cycle reports zero extensions",
+  );
+
+  const extendedOpenCycle = makeCycle({
+    ...expiredOpenCycle,
+    id: "00000000-0000-4000-8000-000000000505",
+    deadlineAt: new Date("2026-08-04T09:00:00.000Z"),
+    metadata: {
+      openingMode: "DIRECT_OPEN",
+      headteacherFeedbackDeadlineExtension: {
+        schemaVersion: 1,
+        extensionMode: "DIRECTOR_EXPIRED_WINDOW_RECOVERY",
+        extensionNumber: 1,
+        extensionDays: 7,
+        originalDeadlineAt: "2026-07-27T09:00:00.000Z",
+        extendedAt: "2026-07-28T09:00:00.000Z",
+        newDeadlineAt: "2026-08-04T09:00:00.000Z",
+        actorRole: "DISTRICT_DIRECTOR",
+        participantSetPreserved: true,
+        savedResponsesPreserved: true,
+        finalizedResponsesPreserved: true,
+        respondentIdentitiesIncluded: false,
+        scoreValuesIncluded: false,
+        notificationsSeeded: false,
+        providerCalled: false,
+      },
+    },
+  });
+  const extendedItem = readStates.buildDirectorHeadteacherAppraisalReadItem(
+    extendedOpenCycle,
+    new Date("2026-08-05T09:00:00.000Z"),
+  );
+  assertEqual(
+    extendedItem.feedbackWindowExpired,
+    true,
+    "Expired extended window remains truthful",
+  );
+  assertEqual(
+    extendedItem.feedbackDeadlineExtensionCount,
+    1,
+    "Extended cycle reports one extension",
+  );
+  assertEqual(
+    extendedItem.canExtendFeedbackWindow,
+    false,
+    "One-extension V1 limit fails closed after expiry",
+  );
+  assertNoConfidentialTeacherIdentity(expiredItem);
+  assertNoConfidentialTeacherIdentity(extendedItem);
   assertEqual(
     JSON.stringify(
       directorDb.state.cycleFindManyQueries[0].where.targetTenantId.in,
@@ -574,15 +838,42 @@ async function main() {
     source.includes("assertHeadteacherFeedbackApprovalAuthority"),
     "Director rows must be scope-authorized",
   );
-
-  const barrel = fs.readFileSync(
-    path.join(repoRoot, "src", "lib", "appraisals", "index.ts"),
-    "utf8",
+  assert(
+    source.includes("appraisalAssessment.findMany"),
+    "Director direct-release hint must use one batched read-only assessment query",
   );
   assert(
-    barrel.includes('export * from "./headteacherFeedbackReadStates";'),
-    "C5 barrel export missing",
+    source.includes("assessorUserId: actorUserId"),
+    "Director direct-release hint must bind exact assessor ownership",
   );
+  assert(
+    source.includes("canDirectReleaseOwnAssessment"),
+    "Director read model must expose an explicit direct-release presentation hint",
+  );
+  assert(
+    source.includes("directReleaseAssessmentId"),
+    "Director read model must expose only the exact own assessment identifier needed by the protected endpoint",
+  );
+
+  const directConsumers = [
+    "src/app/headteacher/my-appraisal/page.tsx",
+    "src/app/teacher/dashboard/page.tsx",
+    "src/app/api/district/headteacher-appraisals/route.ts",
+  ];
+
+  for (const relativePath of directConsumers) {
+    const consumer = fs.readFileSync(
+      path.join(repoRoot, ...relativePath.split("/")),
+      "utf8",
+    );
+    assert(
+      consumer.includes(
+        'from "@/lib/appraisals/headteacherFeedbackReadStates"',
+      ),
+      "C5 direct module import boundary missing",
+      relativePath,
+    );
+  }
 
   console.log("");
   console.log("=== D3.4C5 HEADTEACHER READ-ONLY STATES ===");
@@ -601,6 +892,12 @@ async function main() {
   console.log("Director individual forms     : Respondent 1…N labels only");
   console.log("Real identity audience        : SUPERADMIN_ONLY");
   console.log("Director pending/open counts  : aggregate only");
+  console.log("Director expired OPEN state   : explicit");
+  console.log("Director extension availability: server-derived, one-use V1");
+  console.log("Module boundary                : direct imports; no barrel dependency");
+  console.log("Director own direct release    : server-derived presentation hint");
+  console.log("Direct-release assessment read : exact actor + CLOSED cycle, batched");
+  console.log("Ambiguous own assessments      : fail closed");
   console.log("Director teacher identities   : absent");
   console.log("Tenant and role scope         : exact");
   console.log("Future route targets          : exposed");

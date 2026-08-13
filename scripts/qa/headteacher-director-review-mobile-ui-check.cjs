@@ -71,11 +71,14 @@ function main() {
     "src/app/api/district/headteacher-appraisals/route.ts";
   const sharedRoutePath =
     "src/app/api/district/headteacher-appraisals/_shared.ts";
+  const extensionRoutePath =
+    "src/app/api/district/headteacher-appraisals/[cycleId]/extend-feedback/route.ts";
 
   const page = read(pagePath);
   const client = read(clientPath);
   const queueRoute = read(queueRoutePath);
   const sharedRoute = read(sharedRoutePath);
+  const extensionRoute = read(extensionRoutePath);
 
   contains(page, 'export const dynamic = "force-dynamic"', "dynamic page");
   contains(page, "initialCycleId={cycleId}", "controlled cycle reference");
@@ -130,6 +133,21 @@ function main() {
     client,
     "providerDeliveryIncluded: false",
     "no provider delivery",
+  );
+  contains(
+    client,
+    'stageSelectionMode: "SERVER_QUEUE_DERIVED_ON_LOAD"',
+    "server-queue-derived stage selection",
+  );
+  contains(
+    client,
+    "attentionBadgeDoesNotSelectStage: true",
+    "attention badge separated from active stage",
+  );
+  contains(
+    client,
+    'directorAuthoredDecisionPath: "DIRECT_RELEASE_NO_SELF_REVIEW"',
+    "Director-authored direct-release path",
   );
 
   contains(
@@ -202,6 +220,41 @@ function main() {
   );
   contains(
     client,
+    "Release my assessment",
+    "Director-authored direct-release action",
+  );
+  contains(
+    client,
+    "item.canDirectReleaseOwnAssessment &&",
+    "server-derived direct-release presentation gate",
+  );
+  contains(
+    client,
+    "item.directReleaseAssessmentId",
+    "exact own assessment identifier",
+  );
+  contains(
+    client,
+    "/api/governance/appraisals/headteacher-supervisory/",
+    "protected governance direct-release endpoint",
+  );
+  contains(
+    client,
+    "/direct-release",
+    "Director-authored direct-release endpoint suffix",
+  );
+  contains(
+    client,
+    "No self-review will be created.",
+    "BBC-friendly no-self-review confirmation",
+  );
+  contains(
+    client,
+    "No self-review was created",
+    "BBC-friendly direct-release success guidance",
+  );
+  contains(
+    client,
     "Review staff feedback",
     "independent staff-evidence review action",
   );
@@ -209,6 +262,16 @@ function main() {
     client,
     '"COMPLETE"',
     "all-responses-received queue panel",
+  );
+  contains(
+    client,
+    "function deriveQueuePanel",
+    "fresh-load lifecycle stage derivation",
+  );
+  contains(
+    client,
+    "setQueuePanel(deriveQueuePanel(payload.queue))",
+    "queue refresh derives truthful current stage",
   );
   contains(
     client,
@@ -253,6 +316,31 @@ function main() {
     client,
     "Wait until deadline",
     "Director wait action",
+  );
+  contains(
+    client,
+    "Extend feedback 7 days",
+    "Director expired-window recovery action",
+  );
+  contains(
+    client,
+    "Deadline reached ·",
+    "truthful expired OPEN-cycle label",
+  );
+  contains(
+    client,
+    "item.canExtendFeedbackWindow",
+    "server-derived extension availability",
+  );
+  contains(
+    client,
+    "/extend-feedback",
+    "dedicated deadline-extension endpoint",
+  );
+  contains(
+    client,
+    "Feedback reopened until",
+    "BBC-friendly extension success message",
   );
   contains(
     client,
@@ -314,6 +402,11 @@ function main() {
     "h-11 min-w-11",
     "large readable queue badges",
   );
+  contains(
+    client,
+    'hasAttention\n            ? "min-h-[144px] rounded-[22px] border border-white/10 bg-slate-900/85',
+    "attention-only card remains visually unselected",
+  );
 
   contains(
     queueRoute,
@@ -349,6 +442,36 @@ function main() {
     sharedRoute,
     "governanceAssessmentRequiredForStaffClosure: false",
     "shared independent-stream policy",
+  );
+  contains(
+    extensionRoute,
+    "extendExpiredHeadteacherFeedbackCycle",
+    "deadline-extension service wiring",
+  );
+  contains(
+    extensionRoute,
+    'const ALLOWED_BODY_FIELDS = new Set(["confirm"])',
+    "confirm-only deadline-extension body",
+  );
+  contains(
+    extensionRoute,
+    "HEADTEACHER_FEEDBACK_EXTENSION_CONFIRMATION_REQUIRED",
+    "explicit extension confirmation",
+  );
+  excludes(
+    extensionRoute,
+    "prisma.",
+    "direct Prisma access in extension route",
+  );
+  excludes(
+    extensionRoute,
+    "sendSms",
+    "SMS provider in extension route",
+  );
+  excludes(
+    extensionRoute,
+    "sendEmail",
+    "email provider in extension route",
   );
   contains(
     client,
@@ -483,6 +606,7 @@ function main() {
   transpile(client, clientPath);
   transpile(queueRoute, queueRoutePath);
   transpile(sharedRoute, sharedRoutePath);
+  transpile(extensionRoute, extensionRoutePath);
 
   console.log("");
   console.log(
@@ -503,6 +627,15 @@ function main() {
   );
   console.log(
     "Queue lifecycle order          : work → approval → feedback → complete → review",
+  );
+  console.log(
+    "Fresh-load stage highlight     : derived from current server queue",
+  );
+  console.log(
+    "Attention badge semantics      : count only; does not select stage",
+  );
+  console.log(
+    "Director own assessment        : direct release, no self-review",
   );
   console.log(
     "Early completion               : all responses received attention state",

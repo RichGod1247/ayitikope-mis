@@ -28,6 +28,9 @@ export const HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY = {
   requiredCycleStatus: "RELEASED",
   requiredReleaseProofVersion: 1,
   releaseMetadataKey: "headteacherDirectorRelease",
+  reviewedReleaseMode: "REVIEWED_DIRECTOR_RELEASE",
+  directorAuthoredDirectReleaseMode: "DIRECTOR_AUTHORED_DIRECT_RELEASE",
+  dualReleaseModesSupported: true,
   requiredNotificationReadiness: "READY_FOR_POST_RELEASE_SEEDING",
   inAppHref: "/headteacher/my-appraisal",
   inAppActionLabel: "Open released appraisal",
@@ -587,32 +590,67 @@ function assertReleasedCycle(input: {
 }) {
   const release = releaseProofFromCycle(input.cycle);
   const actualReleasedAt = input.cycle.releasedAt?.toISOString() ?? "";
+  const releaseMode = clean(release.releaseMode);
+  const directRelease =
+    releaseMode ===
+    HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY
+      .directorAuthoredDirectReleaseMode;
 
-  if (
-    normalized(input.cycle.status) !==
-      HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.requiredCycleStatus ||
-    normalized(input.cycle.targetRoleSnapshot) !==
-      HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.recipientRole ||
-    !input.cycle.targetTenantId ||
-    !actualReleasedAt ||
-    actualReleasedAt !== input.releasedAt ||
-    Number(release.proofSchemaVersion) !==
-      HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.requiredReleaseProofVersion ||
-    clean(release.workflow) !== HEADTEACHER_FEEDBACK_POLICY.workflow ||
-    clean(release.cycleId) !== input.cycle.id ||
-    normalized(release.reviewDecision) !== "ACCEPTED" ||
-    normalized(release.assessmentStatus) !== "FINALIZED" ||
-    clean(release.reviewerUserId) !== input.actorUserId ||
-    clean(release.releasedAt) !== actualReleasedAt ||
-    clean(release.releaseProofHash).toLowerCase() !== input.releaseProofHash ||
-    release.notificationsSeeded !== false ||
-    release.notificationReadiness !==
-      HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.requiredNotificationReadiness ||
-    release.providerCalled !== false ||
-    release.respondentIdentitiesAccessed !== false ||
-    release.individualStaffResponsesAccessed !== false ||
-    release.scoreMutationPerformed !== false
-  ) {
+  const commonValid =
+    normalized(input.cycle.status) ===
+      HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.requiredCycleStatus &&
+    normalized(input.cycle.targetRoleSnapshot) ===
+      HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.recipientRole &&
+    Boolean(input.cycle.targetTenantId) &&
+    Boolean(actualReleasedAt) &&
+    actualReleasedAt === input.releasedAt &&
+    Number(release.proofSchemaVersion) ===
+      HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY
+        .requiredReleaseProofVersion &&
+    clean(release.workflow) === HEADTEACHER_FEEDBACK_POLICY.workflow &&
+    clean(release.cycleId) === input.cycle.id &&
+    normalized(release.assessmentStatus) === "FINALIZED" &&
+    clean(release.releasedAt) === actualReleasedAt &&
+    clean(release.releaseProofHash).toLowerCase() ===
+      input.releaseProofHash &&
+    release.notificationsSeeded === false &&
+    release.notificationReadiness ===
+      HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY
+        .requiredNotificationReadiness &&
+    release.providerCalled === false &&
+    release.respondentIdentitiesAccessed === false &&
+    release.individualStaffResponsesAccessed === false &&
+    release.scoreMutationPerformed === false;
+
+  const modeValid = directRelease
+    ? clean(release.assessorRole) === "DISTRICT_DIRECTOR" &&
+      clean(release.releaserRole) === "DISTRICT_DIRECTOR" &&
+      clean(release.assessorUserId) === input.actorUserId &&
+      clean(release.releaserUserId) === input.actorUserId &&
+      clean(release.assessorAssignmentId) ===
+        clean(release.releaserAssignmentId) &&
+      Number(release.assessmentRevision) === 1 &&
+      Number(release.snapshotVersion) === 1 &&
+      Number(release.finalizedResponses) >= 1 &&
+      Number(release.minimumResponses) === 1 &&
+      release.reviewRowsRequired === false &&
+      release.reviewRowsPresent === false &&
+      release.selfReviewPerformed === false &&
+      release.releaseNoteIncluded === false &&
+      release.releaseNoteHash === null &&
+      release.assessmentMutationPerformed === false &&
+      release.visitContextMutationPerformed === false &&
+      release.reviewerMayRewriteScores === false &&
+      release.separateEvidenceStreams === true &&
+      release.combinedWeightingDefined === false
+    : (!releaseMode ||
+        releaseMode ===
+          HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY
+            .reviewedReleaseMode) &&
+      normalized(release.reviewDecision) === "ACCEPTED" &&
+      clean(release.reviewerUserId) === input.actorUserId;
+
+  if (!commonValid || !modeValid) {
     fail("HEADTEACHER_RELEASE_NOTIFICATION_RELEASE_PROOF_DRIFT", 409, {
       cycleId: input.cycle.id,
     });

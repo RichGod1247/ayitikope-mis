@@ -4,8 +4,17 @@ import { prisma } from "@/lib/prisma";
 import { HEADTEACHER_FEEDBACK_POLICY } from "@/lib/appraisals/headteacherFeedback";
 import {
   HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY,
+  canonicalHeadteacherSupervisoryAssessorRole,
   inspectHeadteacherSupervisoryInstrument,
 } from "@/lib/appraisals/headteacherSupervisoryAssessment";
+import {
+  HEADTEACHER_DIRECTOR_DIRECT_RELEASE_POLICY,
+  computeHeadteacherDirectorDirectReleaseDecisionContractHash,
+  computeHeadteacherDirectorDirectReleaseEvidenceHash,
+  computeHeadteacherDirectorDirectReleaseProofHashFromMetadata,
+  computeHeadteacherDirectorDirectReleaseRequestHash,
+  type HeadteacherDirectorDirectReleaseHashEvidence,
+} from "@/lib/appraisals/headteacherDirectorDirectRelease";
 import { calculateAppraisalScores } from "@/lib/appraisals/scoring";
 import {
   visitDetailsFromEvidenceSnapshot,
@@ -19,6 +28,9 @@ export const HEADTEACHER_RELEASED_RESULT_POLICY = {
   requiredRole: "HEADTEACHER",
   requiredCycleStatus: "RELEASED",
   requiredReviewDecision: "ACCEPTED",
+  reviewedReleaseMode: "REVIEWED_DIRECTOR_RELEASE",
+  directorAuthoredDirectReleaseMode: "DIRECTOR_AUTHORED_DIRECT_RELEASE",
+  dualReleaseModesSupported: true,
   requiredAssessmentStatus: "FINALIZED",
   releaseProofSchemaVersion: 1,
   aggregateSnapshotVersion: 1,
@@ -89,7 +101,8 @@ export type HeadteacherReleasedResult = {
   release: {
     releaseProofHash: string;
     proofSchemaVersion: 1;
-    reviewStage: number;
+    releaseMode: "REVIEWED_DIRECTOR_RELEASE" | "DIRECTOR_AUTHORED_DIRECT_RELEASE";
+    reviewStage: number | null;
     releaseNote: string | null;
     releaseNoteIncluded: boolean;
     integrityVerified: true;
@@ -1091,15 +1104,22 @@ export async function readHeadteacherReleasedResult(
     fail("HEADTEACHER_RELEASED_RESULT_MEMBERSHIP_SCOPE_DRIFT", 409);
   }
 
-  const cycleRelease = objectValue(
-    objectValue(cycle.metadata)[RELEASE_METADATA_KEY],
-  );
-  const reviewId = requireIdentifier(cycleRelease.reviewId, "reviewId");
+  const cycleMetadata = objectValue(cycle.metadata);
+  const cycleRelease = objectValue(cycleMetadata[RELEASE_METADATA_KEY]);
+  const directRelease =
+    clean(cycleRelease.releaseMode) ===
+    HEADTEACHER_RELEASED_RESULT_POLICY.directorAuthoredDirectReleaseMode;
+  const releaseMode = directRelease
+    ? HEADTEACHER_RELEASED_RESULT_POLICY.directorAuthoredDirectReleaseMode
+    : HEADTEACHER_RELEASED_RESULT_POLICY.reviewedReleaseMode;
   const assessmentId = requireIdentifier(
     cycleRelease.assessmentId,
     "assessmentId",
   );
   const snapshotId = requireIdentifier(cycleRelease.snapshotId, "snapshotId");
+  const reviewId = directRelease
+    ? null
+    : requireIdentifier(cycleRelease.reviewId, "reviewId");
 
   const assessment = await database.appraisalAssessment.findUnique({
     where: { id: assessmentId },
@@ -1108,62 +1128,26 @@ export async function readHeadteacherReleasedResult(
   if (!assessment) {
     fail("HEADTEACHER_RELEASED_RESULT_ASSESSMENT_NOT_FOUND", 409);
   }
-
-  const review = assessment.reviews.find((row) => row.id === reviewId) ?? null;
-  if (!review) fail("HEADTEACHER_RELEASED_RESULT_REVIEW_NOT_FOUND", 409);
-  verifyReviewChain(assessment.reviews, review);
+  if (
+    assessment.cycleId !== cycleId ||
+    normalized(assessment.status) !== "FINALIZED"
+  ) {
+    fail("HEADTEACHER_RELEASED_RESULT_SUPERVISORY_EVIDENCE_INVALID", 409);
+  }
 
   const snapshot = await database.appraisalAggregateSnapshot.findUnique({
     where: { id: snapshotId },
     select: SNAPSHOT_SELECT,
   });
   if (!snapshot) fail("HEADTEACHER_RELEASED_RESULT_SNAPSHOT_NOT_FOUND", 409);
-
-  const reviewRelease = objectValue(
-    objectValue(review.metadata)[RELEASE_METADATA_KEY],
-  );
-  if (!sameJson(cycleRelease, reviewRelease)) {
-    fail("HEADTEACHER_RELEASED_RESULT_RELEASE_PROOF_COPY_DRIFT", 409);
-  }
-  if (
-    review.cycleId !== cycleId ||
-    review.assessmentId !== assessmentId ||
-    normalized(review.decision) !== "ACCEPTED" ||
-    !review.decidedAt ||
-    review.decidedAt.toISOString() !== cycle.releasedAt.toISOString() ||
-    assessment.cycleId !== cycleId ||
-    normalized(assessment.status) !== "FINALIZED" ||
-    snapshot.cycleId !== cycleId ||
-    Number(cycleRelease.proofSchemaVersion) !== 1 ||
-    clean(cycleRelease.workflow) !== HEADTEACHER_FEEDBACK_POLICY.workflow ||
-    clean(cycleRelease.cycleId) !== cycleId ||
-    clean(cycleRelease.reviewId) !== review.id ||
-    Number(cycleRelease.reviewStage) !== review.stage ||
-    normalized(cycleRelease.reviewDecision) !== "ACCEPTED" ||
-    clean(cycleRelease.assessmentId) !== assessment.id ||
-    normalized(cycleRelease.assessmentStatus) !== "FINALIZED" ||
-    clean(cycleRelease.snapshotId) !== snapshot.id ||
-    clean(cycleRelease.releasedAt) !== cycle.releasedAt.toISOString() ||
-    cycleRelease.assessmentMutationPerformed !== false ||
-    cycleRelease.scoreMutationPerformed !== false ||
-    cycleRelease.respondentIdentitiesAccessed !== false ||
-    cycleRelease.individualStaffResponsesAccessed !== false ||
-    cycleRelease.reviewerMayRewriteScores !== false ||
-    cycleRelease.separateEvidenceStreams !== true ||
-    cycleRelease.combinedWeightingDefined !== false ||
-    cycleRelease.notificationsSeeded !== false ||
-    cycleRelease.notificationReadiness !==
-      "READY_FOR_POST_RELEASE_SEEDING" ||
-    cycleRelease.providerCalled !== false ||
-    !isSha256(cycleRelease.decisionContractHash) ||
-    !isSha256(cycleRelease.releaseRequestHash) ||
-    !isSha256(cycleRelease.releaseProofHash)
-  ) {
-    fail("HEADTEACHER_RELEASED_RESULT_RELEASE_PROOF_INVALID", 409);
+  if (snapshot.cycleId !== cycleId) {
+    fail("HEADTEACHER_RELEASED_RESULT_SNAPSHOT_CYCLE_DRIFT", 409);
   }
 
-  const anchors = reviewEvidenceAnchors(review);
   const verifiedAssessment = verifyAssessment(assessment);
+  const visitContextHash = clean(
+    objectValue(assessment.metadata).visitContextHash,
+  ).toLowerCase();
   const visitDetails = visitDetailsFromEvidenceSnapshot(
     assessment.evidenceSnapshotJson,
   );
@@ -1174,49 +1158,248 @@ export async function readHeadteacherReleasedResult(
     snapshotItems: verifiedSnapshot.itemRows,
   });
 
-  if (
-    anchors.snapshotId !== snapshot.id ||
-    anchors.staffSourceHash !== clean(snapshot.sourceHash).toLowerCase() ||
-    anchors.assessmentHash !== verifiedAssessment.hash ||
-    clean(cycleRelease.reviewEvidenceHash).toLowerCase() !==
-      anchors.reviewEvidenceHash ||
-    clean(cycleRelease.staffSourceHash).toLowerCase() !==
-      anchors.staffSourceHash ||
-    clean(cycleRelease.supervisoryAssessmentHash).toLowerCase() !==
-      anchors.assessmentHash
-  ) {
-    fail("HEADTEACHER_RELEASED_RESULT_EVIDENCE_ANCHOR_DRIFT", 409);
-  }
+  let review: ReviewRecord | null = null;
+  let reviewStage: number | null = null;
+  let releaseNote = "";
+  let releaseNoteIncluded = false;
+  let expectedRequestHash = "";
+  let expectedProofHash = "";
 
-  const releaseNote = clean(review.note);
-  const releaseNoteIncluded = cycleRelease.releaseNoteIncluded === true;
-  const expectedNoteHash = releaseNote ? hashJson({ note: releaseNote }) : null;
-  if (
-    releaseNoteIncluded !== Boolean(releaseNote) ||
-    (expectedNoteHash
-      ? clean(cycleRelease.releaseNoteHash).toLowerCase() !== expectedNoteHash
-      : cycleRelease.releaseNoteHash !== null)
-  ) {
-    fail("HEADTEACHER_RELEASED_RESULT_RELEASE_NOTE_HASH_DRIFT", 409);
-  }
+  if (directRelease) {
+    if (assessment.reviews.length !== 0) {
+      fail("HEADTEACHER_RELEASED_RESULT_DIRECT_RELEASE_REVIEW_ROWS_PRESENT", 409, {
+        reviewRows: assessment.reviews.length,
+      });
+    }
 
-  const expectedRequestHash = releaseRequestHash({
-    cycleId,
-    review,
-    release: cycleRelease,
-    note: releaseNote,
-  });
-  if (
-    clean(cycleRelease.releaseRequestHash).toLowerCase() !==
+    const frozen = objectValue(assessment.evidenceSnapshotJson);
+    const frozenAssessor = objectValue(frozen.assessor);
+    const frozenJurisdiction = objectValue(frozen.jurisdiction);
+    const frozenRole = canonicalHeadteacherSupervisoryAssessorRole(
+      clean(frozenAssessor.role) || clean(frozenAssessor.assignmentRole),
+    );
+    const assessorAssignmentId = clean(assessment.assessorAssignmentId);
+    const releaserAssignmentId = clean(cycleRelease.releaserAssignmentId);
+    const cycleReview = objectValue(cycleMetadata.headteacherSupervisoryReview);
+
+    if (
+      frozenRole !== "DISTRICT_DIRECTOR" ||
+      clean(frozenAssessor.userId) !== assessment.assessorUserId ||
+      clean(frozenAssessor.assignmentId) !== assessorAssignmentId ||
+      clean(frozenJurisdiction.districtZoneId) !== cycle.scopeZoneId ||
+      Number(cycleRelease.proofSchemaVersion) !== 1 ||
+      clean(cycleRelease.releaseMode) !==
+        HEADTEACHER_DIRECTOR_DIRECT_RELEASE_POLICY.releaseMode ||
+      clean(cycleRelease.workflow) !== HEADTEACHER_FEEDBACK_POLICY.workflow ||
+      clean(cycleRelease.evidenceStream) !==
+        HEADTEACHER_DIRECTOR_DIRECT_RELEASE_POLICY.evidenceStream ||
+      clean(cycleRelease.cycleId) !== cycleId ||
+      clean(cycleRelease.assessmentId) !== assessment.id ||
+      Number(cycleRelease.assessmentRevision) !== 1 ||
+      assessment.revision !== 1 ||
+      normalized(cycleRelease.assessmentStatus) !== "FINALIZED" ||
+      clean(cycleRelease.assessmentHash).toLowerCase() !==
+        verifiedAssessment.hash ||
+      clean(cycleRelease.visitContextHash).toLowerCase() !== visitContextHash ||
+      clean(cycleRelease.snapshotId) !== snapshot.id ||
+      Number(cycleRelease.snapshotVersion) !== 1 ||
+      clean(cycleRelease.staffSourceHash).toLowerCase() !==
+        clean(snapshot.sourceHash).toLowerCase() ||
+      Number(cycleRelease.finalizedResponses) !== snapshot.finalizedResponses ||
+      Number(cycleRelease.minimumResponses) !== snapshot.minimumResponses ||
+      clean(cycleRelease.assessorUserId) !== assessment.assessorUserId ||
+      clean(cycleRelease.assessorAssignmentId) !== assessorAssignmentId ||
+      clean(cycleRelease.assessorRole) !== "DISTRICT_DIRECTOR" ||
+      cycleRelease.reviewRowsRequired !== false ||
+      cycleRelease.reviewRowsPresent !== false ||
+      cycleRelease.selfReviewPerformed !== false ||
+      clean(cycleRelease.releaserUserId) !== assessment.assessorUserId ||
+      !releaserAssignmentId ||
+      releaserAssignmentId !== assessorAssignmentId ||
+      clean(cycleRelease.releaserRole) !== "DISTRICT_DIRECTOR" ||
+      clean(cycleRelease.releasedAt) !== cycle.releasedAt.toISOString() ||
+      cycleRelease.releaseNoteIncluded !== false ||
+      cycleRelease.releaseNoteHash !== null ||
+      cycleRelease.assessmentMutationPerformed !== false ||
+      cycleRelease.scoreMutationPerformed !== false ||
+      cycleRelease.visitContextMutationPerformed !== false ||
+      cycleRelease.reviewerMayRewriteScores !== false ||
+      cycleRelease.respondentIdentitiesAccessed !== false ||
+      cycleRelease.individualStaffResponsesAccessed !== false ||
+      cycleRelease.separateEvidenceStreams !== true ||
+      cycleRelease.combinedWeightingDefined !== false ||
+      cycleRelease.notificationsSeeded !== false ||
+      cycleRelease.notificationReadiness !== "READY_FOR_POST_RELEASE_SEEDING" ||
+      cycleRelease.providerCalled !== false ||
+      clean(cycleReview.state) !== "RELEASED" ||
+      clean(cycleReview.releaseMode) !==
+        HEADTEACHER_DIRECTOR_DIRECT_RELEASE_POLICY.releaseMode ||
+      cycleReview.currentReviewId !== null ||
+      cycleReview.currentReviewStage !== null ||
+      cycleReview.currentReviewDecision !== null ||
+      cycleReview.currentReviewerRole !== null ||
+      cycleReview.currentReviewerAssignmentId !== null ||
+      cycleReview.reviewEvidenceHash !== null ||
+      cycleReview.reviewRowsRequired !== false ||
+      cycleReview.reviewRowsPresent !== false ||
+      cycleReview.selfReviewPerformed !== false ||
+      clean(cycleReview.admittedAssessmentId) !== assessment.id ||
+      Number(cycleReview.admittedAssessmentRevision) !== 1 ||
+      clean(cycleReview.assessmentHash).toLowerCase() !== verifiedAssessment.hash ||
+      clean(cycleReview.visitContextHash).toLowerCase() !== visitContextHash ||
+      clean(cycleReview.staffSnapshotId) !== snapshot.id ||
+      clean(cycleReview.staffSourceHash).toLowerCase() !==
+        clean(snapshot.sourceHash).toLowerCase() ||
+      clean(cycleReview.directReleasedByUserId) !== assessment.assessorUserId ||
+      clean(cycleReview.directReleasedByAssignmentId) !== assessorAssignmentId ||
+      clean(cycleReview.directReleasedByRole) !== "DISTRICT_DIRECTOR" ||
+      cycleReview.awaitingRevision !== false ||
+      cycleReview.awaitingDirectorAdmission !== false ||
+      cycleReview.directorReviewCreated !== false ||
+      cycleReview.reviewerMayRewriteScores !== false ||
+      cycleReview.separateEvidenceStreams !== true ||
+      cycleReview.combinedWeightingDefined !== false ||
+      cycleReview.respondentIdentitiesAccessed !== false ||
+      cycleReview.individualStaffResponsesAccessed !== false ||
+      cycleReview.notificationsSeeded !== false ||
+      cycleReview.providerCalled !== false ||
+      clean(cycleReview.releasedAt) !== cycle.releasedAt.toISOString()
+    ) {
+      fail("HEADTEACHER_RELEASED_RESULT_DIRECT_RELEASE_PROOF_INVALID", 409);
+    }
+
+    const hashEvidence: HeadteacherDirectorDirectReleaseHashEvidence = {
+      cycleId,
+      assessmentId: assessment.id,
+      assessmentRevision: assessment.revision,
+      assessmentHash: verifiedAssessment.hash,
+      visitContextHash,
+      assessorUserId: assessment.assessorUserId,
+      assessorAssignmentId,
+      snapshotId: snapshot.id,
+      snapshotVersion: snapshot.version,
+      staffSourceHash: clean(snapshot.sourceHash).toLowerCase(),
+      finalizedResponses: snapshot.finalizedResponses,
+      minimumResponses: snapshot.minimumResponses,
+    };
+    const decisionContractHash =
+      computeHeadteacherDirectorDirectReleaseDecisionContractHash();
+    expectedRequestHash = computeHeadteacherDirectorDirectReleaseRequestHash({
+      evidence: hashEvidence,
+      releaserAssignmentId,
+      decisionContractHash,
+    });
+    const expectedEvidenceHash =
+      computeHeadteacherDirectorDirectReleaseEvidenceHash({
+        evidence: hashEvidence,
+        releaseRequestHash: expectedRequestHash,
+      });
+    expectedProofHash =
+      computeHeadteacherDirectorDirectReleaseProofHashFromMetadata(cycleRelease);
+
+    if (
+      clean(cycleRelease.decisionContractHash).toLowerCase() !==
+        decisionContractHash ||
+      clean(cycleRelease.releaseRequestHash).toLowerCase() !==
+        expectedRequestHash ||
+      clean(cycleRelease.releaseEvidenceHash).toLowerCase() !==
+        expectedEvidenceHash ||
+      !isSha256(cycleRelease.releaseProofHash) ||
+      clean(cycleRelease.releaseProofHash).toLowerCase() !== expectedProofHash ||
+      clean(cycleReview.releaseProofHash).toLowerCase() !== expectedProofHash
+    ) {
+      fail("HEADTEACHER_RELEASED_RESULT_DIRECT_RELEASE_HASH_DRIFT", 409);
+    }
+  } else {
+    review = assessment.reviews.find((row) => row.id === reviewId) ?? null;
+    if (!review) fail("HEADTEACHER_RELEASED_RESULT_REVIEW_NOT_FOUND", 409);
+    verifyReviewChain(assessment.reviews, review);
+
+    const reviewRelease = objectValue(
+      objectValue(review.metadata)[RELEASE_METADATA_KEY],
+    );
+    if (!sameJson(cycleRelease, reviewRelease)) {
+      fail("HEADTEACHER_RELEASED_RESULT_RELEASE_PROOF_COPY_DRIFT", 409);
+    }
+    if (
+      review.cycleId !== cycleId ||
+      review.assessmentId !== assessmentId ||
+      normalized(review.decision) !== "ACCEPTED" ||
+      !review.decidedAt ||
+      review.decidedAt.toISOString() !== cycle.releasedAt.toISOString() ||
+      Number(cycleRelease.proofSchemaVersion) !== 1 ||
+      clean(cycleRelease.workflow) !== HEADTEACHER_FEEDBACK_POLICY.workflow ||
+      clean(cycleRelease.cycleId) !== cycleId ||
+      clean(cycleRelease.reviewId) !== review.id ||
+      Number(cycleRelease.reviewStage) !== review.stage ||
+      normalized(cycleRelease.reviewDecision) !== "ACCEPTED" ||
+      clean(cycleRelease.assessmentId) !== assessment.id ||
+      normalized(cycleRelease.assessmentStatus) !== "FINALIZED" ||
+      clean(cycleRelease.snapshotId) !== snapshot.id ||
+      clean(cycleRelease.releasedAt) !== cycle.releasedAt.toISOString() ||
+      cycleRelease.assessmentMutationPerformed !== false ||
+      cycleRelease.scoreMutationPerformed !== false ||
+      cycleRelease.respondentIdentitiesAccessed !== false ||
+      cycleRelease.individualStaffResponsesAccessed !== false ||
+      cycleRelease.reviewerMayRewriteScores !== false ||
+      cycleRelease.separateEvidenceStreams !== true ||
+      cycleRelease.combinedWeightingDefined !== false ||
+      cycleRelease.notificationsSeeded !== false ||
+      cycleRelease.notificationReadiness !== "READY_FOR_POST_RELEASE_SEEDING" ||
+      cycleRelease.providerCalled !== false ||
+      !isSha256(cycleRelease.decisionContractHash) ||
+      !isSha256(cycleRelease.releaseRequestHash) ||
+      !isSha256(cycleRelease.releaseProofHash)
+    ) {
+      fail("HEADTEACHER_RELEASED_RESULT_RELEASE_PROOF_INVALID", 409);
+    }
+
+    const anchors = reviewEvidenceAnchors(review);
+    if (
+      anchors.snapshotId !== snapshot.id ||
+      anchors.staffSourceHash !== clean(snapshot.sourceHash).toLowerCase() ||
+      anchors.assessmentHash !== verifiedAssessment.hash ||
+      clean(cycleRelease.reviewEvidenceHash).toLowerCase() !==
+        anchors.reviewEvidenceHash ||
+      clean(cycleRelease.staffSourceHash).toLowerCase() !==
+        anchors.staffSourceHash ||
+      clean(cycleRelease.supervisoryAssessmentHash).toLowerCase() !==
+        anchors.assessmentHash
+    ) {
+      fail("HEADTEACHER_RELEASED_RESULT_EVIDENCE_ANCHOR_DRIFT", 409);
+    }
+
+    releaseNote = clean(review.note);
+    releaseNoteIncluded = cycleRelease.releaseNoteIncluded === true;
+    const expectedNoteHash = releaseNote ? hashJson({ note: releaseNote }) : null;
+    if (
+      releaseNoteIncluded !== Boolean(releaseNote) ||
+      (expectedNoteHash
+        ? clean(cycleRelease.releaseNoteHash).toLowerCase() !== expectedNoteHash
+        : cycleRelease.releaseNoteHash !== null)
+    ) {
+      fail("HEADTEACHER_RELEASED_RESULT_RELEASE_NOTE_HASH_DRIFT", 409);
+    }
+
+    expectedRequestHash = releaseRequestHash({
+      cycleId,
+      review,
+      release: cycleRelease,
+      note: releaseNote,
+    });
+    if (
+      clean(cycleRelease.releaseRequestHash).toLowerCase() !==
       expectedRequestHash
-  ) {
-    fail("HEADTEACHER_RELEASED_RESULT_RELEASE_REQUEST_HASH_DRIFT", 409);
-  }
-  const expectedProofHash = hashJson(releaseProofPayload(cycleRelease));
-  if (
-    clean(cycleRelease.releaseProofHash).toLowerCase() !== expectedProofHash
-  ) {
-    fail("HEADTEACHER_RELEASED_RESULT_RELEASE_PROOF_HASH_DRIFT", 409);
+    ) {
+      fail("HEADTEACHER_RELEASED_RESULT_RELEASE_REQUEST_HASH_DRIFT", 409);
+    }
+    expectedProofHash = hashJson(releaseProofPayload(cycleRelease));
+    if (
+      clean(cycleRelease.releaseProofHash).toLowerCase() !== expectedProofHash
+    ) {
+      fail("HEADTEACHER_RELEASED_RESULT_RELEASE_PROOF_HASH_DRIFT", 409);
+    }
+    reviewStage = review.stage;
   }
 
   const staffSections = verifiedSnapshot.sectionRows.map((row) => ({
@@ -1250,7 +1433,6 @@ export async function readHeadteacherReleasedResult(
             itemKey: item.key,
           });
         }
-
         return {
           itemKey: item.key,
           itemLabel: item.label,
@@ -1292,7 +1474,8 @@ export async function readHeadteacherReleasedResult(
     release: {
       releaseProofHash: expectedProofHash,
       proofSchemaVersion: 1,
-      reviewStage: review.stage,
+      releaseMode,
+      reviewStage,
       releaseNote: releaseNote || null,
       releaseNoteIncluded,
       integrityVerified: true,
