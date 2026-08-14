@@ -119,13 +119,11 @@ function main() {
     "src/app/district/director-feedback/review/DirectorFeedbackReviewClient.tsx";
   const chartPath =
     "src/app/district/director-feedback/review/DirectorFeedbackPetalChart.tsx";
-  const indexPath = "src/lib/appraisals/index.ts";
 
   const analysisSource = read(analysisPath);
   const reviewSource = read(reviewPath);
   const clientSource = read(clientPath);
   const chartSource = read(chartPath);
-  const indexSource = read(indexPath);
 
   for (const [relativePath, source] of [
     [analysisPath, analysisSource],
@@ -182,6 +180,14 @@ function main() {
   contains(chartSource, "<svg", "chart:svg");
   contains(chartSource, 'role="img"', "chart:accessible-role");
   contains(chartSource, "DIRECTOR_FEEDBACK_PETAL_COUNT = 7", "chart:seven-petals");
+  contains(chartSource, "selectedSectionKey", "chart:selected-section-contract");
+  contains(chartSource, "onSelectSection", "chart:selection-callback");
+  contains(chartSource, 'role={interactive ? "button" : undefined}', "chart:keyboard-button-role");
+  contains(chartSource, "aria-pressed", "chart:selected-accessibility");
+  contains(chartSource, "onKeyDown", "chart:keyboard-selection");
+  contains(chartSource, "linearGradient", "chart:edulife-gradients");
+  contains(chartSource, "director-petal-selected", "chart:selected-glow");
+  contains(chartSource, "LEADERSHIP PROFILE", "chart:center-hub");
   excludes(chartSource, "recharts", "chart:no-recharts");
   excludes(chartSource, "chart.js", "chart:no-chartjs");
   excludes(chartSource, "canvas", "chart:no-canvas");
@@ -189,9 +195,36 @@ function main() {
   contains(clientSource, "Leadership profile", "ui:profile");
   contains(
     clientSource,
-    "Question-by-question analysis",
-    "ui:item-drilldown",
+    "Section {selectedAnalysisSection.sectionOrder} question breakdown",
+    "ui:petal-selected-breakdown",
   );
+  contains(clientSource, "Average score", "ui:petal-average-score");
+  contains(clientSource, "Valid heads", "ui:petal-valid-head-count");
+  contains(
+    clientSource,
+    "These are aggregate Headteacher ratings only.",
+    "ui:petal-aggregate-privacy-copy",
+  );
+  contains(
+    clientSource,
+    "Select any petal or numbered section card",
+    "ui:petal-selection-guidance",
+  );
+  excludes(
+    clientSource,
+    "Question-by-question analysis",
+    "ui:no-duplicate-item-analysis",
+  );
+  contains(clientSource, "scrollIntoView", "ui:petal-auto-scroll");
+  contains(clientSource, 'behavior: "smooth"', "ui:petal-smooth-scroll");
+  contains(clientSource, "selectedBreakdownRef", "ui:petal-breakdown-target");
+  excludes(
+    clientSource,
+    "circuit.sections.map",
+    "ui:no-duplicate-circuit-section-grid",
+  );
+  contains(clientSource, "Math.round", "ui:whole-percentage-display");
+  contains(chartSource, "Math.round", "chart:whole-percentage-display");
   contains(clientSource, "Developmental guide", "ui:development-guide");
   contains(clientSource, "not official", "ui:not-official-grades");
   contains(clientSource, "N/A", "ui:not-applicable-count");
@@ -199,11 +232,13 @@ function main() {
   contains(clientSource, "Seal and Complete Review", "ui:release-regression");
   excludes(clientSource, "localStorage", "ui:no-local-storage");
   excludes(clientSource, "sessionStorage", "ui:no-session-storage");
+  excludes(clientSource, "respondentUserId", "ui:no-respondent-id");
+  excludes(clientSource, "respondentTenantId", "ui:no-school-link");
 
   contains(
-    indexSource,
-    'export * from "./directorFeedbackAnalysis";',
-    "barrel:analysis-export",
+    reviewSource,
+    'from "@/lib/appraisals/directorFeedbackAnalysis";',
+    "review:direct-analysis-import",
   );
 
   const analysisModulePath = path.join(repoRoot, analysisPath);
@@ -328,15 +363,18 @@ function main() {
   console.log("");
   console.log("Official instrument source    : verified");
   console.log("Sections / items              : 7 / 35");
-  console.log("Seven-petal SVG               : original, lightweight");
-  console.log("Plain-text chart alternative  : present");
+  console.log("Seven-petal SVG               : interactive EduLife profile");
+  console.log("Visual treatment              : gradient wedges + selected lift/glow");
+  console.log("Petal keyboard interaction    : Enter / Space supported");
+  console.log("Plain-text section controls   : present and selectable");
+  console.log("Petal questionnaire drilldown : aggregate item table/cards + auto-scroll");
   console.log("Question-level averages       : sealed snapshot only");
   console.log("Valid and N/A counts          : displayed separately");
   console.log("Score frequency distribution  : not invented");
   console.log("Development bands             : deterministic, non-official");
   console.log("Pre-review score exposure     : blocked");
   console.log("Below-threshold analysis      : blocked");
-  console.log("Threshold-safe circuits       : preserved");
+  console.log("Threshold-safe circuits       : preserved without repeated section grid");
   console.log("Respondent / school identity  : absent");
   console.log("Raw response query            : absent");
   console.log("Database write                : absent");

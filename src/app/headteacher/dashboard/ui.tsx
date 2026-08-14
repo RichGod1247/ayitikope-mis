@@ -1,7 +1,7 @@
 // src/app/headteacher/dashboard/ui.tsx
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type WeeklyRow = {
@@ -85,6 +85,16 @@ type DirectorFeedbackAssignmentsResp =
         responseStatus: string | null;
         completionPercentage: number;
       }>;
+    }
+  | { ok: false; error: string };
+
+type TeacherAttendanceAvailabilityResp =
+  | {
+      ok: true;
+      feature: {
+        key: string;
+        enabled: boolean;
+      };
     }
   | { ok: false; error: string };
 
@@ -361,6 +371,8 @@ export default function HeadteacherDashboardClient() {
   const [releaseStatus, setReleaseStatus] = useState<ReleaseStatusResp | null>(null);
   const [directorFeedback, setDirectorFeedback] =
     useState<DirectorFeedbackAssignmentsResp | null>(null);
+  const [teacherAttendanceEnabled, setTeacherAttendanceEnabled] =
+    useState<boolean | null>(null);
   const [governance, setGovernance] = useState<GovernanceResp | null>(null);
   const [riskBoard, setRiskBoard] = useState<RiskBoardResp | null>(null);
   const [showRiskBoard, setShowRiskBoard] = useState(false);
@@ -373,6 +385,7 @@ export default function HeadteacherDashboardClient() {
   const [noteBySessionId, setNoteBySessionId] = useState<Record<string, string>>({});
 
   const reqSeq = useRef(0);
+  const directorFeedbackReqSeq = useRef(0);
 
   async function loadCore() {
     const mySeq = ++reqSeq.current;
@@ -383,7 +396,6 @@ export default function HeadteacherDashboardClient() {
       setPending(bad);
       setPendingNotes(bad);
       setReleaseStatus(bad);
-      setDirectorFeedback(bad);
       return;
     }
 
@@ -392,7 +404,7 @@ export default function HeadteacherDashboardClient() {
     try {
       const qs = `start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
 
-      const [w, p, pn, rs, df] = await Promise.all([
+      const [w, p, pn, rs] = await Promise.all([
         fetchJson<WeeklyResp>(`/api/headteacher/attendance/weekly/summary?${qs}`, {
           cache: "no-store",
         }),
@@ -405,9 +417,6 @@ export default function HeadteacherDashboardClient() {
         fetchJson<ReleaseStatusResp>(`/api/headteacher/results/release/status`, {
           cache: "no-store",
         }),
-        fetchJson<DirectorFeedbackAssignmentsResp>(`/api/headteacher/director-feedback`, {
-          cache: "no-store",
-        }),
       ]);
 
       if (mySeq !== reqSeq.current) return;
@@ -416,7 +425,6 @@ export default function HeadteacherDashboardClient() {
       setPending(p);
       setPendingNotes(pn);
       setReleaseStatus(rs);
-      setDirectorFeedback(df);
     } catch {
       if (mySeq !== reqSeq.current) return;
       const bad = { ok: false, error: "Failed to load dashboard data." } as const;
@@ -424,11 +432,46 @@ export default function HeadteacherDashboardClient() {
       setPending(bad);
       setPendingNotes(bad);
       setReleaseStatus({ ok: false, error: "Failed to load results release status." });
-      setDirectorFeedback({ ok: false, error: "Failed to load Director feedback status." });
     } finally {
       if (mySeq === reqSeq.current) setLoading(false);
     }
   }
+
+  const loadDirectorFeedbackStatus = useCallback(async () => {
+    const mySeq = ++directorFeedbackReqSeq.current;
+
+    try {
+      const response = await fetchJson<DirectorFeedbackAssignmentsResp>(
+        `/api/headteacher/director-feedback`,
+        { cache: "no-store" },
+      );
+
+      if (mySeq !== directorFeedbackReqSeq.current) return;
+      setDirectorFeedback(response);
+    } catch {
+      if (mySeq !== directorFeedbackReqSeq.current) return;
+      setDirectorFeedback({
+        ok: false,
+        error: "Failed to load Director feedback status.",
+      });
+    }
+  }, []);
+
+  const loadTeacherAttendanceAvailability = useCallback(async () => {
+    try {
+      const response = await fetchJson<TeacherAttendanceAvailabilityResp>(
+        "/api/headteacher/teacher-attendance?availability=1",
+        { cache: "no-store" },
+      );
+
+      setTeacherAttendanceEnabled(
+        response.ok === true && response.feature.enabled === true,
+      );
+    } catch {
+      // Safety policy: inability to prove activation means OFF.
+      setTeacherAttendanceEnabled(false);
+    }
+  }, []);
 
   async function loadGovernance() {
     if (start && end && start > end) {
@@ -484,8 +527,35 @@ export default function HeadteacherDashboardClient() {
 
   useEffect(() => {
     void loadCore();
+    void loadDirectorFeedbackStatus();
+    void loadTeacherAttendanceAvailability();
+
+    let lastRefreshAt = 0;
+    const refreshDirectorFeedbackWhenActive = () => {
+      if (document.visibilityState !== "visible") return;
+
+      const now = Date.now();
+      if (now - lastRefreshAt < 750) return;
+      lastRefreshAt = now;
+      void loadDirectorFeedbackStatus();
+      void loadTeacherAttendanceAvailability();
+    };
+
+    document.addEventListener(
+      "visibilitychange",
+      refreshDirectorFeedbackWhenActive,
+    );
+    window.addEventListener("focus", refreshDirectorFeedbackWhenActive);
+
+    return () => {
+      document.removeEventListener(
+        "visibilitychange",
+        refreshDirectorFeedbackWhenActive,
+      );
+      window.removeEventListener("focus", refreshDirectorFeedbackWhenActive);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadDirectorFeedbackStatus, loadTeacherAttendanceAvailability]);
 
   async function certify(sessionId: string) {
     setBusyCertifyId(sessionId);
@@ -541,8 +611,10 @@ export default function HeadteacherDashboardClient() {
     (item) => item.responseStatus === "FINALIZED",
   );
 
-  const directorFeedbackAvailable = directorFeedbackItems.some(
-    (item) => item.canContinue || item.responseStatus === "FINALIZED",
+  const directorFeedbackAvailable = directorFeedbackItems.length > 0;
+
+  const directorFeedbackClosed = directorFeedbackItems.some(
+    (item) => !item.canContinue && item.responseStatus !== "FINALIZED",
   );
 
   const directorFeedbackInProgress = directorFeedbackItems.some(
@@ -559,9 +631,11 @@ export default function HeadteacherDashboardClient() {
         ? "Submitted"
         : directorFeedbackInProgress
           ? "In progress"
-          : directorFeedbackAvailable
-            ? "Requested"
-            : "Awaiting request";
+          : directorFeedbackClosed
+            ? "Closed"
+            : directorFeedbackAvailable
+              ? "Requested"
+              : "Awaiting request";
 
   const directorFeedbackCta =
     directorFeedback === null
@@ -570,9 +644,11 @@ export default function HeadteacherDashboardClient() {
         ? "View submitted response"
         : directorFeedbackInProgress
           ? "Continue confidential feedback"
-          : directorFeedbackAvailable
-            ? "Open confidential feedback"
-            : "Available when Director opens feedback";
+          : directorFeedbackClosed
+            ? "View feedback status"
+            : directorFeedbackAvailable
+              ? "Open confidential feedback"
+              : "Available when Director opens feedback";
 
   return (
     <div className="space-y-6">
@@ -584,12 +660,33 @@ export default function HeadteacherDashboardClient() {
 
         <MajorTile
           title="Teacher Attendance"
-          desc="Staff attendance register for headteacher marking and supervision."
-          cta="Open teacher attendance"
-          badge="New"
+          desc={
+            teacherAttendanceEnabled === true
+              ? "Staff attendance register for headteacher marking and supervision."
+              : "Temporarily unavailable while institutional safeguards for fair use are being finalized."
+          }
+          cta={
+            teacherAttendanceEnabled === null
+              ? "Checking platform safety control"
+              : teacherAttendanceEnabled
+                ? "Open teacher attendance"
+                : "Disabled by Superadmin safety policy"
+          }
+          badge={
+            teacherAttendanceEnabled === null
+              ? "Checking"
+              : teacherAttendanceEnabled
+                ? "Available"
+                : "Temporarily off"
+          }
+          disabled={teacherAttendanceEnabled !== true}
           toneClass="border-lime-300/20 from-[#101F0A] via-[#1D2D10] to-[#08121C]"
           accentClass="border-lime-300/25 bg-lime-400/12 text-lime-100"
-          onClick={() => router.push("/headteacher/teacher-attendance")}
+          onClick={
+            teacherAttendanceEnabled === true
+              ? () => router.push("/headteacher/teacher-attendance")
+              : undefined
+          }
         />
 
         <MajorTile
@@ -643,9 +740,11 @@ export default function HeadteacherDashboardClient() {
         <MajorTile
           title="Director Feedback"
           desc={
-            directorFeedbackAvailable
-              ? "Give honest, confidential feedback on the Municipal Director using the official seven-section form."
-              : "This confidential form opens only after the Municipal Director requests feedback."
+            directorFeedbackClosed
+              ? "The Director requested confidential feedback. Open this card to view the current response status."
+              : directorFeedbackAvailable
+                ? "Give honest, confidential feedback on the Municipal Director using the official seven-section form."
+                : "This confidential form opens only after the Municipal Director requests feedback."
           }
           cta={directorFeedbackCta}
           badge={directorFeedbackBadge}

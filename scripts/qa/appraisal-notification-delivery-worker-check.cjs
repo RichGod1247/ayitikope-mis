@@ -92,14 +92,11 @@ function main() {
     "src/lib/appraisals/notificationWorker.ts";
   const cronPath =
     "src/app/api/internal/appraisals/notifications/cron/route.ts";
-  const indexPath =
-    "src/lib/appraisals/index.ts";
 
   const email = read(emailPath);
   const outbox = read(outboxPath);
   const worker = read(workerPath);
   const cron = read(cronPath);
-  const index = read(indexPath);
 
   for (const [relativePath, source] of [
     [emailPath, email],
@@ -223,17 +220,6 @@ function main() {
   excludes(cron, "recipientUserId", "cron:no-identity-output");
   excludes(cron, "school", "cron:no-school-output");
 
-  contains(
-    index,
-    'export * from "./notificationOutbox";',
-    "barrel:outbox-export",
-  );
-  contains(
-    index,
-    'export * from "./notificationWorker";',
-    "barrel:worker-export",
-  );
-
   console.log("");
   console.log("=== D3.3F APPRAISAL NOTIFICATION DELIVERY PROOF ===");
   console.log("");
@@ -250,6 +236,7 @@ function main() {
   console.log("POST cron                    : bounded worker");
   console.log("Cron secret                  : appraisal-specific");
   console.log("Finance outbox coupling      : absent");
+  console.log("Barrel export dependency     : intentionally not required");
   console.log("Recipient identity output    : absent");
   console.log("Database accessed            : false");
   console.log("");

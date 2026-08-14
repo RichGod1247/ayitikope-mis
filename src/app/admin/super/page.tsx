@@ -1,9 +1,19 @@
-// src/app/admin/super/page.tsx
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-const superTiles = [
+type SuperTile = {
+  title: string;
+  desc: string;
+  href: string;
+  icon: string;
+  accent: string;
+  border: string;
+  pill: string;
+  pillCls: string;
+};
+
+const primaryTiles: SuperTile[] = [
   {
     title: "Onboarding Applications",
     desc: "Review school, SISSO, and directorate applications, then convert verified demand into official invites.",
@@ -64,25 +74,28 @@ const superTiles = [
     pill: "Authority control",
     pillCls: "border-emerald-300/25 bg-emerald-400/14 text-emerald-100",
   },
+];
+
+const secondaryTiles: SuperTile[] = [
   {
-    title: "Circuit Dashboard",
-    desc: "Open the circuit governance dashboard to inspect sector-aware school risk and official communication.",
-    href: "/circuit/dashboard",
-    icon: "🧩",
-    accent: "from-[#1E1B4B] via-[#312E81] to-[#07111F]",
-    border: "border-indigo-300/20",
-    pill: "SISSO view",
-    pillCls: "border-indigo-300/25 bg-indigo-400/14 text-indigo-100",
+    title: "Safety Controls",
+    desc: "Activate or deactivate sensitive platform capabilities through explicit Superadmin safeguards and audit evidence.",
+    href: "/admin/super/safety-controls",
+    icon: "🛑",
+    accent: "from-[#3A1609] via-[#5A2812] to-[#07111F]",
+    border: "border-orange-300/20",
+    pill: "Human-impact guard",
+    pillCls: "border-orange-300/25 bg-orange-400/14 text-orange-100",
   },
   {
-    title: "District Dashboard",
-    desc: "Open district command intelligence for circuits, schools, interventions, and sector-aware notices.",
-    href: "/district/dashboard",
-    icon: "🏢",
-    accent: "from-[#351A19] via-[#512522] to-[#07111F]",
-    border: "border-rose-300/20",
-    pill: "Director view",
-    pillCls: "border-rose-300/25 bg-rose-400/14 text-rose-100",
+    title: "Confidential Identity Audit",
+    desc: "Reveal one finalized confidential appraisal respondent only for an authorized purpose with permanent audit evidence.",
+    href: "/admin/super/appraisals/confidential-identities",
+    icon: "🔐",
+    accent: "from-[#2B1022] via-[#4A183B] to-[#07111F]",
+    border: "border-pink-300/20",
+    pill: "Superadmin only",
+    pillCls: "border-pink-300/25 bg-pink-400/14 text-pink-100",
   },
   {
     title: "Public School Application",
@@ -106,8 +119,133 @@ const superTiles = [
   },
 ];
 
+const governanceDashboards = [
+  {
+    title: "Director",
+    desc: "District command",
+    href: "/district/dashboard",
+    icon: "🏢",
+  },
+  {
+    title: "SISSO",
+    desc: "Circuit command",
+    href: "/circuit/dashboard",
+    icon: "🧩",
+  },
+  {
+    title: "HOS",
+    desc: "Supervision oversight",
+    href: "/district/hos/dashboard",
+    icon: "🧭",
+  },
+  {
+    title: "BSC",
+    desc: "Basic-school coordination",
+    href: "/district/bsc/dashboard",
+    icon: "🏫",
+  },
+] as const;
+
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
+}
+
+function SuperTileCard({ tile }: { tile: SuperTile }) {
+  return (
+    <Link
+      href={tile.href}
+      className={cx(
+        "group relative overflow-hidden rounded-[28px] border bg-gradient-to-br p-5 shadow-[0_12px_36px_rgba(0,0,0,0.20)] transition hover:-translate-y-1",
+        tile.accent,
+        tile.border,
+      )}
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_36%)]" />
+
+      <div className="relative flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2 text-sm font-semibold text-[#F7F4ED]">
+          <span className="text-lg transition-transform duration-200 ease-out group-hover:scale-110 group-hover:rotate-6">
+            {tile.icon}
+          </span>
+          {tile.title}
+        </div>
+
+        <span
+          className={cx(
+            "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+            tile.pillCls,
+          )}
+        >
+          {tile.pill}
+        </span>
+      </div>
+
+      <p className="relative mt-4 text-sm leading-7 text-[#E1E6EF]">
+        {tile.desc}
+      </p>
+
+      <div className="relative mt-4 text-[11px] font-semibold text-[#F7F4ED] group-hover:underline">
+        Open module
+      </div>
+
+      <div className="pointer-events-none absolute inset-0 rounded-[28px] ring-0 transition group-hover:ring-2 group-hover:ring-white/8" />
+    </Link>
+  );
+}
+
+function GovernanceDashboardsCard() {
+  return (
+    <details className="group relative overflow-hidden rounded-[28px] border border-indigo-300/20 bg-gradient-to-br from-[#151C45] via-[#24336B] to-[#07111F] p-5 shadow-[0_12px_36px_rgba(0,0,0,0.20)]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_36%)]" />
+
+      <summary className="relative cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2 text-sm font-semibold text-[#F7F4ED]">
+            <span className="text-lg">🗂️</span>
+            Governance Dashboards
+          </div>
+
+          <span className="inline-flex items-center rounded-full border border-indigo-300/25 bg-indigo-400/14 px-2.5 py-1 text-[11px] font-semibold text-indigo-100">
+            4 views
+          </span>
+        </div>
+
+        <p className="mt-4 text-sm leading-7 text-[#E1E6EF]">
+          Open Director, SISSO, HOS, or BSC command workspaces from one tidy
+          governance hub.
+        </p>
+
+        <div className="mt-4 flex items-center gap-2 text-[11px] font-semibold text-[#F7F4ED]">
+          <span>Open dashboard choices</span>
+          <span aria-hidden="true">▾</span>
+        </div>
+      </summary>
+
+      <div className="relative mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {governanceDashboards.map((dashboard) => (
+          <Link
+            key={dashboard.href}
+            href={dashboard.href}
+            className="group/dashboard rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-sm font-bold text-white">
+                <span className="text-lg">{dashboard.icon}</span>
+                {dashboard.title}
+              </div>
+              <span aria-hidden="true" className="text-sm text-white/70 transition group-hover/dashboard:translate-x-0.5">
+                →
+              </span>
+            </div>
+
+            <p className="mt-2 text-xs font-medium leading-5 text-indigo-100/85">
+              {dashboard.desc}
+            </p>
+          </Link>
+        ))}
+      </div>
+    </details>
+  );
 }
 
 export default function AdminSuperHome() {
@@ -141,7 +279,7 @@ export default function AdminSuperHome() {
               Invite + approval flow
             </span>
             <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-medium text-[#F7F4ED]">
-              Circuit + district access
+              Governance dashboards
             </span>
           </div>
         </div>
@@ -166,46 +304,14 @@ export default function AdminSuperHome() {
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
-          {superTiles.map((tile) => (
-            <Link
-              key={tile.title}
-              href={tile.href}
-              className={cx(
-                "group relative overflow-hidden rounded-[28px] border bg-gradient-to-br p-5 shadow-[0_12px_36px_rgba(0,0,0,0.20)] transition hover:-translate-y-1",
-                tile.accent,
-                tile.border,
-              )}
-            >
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_36%)]" />
+          {primaryTiles.map((tile) => (
+            <SuperTileCard key={tile.title} tile={tile} />
+          ))}
 
-              <div className="relative flex items-start justify-between gap-3">
-                <div className="flex items-center gap-2 text-sm font-semibold text-[#F7F4ED]">
-                  <span className="text-lg transition-transform duration-200 ease-out group-hover:scale-110 group-hover:rotate-6">
-                    {tile.icon}
-                  </span>
-                  {tile.title}
-                </div>
+          <GovernanceDashboardsCard />
 
-                <span
-                  className={cx(
-                    "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold",
-                    tile.pillCls,
-                  )}
-                >
-                  {tile.pill}
-                </span>
-              </div>
-
-              <p className="relative mt-4 text-sm leading-7 text-[#E1E6EF]">
-                {tile.desc}
-              </p>
-
-              <div className="relative mt-4 text-[11px] font-semibold text-[#F7F4ED] group-hover:underline">
-                Open module
-              </div>
-
-              <div className="pointer-events-none absolute inset-0 rounded-[28px] ring-0 transition group-hover:ring-2 group-hover:ring-white/8" />
-            </Link>
+          {secondaryTiles.map((tile) => (
+            <SuperTileCard key={tile.title} tile={tile} />
           ))}
         </div>
       </section>

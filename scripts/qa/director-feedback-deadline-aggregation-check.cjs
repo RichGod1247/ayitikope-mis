@@ -145,12 +145,10 @@ function main() {
     "src/app/api/internal/appraisals/notifications/cron/route.ts";
   const notificationsPath =
     "src/lib/appraisals/directorFeedbackNotifications.ts";
-  const indexPath = "src/lib/appraisals/index.ts";
 
   const closure = read(closurePath);
   const cron = read(cronPath);
   const notifications = read(notificationsPath);
-  const index = read(indexPath);
 
   contains(closure, "AppraisalCycleStatus.CLOSED", "closure:closed-state");
   contains(
@@ -225,9 +223,9 @@ function main() {
     "request-gate:closed-blocks-new-cycle",
   );
   contains(
-    index,
-    'export * from "./directorFeedbackClosure";',
-    "barrel:closure-export",
+    cron,
+    'from "@/lib/appraisals/directorFeedbackClosure";',
+    "cron:direct-closure-import",
   );
 
   const modulePath = path.join(repoRoot, closurePath);

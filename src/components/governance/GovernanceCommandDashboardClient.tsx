@@ -386,8 +386,11 @@ overview?: {
   totals?: Record<string, number>;
   signals?: Record<string, number>;
   attendance?: AttendanceOverview;
-  teacherAttendance?: TeacherAttendanceOverview;
-  teacherAbsenteeism?: GovernanceTeacherAbsenteeismOverview;
+  teacherAttendance?: TeacherAttendanceOverview | null;
+  teacherAbsenteeism?: GovernanceTeacherAbsenteeismOverview | null;
+  featureAvailability?: {
+    teacherAttendance?: boolean;
+  };
   emptyStates?: string[];
   generatedAt?: string;
 };
@@ -1941,6 +1944,9 @@ export default function GovernanceCommandDashboardClient({
   const teacherAbsenteeism = overview?.teacherAbsenteeism ?? null;
   const sectorSummary = overview?.sectorSummary ?? {};
 
+  const teacherAttendanceEnabled =
+    overview?.featureAvailability?.teacherAttendance === true;
+
   const absenteeTeacherCount = numberValue(
     teacherAbsenteeism?.flaggedTeachers,
   );
@@ -2239,31 +2245,50 @@ const mockCommandTile = (
     />
   )}
 
-  <StatCard
-    label="Absent teachers"
-    value={absenteeTeacherCount}
-    helper={
-      absenteeTeacherCount
-        ? "3+ certified absent days"
-        : "No teacher reached 3 days"
-    }
-    tone={absenteeRiskTone}
-    onClick={() => openPanel("risk")}
-    active={activePanel === "risk"}
-  />
+  {teacherAttendanceEnabled ? (
+    <>
+      <StatCard
+        label="Absent teachers"
+        value={absenteeTeacherCount}
+        helper={
+          absenteeTeacherCount
+            ? "3+ certified absent days"
+            : "No teacher reached 3 days"
+        }
+        tone={absenteeRiskTone}
+        onClick={() => openPanel("risk")}
+        active={activePanel === "risk"}
+      />
 
-  <StatCard
-    label="Affected schools"
-    value={absenteeSchoolCount}
-    helper={
-      isDistrictView
-        ? `${absenteeCircuitCount} circuit(s)`
-        : "Tap to see teachers"
-    }
-    tone={absenteeRiskTone}
-    onClick={() => openPanel("risk")}
-    active={activePanel === "risk"}
-  />
+      <StatCard
+        label="Affected schools"
+        value={absenteeSchoolCount}
+        helper={
+          isDistrictView
+            ? `${absenteeCircuitCount} circuit(s)`
+            : "Tap to see teachers"
+        }
+        tone={absenteeRiskTone}
+        onClick={() => openPanel("risk")}
+        active={activePanel === "risk"}
+      />
+    </>
+  ) : (
+    <>
+      <StatCard
+        label="Teacher attendance"
+        value="Off"
+        helper="Disabled by Superadmin safety policy"
+        tone="default"
+      />
+      <StatCard
+        label="Teacher risk"
+        value="Off"
+        helper="No absenteeism ranking while attendance is off"
+        tone="default"
+      />
+    </>
+  )}
 </div>
         </div>
       </section>
@@ -2271,15 +2296,24 @@ const mockCommandTile = (
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
   {isDistrictView ? (
     <>
-      <CommandTile
-        icon="🔥"
-        title="Risk Board"
-        description="Teachers absent for 3 certified days or more."
-        value={absenteeTeacherCount}
-        tone={absenteeRiskTone}
-        active={activePanel === "risk"}
-        onClick={() => openPanel("risk")}
-      />
+      {teacherAttendanceEnabled ? (
+        <CommandTile
+          icon="🔥"
+          title="Risk Board"
+          description="Teachers absent for 3 certified days or more."
+          value={absenteeTeacherCount}
+          tone={absenteeRiskTone}
+          active={activePanel === "risk"}
+          onClick={() => openPanel("risk")}
+        />
+      ) : (
+        <LockedCommandTile
+          icon="🔥"
+          title="Risk Board"
+          description="Teacher absenteeism ranking is unavailable while Teacher Attendance is deactivated."
+          badge="Temporarily off"
+        />
+      )}
 
       <CommandTile
         icon="🧒"
@@ -2301,27 +2335,36 @@ const mockCommandTile = (
         onClick={() => openPanel("students-attendance")}
       />
 
-      <CommandTile
-        icon="👨‍🏫"
-        title="Teacher Attendance"
-        description="Certified staff presence by school."
-        value={
-          teacherAttendanceNeedsAction
-            ? `${teacherAttendanceNeedsAction} follow-up`
-            : teacherAttendanceCertifiedSchools
-              ? `${teacherAttendanceCertifiedSchools} certified`
-              : "0 certified"
-        }
-        tone={
-          teacherAttendanceNeedsAction
-            ? "warning"
-            : teacherAttendanceCertifiedSchools
-              ? "success"
-              : "info"
-        }
-        active={activePanel === "teacher-attendance"}
-        onClick={() => openPanel("teacher-attendance")}
-      />
+      {teacherAttendanceEnabled ? (
+        <CommandTile
+          icon="👨‍🏫"
+          title="Teacher Attendance"
+          description="Certified staff presence by school."
+          value={
+            teacherAttendanceNeedsAction
+              ? `${teacherAttendanceNeedsAction} follow-up`
+              : teacherAttendanceCertifiedSchools
+                ? `${teacherAttendanceCertifiedSchools} certified`
+                : "0 certified"
+          }
+          tone={
+            teacherAttendanceNeedsAction
+              ? "warning"
+              : teacherAttendanceCertifiedSchools
+                ? "success"
+                : "info"
+          }
+          active={activePanel === "teacher-attendance"}
+          onClick={() => openPanel("teacher-attendance")}
+        />
+      ) : (
+        <LockedCommandTile
+          icon="👨‍🏫"
+          title="Teacher Attendance"
+          description="Temporarily unavailable until the platform safety control is activated."
+          badge="Temporarily off"
+        />
+      )}
 
       <CommandTile
         icon="📚"
@@ -2395,15 +2438,24 @@ const mockCommandTile = (
     </>
   ) : (
     <>
-      <CommandTile
-        icon="🔥"
-        title="Risk Board"
-        description="Teachers absent for 3 certified days or more."
-        value={absenteeTeacherCount}
-        tone={absenteeRiskTone}
-        active={activePanel === "risk"}
-        onClick={() => openPanel("risk")}
-      />
+      {teacherAttendanceEnabled ? (
+        <CommandTile
+          icon="🔥"
+          title="Risk Board"
+          description="Teachers absent for 3 certified days or more."
+          value={absenteeTeacherCount}
+          tone={absenteeRiskTone}
+          active={activePanel === "risk"}
+          onClick={() => openPanel("risk")}
+        />
+      ) : (
+        <LockedCommandTile
+          icon="🔥"
+          title="Risk Board"
+          description="Teacher absenteeism ranking is unavailable while Teacher Attendance is deactivated."
+          badge="Temporarily off"
+        />
+      )}
 
       <CommandTile
         icon="🧒"
@@ -2425,27 +2477,36 @@ const mockCommandTile = (
         onClick={() => openPanel("students-attendance")}
       />
 
-      <CommandTile
-        icon="👨‍🏫"
-        title="Teacher Attendance"
-        description="Certified staff presence by school."
-        value={
-          teacherAttendanceNeedsAction
-            ? `${teacherAttendanceNeedsAction} follow-up`
-            : teacherAttendanceCertifiedSchools
-              ? `${teacherAttendanceCertifiedSchools} certified`
-              : "0 certified"
-        }
-        tone={
-          teacherAttendanceNeedsAction
-            ? "warning"
-            : teacherAttendanceCertifiedSchools
-              ? "success"
-              : "info"
-        }
-        active={activePanel === "teacher-attendance"}
-        onClick={() => openPanel("teacher-attendance")}
-      />
+      {teacherAttendanceEnabled ? (
+        <CommandTile
+          icon="👨‍🏫"
+          title="Teacher Attendance"
+          description="Certified staff presence by school."
+          value={
+            teacherAttendanceNeedsAction
+              ? `${teacherAttendanceNeedsAction} follow-up`
+              : teacherAttendanceCertifiedSchools
+                ? `${teacherAttendanceCertifiedSchools} certified`
+                : "0 certified"
+          }
+          tone={
+            teacherAttendanceNeedsAction
+              ? "warning"
+              : teacherAttendanceCertifiedSchools
+                ? "success"
+                : "info"
+          }
+          active={activePanel === "teacher-attendance"}
+          onClick={() => openPanel("teacher-attendance")}
+        />
+      ) : (
+        <LockedCommandTile
+          icon="👨‍🏫"
+          title="Teacher Attendance"
+          description="Temporarily unavailable until the platform safety control is activated."
+          badge="Temporarily off"
+        />
+      )}
 
       <CommandTile
         icon="📚"
@@ -2548,11 +2609,28 @@ const mockCommandTile = (
 />
       ) : null}
 
-      {activePanel === "risk" ? (
+      {activePanel === "risk" && teacherAttendanceEnabled ? (
         <GovernanceTeacherAbsenteeismRiskPanel
           data={teacherAbsenteeism}
           isDistrictView={isDistrictView}
         />
+      ) : null}
+
+      {activePanel === "risk" && !teacherAttendanceEnabled ? (
+        <section className="rounded-[28px] border border-amber-300/20 bg-amber-400/10 p-4 md:p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">
+            Teacher accountability safety control
+          </p>
+          <h2 className="mt-2 text-lg font-bold text-white">
+            Teacher Attendance and absenteeism risk are temporarily off
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-amber-100/80">
+            The Superadmin has deactivated Teacher Attendance while fair-use
+            safeguards are being finalized. Historical records remain preserved,
+            but this governance dashboard does not query or rank Teacher
+            Attendance while the feature is off.
+          </p>
+        </section>
       ) : null}
 
       {activePanel === "students-attendance" ? (
@@ -2709,7 +2787,7 @@ const mockCommandTile = (
         </section>
       ) : null}
 
-{activePanel === "teacher-attendance" ? (
+{activePanel === "teacher-attendance" && teacherAttendanceEnabled ? (
   <section className="rounded-[28px] border border-sky-300/20 bg-sky-500/10 p-4 md:p-5">
     <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
       <div>
@@ -2873,6 +2951,22 @@ const mockCommandTile = (
     </div>
   </section>
 ) : null}
+
+      {activePanel === "teacher-attendance" && !teacherAttendanceEnabled ? (
+        <section className="rounded-[28px] border border-amber-300/20 bg-amber-400/10 p-4 md:p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">
+            Teacher Attendance safety control
+          </p>
+          <h2 className="mt-2 text-lg font-bold text-white">
+            Teacher Attendance is temporarily unavailable
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-amber-100/80">
+            No Teacher Attendance register or absenteeism-risk data is exposed
+            to governance while the global safety switch is off. Student
+            Attendance remains active.
+          </p>
+        </section>
+      ) : null}
 
 {activePanel === "scheme-coverage" ? (
   <GovernanceSchemeCoveragePanel

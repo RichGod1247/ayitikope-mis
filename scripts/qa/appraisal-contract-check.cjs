@@ -279,6 +279,27 @@ function main() {
     "The two headteacher workflows must reuse one shared item bank",
   );
 
+  assertEqual(
+    staff.commentsPolicy,
+    "PROHIBITED",
+    "Headteacher confidential staff-feedback comments policy",
+  );
+  assertEqual(
+    staff.allowComments,
+    false,
+    "Headteacher confidential staff-feedback comments must be disabled",
+  );
+  assertEqual(
+    supervisory.commentsPolicy,
+    "PROHIBITED",
+    "Headteacher supervisory comments policy",
+  );
+  assertEqual(
+    supervisory.allowComments,
+    false,
+    "Headteacher supervisory comments must be disabled",
+  );
+
   assertEqual(teacher.sections.length, 6, "Teacher observation section count");
   assertEqual(itemCount(teacher), 34, "Teacher observation item count");
   assertEqual(rawMaximum(teacher), 170, "Teacher observation raw maximum");
@@ -325,6 +346,16 @@ function main() {
     sectionMaximums(director),
     [40, 25, 30, 20, 20, 10, 30],
     "Director section maximums",
+  );
+  assertEqual(
+    director.commentsPolicy,
+    "PROHIBITED",
+    "Director appraisal comments policy",
+  );
+  assertEqual(
+    director.allowComments,
+    false,
+    "Director appraisal comments must be disabled",
   );
 
   assertEqual(

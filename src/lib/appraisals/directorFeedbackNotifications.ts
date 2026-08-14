@@ -85,8 +85,12 @@ export type DirectorFeedbackRequestStatus = {
     minimumResponses: number;
     participantCount: number;
     finalizedResponses: number;
+    expiredResponses: number;
     circuitCount: number;
     extensionCount: number;
+    allResponsesFinalized: boolean;
+    canCloseEarly: boolean;
+    canExtendFeedbackWindow: boolean;
     canRequestNewCycle: boolean;
   };
   notifications: DirectorFeedbackNotificationSummary;
@@ -636,6 +640,28 @@ export async function getDirectorFeedbackRequestStatus(input: {
     if (key) circuits.add(key);
   }
 
+  const finalizedResponses = participants.filter(
+    (participant) =>
+      participant.status === AppraisalParticipantStatus.FINALIZED,
+  ).length;
+  const expiredResponses = participants.filter(
+    (participant) =>
+      participant.status === AppraisalParticipantStatus.EXPIRED,
+  ).length;
+  const deadlineReached =
+    Boolean(cycle.deadlineAt) &&
+    cycle.deadlineAt!.getTime() <= Date.now();
+  const eligibleParticipants = participants.filter(
+    (participant) =>
+      participant.status !== AppraisalParticipantStatus.REVOKED,
+  );
+  const allResponsesFinalized =
+    eligibleParticipants.length > 0 &&
+    eligibleParticipants.every(
+      (participant) =>
+        participant.status === AppraisalParticipantStatus.FINALIZED,
+    );
+
   return {
     cycle: {
       id: cycle.id,
@@ -647,12 +673,20 @@ export async function getDirectorFeedbackRequestStatus(input: {
       responseWindowDays: cycle.responseWindowDays,
       minimumResponses: cycle.minimumResponses,
       participantCount: participants.length,
-      finalizedResponses: participants.filter(
-        (participant) =>
-          participant.status === AppraisalParticipantStatus.FINALIZED,
-      ).length,
+      finalizedResponses,
+      expiredResponses,
       circuitCount: circuits.size,
       extensionCount: cycle.extensionCount,
+      allResponsesFinalized,
+      canCloseEarly:
+        cycle.status === AppraisalCycleStatus.OPEN &&
+        !deadlineReached &&
+        allResponsesFinalized,
+      canExtendFeedbackWindow:
+        cycle.status === AppraisalCycleStatus.CLOSED &&
+        deadlineReached &&
+        cycle.extensionCount === 0 &&
+        expiredResponses > 0,
       canRequestNewCycle: !ACTIVE_DIRECTOR_FEEDBACK_STATUSES.includes(
         cycle.status,
       ),

@@ -241,6 +241,9 @@ function main() {
 
   contains(serviceSource, "POST_CLOSURE_HASH_ORDER", "service:mask-order");
   contains(serviceSource, "createHash", "service:cryptographic-mask");
+  contains(serviceSource, "numericLabel", "service:numeric-mask-label");
+  excludes(serviceSource, "alphaLabel", "service:no-alphabetic-mask-label");
+  excludes(serviceSource, "responseProofFingerprint", "service:no-response-proof-output");
   contains(serviceSource, "AppraisalCycleStatus.UNDER_REVIEW", "service:review-state");
   contains(serviceSource, "AppraisalCycleStatus.RELEASED", "service:released-state");
   contains(serviceSource, "releaseEligible", "service:municipal-threshold");
@@ -265,9 +268,18 @@ function main() {
 
   contains(componentSource, "View masked responses", "ui:list-entry");
   contains(componentSource, "Complete finalized appraisal form", "ui:full-form");
+  contains(componentSource, "Behavioural Competence", "ui:native-form-behaviour-column");
+  contains(componentSource, "FINAL SCORE", "ui:native-form-final-score");
+  contains(componentSource, "TOTAL SCORE (OUT OF", "ui:native-form-section-total");
+  contains(componentSource, "OVERALL PERCENTAGE", "ui:native-form-overall");
+  contains(componentSource, "General Comment(s):", "ui:native-form-comment-row");
   contains(componentSource, "submission order", "ui:not-order");
   contains(componentSource, "names or schools", "ui:privacy");
   contains(componentSource, "navigator.onLine", "ui:offline-awareness");
+  contains(componentSource, "Math.round", "ui:whole-percentage-display");
+  contains(componentSource, "scrollIntoView", "ui:respondent-form-auto-scroll");
+  excludes(componentSource, "Response proof", "ui:no-response-proof-display");
+  excludes(componentSource, "<details", "ui:no-questionnaire-accordion");
   excludes(componentSource, "localStorage", "ui:no-local-storage");
   excludes(componentSource, "sessionStorage", "ui:no-session-storage");
 
@@ -294,7 +306,7 @@ function main() {
   });
   assertEqual(list.mode, "LIST", "List mode expected");
   assertEqual(list.respondents.length, 5, "Five threshold-qualified forms");
-  assertEqual(list.respondents[0].maskedLabel, "Respondent A", "First masked label");
+  assertEqual(list.respondents[0].maskedLabel, "Respondent 1", "First masked label");
   assertEqual(new Set(list.respondents.map((row) => row.maskedRespondentKey)).size, 5, "Masked keys unique");
   assertEqual(list.privacy.respondentNameIncluded, false, "Name absent");
   assertEqual(list.privacy.schoolNameIncluded, false, "School absent");
@@ -371,14 +383,16 @@ function main() {
   console.log("Cycle states                  : UNDER_REVIEW / RELEASED only");
   console.log("Municipal threshold           : enforced");
   console.log("Circuit threshold             : enforced at 5");
-  console.log("Masked labels                 : post-closure hash order");
+  console.log("Masked labels                 : Respondent 1..N in post-closure hash order");
   console.log("Submission-order linkage      : absent");
-  console.log("Official form                 : 7 sections / 35 items");
+  console.log("Official form                 : native Director table, 7 sections / 35 items");
   console.log("Respondent name               : absent");
   console.log("School / tenant identity      : absent");
   console.log("Contact details               : absent");
   console.log("Exact submission time         : absent");
   console.log("Participant / response ids    : absent from output");
+  console.log("Response proof fingerprint    : absent from Director output");
+  console.log("Displayed percentages         : whole numbers");
   console.log("Below-threshold circuits      : hidden");
   console.log("Snapshot/source mismatch      : blocked");
   console.log("Browser persistence           : absent");

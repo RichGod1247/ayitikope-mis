@@ -569,6 +569,22 @@ model AuditLog {
   @@index([action])
 }
 
+/// *
+/// * =======================
+/// * Platform Safety Controls
+/// * =======================
+/// Global fail-closed feature controls. A missing row is treated as disabled.
+model PlatformFeatureFlag {
+  key             String   @id @db.VarChar(80)
+  enabled         Boolean  @default(false)
+  updatedByUserId String?  @map("updated_by_user_id")
+  reason          String?  @db.Text
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("platform_feature_flag")
+}
+
 model ApiRateLimitBucket {
   id           String    @id @default(cuid())
   scope        String    @db.VarChar(100)
@@ -4252,6 +4268,7 @@ enum AppraisalNotificationType {
   RESPONSE_FINALIZED
   REVIEW_READY
   FEEDBACK_RELEASED
+  PARTICIPATION_APPRECIATION
   CYCLE_CANCELLED
 }
 

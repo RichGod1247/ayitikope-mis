@@ -346,6 +346,16 @@ async function main() {
   const contentHash = hashAppraisalInstrumentDefinition(director);
 
   assertEqual(canonical.schemaVersion, 1, "Canonical schema version");
+  assertEqual(
+    canonical.commentsPolicy,
+    "PROHIBITED",
+    "Director canonical comments policy",
+  );
+  assertEqual(
+    canonical.allowComments,
+    false,
+    "Director canonical comments must be disabled",
+  );
   assertEqual(contentHash.length, 64, "SHA-256 hash length");
   assertEqual(
     /^[a-f0-9]{64}$/.test(contentHash),
@@ -490,6 +500,16 @@ async function main() {
     175,
     "Published expected raw maximum",
   );
+  assertEqual(
+    storedVersion.allowComments,
+    false,
+    "Published Director comments must be disabled",
+  );
+  assertEqual(
+    storedVersion.metadata.commentsPolicy,
+    "PROHIBITED",
+    "Published Director comments policy metadata",
+  );
 
   const existing = await publishAppraisalInstrumentVersion({
     code: directorCode,
@@ -604,6 +624,19 @@ async function main() {
     2,
     "Headteacher publication transaction count",
   );
+  for (const storedHeadteacherVersion of
+    headteacherDatabase.versionsByInstrumentVersion.values()) {
+    assertEqual(
+      storedHeadteacherVersion.allowComments,
+      false,
+      "Published Headteacher comments must be disabled",
+    );
+    assertEqual(
+      storedHeadteacherVersion.metadata.commentsPolicy,
+      "PROHIBITED",
+      "Published Headteacher comments policy metadata",
+    );
+  }
   assertEqual(
     JSON.stringify(headteacherDatabase.versionStatusTransitions),
     JSON.stringify(["DRAFT", "ACTIVE", "DRAFT", "ACTIVE"]),
@@ -716,6 +749,18 @@ async function main() {
 
   const storedTeacherInstrument =
     teacherDatabase.instrumentsByCode.get(teacherCode);
+  const storedTeacherVersion =
+    [...teacherDatabase.versionsByInstrumentVersion.values()][0];
+  assertEqual(
+    storedTeacherVersion.allowComments,
+    true,
+    "Published Teacher comments remain enabled",
+  );
+  assertEqual(
+    storedTeacherVersion.metadata.commentsPolicy,
+    "OFFICIAL_FORM_CONTROLLED",
+    "Published Teacher comments policy metadata",
+  );
   assertEqual(
     storedTeacherInstrument.purpose,
     "TEACHER_OBSERVATION",

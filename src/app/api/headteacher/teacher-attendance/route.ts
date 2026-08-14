@@ -1,7 +1,10 @@
-﻿//src/app/api/headteacher/teacher-attendance/route.ts
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getHeadteacherApiContext } from "@/lib/headteacherAuth";
+import {
+  readTeacherAttendanceFeatureState,
+  teacherAttendanceDisabledPayload,
+} from "@/lib/platformFeatures";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -72,6 +75,24 @@ function emptyCounts(totalTeachers: number) {
 export async function GET(req: NextRequest) {
   const ctx = await getHeadteacherApiContext();
   if (!ctx) return jsonNoStore({ ok: false, error: "UNAUTHORIZED" }, 401);
+
+  const feature = await readTeacherAttendanceFeatureState();
+  const availabilityOnly =
+    req.nextUrl.searchParams.get("availability") === "1";
+
+  if (availabilityOnly) {
+    return jsonNoStore({
+      ok: true,
+      feature: {
+        key: feature.key,
+        enabled: feature.enabled,
+      },
+    });
+  }
+
+  if (!feature.enabled) {
+    return jsonNoStore(teacherAttendanceDisabledPayload(), 423);
+  }
 
   const { searchParams } = new URL(req.url);
   const isoDate = toISODateOnly(searchParams.get("date")) ?? new Date().toISOString().slice(0, 10);

@@ -17,6 +17,7 @@ import {
   type ServerUserContext,
 } from "@/lib/serverAuth";
 import { normRole } from "@/lib/roleRouting";
+import { readTeacherAttendanceFeatureState } from "@/lib/platformFeatures";
 
 import {
   calculatePlacementMockAggregate,
@@ -2032,7 +2033,10 @@ trendLabel,
   };
 }
 
-function emptyOverview(message = "No schools are currently assigned to this governance scope.") {
+function emptyOverview(
+  message = "No schools are currently assigned to this governance scope.",
+  teacherAttendanceEnabled = false,
+) {
   return {
     schools: [] as MappedSchool[],
     circuitBreakdown: [],
@@ -2062,10 +2066,17 @@ function emptyOverview(message = "No schools are currently assigned to this gove
       circuits: 0,
       districts: 0,
     },
-        attendance: emptyAttendanceOverview(),
-    teacherAttendance: emptyTeacherAttendanceOverview(),
-teacherAbsenteeism: emptyTeacherAbsenteeismOverview(),
-mockReadiness: emptyMockReadinessOverview(),
+    attendance: emptyAttendanceOverview(),
+    teacherAttendance: teacherAttendanceEnabled
+      ? emptyTeacherAttendanceOverview()
+      : null,
+    teacherAbsenteeism: teacherAttendanceEnabled
+      ? emptyTeacherAbsenteeismOverview()
+      : null,
+    featureAvailability: {
+      teacherAttendance: teacherAttendanceEnabled,
+    },
+    mockReadiness: emptyMockReadinessOverview(),
     signals: {
       attendanceSessionsToday: 0,
       openAttendanceSessionsToday: 0,
@@ -2073,17 +2084,21 @@ mockReadiness: emptyMockReadinessOverview(),
       certifiedAttendanceSessionsToday: 0,
       closedButUncertifiedAttendanceSessionsToday: 0,
       missingAttendanceSessionsToday: 0,
-      teacherAttendanceSchoolsCertified: 0,
-      teacherAttendanceSchoolsMissingSession: 0,
-      teacherAttendanceSchoolsUncertified: 0,
-      teacherAttendanceMarkedToday: 0,
-      teacherAttendancePresentToday: 0,
-      teacherAttendanceAbsentToday: 0,
-      teacherAttendanceLateToday: 0,
-      teacherAttendanceExcusedToday: 0,
-      teacherAttendanceCompletionRateToday: 0,
-      teacherAttendancePresentRateToday: 0,
-      teacherAttendanceNeedsAction: 0,
+      ...(teacherAttendanceEnabled
+        ? {
+            teacherAttendanceSchoolsCertified: 0,
+            teacherAttendanceSchoolsMissingSession: 0,
+            teacherAttendanceSchoolsUncertified: 0,
+            teacherAttendanceMarkedToday: 0,
+            teacherAttendancePresentToday: 0,
+            teacherAttendanceAbsentToday: 0,
+            teacherAttendanceLateToday: 0,
+            teacherAttendanceExcusedToday: 0,
+            teacherAttendanceCompletionRateToday: 0,
+            teacherAttendancePresentRateToday: 0,
+            teacherAttendanceNeedsAction: 0,
+          }
+        : {}),
       parentAlertsSentToday: 0,
       attendanceMarksToday: 0,
       presentMarksToday: 0,
@@ -2130,18 +2145,27 @@ mockReadiness: emptyMockReadinessOverview(),
   };
 }
 
-function overviewCacheKey(scope: GovernanceScope) {
+function overviewCacheKey(
+  scope: GovernanceScope,
+  teacherAttendanceFeatureToken: string,
+) {
   const { start } = todayRangeUtcForGhana();
   return [
     scope.isSuperAdmin ? "SUPER" : scope.userId,
     todayDateKey(start),
     [...scope.zoneIds].sort().join(","),
     [...scope.tenantIds].sort().join(","),
+    teacherAttendanceFeatureToken,
   ].join("|");
 }
 
 export async function buildGovernanceOverview(scope: GovernanceScope) {
-  const key = overviewCacheKey(scope);
+  // Read the global safety state before cache lookup so OFF can never reuse an
+  // earlier cache entry that contains Teacher Attendance-derived information.
+  const teacherAttendanceFeature =
+    await readTeacherAttendanceFeatureState();
+  const teacherAttendanceEnabled = teacherAttendanceFeature.enabled === true;
+  const key = overviewCacheKey(scope, teacherAttendanceFeature.cacheToken);
   const now = Date.now();
   const cached = overviewCache.get(key);
 
@@ -2150,7 +2174,10 @@ export async function buildGovernanceOverview(scope: GovernanceScope) {
     if (cached.promise) return cached.promise;
   }
 
-  const promise = buildGovernanceOverviewUncached(scope)
+  const promise = buildGovernanceOverviewUncached(
+    scope,
+    teacherAttendanceEnabled,
+  )
     .then((value) => {
       overviewCache.set(key, { value, expiresAt: Date.now() + OVERVIEW_CACHE_TTL_MS });
       return value;
@@ -2164,11 +2191,17 @@ export async function buildGovernanceOverview(scope: GovernanceScope) {
   return promise;
 }
 
-async function buildGovernanceOverviewUncached(scope: GovernanceScope) {
+async function buildGovernanceOverviewUncached(
+  scope: GovernanceScope,
+  teacherAttendanceEnabled: boolean,
+) {
   const tenantIds = scope.tenantIds;
 
   if (!tenantIds.length) {
-    return emptyOverview();
+    return emptyOverview(
+      "No schools are currently assigned to this governance scope.",
+      teacherAttendanceEnabled,
+    );
   }
 
   const { start, end } = todayRangeUtcForGhana();
@@ -2219,7 +2252,10 @@ async function buildGovernanceOverviewUncached(scope: GovernanceScope) {
   });
 
   if (!schools.length) {
-    return emptyOverview("This governance scope is valid, but no active schools are attached to it yet.");
+    return emptyOverview(
+      "This governance scope is valid, but no active schools are attached to it yet.",
+      teacherAttendanceEnabled,
+    );
   }
 
   const schoolIds = schools.map((school) => school.id);
@@ -2627,20 +2663,23 @@ async function buildGovernanceOverviewUncached(scope: GovernanceScope) {
 
   const attendance = buildAttendanceOverview(mappedSchools, dateKey);
 
-  const teacherAttendance = await buildTeacherAttendanceOverview({
-  mappedSchools,
-  tenantIds: schoolIds,
-  todayStart: start,
-  todayEnd: end,
-  dateKey,
-});
+  const teacherAttendance = teacherAttendanceEnabled
+    ? await buildTeacherAttendanceOverview({
+        mappedSchools,
+        tenantIds: schoolIds,
+        todayStart: start,
+        todayEnd: end,
+        dateKey,
+      })
+    : null;
 
-const teacherAbsenteeism =
-  await buildGovernanceTeacherAbsenteeismOverview({
-    schools: mappedSchools,
-    todayStart: start,
-    todayEnd: end,
-  });
+  const teacherAbsenteeism = teacherAttendanceEnabled
+    ? await buildGovernanceTeacherAbsenteeismOverview({
+        schools: mappedSchools,
+        todayStart: start,
+        todayEnd: end,
+      })
+    : null;
 
 const mockReadiness = await buildGovernanceMockReadinessOverview({
     schools: mappedSchools,
@@ -2701,12 +2740,16 @@ if (mockReadiness.schoolsWithReleasedMock === 0) {
   );
 }
 
-  if (teacherAttendance.schoolsCertified === 0) {
-    emptyStates.push("No certified teacher attendance register is available today in this jurisdiction.");
-  } else if (teacherAttendance.needsAction > 0) {
-    emptyStates.push(
-      `${teacherAttendance.needsAction} school(s) need teacher attendance follow-up today.`
-    );
+  if (teacherAttendanceEnabled && teacherAttendance) {
+    if (teacherAttendance.schoolsCertified === 0) {
+      emptyStates.push(
+        "No certified teacher attendance register is available today in this jurisdiction.",
+      );
+    } else if (teacherAttendance.needsAction > 0) {
+      emptyStates.push(
+        `${teacherAttendance.needsAction} school(s) need teacher attendance follow-up today.`,
+      );
+    }
   }
 
   return {
@@ -2727,21 +2770,32 @@ if (mockReadiness.schoolsWithReleasedMock === 0) {
       districts: districtCount || zones.filter((z) => z.zoneType.level === 2).length,
     },
     attendance,
-teacherAttendance,
-teacherAbsenteeism,
-mockReadiness,
+    teacherAttendance,
+    teacherAbsenteeism,
+    featureAvailability: {
+      teacherAttendance: teacherAttendanceEnabled,
+    },
+    mockReadiness,
     signals: {
-            teacherAttendanceSchoolsCertified: teacherAttendance.schoolsCertified,
-      teacherAttendanceSchoolsMissingSession: teacherAttendance.schoolsMissingSession,
-      teacherAttendanceSchoolsUncertified: teacherAttendance.schoolsUncertified,
-      teacherAttendanceMarkedToday: teacherAttendance.marked,
-      teacherAttendancePresentToday: teacherAttendance.present,
-      teacherAttendanceAbsentToday: teacherAttendance.absent,
-      teacherAttendanceLateToday: teacherAttendance.late,
-      teacherAttendanceExcusedToday: teacherAttendance.excused,
-      teacherAttendanceCompletionRateToday: teacherAttendance.completionPct,
-      teacherAttendancePresentRateToday: teacherAttendance.presentPct,
-      teacherAttendanceNeedsAction: teacherAttendance.needsAction,
+      ...(teacherAttendanceEnabled && teacherAttendance
+        ? {
+            teacherAttendanceSchoolsCertified:
+              teacherAttendance.schoolsCertified,
+            teacherAttendanceSchoolsMissingSession:
+              teacherAttendance.schoolsMissingSession,
+            teacherAttendanceSchoolsUncertified:
+              teacherAttendance.schoolsUncertified,
+            teacherAttendanceMarkedToday: teacherAttendance.marked,
+            teacherAttendancePresentToday: teacherAttendance.present,
+            teacherAttendanceAbsentToday: teacherAttendance.absent,
+            teacherAttendanceLateToday: teacherAttendance.late,
+            teacherAttendanceExcusedToday: teacherAttendance.excused,
+            teacherAttendanceCompletionRateToday:
+              teacherAttendance.completionPct,
+            teacherAttendancePresentRateToday: teacherAttendance.presentPct,
+            teacherAttendanceNeedsAction: teacherAttendance.needsAction,
+          }
+        : {}),
       attendanceSessionsToday: metricTotals.attendanceSessionsToday,
       openAttendanceSessionsToday: metricTotals.openAttendanceSessionsToday,
       closedAttendanceSessionsToday: metricTotals.closedAttendanceSessionsToday,

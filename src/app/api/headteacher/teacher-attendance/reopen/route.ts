@@ -1,8 +1,11 @@
-//src/app/api/headteacher/teacher-attendance/reopen/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getHeadteacherApiContext } from "@/lib/headteacherAuth";
 import { writeAuditLog } from "@/lib/audit";
+import {
+  readTeacherAttendanceFeatureState,
+  teacherAttendanceDisabledPayload,
+} from "@/lib/platformFeatures";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,6 +43,11 @@ async function audit(req: NextRequest, args: { tenantId: string; userId: string;
 export async function POST(req: NextRequest) {
   const ctx = await getHeadteacherApiContext();
   if (!ctx) return jsonNoStore({ ok: false, error: "UNAUTHORIZED" }, 401);
+
+  const feature = await readTeacherAttendanceFeatureState();
+  if (!feature.enabled) {
+    return jsonNoStore(teacherAttendanceDisabledPayload(), 423);
+  }
 
   const ct = req.headers.get("content-type") || "";
   if (!ct.toLowerCase().includes("application/json")) {

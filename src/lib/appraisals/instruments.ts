@@ -143,7 +143,7 @@ export const APPRAISAL_INSTRUMENT_SPECIFICATIONS = {
     scaleMin: 1,
     scaleMax: 5,
     allowNotApplicable: true,
-    commentsPolicy: "OFFICIAL_FORM_CONTROLLED",
+    commentsPolicy: "PROHIBITED",
     identityVisibility: "AUTHORIZED_GOVERNANCE_ONLY",
     responseWindowDays: null,
     minimumResponses: null,
@@ -1028,8 +1028,8 @@ export const APPRAISAL_INSTRUMENT_DEFINITIONS = {
       documentTitle: "Work Appraisal Form (Director)",
     },
     instructions:
-      "Score each item from 1 to 5 or N/A. General comments are permitted. Section percentages exclude N/A items from their denominators. The overall result is the average of all seven valid section percentages.",
-    allowComments: true,
+      "Score each item from 1 to 5 or N/A. Do not provide free-text comments. Section percentages exclude N/A items from their denominators. The overall result is the average of all seven valid section percentages.",
+    allowComments: false,
     headerFields: [],
     sourceNotes: [
       "The printed title says 'Work Appraisal Form (Headteachers)' but the supplied official copy is corrected by hand to 'Director'. The digital title therefore uses 'Work Appraisal Form (Director)'.",

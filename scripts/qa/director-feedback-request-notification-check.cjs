@@ -86,8 +86,6 @@ function main() {
     "src/app/district/dashboard/page.tsx";
   const commandDashboardPath =
     "src/components/governance/GovernanceCommandDashboardClient.tsx";
-  const indexPath =
-    "src/lib/appraisals/index.ts";
 
   const service = read(servicePath);
   const api = read(apiPath);
@@ -95,7 +93,6 @@ function main() {
   const client = read(clientPath);
   const dashboardPage = read(dashboardPagePath);
   const commandDashboard = read(commandDashboardPath);
-  const index = read(indexPath);
 
   for (const [relativePath, source] of [
     [servicePath, service],
@@ -199,6 +196,11 @@ function main() {
     api,
     "DIRECTOR_FEEDBACK_REQUEST_CONFIRMATION_REQUIRED",
     "api:confirmation",
+  );
+  contains(
+    api,
+    'from "@/lib/appraisals/directorFeedbackNotifications";',
+    "api:direct-notification-import",
   );
 
   excludes(api, "phone", "api:no-phone-output");
@@ -311,12 +313,6 @@ function main() {
     "D3_3E_REQUEST_NOT_UNDER_MY_APPRAISAL",
   );
 
-  contains(
-    index,
-    'export * from "./directorFeedbackNotifications";',
-    "barrel:notification-export",
-  );
-
   console.log("");
   console.log("=== D3.3E DIRECTOR REQUEST + NOTIFICATION PROOF ===");
   console.log("");
@@ -328,6 +324,7 @@ function main() {
   console.log("Optional purpose field       : removed");
   console.log("Short confirmation           : verified");
   console.log("Existing cycle engine        : reused");
+  console.log("Notification service import  : direct module import verified");
   console.log("IN_APP notification          : immediately ready");
   console.log("SMS notification             : queued or skipped");
   console.log("EMAIL notification           : queued or skipped");

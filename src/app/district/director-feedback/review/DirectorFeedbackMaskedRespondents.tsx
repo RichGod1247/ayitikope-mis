@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useRef, useState } from "react";
 
 type MaskedSummary = {
   maskedRespondentKey: string;
@@ -54,7 +54,6 @@ type FormResult = {
   respondent: {
     maskedRespondentKey: string;
     maskedLabel: string;
-    responseProofFingerprint: string;
   };
   officialForm: {
     documentTitle: string;
@@ -85,13 +84,60 @@ type ApiResponse =
 
 function percentage(value: number | null | undefined) {
   if (value == null || !Number.isFinite(value)) return "—";
-  return `${value.toFixed(1)}%`;
+  return `${Math.round(Math.max(0, Math.min(100, value)))}%`;
 }
 
-function scoreLabel(item: MaskedFormItem) {
-  if (item.notApplicable) return "N/A";
-  if (item.score == null) return "Not answered";
-  return `${item.score} / ${item.itemMaxScore}`;
+function cx(...parts: Array<string | false | null | undefined>) {
+  return parts.filter(Boolean).join(" ");
+}
+
+function scoreTone(score: number | null | undefined, notApplicable: boolean) {
+  if (notApplicable) return "bg-slate-200 text-slate-900";
+  switch (score) {
+    case 1:
+      return "bg-rose-100 text-rose-950";
+    case 2:
+      return "bg-orange-100 text-orange-950";
+    case 3:
+      return "bg-amber-100 text-amber-950";
+    case 4:
+      return "bg-cyan-100 text-cyan-950";
+    case 5:
+      return "bg-emerald-100 text-emerald-950";
+    default:
+      return "bg-white text-slate-700";
+  }
+}
+
+function sectionSummary(section: MaskedFormSection) {
+  let rawScore = 0;
+  let applicableMaximum = section.items.reduce(
+    (sum, item) => sum + item.itemMaxScore,
+    0,
+  );
+  let notApplicableItems = 0;
+
+  for (const item of section.items) {
+    if (item.notApplicable) {
+      notApplicableItems += 1;
+      applicableMaximum -= item.itemMaxScore;
+      continue;
+    }
+    if (item.score != null) rawScore += item.score;
+  }
+
+  return { rawScore, applicableMaximum, notApplicableItems };
+}
+
+function totalRawScore(sections: MaskedFormSection[]) {
+  return sections.reduce(
+    (sum, section) => sum + sectionSummary(section).rawScore,
+    0,
+  );
+}
+
+function totalOfficialMaximum(sections: MaskedFormSection[]) {
+  return sections.reduce((sum, section) => sum + section.sectionMaxScore, 0);
 }
 
 function friendlyError(code: string) {
@@ -128,6 +174,7 @@ export default function DirectorFeedbackMaskedRespondents(props: {
   const [list, setList] = useState<ListResult | null>(null);
   const [form, setForm] = useState<FormResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const formRef = useRef<HTMLDivElement | null>(null);
 
   function endpoint(maskedRespondentKey?: string) {
     const query = new URLSearchParams({
@@ -211,6 +258,11 @@ export default function DirectorFeedbackMaskedRespondents(props: {
       }
 
       setForm(payload.result);
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      });
     } catch {
       setError("The protected masked form could not load. Check the connection.");
     } finally {
@@ -276,9 +328,7 @@ export default function DirectorFeedbackMaskedRespondents(props: {
               key={respondent.maskedRespondentKey}
               type="button"
               disabled={loadingFormKey !== null}
-              onClick={() =>
-                void loadForm(respondent.maskedRespondentKey)
-              }
+              onClick={() => void loadForm(respondent.maskedRespondentKey)}
               className="min-h-12 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-bold text-[#F7F4ED] hover:bg-white/10 disabled:opacity-55"
             >
               {loadingFormKey === respondent.maskedRespondentKey
@@ -290,8 +340,8 @@ export default function DirectorFeedbackMaskedRespondents(props: {
       ) : null}
 
       {form ? (
-        <div className="mt-5 rounded-2xl border border-[#E8C96A]/25 bg-[#0A1628] p-4 sm:p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div ref={formRef} className="mt-5 scroll-mt-24">
+          <div className="mb-3 flex flex-col gap-2 rounded-2xl border border-[#E8C96A]/25 bg-[#0A1628] p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="text-[11px] font-bold uppercase tracking-[0.13em] text-[#E8C96A]">
                 {form.respondent.maskedLabel}
@@ -299,8 +349,9 @@ export default function DirectorFeedbackMaskedRespondents(props: {
               <h4 className="mt-1 text-lg font-bold">
                 Complete finalized appraisal form
               </h4>
-              <p className="mt-1 text-xs text-[#C9CDD6]">
-                Response proof {form.respondent.responseProofFingerprint}
+              <p className="mt-1 text-xs leading-5 text-[#C9CDD6]">
+                This randomized label does not identify a Headteacher, school,
+                contact, exact submission time or submission position.
               </p>
             </div>
             <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-4 py-3 text-center">
@@ -313,64 +364,216 @@ export default function DirectorFeedbackMaskedRespondents(props: {
             </div>
           </div>
 
-          <div className="mt-4 rounded-xl border border-amber-300/20 bg-amber-400/10 p-3 text-xs leading-5 text-amber-100">
-            This form contains scores only. It excludes the respondent&apos;s
-            name, school, contact details, exact submission time and submission
-            position.
-          </div>
+          <section className="overflow-hidden rounded-[28px] border border-slate-300 bg-white text-slate-950 shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
+            <div className="overflow-x-auto">
+              <div className="min-w-[1120px]">
+                <div className="border-b-2 border-slate-950 px-6 py-5 text-center">
+                  <div className="text-sm font-black uppercase tracking-[0.08em]">
+                    {form.officialForm.directorateName ?? "Education Directorate"}
+                  </div>
+                  <div className="mt-2 text-xl font-black uppercase">
+                    {form.officialForm.documentTitle}
+                  </div>
+                </div>
 
-          <div className="mt-4 space-y-3">
-            {form.officialForm.sections.map((section) => (
-              <details
-                key={section.sectionKey}
-                className="group rounded-2xl border border-white/10 bg-[#06101F] open:border-[#E8C96A]/35"
-              >
-                <summary className="cursor-pointer list-none p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#8F98A8]">
-                        Section {section.sectionOrder}
-                      </div>
-                      <div className="mt-1 text-sm font-bold leading-6">
-                        {section.sectionTitle}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-lg font-bold text-[#E8C96A]">
-                        {percentage(section.percentage)}
-                      </div>
-                      <span className="text-lg text-[#C9CDD6] group-open:rotate-180">
-                        ⌄
-                      </span>
+                <table className="w-full border-collapse text-[12px] leading-5">
+                  <thead>
+                    <tr className="bg-slate-100">
+                      <th
+                        rowSpan={2}
+                        className="w-[64px] border border-slate-700 px-2 py-2 text-center font-black"
+                      >
+                        S/N
+                      </th>
+                      <th
+                        rowSpan={2}
+                        className="border border-slate-700 px-3 py-2 text-center font-black uppercase"
+                      >
+                        <div>Behavioural Competence</div>
+                        <div className="mt-1 text-[10px] font-semibold normal-case tracking-normal">
+                          [1—Very poor] [2—Poor] [3—Acceptable] [4—Good] [5—Very Good]
+                        </div>
+                      </th>
+                      <th
+                        colSpan={6}
+                        className="border border-slate-700 px-2 py-2 text-center font-black"
+                      >
+                        SCORE
+                      </th>
+                      <th
+                        rowSpan={2}
+                        className="w-[92px] border border-slate-700 px-2 py-2 text-center font-black"
+                      >
+                        FINAL SCORE
+                      </th>
+                    </tr>
+                    <tr className="bg-slate-100">
+                      {["N/A", "1", "2", "3", "4", "5"].map((label) => (
+                        <th
+                          key={label}
+                          className="w-[48px] border border-slate-700 px-1 py-2 text-center font-black"
+                        >
+                          {label}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {form.officialForm.sections.map((section) => {
+                      const summary = sectionSummary(section);
+
+                      return (
+                        <Fragment key={section.sectionKey}>
+                          <tr className="bg-[#304C6E] text-white">
+                            <td className="border border-white/25 px-2 py-2 text-center font-black">
+                              {section.sectionOrder}.0
+                            </td>
+                            <td className="border border-white/25 px-3 py-2 font-black uppercase">
+                              {section.sectionTitle}
+                            </td>
+                            <td colSpan={7} className="border border-white/25" />
+                          </tr>
+
+                          {section.items.map((item) => {
+                            const finalScore = item.notApplicable
+                              ? "N/A"
+                              : item.score == null
+                                ? "—"
+                                : String(item.score);
+
+                            return (
+                              <tr
+                                key={`${section.sectionKey}:${item.itemKey}`}
+                                className="bg-white"
+                              >
+                                <td className="border border-slate-500 px-2 py-2 text-center font-bold">
+                                  {item.itemKey}
+                                </td>
+                                <td className="border border-slate-500 px-3 py-2 align-top">
+                                  {item.itemLabel}
+                                </td>
+                                <td
+                                  className={cx(
+                                    "border border-slate-500 px-1 py-2 text-center font-black",
+                                    item.notApplicable
+                                      ? scoreTone(item.score, true)
+                                      : "bg-white text-slate-300",
+                                  )}
+                                >
+                                  {item.notApplicable ? "✓" : ""}
+                                </td>
+                                {[1, 2, 3, 4, 5].map((score) => {
+                                  const selected =
+                                    !item.notApplicable && item.score === score;
+                                  return (
+                                    <td
+                                      key={`${section.sectionKey}:${item.itemKey}:${score}`}
+                                      className={cx(
+                                        "border border-slate-500 px-1 py-2 text-center font-black",
+                                        selected
+                                          ? scoreTone(item.score, false)
+                                          : "bg-white text-slate-300",
+                                      )}
+                                    >
+                                      {selected ? "✓" : ""}
+                                    </td>
+                                  );
+                                })}
+                                <td
+                                  className={cx(
+                                    "border border-slate-500 px-2 py-2 text-center font-black",
+                                    scoreTone(item.score, item.notApplicable),
+                                  )}
+                                >
+                                  {finalScore}
+                                </td>
+                              </tr>
+                            );
+                          })}
+
+                          <tr className="bg-slate-100">
+                            <td
+                              colSpan={8}
+                              className="border border-slate-700 px-3 py-2 text-right font-black uppercase"
+                            >
+                              TOTAL SCORE (OUT OF {section.sectionMaxScore})
+                            </td>
+                            <td className="border border-slate-700 px-2 py-2 text-center font-black">
+                              {summary.rawScore}
+                            </td>
+                          </tr>
+
+                          <tr className="bg-slate-100">
+                            <td
+                              colSpan={8}
+                              className="border border-slate-700 px-3 py-2 text-right font-black uppercase"
+                            >
+                              PERCENTAGE SCORE = (TOTAL SCORE / {summary.notApplicableItems > 0
+                                ? `${summary.applicableMaximum} APPLICABLE MAXIMUM`
+                                : section.sectionMaxScore}) × 100
+                            </td>
+                            <td className="border border-slate-700 px-2 py-2 text-center font-black">
+                              {percentage(section.percentage)}
+                            </td>
+                          </tr>
+
+                          {summary.notApplicableItems > 0 ? (
+                            <tr className="bg-amber-50">
+                              <td
+                                colSpan={9}
+                                className="border border-slate-500 px-3 py-1.5 text-right text-[10px] font-semibold text-slate-700"
+                              >
+                                {summary.notApplicableItems} N/A item(s) excluded from the digital percentage denominator.
+                              </td>
+                            </tr>
+                          ) : null}
+                        </Fragment>
+                      );
+                    })}
+
+                    <tr className="bg-indigo-50">
+                      <td
+                        colSpan={8}
+                        className="border border-slate-700 px-3 py-2 text-right font-black uppercase"
+                      >
+                        OVERALL PERCENTAGE (1.0 + 2.0 + 3.0 + 4.0 + 5.0 + 6.0 + 7.0) ÷ 7
+                      </td>
+                      <td className="border border-slate-700 px-2 py-2 text-center font-black">
+                        {percentage(form.officialForm.overallPercentage)}
+                      </td>
+                    </tr>
+
+                    <tr className="bg-white">
+                      <td className="border border-slate-700 px-2 py-3" />
+                      <td colSpan={8} className="border border-slate-700 px-3 py-3">
+                        <span className="font-black">General Comment(s):</span>{" "}
+                        <span className="text-slate-600">
+                          Not enabled in this workflow.
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div className="grid grid-cols-2 border-t-2 border-slate-950 bg-cyan-50 text-sm">
+                  <div className="border-r border-slate-700 px-5 py-4">
+                    <div className="font-black uppercase">Total Score</div>
+                    <div className="mt-1 text-xl font-black">
+                      {totalRawScore(form.officialForm.sections)} /{" "}
+                      {totalOfficialMaximum(form.officialForm.sections)}
                     </div>
                   </div>
-                </summary>
-
-                <div className="space-y-2 border-t border-white/10 p-4">
-                  {section.items.map((item) => (
-                    <div
-                      key={item.itemKey}
-                      className="rounded-xl border border-white/8 bg-[#0A1628] p-3"
-                    >
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="min-w-0">
-                          <div className="text-xs font-bold text-[#E8C96A]">
-                            {item.itemKey}
-                          </div>
-                          <div className="mt-1 text-sm leading-6 text-[#F7F4ED]">
-                            {item.itemLabel}
-                          </div>
-                        </div>
-                        <div className="shrink-0 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-[#F7F4ED]">
-                          {scoreLabel(item)}
-                        </div>
-                      </div>
+                  <div className="px-5 py-4 text-right">
+                    <div className="font-black uppercase">Overall Percentage</div>
+                    <div className="mt-1 text-xl font-black">
+                      {percentage(form.officialForm.overallPercentage)}
                     </div>
-                  ))}
+                  </div>
                 </div>
-              </details>
-            ))}
-          </div>
+              </div>
+            </div>
+          </section>
         </div>
       ) : null}
     </div>

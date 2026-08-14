@@ -175,7 +175,6 @@ export type DirectorFeedbackMaskedRespondentForm = {
   respondent: {
     maskedRespondentKey: string;
     maskedLabel: string;
-    responseProofFingerprint: string;
   };
   officialForm: {
     documentTitle: string;
@@ -260,17 +259,8 @@ function sha256(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function alphaLabel(index: number) {
-  let value = index + 1;
-  let output = "";
-
-  while (value > 0) {
-    value -= 1;
-    output = String.fromCharCode(65 + (value % 26)) + output;
-    value = Math.floor(value / 26);
-  }
-
-  return `Respondent ${output}`;
+function numericLabel(index: number) {
+  return `Respondent ${index + 1}`;
 }
 
 function privacyContract(): DirectorFeedbackMaskedPrivacy {
@@ -445,7 +435,7 @@ function maskedRows(
     .sort((left, right) => left.seed.localeCompare(right.seed))
     .map((row, index) => ({
       ...row,
-      maskedLabel: alphaLabel(index),
+      maskedLabel: numericLabel(index),
     }));
 }
 
@@ -568,9 +558,6 @@ export function buildDirectorFeedbackMaskedRespondentWorkspace(input: {
     respondent: {
       maskedRespondentKey: selected.maskedRespondentKey,
       maskedLabel: selected.maskedLabel,
-      responseProofFingerprint: clean(
-        selected.participant.response.responseHash,
-      ).slice(0, 12),
     },
     officialForm: buildOfficialForm(cycle, selected.participant.response),
     evidence,

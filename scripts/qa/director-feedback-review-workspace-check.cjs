@@ -164,14 +164,12 @@ function main() {
     "src/app/district/director-feedback/review/DirectorFeedbackReviewClient.tsx";
   const requestClientPath =
     "src/app/district/director-feedback/DirectorFeedbackRequestClient.tsx";
-  const indexPath = "src/lib/appraisals/index.ts";
 
   const service = read(servicePath);
   const api = read(apiPath);
   const page = read(pagePath);
   const client = read(clientPath);
   const requestClient = read(requestClientPath);
-  const index = read(indexPath);
 
   contains(service, "AppraisalCycleStatus.CLOSED", "service:closed-state");
   contains(service, "AppraisalCycleStatus.UNDER_REVIEW", "service:review-state");
@@ -215,7 +213,17 @@ function main() {
   contains(client, "Begin Private Review", "ui:explicit-entry");
   contains(client, "minimum response threshold", "ui:threshold-explanation");
   contains(client, "Threshold-safe circuits", "ui:circuit-disclosure");
-  contains(client, "not a substitute for the Regional Director", "ui:interim-policy");
+  contains(
+    client,
+    "I understand that these feedback results are confidential and",
+    "ui:protected-confidentiality-confirmation",
+  );
+  contains(
+    client,
+    "completing this review seals the confidential feedback record.",
+    "ui:sealed-review-confirmation",
+  );
+  excludes(client, "Regional Director", "ui:no-regional-director-comparison-copy");
   contains(client, "navigator.onLine", "ui:offline-awareness");
   excludes(client, "localStorage", "ui:no-local-storage");
   excludes(client, "sessionStorage", "ui:no-session-storage");
@@ -228,7 +236,11 @@ function main() {
   );
   contains(requestClient, "Open Review Readiness", "request-ui:closed-label");
   contains(requestClient, "Continue Private Review", "request-ui:continue-label");
-  contains(index, 'export * from "./directorFeedbackReview";', "barrel:export");
+  contains(
+    api,
+    'from "@/lib/appraisals/directorFeedbackReview";',
+    "api:direct-review-import",
+  );
 
   const modulePath = path.join(repoRoot, servicePath);
   const { buildDirectorFeedbackReviewWorkspace } = require(modulePath);
@@ -304,7 +316,8 @@ function main() {
   console.log("=== D3.3H DIRECTOR REVIEW WORKSPACE PROOF ===");
   console.log("");
   console.log("Review entry transition       : CLOSED -> UNDER_REVIEW");
-  console.log("Explicit Director confirmation: required");
+  console.log("Explicit Director confirmation: confidential + protected wording");
+  console.log("Regional appraisal comparison : removed from review copy");
   console.log("Audit before score visibility : verified");
   console.log("Municipal threshold           : 5 finalized responses");
   console.log("Below-threshold score exposure: blocked");

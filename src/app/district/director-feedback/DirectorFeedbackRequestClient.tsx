@@ -27,8 +27,12 @@ type RequestStatus = {
     minimumResponses: number;
     participantCount: number;
     finalizedResponses: number;
+    expiredResponses: number;
     circuitCount: number;
     extensionCount: number;
+    allResponsesFinalized: boolean;
+    canCloseEarly: boolean;
+    canExtendFeedbackWindow: boolean;
     canRequestNewCycle: boolean;
   };
   notifications: {
@@ -84,6 +88,33 @@ function friendlyError(code: string) {
       return "Your active Director jurisdiction assignment could not be confirmed.";
     case "DIRECTOR_FEEDBACK_PUBLISHED_INSTRUMENT_NOT_FOUND":
       return "The official Director feedback form is not available.";
+    case "DIRECTOR_FEEDBACK_EARLY_CLOSE_CONFIRMATION_REQUIRED":
+      return "Confirm that you want to close the feedback period now.";
+    case "DIRECTOR_FEEDBACK_EARLY_CLOSE_ALL_RESPONSES_REQUIRED":
+      return "The feedback period can close early only after every eligible respondent has submitted.";
+    case "DIRECTOR_FEEDBACK_EARLY_CLOSE_DEADLINE_REACHED":
+      return "The deadline has now been reached. Refresh the page for the latest cycle status.";
+    case "DIRECTOR_FEEDBACK_EARLY_CLOSE_OPEN_CYCLE_REQUIRED":
+    case "DIRECTOR_FEEDBACK_EARLY_CLOSE_CYCLE_ALREADY_CLOSED":
+      return "This feedback exercise is no longer open for early closure. Refresh the latest status.";
+    case "DIRECTOR_FEEDBACK_EARLY_CLOSE_CURRENT_ASSIGNMENT_REQUIRED":
+    case "DIRECTOR_FEEDBACK_EARLY_CLOSE_SCOPE_FORBIDDEN":
+      return "Your current Director jurisdiction could not be confirmed for this action.";
+    case "DIRECTOR_FEEDBACK_EXTENSION_CONFIRMATION_REQUIRED":
+      return "Confirm the 7-day extension before continuing.";
+    case "DIRECTOR_FEEDBACK_EXTENSION_CYCLE_NOT_FOUND":
+      return "This feedback exercise could not be found.";
+    case "DIRECTOR_FEEDBACK_EXTENSION_CLOSED_CYCLE_REQUIRED":
+      return "This feedback exercise is no longer eligible for extension.";
+    case "DIRECTOR_FEEDBACK_EXTENSION_EXPIRED_PARTICIPANTS_REQUIRED":
+      return "There are no unfinished respondents to extend.";
+    case "DIRECTOR_FEEDBACK_EXTENSION_LIMIT_REACHED":
+      return "The one-time 7-day extension has already been used.";
+    case "DIRECTOR_FEEDBACK_EXTENSION_REVIEW_ALREADY_STARTED":
+      return "Private review has already started, so the response window cannot be extended.";
+    case "DIRECTOR_FEEDBACK_EXTENSION_CURRENT_ASSIGNMENT_REQUIRED":
+    case "DIRECTOR_FEEDBACK_EXTENSION_SCOPE_FORBIDDEN":
+      return "Your current Director assignment cannot extend this feedback exercise.";
     case "UNAUTHORIZED":
     case "GOVERNANCE_FORBIDDEN":
       return "Your Director session is not authorized for this action.";
@@ -129,7 +160,11 @@ export default function DirectorFeedbackRequestClient() {
   const [status, setStatus] = useState<RequestStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [extending, setExtending] = useState(false);
+  const [closingEarly, setClosingEarly] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [extensionConfirmed, setExtensionConfirmed] = useState(false);
+  const [closeEarlyConfirmed, setCloseEarlyConfirmed] = useState(false);
   const [online, setOnline] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -211,6 +246,154 @@ export default function DirectorFeedbackRequestClient() {
       setError("The request status could not load. Check the connection.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function closeFeedbackEarly() {
+    if (!cycle?.canCloseEarly || !closeEarlyConfirmed) {
+      setError("Confirm that you want to close the feedback period now.");
+      return;
+    }
+
+    if (!online) {
+      setError("You are offline. Reconnect before closing the feedback period.");
+      return;
+    }
+
+    setClosingEarly(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const response = await fetch(
+        `/api/district/director-feedback/${encodeURIComponent(
+          cycle.id,
+        )}/close-early`,
+        {
+          method: "POST",
+          cache: "no-store",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ confirm: true }),
+        },
+      );
+
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            ok: true;
+            reqId: string;
+            closure: { outcome: "CLOSED" | "ALREADY_CLOSED" };
+            aggregate: {
+              outcome: "CREATED" | "EXISTING_MATCH" | "NOT_AGGREGATABLE";
+            };
+          }
+        | {
+            ok: false;
+            reqId?: string;
+            error: string;
+          }
+        | null;
+
+      if (!response.ok || !payload?.ok) {
+        setError(
+          friendlyError(
+            payload && !payload.ok
+              ? payload.error
+              : "FAILED_TO_CLOSE_DIRECTOR_FEEDBACK_EARLY",
+          ),
+        );
+        return;
+      }
+
+      setCloseEarlyConfirmed(false);
+      setNotice(
+        payload.closure.outcome === "CLOSED"
+          ? "Feedback closed safely. The protected review evidence is ready to continue."
+          : "This feedback period was already closed safely. The protected review evidence was verified.",
+      );
+      await loadStatus();
+    } catch {
+      setError(
+        "The close action could not be confirmed. Refresh safely before trying again; repeated confirmation cannot close the cycle twice.",
+      );
+    } finally {
+      setClosingEarly(false);
+    }
+  }
+
+  async function extendFeedback() {
+    if (!cycle?.canExtendFeedbackWindow || !extensionConfirmed) {
+      setError("Confirm the 7-day extension before continuing.");
+      return;
+    }
+
+    if (!online) {
+      setError("You are offline. Reconnect before extending the feedback window.");
+      return;
+    }
+
+    setExtending(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const response = await fetch(
+        `/api/district/director-feedback/${encodeURIComponent(
+          cycle.id,
+        )}/extend-feedback`,
+        {
+          method: "POST",
+          cache: "no-store",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ confirm: true }),
+        },
+      );
+
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            ok: true;
+            reqId: string;
+            result: {
+              outcome: "EXTENDED" | "EXISTING_EXTENDED";
+              newDeadlineAt: string;
+            };
+          }
+        | {
+            ok: false;
+            reqId?: string;
+            error: string;
+          }
+        | null;
+
+      if (!response.ok || !payload?.ok) {
+        setError(
+          friendlyError(
+            payload && !payload.ok
+              ? payload.error
+              : "FAILED_TO_EXTEND_DIRECTOR_FEEDBACK",
+          ),
+        );
+        return;
+      }
+
+      setExtensionConfirmed(false);
+      setNotice(
+        payload.result.outcome === "EXTENDED"
+          ? `Feedback reopened until ${formatDate(payload.result.newDeadlineAt)}. Unfinished respondents can continue their saved forms.`
+          : `The 7-day extension was already applied safely. Feedback remains open until ${formatDate(payload.result.newDeadlineAt)}.`,
+      );
+      await loadStatus();
+    } catch {
+      setError(
+        "The extension could not be confirmed. Refresh safely before trying again; repeated confirmation cannot create a second extension.",
+      );
+    } finally {
+      setExtending(false);
     }
   }
 
@@ -358,7 +541,11 @@ export default function DirectorFeedbackRequestClient() {
             <Metric
               label="Window"
               value={`${cycle.responseWindowDays} days`}
-              helper="Director cannot extend it"
+              helper={
+                cycle.extensionCount > 0
+                  ? "One recovery extension used"
+                  : "One 7-day recovery extension is available if unfinished responses remain"
+              }
             />
           </div>
 
@@ -379,6 +566,85 @@ export default function DirectorFeedbackRequestClient() {
               helper={`${notificationTotals.emailUnavailable} unavailable`}
             />
           </div>
+
+          {cycle.canCloseEarly ? (
+            <div className="mt-5 rounded-2xl border border-emerald-300/25 bg-emerald-400/10 p-4">
+              <div className="text-sm font-bold text-emerald-50">
+                All responses received
+              </div>
+              <p className="mt-2 text-sm leading-6 text-emerald-100/90">
+                Every eligible respondent has submitted before the deadline.
+                You may close the feedback period now and prepare the private
+                review, or leave it open and wait for the scheduled deadline.
+              </p>
+
+              <label className="mt-4 flex items-start gap-3 rounded-2xl border border-emerald-200/15 bg-[#0A1628] p-4">
+                <input
+                  type="checkbox"
+                  checked={closeEarlyConfirmed}
+                  onChange={(event) =>
+                    setCloseEarlyConfirmed(event.target.checked)
+                  }
+                  className="mt-1 h-5 w-5"
+                />
+                <span className="text-sm leading-6 text-[#F7F4ED]">
+                  Close this feedback period now and prepare the protected
+                  review evidence.
+                </span>
+              </label>
+
+              <button
+                type="button"
+                disabled={!closeEarlyConfirmed || closingEarly || !online}
+                onClick={() => void closeFeedbackEarly()}
+                className="mt-4 min-h-12 w-full rounded-2xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-5 py-3 text-sm font-bold text-[#071A3D] disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto"
+              >
+                {closingEarly ? "Closing safely…" : "Close now and prepare review"}
+              </button>
+
+              <p className="mt-3 text-xs leading-5 text-emerald-100/75">
+                Prefer to wait? Do nothing. The feedback period will remain open
+                until {formatDate(cycle.deadlineAt)}.
+              </p>
+            </div>
+          ) : null}
+
+          {cycle.canExtendFeedbackWindow ? (
+            <div className="mt-5 rounded-2xl border border-amber-300/25 bg-amber-400/10 p-4">
+              <div className="text-sm font-bold text-amber-50">
+                Feedback deadline reached
+              </div>
+              <p className="mt-2 text-sm leading-6 text-amber-100/90">
+                {cycle.expiredResponses} respondent(s) did not finish before the
+                deadline. You may give unfinished respondents 7 more days once.
+                Their saved work and completed responses will remain unchanged.
+              </p>
+
+              <label className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-200/15 bg-[#0A1628] p-4">
+                <input
+                  type="checkbox"
+                  checked={extensionConfirmed}
+                  onChange={(event) =>
+                    setExtensionConfirmed(event.target.checked)
+                  }
+                  className="mt-1 h-5 w-5"
+                />
+                <span className="text-sm leading-6 text-[#F7F4ED]">
+                  Give unfinished respondents 7 more days on this same appraisal
+                  cycle.
+                </span>
+              </label>
+
+              <button
+                type="button"
+                disabled={!extensionConfirmed || extending || !online}
+                onClick={() => void extendFeedback()}
+                className="mt-4 min-h-12 w-full rounded-2xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-5 py-3 text-sm font-bold text-[#071A3D] disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto"
+              >
+                {extending ? "Extending safely…" : "Extend feedback 7 days"}
+              </button>
+            </div>
+          ) : null}
 
           <div className="mt-5 rounded-2xl border border-cyan-300/20 bg-cyan-400/8 p-4 text-sm leading-6 text-cyan-50">
             You can see only safe municipal totals. Names, schools, contact

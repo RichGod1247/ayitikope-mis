@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import DirectorFeedbackPetalChart from "./DirectorFeedbackPetalChart";
 import DirectorFeedbackMaskedRespondents from "./DirectorFeedbackMaskedRespondents";
 
@@ -169,6 +169,42 @@ type ApiResponse =
       error: string;
     };
 
+type AppreciationChannelSummary = {
+  total: number;
+  pending: number;
+  processing: number;
+  sent: number;
+  skipped: number;
+  failed: number;
+  dead: number;
+  cancelled: number;
+};
+
+type AppreciationStatus = {
+  cycleId: string;
+  participantCount: number;
+  dispatched: boolean;
+  channels: {
+    inApp: AppreciationChannelSummary;
+    sms: AppreciationChannelSummary;
+    email: AppreciationChannelSummary;
+  };
+};
+
+type AppreciationApiResponse =
+  | {
+      ok: true;
+      reqId: string;
+      outcome?: "DISPATCHED" | "ALREADY_DISPATCHED";
+      rowsInserted?: number;
+      status: AppreciationStatus;
+    }
+  | {
+      ok: false;
+      reqId?: string;
+      error: string;
+    };
+
 function panel(extra = "") {
   return `rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.075),rgba(255,255,255,0.025))] ${extra}`;
 }
@@ -188,7 +224,7 @@ function formatDate(value: string | null | undefined) {
 
 function percentage(value: number | null | undefined) {
   if (value == null || !Number.isFinite(value)) return "—";
-  return `${value.toFixed(1)}%`;
+  return `${Math.round(Math.max(0, Math.min(100, value)))}%`;
 }
 
 function scoreOutOfFive(value: number | null | undefined) {
@@ -196,9 +232,18 @@ function scoreOutOfFive(value: number | null | undefined) {
   return `${value.toFixed(2)} / 5`;
 }
 
-function widthPercentage(value: number | null | undefined) {
-  if (value == null || !Number.isFinite(value)) return 0;
-  return Math.max(0, Math.min(100, value));
+function channelSummaryText(summary: AppreciationChannelSummary) {
+  const queued = summary.pending + summary.processing;
+  const failed = summary.failed + summary.dead;
+  const parts: string[] = [];
+
+  if (summary.sent > 0) parts.push(`${summary.sent} sent`);
+  if (queued > 0) parts.push(`${queued} queued`);
+  if (summary.skipped > 0) parts.push(`${summary.skipped} unavailable`);
+  if (failed > 0) parts.push(`${failed} needs attention`);
+  if (summary.cancelled > 0) parts.push(`${summary.cancelled} cancelled`);
+
+  return parts.length ? parts.join(" · ") : "Not started";
 }
 
 function friendlyError(code: string) {
@@ -221,6 +266,16 @@ function friendlyError(code: string) {
       return "Begin the private review before completing it.";
     case "DIRECTOR_FEEDBACK_RELEASE_READINESS_BLOCKED":
       return "The review cannot be completed because its protected release checks did not pass.";
+    case "DIRECTOR_FEEDBACK_APPRECIATION_CONFIRMATION_REQUIRED":
+      return "Confirm the appreciation dispatch before sending.";
+    case "DIRECTOR_FEEDBACK_APPRECIATION_REVIEW_NOT_COMPLETED":
+      return "Complete and seal the private review before thanking participants.";
+    case "DIRECTOR_FEEDBACK_APPRECIATION_SCOPE_FORBIDDEN":
+      return "This completed feedback exercise does not belong to your Director account.";
+    case "DIRECTOR_FEEDBACK_APPRECIATION_NO_FINALIZED_PARTICIPANTS":
+      return "No finalized participant is available for an appreciation notice.";
+    case "DIRECTOR_FEEDBACK_APPRECIATION_OUTBOX_INCOMPLETE":
+      return "The appreciation notices were not prepared completely. Nothing should be retried manually; refresh and try again safely.";
     case "UNAUTHORIZED":
     case "GOVERNANCE_FORBIDDEN":
       return "Your Director session is not authorized for this review.";
@@ -261,6 +316,12 @@ export default function DirectorFeedbackReviewClient() {
   const [online, setOnline] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [appreciation, setAppreciation] =
+    useState<AppreciationStatus | null>(null);
+  const [appreciationLoading, setAppreciationLoading] = useState(false);
+  const [appreciationSending, setAppreciationSending] = useState(false);
+  const [selectedSectionKey, setSelectedSectionKey] = useState<string | null>(null);
+  const selectedBreakdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const syncOnline = () => setOnline(navigator.onLine);
@@ -276,6 +337,20 @@ export default function DirectorFeedbackReviewClient() {
   useEffect(() => {
     void loadWorkspace();
   }, []);
+
+  useEffect(() => {
+    const releasedCycleId =
+      workspace?.cycle?.status === "RELEASED"
+        ? workspace.cycle.id
+        : null;
+
+    if (!releasedCycleId) {
+      setAppreciation(null);
+      return;
+    }
+
+    void loadAppreciation(releasedCycleId);
+  }, [workspace?.cycle?.id, workspace?.cycle?.status]);
 
   async function loadWorkspace() {
     setLoading(true);
@@ -310,6 +385,106 @@ export default function DirectorFeedbackReviewClient() {
       setError("The review workspace could not load. Check the connection.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadAppreciation(cycleId: string) {
+    setAppreciationLoading(true);
+
+    try {
+      const response = await fetch(
+        `/api/district/director-feedback/review/appreciation?cycleId=${encodeURIComponent(
+          cycleId,
+        )}`,
+        {
+          method: "GET",
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        },
+      );
+      const payload = (await response.json().catch(() => null)) as
+        | AppreciationApiResponse
+        | null;
+
+      if (!response.ok || !payload?.ok) {
+        setError(
+          friendlyError(
+            payload && !payload.ok
+              ? payload.error
+              : "FAILED_TO_LOAD_DIRECTOR_FEEDBACK_APPRECIATION",
+          ),
+        );
+        return;
+      }
+
+      setAppreciation(payload.status);
+    } catch {
+      setError(
+        "The appreciation status could not load. Check the connection and refresh safely.",
+      );
+    } finally {
+      setAppreciationLoading(false);
+    }
+  }
+
+  async function sendAppreciation() {
+    const cycleId = workspace?.cycle?.id;
+    if (!cycleId || workspace?.cycle?.status !== "RELEASED") {
+      setError("Complete and seal the private review before thanking participants.");
+      return;
+    }
+    if (!online) {
+      setError("You are offline. Reconnect before sending appreciation.");
+      return;
+    }
+
+    setAppreciationSending(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const response = await fetch(
+        "/api/district/director-feedback/review/appreciation",
+        {
+          method: "POST",
+          cache: "no-store",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            confirm: true,
+            cycleId,
+          }),
+        },
+      );
+      const payload = (await response.json().catch(() => null)) as
+        | AppreciationApiResponse
+        | null;
+
+      if (!response.ok || !payload?.ok) {
+        setError(
+          friendlyError(
+            payload && !payload.ok
+              ? payload.error
+              : "FAILED_TO_SEND_DIRECTOR_FEEDBACK_APPRECIATION",
+          ),
+        );
+        return;
+      }
+
+      setAppreciation(payload.status);
+      setNotice(
+        payload.outcome === "DISPATCHED"
+          ? "Thank-you notices were prepared safely for every participating Headteacher."
+          : "The thank-you notices had already been prepared; no duplicate was created.",
+      );
+    } catch {
+      setError(
+        "The server response could not be confirmed. Refresh safely; appreciation dispatch is idempotent.",
+      );
+    } finally {
+      setAppreciationSending(false);
     }
   }
 
@@ -439,6 +614,23 @@ export default function DirectorFeedbackReviewClient() {
   const aggregate = workspace?.aggregate ?? null;
   const analysis = aggregate?.analysis ?? null;
   const readiness = workspace?.readiness ?? null;
+  const selectedAnalysisSection =
+    analysis?.sections.find(
+      (section) => section.sectionKey === selectedSectionKey,
+    ) ?? null;
+
+  function selectAnalysisSection(sectionKey: string) {
+    setSelectedSectionKey(sectionKey);
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        selectedBreakdownRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+    });
+  }
 
   return (
     <div className="space-y-5">
@@ -587,9 +779,8 @@ export default function DirectorFeedbackReviewClient() {
                   className="mt-1 h-5 w-5"
                 />
                 <span className="text-sm leading-6">
-                  I understand that the results are confidential, aggregated
-                  and not a substitute for the Regional Director&apos;s official
-                  appraisal.
+                  I understand that these feedback results are confidential and
+                  protected.
                 </span>
               </label>
 
@@ -612,9 +803,10 @@ export default function DirectorFeedbackReviewClient() {
               <p className="mt-2 text-sm leading-6 text-amber-100/90">
                 {aggregate.finalizedResponses} finalized response(s) were
                 received, but {aggregate.minimumResponses} are required. Scores,
-                sections and circuit details remain hidden. The Director cannot
-                extend or reopen this cycle; only Superadmin may do so with a
-                written reason and audit trail.
+                sections and circuit details remain hidden. Return to Appraisal
+                Request to see whether the one-time 7-day recovery extension is
+                still available for unfinished respondents. Broader controlled
+                extend/reopen authority remains restricted to Superadmin.
               </p>
             </section>
           ) : null}
@@ -701,8 +893,141 @@ export default function DirectorFeedbackReviewClient() {
                       <DirectorFeedbackPetalChart
                         overallPercentage={analysis.overall.percentage}
                         sections={analysis.sections}
+                        selectedSectionKey={selectedSectionKey}
+                        onSelectSection={selectAnalysisSection}
                       />
                     </div>
+
+                    {selectedAnalysisSection ? (
+                      <div
+                        ref={selectedBreakdownRef}
+                        className="mt-5 scroll-mt-24 rounded-[24px] border border-[#57D6C4]/30 bg-[#071426] p-4 sm:p-5"
+                      >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#57D6C4]">
+                              Section {selectedAnalysisSection.sectionOrder} question breakdown
+                            </div>
+                            <h3 className="mt-2 text-lg font-bold leading-7 text-[#F7F4ED]">
+                              {selectedAnalysisSection.sectionTitle}
+                            </h3>
+                            <p className="mt-2 max-w-3xl text-sm leading-6 text-[#C9CDD6]">
+                              These are aggregate Headteacher ratings only. No row
+                              identifies which Headteacher or school gave a score.
+                            </p>
+                          </div>
+                          <div className="rounded-2xl border border-white/10 bg-[#0A1628] px-4 py-3 text-left sm:text-right">
+                            <div className="text-[11px] uppercase tracking-[0.12em] text-[#8F98A8]">
+                              Section result
+                            </div>
+                            <div className="mt-1 text-2xl font-black text-[#E8C96A]">
+                              {percentage(selectedAnalysisSection.averagePercentage)}
+                            </div>
+                            <div className="mt-1 text-xs text-[#C9CDD6]">
+                              {selectedAnalysisSection.bandLabel}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 space-y-3 md:hidden">
+                          {selectedAnalysisSection.items.map((item) => (
+                            <article
+                              key={item.itemKey}
+                              className="rounded-2xl border border-white/10 bg-[#0A1628] p-4"
+                            >
+                              <div className="text-xs font-black text-[#E8C96A]">
+                                {item.itemKey}
+                              </div>
+                              <p className="mt-1 text-base font-semibold leading-7 text-[#F7F4ED]">
+                                {item.itemLabel}
+                              </p>
+                              <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                                <div className="rounded-xl bg-white/5 p-3">
+                                  <div className="text-[11px] uppercase tracking-[0.1em] text-[#8F98A8]">
+                                    Average score
+                                  </div>
+                                  <div className="mt-1 font-bold">
+                                    {scoreOutOfFive(item.averageScore)}
+                                  </div>
+                                </div>
+                                <div className="rounded-xl bg-white/5 p-3">
+                                  <div className="text-[11px] uppercase tracking-[0.1em] text-[#8F98A8]">
+                                    Result
+                                  </div>
+                                  <div className="mt-1 font-bold text-[#57D6C4]">
+                                    {percentage(item.averagePercentage)}
+                                  </div>
+                                </div>
+                                <div className="rounded-xl bg-white/5 p-3">
+                                  <div className="text-[11px] uppercase tracking-[0.1em] text-[#8F98A8]">
+                                    Valid heads
+                                  </div>
+                                  <div className="mt-1 font-bold">
+                                    {item.validResponses}
+                                  </div>
+                                </div>
+                                <div className="rounded-xl bg-white/5 p-3">
+                                  <div className="text-[11px] uppercase tracking-[0.1em] text-[#8F98A8]">
+                                    N/A
+                                  </div>
+                                  <div className="mt-1 font-bold">
+                                    {item.notApplicableResponses}
+                                  </div>
+                                </div>
+                              </div>
+                            </article>
+                          ))}
+                        </div>
+
+                        <div className="mt-4 hidden overflow-x-auto rounded-2xl border border-white/10 md:block">
+                          <table className="w-full min-w-[820px] border-collapse text-left">
+                            <thead className="bg-white/5 text-[11px] uppercase tracking-[0.1em] text-[#AEB6C4]">
+                              <tr>
+                                <th className="px-4 py-3 font-bold">Question</th>
+                                <th className="px-4 py-3 text-center font-bold">Average score</th>
+                                <th className="px-4 py-3 text-center font-bold">Result</th>
+                                <th className="px-4 py-3 text-center font-bold">Valid heads</th>
+                                <th className="px-4 py-3 text-center font-bold">N/A</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {selectedAnalysisSection.items.map((item) => (
+                                <tr
+                                  key={item.itemKey}
+                                  className="border-t border-white/8 align-top"
+                                >
+                                  <td className="px-4 py-4">
+                                    <div className="text-xs font-black text-[#E8C96A]">
+                                      {item.itemKey}
+                                    </div>
+                                    <div className="mt-1 max-w-3xl text-sm font-semibold leading-6 text-[#F7F4ED]">
+                                      {item.itemLabel}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-4 text-center text-sm font-bold">
+                                    {scoreOutOfFive(item.averageScore)}
+                                  </td>
+                                  <td className="px-4 py-4 text-center text-sm font-black text-[#57D6C4]">
+                                    {percentage(item.averagePercentage)}
+                                  </td>
+                                  <td className="px-4 py-4 text-center text-sm font-bold">
+                                    {item.validResponses}
+                                  </td>
+                                  <td className="px-4 py-4 text-center text-sm font-bold">
+                                    {item.notApplicableResponses}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-5 rounded-2xl border border-[#57D6C4]/20 bg-[#57D6C4]/8 p-4 text-sm leading-6 text-cyan-50">
+                        Select any petal or numbered section card to open its
+                        questionnaire-level aggregate breakdown.
+                      </div>
+                    )}
 
                     <div className="mt-5 rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
                       The labels below are developmental guides, not official
@@ -734,102 +1059,6 @@ export default function DirectorFeedbackReviewClient() {
                     </div>
                   </section>
 
-                  <section className={panel("p-5")}>
-                    <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#57D6C4]">
-                      Official 35-item form
-                    </div>
-                    <h2 className="mt-2 text-xl font-bold">
-                      Question-by-question analysis
-                    </h2>
-                    <p className="mt-2 max-w-3xl text-sm leading-6 text-[#C9CDD6]">
-                      Average scores use only valid 1–5 ratings. N/A responses
-                      are shown separately and are excluded from the score
-                      denominator. Masked individual forms are separate from this
-                      aggregate analysis.
-                    </p>
-
-                    <div className="mt-5 space-y-3">
-                      {analysis.sections.map((section) => (
-                        <details
-                          key={section.sectionKey}
-                          className="group rounded-2xl border border-white/10 bg-[#0A1628] open:border-[#E8C96A]/35"
-                        >
-                          <summary className="cursor-pointer list-none p-4 sm:p-5">
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                              <div>
-                                <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#8F98A8]">
-                                  Section {section.sectionOrder} • {section.items.length} items
-                                </div>
-                                <h3 className="mt-1 font-bold leading-6">
-                                  {section.sectionTitle}
-                                </h3>
-                                <p className="mt-2 text-xs leading-5 text-[#C9CDD6]">
-                                  {section.interpretation}
-                                </p>
-                              </div>
-                              <div className="flex shrink-0 items-center gap-3">
-                                <div className="text-right">
-                                  <div className="text-2xl font-bold text-[#E8C96A]">
-                                    {percentage(section.averagePercentage)}
-                                  </div>
-                                  <div className="text-xs text-[#C9CDD6]">
-                                    {section.bandLabel}
-                                  </div>
-                                </div>
-                                <span className="text-xl text-[#C9CDD6] group-open:rotate-180">⌄</span>
-                              </div>
-                            </div>
-                          </summary>
-
-                          <div className="border-t border-white/10 p-4 sm:p-5">
-                            <div className="space-y-3">
-                              {section.items.map((item) => (
-                                <article
-                                  key={item.itemKey}
-                                  className="rounded-2xl border border-white/8 bg-[#06101F] p-4"
-                                >
-                                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                    <div className="min-w-0">
-                                      <div className="text-xs font-bold text-[#E8C96A]">
-                                        {item.itemKey}
-                                      </div>
-                                      <p className="mt-1 text-sm leading-6 text-[#F7F4ED]">
-                                        {item.itemLabel}
-                                      </p>
-                                    </div>
-                                    <div className="shrink-0 text-left sm:text-right">
-                                      <div className="text-lg font-bold">
-                                        {scoreOutOfFive(item.averageScore)}
-                                      </div>
-                                      <div className="text-xs text-[#C9CDD6]">
-                                        {percentage(item.averagePercentage)} • {item.bandLabel}
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/8">
-                                    <div
-                                      className="h-full rounded-full bg-[linear-gradient(90deg,#57D6C4,#E8C96A)]"
-                                      style={{
-                                        width: `${widthPercentage(
-                                          item.averagePercentage,
-                                        )}%`,
-                                      }}
-                                    />
-                                  </div>
-
-                                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#C9CDD6]">
-                                    <span>{item.validResponses} valid response(s)</span>
-                                    <span>{item.notApplicableResponses} N/A</span>
-                                  </div>
-                                </article>
-                              ))}
-                            </div>
-                          </div>
-                        </details>
-                      ))}
-                    </div>
-                  </section>
                 </>
               ) : null}
 
@@ -861,23 +1090,6 @@ export default function DirectorFeedbackReviewClient() {
                           </div>
                         </div>
 
-                        {circuit.sections.length ? (
-                          <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                            {circuit.sections.map((section) => (
-                              <div
-                                key={section.sectionKey}
-                                className="rounded-xl border border-white/8 bg-[#06101F] p-3"
-                              >
-                                <div className="text-xs leading-5 text-[#C9CDD6]">
-                                  {section.sectionOrder ?? "—"}. {section.sectionTitle}
-                                </div>
-                                <div className="mt-1 font-bold text-[#E8C96A]">
-                                  {percentage(section.averagePercentage)}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : null}
 
                         {workspace?.privacy.individualFormsAvailable ? (
                           <DirectorFeedbackMaskedRespondents
@@ -912,9 +1124,8 @@ export default function DirectorFeedbackReviewClient() {
               <h2 className="text-lg font-bold">Complete private review</h2>
               <p className="mt-3 text-sm leading-6 text-[#D9DEE8]">
                 Completing the review seals this protected aggregate as the
-                final developmental feedback record. It does not replace the
-                Regional Director&apos;s official appraisal and it does not reveal
-                any respondent or school identity.
+                final developmental feedback record. Respondent and school
+                identities remain protected.
               </p>
 
               <label className="mt-5 flex items-start gap-3 rounded-2xl border border-white/10 bg-[#0A1628] p-4">
@@ -925,9 +1136,8 @@ export default function DirectorFeedbackReviewClient() {
                   className="mt-1 h-5 w-5"
                 />
                 <span className="text-sm leading-6">
-                  I have reviewed the aggregated findings and understand that
-                  this is confidential developmental feedback, not the Regional
-                  Director&apos;s official appraisal.
+                  I have reviewed the protected findings and understand that
+                  completing this review seals the confidential feedback record.
                 </span>
               </label>
 
@@ -943,16 +1153,97 @@ export default function DirectorFeedbackReviewClient() {
           ) : null}
 
           {cycle.status === "RELEASED" ? (
-            <section className="rounded-[28px] border border-emerald-300/25 bg-emerald-400/10 p-5">
-              <h2 className="text-lg font-bold text-emerald-50">
-                Private review completed
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-emerald-100/90">
-                This feedback record was sealed on {formatDate(cycle.releasedAt)}.
-                The aggregate remains available as read-only evidence, while
-                respondent and school identities remain protected.
-              </p>
-            </section>
+            <>
+              <section className="rounded-[28px] border border-emerald-300/25 bg-emerald-400/10 p-5">
+                <h2 className="text-lg font-bold text-emerald-50">
+                  Private review completed
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-emerald-100/90">
+                  This feedback record was sealed on {formatDate(cycle.releasedAt)}.
+                  The aggregate remains available as read-only evidence, while
+                  respondent and school identities remain protected.
+                </p>
+              </section>
+
+              <section className={panel("p-5")}>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#E8C96A]">
+                      Close the participation loop
+                    </div>
+                    <h2 className="mt-2 text-lg font-bold text-[#F7F4ED]">
+                      Thank participating Headteachers
+                    </h2>
+                    <p className="mt-2 max-w-3xl text-sm leading-6 text-[#C9CDD6]">
+                      Send EduLife OS&apos;s prepared appreciation message to every
+                      Headteacher who finalized this confidential feedback exercise.
+                      Recipient names, schools and scores are never shown here.
+                    </p>
+                  </div>
+
+                  {appreciation?.dispatched ? (
+                    <div className="rounded-2xl border border-emerald-300/25 bg-emerald-400/10 px-4 py-3 text-center">
+                      <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-emerald-100/75">
+                        Appreciation
+                      </div>
+                      <div className="mt-1 text-sm font-black text-emerald-50">
+                        Dispatched ✓
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+
+                {appreciationLoading ? (
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-[#0A1628] p-4 text-sm text-[#C9CDD6]">
+                    Checking appreciation status…
+                  </div>
+                ) : appreciation?.dispatched ? (
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <Metric
+                      label="Headteachers thanked"
+                      value={appreciation.participantCount}
+                      helper="Finalized participants only"
+                    />
+                    <Metric
+                      label="In-app"
+                      value={channelSummaryText(appreciation.channels.inApp)}
+                      helper="Available immediately"
+                    />
+                    <Metric
+                      label="SMS"
+                      value={channelSummaryText(appreciation.channels.sms)}
+                      helper="Opt-in and phone availability respected"
+                    />
+                    <Metric
+                      label="Email"
+                      value={channelSummaryText(appreciation.channels.email)}
+                      helper="Delivered by the notification worker"
+                    />
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-2xl border border-cyan-300/20 bg-cyan-400/8 p-4 text-sm leading-6 text-cyan-50">
+                    The prepared message thanks participants for their time, honesty
+                    and trust, and explains that their feedback will help strengthen
+                    leadership and support for schools.
+                  </div>
+                )}
+
+                {!appreciation?.dispatched ? (
+                  <button
+                    type="button"
+                    disabled={
+                      appreciationLoading || appreciationSending || !online
+                    }
+                    onClick={() => void sendAppreciation()}
+                    className="mt-5 min-h-12 w-full rounded-2xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-5 py-3 text-sm font-bold text-[#071A3D] disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto"
+                  >
+                    {appreciationSending
+                      ? "Sending appreciation…"
+                      : "Send appreciation"}
+                  </button>
+                ) : null}
+              </section>
+            </>
           ) : null}
         </>
       )}

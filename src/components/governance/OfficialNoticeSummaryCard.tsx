@@ -1,8 +1,7 @@
-// src/components/governance/OfficialNoticeSummaryCard.tsx
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type NoticeSummary = {
   total: number;
@@ -30,6 +29,16 @@ type NoticeSummary = {
       } | null;
     };
   }>;
+  appraisal?: {
+    total: number;
+    unread: number;
+    latest: {
+      id: string;
+      title: string;
+      sentAt: string | null;
+      createdAt: string;
+    } | null;
+  };
 };
 
 type SummaryResponse =
@@ -57,6 +66,12 @@ function dateLabel(value: string | null) {
   }
 }
 
+function safeTime(value: string | null | undefined) {
+  if (!value) return 0;
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export default function OfficialNoticeSummaryCard({
   href,
   portalLabel,
@@ -66,6 +81,7 @@ export default function OfficialNoticeSummaryCard({
   const [summary, setSummary] = useState<NoticeSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const lastRefreshAt = useRef(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -83,7 +99,11 @@ export default function OfficialNoticeSummaryCard({
 
       if (!res.ok || !json?.ok) {
         setSummary(null);
-        setError(json && "error" in json ? json.error : `Failed to load notice summary (${res.status})`);
+        setError(
+          json && "error" in json
+            ? json.error
+            : `Failed to load notice summary (${res.status})`,
+        );
         return;
       }
 
@@ -98,11 +118,53 @@ export default function OfficialNoticeSummaryCard({
 
   useEffect(() => {
     void load();
+
+    const refreshWhenActive = () => {
+      if (document.visibilityState !== "visible") return;
+
+      const now = Date.now();
+      if (now - lastRefreshAt.current < 750) return;
+      lastRefreshAt.current = now;
+      void load();
+    };
+
+    document.addEventListener("visibilitychange", refreshWhenActive);
+    window.addEventListener("focus", refreshWhenActive);
+
+    return () => {
+      document.removeEventListener("visibilitychange", refreshWhenActive);
+      window.removeEventListener("focus", refreshWhenActive);
+    };
   }, [load]);
 
   const unacknowledged = summary?.unacknowledged ?? 0;
-  const unread = summary?.unread ?? 0;
-  const latest = summary?.latest?.[0] ?? null;
+  const officialUnread = summary?.unread ?? 0;
+  const appraisalUnread = summary?.appraisal?.unread ?? 0;
+  const unread = officialUnread + appraisalUnread;
+  const officialTotal = summary?.total ?? 0;
+  const appraisalTotal = summary?.appraisal?.total ?? 0;
+  const combinedTotal = officialTotal + appraisalTotal;
+  const latestOfficial = summary?.latest?.[0] ?? null;
+  const latestAppraisal = summary?.appraisal?.latest ?? null;
+
+  const officialLatestAt = safeTime(
+    latestOfficial?.notice.sentAt ?? latestOfficial?.notice.createdAt,
+  );
+  const appraisalLatestAt = safeTime(
+    latestAppraisal?.sentAt ?? latestAppraisal?.createdAt,
+  );
+  const latestTitle =
+    appraisalLatestAt > officialLatestAt
+      ? latestAppraisal?.title ?? null
+      : latestOfficial?.notice.title ?? latestAppraisal?.title ?? null;
+  const latestAt =
+    appraisalLatestAt > officialLatestAt
+      ? latestAppraisal?.sentAt ?? latestAppraisal?.createdAt ?? null
+      : latestOfficial?.notice.sentAt ??
+        latestOfficial?.notice.createdAt ??
+        latestAppraisal?.sentAt ??
+        latestAppraisal?.createdAt ??
+        null;
 
   if (variant === "icon") {
     const badgeCount = unread;
@@ -112,15 +174,15 @@ export default function OfficialNoticeSummaryCard({
       <Link
         href={href}
         className={`group relative inline-flex min-h-11 items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-left shadow-[0_12px_36px_rgba(0,0,0,0.16)] transition hover:border-violet-300/35 hover:bg-white/10 ${className}`}
-        aria-label={`${portalLabel} official notices${badgeCount ? `, ${badgeCount} unread` : ""}`}
+        aria-label={`${portalLabel} notices${badgeCount ? `, ${badgeCount} unread` : ""}`}
         title={
-          latest
-            ? `Latest notice: ${latest.notice.title}`
+          latestTitle
+            ? `Latest notice: ${latestTitle}`
             : loading
-              ? "Loading official notices"
+              ? "Loading notices"
               : error
-                ? "Official notices unavailable"
-                : "No unread official notices"
+                ? "Notices unavailable"
+                : "No unread notices"
         }
       >
         <span className="flex h-9 w-9 items-center justify-center rounded-2xl border border-violet-300/25 bg-violet-400/12 text-lg text-violet-100">
@@ -158,26 +220,28 @@ export default function OfficialNoticeSummaryCard({
   }
 
   return (
-    <section className={`rounded-[28px] border border-violet-300/20 bg-[linear-gradient(135deg,rgba(22,17,46,0.88),rgba(33,26,68,0.78),rgba(12,19,32,0.92))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.20)] ${className}`}>
+    <section
+      className={`rounded-[28px] border border-violet-300/20 bg-[linear-gradient(135deg,rgba(22,17,46,0.88),rgba(33,26,68,0.78),rgba(12,19,32,0.92))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.20)] ${className}`}
+    >
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-200">
-            Official Notices · {portalLabel}
+            Notices · {portalLabel}
           </p>
           <h2 className="mt-2 text-lg font-semibold text-white">
             Accountability inbox
           </h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-300">
-            Track official instructions that require your attention, reading, and acknowledgement.
+            Review official governance notices and personal appraisal messages that require your attention.
           </p>
 
-          {latest ? (
+          {latestTitle ? (
             <p className="mt-3 text-xs leading-5 text-slate-400">
-              Latest: <span className="text-slate-100">{latest.notice.title}</span>{" "}
-              · Sent {dateLabel(latest.notice.sentAt ?? latest.notice.createdAt)}
+              Latest: <span className="text-slate-100">{latestTitle}</span>{" "}
+              · Sent {dateLabel(latestAt)}
             </p>
           ) : !loading && !error ? (
-            <p className="mt-3 text-xs text-slate-400">No official notices yet.</p>
+            <p className="mt-3 text-xs text-slate-400">No notices yet.</p>
           ) : null}
 
           {error ? <p className="mt-3 text-xs text-red-200">{error}</p> : null}
@@ -185,7 +249,7 @@ export default function OfficialNoticeSummaryCard({
 
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200">
-            Total: <b className="text-white">{summary?.total ?? 0}</b>
+            Total: <b className="text-white">{combinedTotal}</b>
           </span>
           <span className="rounded-full border border-amber-300/25 bg-amber-400/10 px-3 py-1 text-xs text-amber-100">
             Unread: <b>{unread}</b>
@@ -193,6 +257,11 @@ export default function OfficialNoticeSummaryCard({
           <span className="rounded-full border border-red-300/25 bg-red-500/10 px-3 py-1 text-xs text-red-100">
             Unacknowledged: <b>{unacknowledged}</b>
           </span>
+          {appraisalTotal > 0 ? (
+            <span className="rounded-full border border-cyan-300/25 bg-cyan-400/10 px-3 py-1 text-xs text-cyan-100">
+              Appraisal messages: <b>{appraisalTotal}</b>
+            </span>
+          ) : null}
           <Link
             href={href}
             className="rounded-full border border-violet-300/30 bg-violet-400/12 px-4 py-2 text-xs font-semibold text-violet-100 transition hover:bg-violet-400/18"

@@ -1,5 +1,5 @@
-// src/app/headteacher/notices/page.tsx
 import { redirect } from "next/navigation";
+import HeadteacherAppraisalMessageInbox from "@/components/appraisals/HeadteacherAppraisalMessageInbox";
 import OfficialNoticeInboxClient from "@/components/governance/OfficialNoticeInboxClient";
 import { requireHeadteacherContext } from "@/lib/headteacherAuth";
 
@@ -21,10 +21,13 @@ export default async function HeadteacherNoticesPage() {
   }
 
   return (
-    <OfficialNoticeInboxClient
-      portalLabel="Headteacher"
-      title="Official Notice Inbox"
-      description="Receive, review, and acknowledge official governance notices from circuit and district education leadership with full delivery evidence."
-    />
+    <div className="space-y-6">
+      <HeadteacherAppraisalMessageInbox />
+      <OfficialNoticeInboxClient
+        portalLabel="Headteacher"
+        title="Official Notice Inbox"
+        description="Receive, review, and acknowledge official governance notices from circuit and district education leadership with full delivery evidence."
+      />
+    </div>
   );
 }
