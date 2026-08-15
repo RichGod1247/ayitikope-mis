@@ -176,6 +176,36 @@ type SupervisoryQueue = {
   individualStaffResponsesIncluded: false;
 };
 
+type DirectOpenTarget = {
+  targetHeadteacherUserId: string;
+  targetHeadteacherName: string | null;
+  targetTenantId: string;
+  schoolName: string;
+  circuitId: string;
+  circuitName: string;
+  districtId: string;
+  districtName: string;
+};
+
+type DirectOpenTargetCircuit = {
+  circuitId: string;
+  circuitName: string;
+  districtId: string;
+  districtName: string;
+  schoolCount: number;
+  targetCount: number;
+};
+
+type DirectOpenTargets = {
+  actorRole: "DISTRICT_DIRECTOR" | "SUPERADMIN";
+  circuits: DirectOpenTargetCircuit[];
+  targets: DirectOpenTarget[];
+  readOnly: true;
+  respondentIdentitiesIncluded: false;
+  individualStaffResponsesIncluded: false;
+  providerCalled: false;
+};
+
 type ClientProps = {
   initialAssessmentId: string;
   initialCycleId: string;
@@ -476,7 +506,10 @@ export default function HeadteacherSupervisoryAssessmentClient({
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [queue, setQueue] = useState<SupervisoryQueue | null>(null);
+  const [directOpenTargets, setDirectOpenTargets] =
+    useState<DirectOpenTargets | null>(null);
   const [queueLoading, setQueueLoading] = useState(false);
+  const [openingCycle, setOpeningCycle] = useState(false);
   const [selectedCircuitId, setSelectedCircuitId] = useState("");
   const [selectedSchoolId, setSelectedSchoolId] = useState("");
   const [showSavedRecords, setShowSavedRecords] = useState(false);
@@ -494,6 +527,7 @@ export default function HeadteacherSupervisoryAssessmentClient({
   const retryTimerRef = useRef<number | null>(null);
   const autosaveRunningRef = useRef(false);
   const nativeReviewRef = useRef<HTMLElement | null>(null);
+  const directOpenKeysRef = useRef(new Map<string, string>());
 
   const clearWorkspaceForAssessmentChange = useCallback(() => {
     if (autosaveTimerRef.current !== null) {
@@ -533,7 +567,32 @@ export default function HeadteacherSupervisoryAssessmentClient({
       if (!response.ok || body.ok !== true) {
         throw new Error(messageFromFailure(body, response.status));
       }
-      setQueue(body.queue);
+
+      const nextQueue = body.queue;
+      setQueue(nextQueue);
+
+      if (nextQueue.actorRole === "DISTRICT_DIRECTOR") {
+        const directorResponse = await fetch(
+          "/api/district/headteacher-appraisals",
+          { cache: "no-store" },
+        );
+        const directorBody = (await readApiBody(directorResponse)) as
+          | {
+              ok: true;
+              directOpenTargets: DirectOpenTargets;
+            }
+          | ApiFailure;
+
+        if (!directorResponse.ok || directorBody.ok !== true) {
+          throw new Error(
+            messageFromFailure(directorBody, directorResponse.status),
+          );
+        }
+
+        setDirectOpenTargets(directorBody.directOpenTargets);
+      } else {
+        setDirectOpenTargets(null);
+      }
     } catch (queueError) {
       setError(
         queueError instanceof Error
@@ -748,8 +807,41 @@ export default function HeadteacherSupervisoryAssessmentClient({
     };
   }, [liveSectionScores, workspace]);
 
+  const selectableCircuits = useMemo(() => {
+    const circuits = new Map<string, SupervisoryQueueCircuit>();
+
+    for (const circuit of queue?.circuits ?? []) {
+      circuits.set(circuit.circuitId, circuit);
+    }
+
+    for (const circuit of directOpenTargets?.circuits ?? []) {
+      const current = circuits.get(circuit.circuitId);
+      circuits.set(circuit.circuitId, {
+        circuitId: circuit.circuitId,
+        circuitName: circuit.circuitName,
+        districtId: circuit.districtId,
+        districtName: circuit.districtName,
+        schoolCount: Math.max(current?.schoolCount ?? 0, circuit.schoolCount),
+        appraisalCount: current?.appraisalCount ?? 0,
+      });
+    }
+
+    return [...circuits.values()].sort((left, right) =>
+      left.circuitName.localeCompare(right.circuitName),
+    );
+  }, [directOpenTargets, queue]);
+
+  const availableSchoolCount = useMemo(() => {
+    const schoolIds = new Set<string>();
+    for (const item of queue?.items ?? []) schoolIds.add(item.schoolId);
+    for (const target of directOpenTargets?.targets ?? []) {
+      schoolIds.add(target.targetTenantId);
+    }
+    return schoolIds.size;
+  }, [directOpenTargets, queue]);
+
   const queueSchools = useMemo(() => {
-    if (!queue || !selectedCircuitId) return [];
+    if (!selectedCircuitId) return [];
     const schools = new Map<
       string,
       {
@@ -757,25 +849,42 @@ export default function HeadteacherSupervisoryAssessmentClient({
         schoolName: string;
         headteacherName: string;
         appraisalCount: number;
+        canDirectOpen: boolean;
       }
     >();
 
-    for (const item of queue.items) {
+    for (const item of queue?.items ?? []) {
       if (item.circuitId !== selectedCircuitId) continue;
       const current = schools.get(item.schoolId) ?? {
         schoolId: item.schoolId,
         schoolName: item.schoolName,
         headteacherName: item.targetName || "Headteacher",
         appraisalCount: 0,
+        canDirectOpen: false,
       };
       current.appraisalCount += 1;
+      current.canDirectOpen = false;
       schools.set(item.schoolId, current);
+    }
+
+    for (const target of directOpenTargets?.targets ?? []) {
+      if (target.circuitId !== selectedCircuitId) continue;
+      const current = schools.get(target.targetTenantId);
+      if (current) continue;
+
+      schools.set(target.targetTenantId, {
+        schoolId: target.targetTenantId,
+        schoolName: target.schoolName,
+        headteacherName: target.targetHeadteacherName || "Headteacher",
+        appraisalCount: 0,
+        canDirectOpen: true,
+      });
     }
 
     return [...schools.values()].sort((left, right) =>
       left.schoolName.localeCompare(right.schoolName),
     );
-  }, [queue, selectedCircuitId]);
+  }, [directOpenTargets, queue, selectedCircuitId]);
 
   const selectedQueueItems = useMemo(() => {
     if (!queue) return [];
@@ -787,6 +896,12 @@ export default function HeadteacherSupervisoryAssessmentClient({
   }, [queue, selectedCircuitId, selectedSchoolId]);
 
   const selectedQueueItem = selectedQueueItems[0] ?? null;
+  const selectedDirectOpenTarget =
+    directOpenTargets?.targets.find(
+      (target) =>
+        target.circuitId === selectedCircuitId &&
+        target.targetTenantId === selectedSchoolId,
+    ) ?? null;
   const cycleQueueItem = queue?.items.find((item) => item.cycleId === cycleId) ?? null;
   const visitDetailsValidation = useMemo(
     () => validateVisitDetails(dateObserved, visitDetails),
@@ -805,19 +920,19 @@ export default function HeadteacherSupervisoryAssessmentClient({
   useEffect(() => {
     if (!queue) return;
 
-    const selectedCircuitStillExists = queue.circuits.some(
+    const selectedCircuitStillExists = selectableCircuits.some(
       (circuit) => circuit.circuitId === selectedCircuitId,
     );
     const nextCircuitId =
       queue.selection.assignedCircuitId ||
       (selectedCircuitStillExists ? selectedCircuitId : "") ||
-      (queue.circuits.length === 1 ? queue.circuits[0].circuitId : "");
+      (selectableCircuits.length === 1 ? selectableCircuits[0].circuitId : "");
 
     if (nextCircuitId !== selectedCircuitId) {
       setSelectedCircuitId(nextCircuitId);
       setSelectedSchoolId("");
     }
-  }, [queue, selectedCircuitId]);
+  }, [queue, selectableCircuits, selectedCircuitId]);
 
   useEffect(() => {
     if (!selectedCircuitId) {
@@ -1066,6 +1181,69 @@ export default function HeadteacherSupervisoryAssessmentClient({
     });
   }
 
+  function directOpenKeyFor(target: DirectOpenTarget) {
+    const targetKey = `${target.targetTenantId}:${target.targetHeadteacherUserId}`;
+    const existing = directOpenKeysRef.current.get(targetKey);
+    if (existing) return existing;
+
+    const generated = `HEADTEACHER-DIRECT-OPEN:${window.crypto.randomUUID()}`;
+    directOpenKeysRef.current.set(targetKey, generated);
+    return generated;
+  }
+
+  async function directOpenSelectedHeadteacher() {
+    if (!selectedDirectOpenTarget || queue?.actorRole !== "DISTRICT_DIRECTOR") {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Open the Headteacher appraisal cycle for ${selectedDirectOpenTarget.targetHeadteacherName || "this Headteacher"} at ${selectedDirectOpenTarget.schoolName}? This opens the confidential 7-day staff-feedback window, freezes the currently eligible Teachers as respondents, and queues their notifications.`,
+    );
+    if (!confirmed) return;
+
+    setOpeningCycle(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await fetch(
+        "/api/district/headteacher-appraisals",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "DIRECT_OPEN",
+            targetHeadteacherUserId:
+              selectedDirectOpenTarget.targetHeadteacherUserId,
+            targetTenantId: selectedDirectOpenTarget.targetTenantId,
+            directOpenKey: directOpenKeyFor(selectedDirectOpenTarget),
+            confirm: true,
+          }),
+        },
+      );
+      const body = (await readApiBody(response)) as
+        | { ok: true; result: { outcome: string } }
+        | ApiFailure;
+
+      if (!response.ok || body.ok !== true) {
+        throw new Error(messageFromFailure(body, response.status));
+      }
+
+      setNotice(
+        "Appraisal cycle opened. Confidential staff feedback is active and the supervisory assessment is now available.",
+      );
+      await loadQueue();
+    } catch (openError) {
+      setError(
+        openError instanceof Error
+          ? openError.message
+          : "The Headteacher appraisal cycle could not be opened.",
+      );
+    } finally {
+      setOpeningCycle(false);
+    }
+  }
+
   async function createDraft() {
     if (!cycleId) return;
 
@@ -1201,7 +1379,7 @@ export default function HeadteacherSupervisoryAssessmentClient({
 
   if (!assessmentId && !cycleId) {
     const actorRole = queue?.actorRole;
-    const selectedCircuit = queue?.circuits.find(
+    const selectedCircuit = selectableCircuits.find(
       (circuit) => circuit.circuitId === selectedCircuitId,
     );
     const savedItems = queue?.items.filter(
@@ -1251,10 +1429,16 @@ export default function HeadteacherSupervisoryAssessmentClient({
             </div>
           ) : null}
 
+          {notice ? (
+            <div className="rounded-3xl border border-emerald-300/25 bg-emerald-500/10 p-4 text-sm text-emerald-100">
+              {notice}
+            </div>
+          ) : null}
+
           <section className="grid grid-cols-4 gap-1.5 md:gap-4">
             {[
-              ["Circuits", queue?.summary.circuits ?? 0],
-              ["Schools", queue?.summary.schools ?? 0],
+              ["Circuits", selectableCircuits.length],
+              ["Schools", availableSchoolCount],
               ["Drafts", (queue?.summary.inProgress ?? 0) + (queue?.summary.returned ?? 0)],
               ["Submitted", queue?.summary.submitted ?? 0],
             ].map(([label, value]) => (
@@ -1290,9 +1474,9 @@ export default function HeadteacherSupervisoryAssessmentClient({
                 ) : null}
 
                 <div className="mt-4 space-y-2">
-                  {queue?.circuits.map((circuit) => {
+                  {selectableCircuits.map((circuit) => {
                     const selected = circuit.circuitId === selectedCircuitId;
-                    const fixed = queue.selection.assignedCircuitId === circuit.circuitId;
+                    const fixed = queue?.selection.assignedCircuitId === circuit.circuitId;
                     return (
                       <button
                         key={circuit.circuitId}
@@ -1335,7 +1519,9 @@ export default function HeadteacherSupervisoryAssessmentClient({
                   Headteacher to appraise
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-slate-300">
-                  Selecting a school automatically selects the Headteacher in the approved appraisal cycle.
+                  {queue?.actorRole === "DISTRICT_DIRECTOR"
+                    ? "Select an authorized school. If no appraisal cycle exists yet, you can open the standard confidential cycle here."
+                    : "Selecting a school automatically selects the Headteacher in the approved appraisal cycle."}
                 </p>
 
                 {!selectedCircuitId ? (
@@ -1364,6 +1550,11 @@ export default function HeadteacherSupervisoryAssessmentClient({
                         >
                           <p className="font-semibold text-white">{school.schoolName}</p>
                           <p className="mt-1 text-xs text-slate-300">{school.headteacherName}</p>
+                          {school.canDirectOpen ? (
+                            <p className="mt-1 text-[11px] font-semibold text-amber-200">
+                              Ready to open appraisal cycle
+                            </p>
+                          ) : null}
                         </button>
                       );
                     })}
@@ -1419,12 +1610,17 @@ export default function HeadteacherSupervisoryAssessmentClient({
                       3. Open appraisal
                     </p>
                     <h2 className="mt-1 text-xl font-semibold text-white">
-                      {selectedQueueItem?.schoolName || selectedCircuit?.circuitName || "Choose a school"}
+                      {selectedQueueItem?.schoolName ||
+                        selectedDirectOpenTarget?.schoolName ||
+                        selectedCircuit?.circuitName ||
+                        "Choose a school"}
                     </h2>
                     <p className="mt-1 text-sm leading-6 text-slate-300">
                       {selectedQueueItem
                         ? `${selectedQueueItem.targetName || "Headteacher"} · ${selectedQueueItem.circuitName}`
-                        : "The approved Headteacher and official form will appear here."}
+                        : selectedDirectOpenTarget
+                          ? `${selectedDirectOpenTarget.targetHeadteacherName || "Headteacher"} · ${selectedDirectOpenTarget.circuitName}`
+                          : "The approved Headteacher and official form will appear here."}
                     </p>
                   </div>
                   {selectedQueueItem ? (
@@ -1435,11 +1631,56 @@ export default function HeadteacherSupervisoryAssessmentClient({
                 </div>
               </section>
 
-              {selectedQueueItems.length === 0 ? (
+              {selectedQueueItems.length === 0 && !selectedDirectOpenTarget ? (
                 <section className="rounded-[28px] border border-dashed border-white/15 bg-white/[0.03] p-6 text-center">
                   <h3 className="text-lg font-semibold text-white">No school selected</h3>
                   <p className="mt-2 text-sm leading-6 text-slate-300">
                     Choose a circuit and school to open the Headteacher appraisal record.
+                  </p>
+                </section>
+              ) : null}
+
+              {selectedQueueItems.length === 0 && selectedDirectOpenTarget ? (
+                <section className="rounded-[28px] border border-amber-300/20 bg-amber-400/[0.08] p-5">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                        School and Headteacher
+                      </p>
+                      <p className="mt-2 font-semibold text-white">
+                        {selectedDirectOpenTarget.schoolName}
+                      </p>
+                      <p className="mt-1 text-sm text-slate-300">
+                        {selectedDirectOpenTarget.targetHeadteacherName || "Headteacher"}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-400">
+                        {selectedDirectOpenTarget.circuitName} · {selectedDirectOpenTarget.districtName}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                        First-cycle setup
+                      </p>
+                      <p className="mt-2 font-semibold text-white">
+                        Confidential staff-feedback cycle not yet open
+                      </p>
+                      <p className="mt-1 text-sm leading-6 text-slate-300">
+                        Opening the cycle freezes the currently eligible Teachers as confidential respondents, starts the 7-day feedback window, and queues their notifications.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={openingCycle}
+                    onClick={() => void directOpenSelectedHeadteacher()}
+                    className="mt-5 inline-flex min-h-14 w-full items-center justify-center rounded-2xl border border-amber-300/25 bg-amber-300 px-5 text-center text-base font-bold text-slate-950 hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {openingCycle ? "Opening appraisal cycle…" : "Open Headteacher appraisal cycle"}
+                  </button>
+
+                  <p className="mt-3 text-center text-xs leading-5 text-slate-400">
+                    Explicit confirmation is required. EduLife OS selects eligible respondents server-side; this screen cannot choose them.
                   </p>
                 </section>
               ) : null}

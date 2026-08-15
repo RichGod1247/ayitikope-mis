@@ -126,12 +126,19 @@ function profile(overrides = {}) {
   };
 }
 
-function curriculumSubject({ id, name, orderIndex = 1, subStrandTitle }) {
+function curriculumSubject({
+  id,
+  name,
+  orderIndex = 1,
+  subStrandTitle,
+  phase = "JHS",
+  level = "JHS 3",
+}) {
   return {
     id,
     tenantId: null,
-    phase: "JHS",
-    level: "JHS 3",
+    phase,
+    level,
     name,
     orderIndex,
     isGlobal: true,
@@ -309,6 +316,42 @@ async function main() {
   assertEqual(options.contactDetailsIncluded, false, "Contacts excluded");
   assertEqual(options.providerCalled, false, "Providers absent");
 
+  const productionShapedCurriculum = new FakeDatabase({
+    curriculumSubjects: [
+      curriculumSubject({
+        id: "curriculum-science-jhs3",
+        name: "JHS 3 Science",
+        phase: "Junior High School",
+        level: "Basic 9",
+        subStrandTitle: "Farming Systems",
+      }),
+    ],
+  });
+  const productionShapedOptions =
+    await readTeacherSupervisoryObservationOptions(
+      readInput(productionShapedCurriculum),
+    );
+  assertEqual(
+    productionShapedOptions.classes.length,
+    1,
+    "Production curriculum phase/level labels must resolve to the assigned class",
+  );
+  assertEqual(
+    productionShapedOptions.classes[0].subjects.length,
+    1,
+    "Level-prefixed curriculum subject must match the Teacher assignment subject",
+  );
+  assertEqual(
+    productionShapedOptions.classes[0].subjects[0].curriculumSubjectId,
+    "curriculum-science-jhs3",
+    "Production curriculum subject identity",
+  );
+  assertEqual(
+    productionShapedOptions.classes[0].subjects[0].subStrands[0].title,
+    "Farming Systems",
+    "Production curriculum sub-strand remains authoritative",
+  );
+
   const selection = await resolveTeacherSupervisoryObservationSelection(selectionInput(database));
   assertEqual(selection.classTaught, "JHS 3 A", "Resolved class label");
   assertEqual(selection.subjectBeingObserved, "Science", "Resolved subject label");
@@ -377,6 +420,147 @@ async function main() {
   const profileOptions = await readTeacherSupervisoryObservationOptions(readInput(multistreamProfileFallback));
   assertEqual(profileOptions.classes.length, 0, "Profile fallback must not guess a multistream class arm");
 
+
+  const productionProfileFallback = new FakeDatabase({
+    assignments: [],
+    classrooms: [
+      classroom("class-jhs3-a", "JHS 3", "A"),
+      classroom("class-jhs3-b", "JHS 3", "B"),
+      classroom("class-jhs3-c", "JHS 3", "C"),
+      classroom("class-jhs3-d", "JHS 3", "D"),
+      classroom("class-jhs3-generic", "JHS3", null),
+    ],
+    profile: profile({
+      primaryClassroomId: "class-jhs3-generic",
+      jhsAssignments: [{ subject: "Science", classes: ["JHS 3"] }],
+    }),
+    curriculumSubjects: [
+      curriculumSubject({
+        id: "curriculum-science-jhs3",
+        name: "JHS 3 Science",
+        phase: "Junior High School",
+        level: "Basic 9",
+        subStrandTitle: "Farming Systems",
+      }),
+    ],
+  });
+  const productionProfileOptions =
+    await readTeacherSupervisoryObservationOptions(
+      readInput(productionProfileFallback),
+    );
+  assertEqual(
+    productionProfileOptions.classes.length,
+    1,
+    "Profile fallback must resolve one canonical armless JHS class even when A/B/C/D streams exist",
+  );
+  assertEqual(
+    productionProfileOptions.classes[0].classroomId,
+    "class-jhs3-generic",
+    "Armless JHS classroom is the default profile-fallback class",
+  );
+  assertEqual(
+    productionProfileOptions.classes[0].subjects.length,
+    1,
+    "Armless profile fallback keeps only the Teacher's assigned JHS subject",
+  );
+  assertEqual(
+    productionProfileOptions.classes[0].subjects[0].curriculumSubjectId,
+    "curriculum-science-jhs3",
+    "Production-shaped JHS curriculum subject resolves through the armless class",
+  );
+
+  const productionProfileSelection =
+    await resolveTeacherSupervisoryObservationSelection(
+      selectionInput(productionProfileFallback, {
+        classroomId: "class-jhs3-generic",
+      }),
+    );
+  assertEqual(
+    productionProfileSelection.authorization.source,
+    "TEACHER_PROFILE_JHS_ASSIGNMENT",
+    "Armless production fallback preserves TeacherProfile JHS provenance",
+  );
+  assertEqual(
+    productionProfileSelection.authorization.teacherProfileId,
+    "teacher-profile-001",
+    "Armless production fallback preserves exact TeacherProfile identity",
+  );
+
+  const armlessDefaultOverStreamPrimary = new FakeDatabase({
+    assignments: [],
+    classrooms: [
+      classroom("class-jhs3-a", "JHS 3", "A"),
+      classroom("class-jhs3-b", "JHS 3", "B"),
+      classroom("class-jhs3-generic", "JHS3", null),
+    ],
+    profile: profile({
+      primaryClassroomId: "class-jhs3-a",
+      jhsAssignments: [{ subject: "Science", classes: ["JHS 3"] }],
+    }),
+  });
+  const armlessDefaultOptions =
+    await readTeacherSupervisoryObservationOptions(
+      readInput(armlessDefaultOverStreamPrimary),
+    );
+  assertEqual(
+    armlessDefaultOptions.classes.length,
+    1,
+    "A unique armless JHS class remains the single-stream default",
+  );
+  assertEqual(
+    armlessDefaultOptions.classes[0].classroomId,
+    "class-jhs3-generic",
+    "Armless single-stream class takes precedence over a streamed profile primary",
+  );
+
+  const exactStreamProfileFallback = new FakeDatabase({
+    assignments: [],
+    classrooms: [
+      classroom("class-jhs3-a", "JHS 3", "A"),
+      classroom("class-jhs3-b", "JHS 3", "B"),
+    ],
+    profile: profile({
+      primaryClassroomId: "class-jhs3-a",
+      jhsAssignments: [{ subject: "Science", classes: ["JHS 3"] }],
+    }),
+  });
+  const exactStreamProfileOptions =
+    await readTeacherSupervisoryObservationOptions(
+      readInput(exactStreamProfileFallback),
+    );
+  assertEqual(
+    exactStreamProfileOptions.classes.length,
+    1,
+    "Exact server-stored primary classroom may resolve when no armless class exists",
+  );
+  assertEqual(
+    exactStreamProfileOptions.classes[0].classroomId,
+    "class-jhs3-a",
+    "Exact primary classroom is used instead of guessing another stream",
+  );
+
+  const duplicateArmlessProfileFallback = new FakeDatabase({
+    assignments: [],
+    classrooms: [
+      classroom("class-jhs3-generic-one", "JHS3", null),
+      classroom("class-jhs3-generic-two", "JHS 3", null),
+      classroom("class-jhs3-a", "JHS 3", "A"),
+    ],
+    profile: profile({
+      primaryClassroomId: null,
+      jhsAssignments: [{ subject: "Science", classes: ["JHS 3"] }],
+    }),
+  });
+  const duplicateArmlessOptions =
+    await readTeacherSupervisoryObservationOptions(
+      readInput(duplicateArmlessProfileFallback),
+    );
+  assertEqual(
+    duplicateArmlessOptions.classes.length,
+    0,
+    "Duplicate armless classrooms fail closed rather than choosing one",
+  );
+
   const roundTrip = readTeacherSupervisoryObservationSelectionSnapshot(selection);
   assertDeepEqual(roundTrip, selection, "Selection snapshot must round-trip exactly");
 
@@ -408,6 +592,10 @@ async function main() {
     "TEACHER_ASSESSMENT_ASSIGNMENT",
     "TEACHER_PROFILE_PRIMARY_CLASSROOM",
     "TEACHER_PROFILE_JHS_ASSIGNMENT",
+    "normalizeSubjectKeyFromMaybeSlug",
+    "preferredProfileClassroomByLevel",
+    "const armless = activeMatches.filter",
+    "JUNIOR_HIGH_SCHOOL",
   ]) {
     assert(source.includes(marker), `Observation-options source marker missing: ${marker}`);
   }
@@ -435,7 +623,8 @@ async function main() {
   console.log("Explicit Teacher assignments     : strongest current truth");
   console.log("Assignment effective date        : observation-date constrained");
   console.log("Profile fallback                 : only when explicit assignment rows absent");
-  console.log("Multistream fallback             : no class-arm guessing");
+  console.log("Armless single-stream default    : preferred when uniquely present");
+  console.log("Multistream fallback             : exact primary only; no class-arm guessing");
   console.log("Class-all-subject assignment     : exact class curriculum subjects");
   console.log("Subject assignment               : exact class or phase/level scope");
   console.log("Sub-strands                      : official curriculum hierarchy only");

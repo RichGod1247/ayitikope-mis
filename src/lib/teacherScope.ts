@@ -134,7 +134,7 @@ export function stripJhsDecorators(nameRaw: unknown): string {
  *
  * Returns a normalized SUBJECT key like "INTEGRATED SCIENCE".
  */
-function normalizeSubjectKeyFromMaybeSlug(input: string) {
+export function normalizeSubjectKeyFromMaybeSlug(input: string) {
   const raw = cleanStr(input);
   if (!raw) return "";
 

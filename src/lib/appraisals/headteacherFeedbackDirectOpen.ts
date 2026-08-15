@@ -3,6 +3,7 @@ import { createHash, randomUUID } from "crypto";
 import { Prisma, type AppraisalCycleStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { APPRAISAL_AUDIT_ACTIONS } from "@/lib/appraisals/audit";
+import { effectiveRole } from "@/lib/roleRouting";
 import {
   ACTIVE_HEADTEACHER_FEEDBACK_CYCLE_STATUSES,
   HEADTEACHER_FEEDBACK_POLICY,
@@ -189,6 +190,42 @@ type ResolvedDirectOpenTarget = {
   circuitName: string;
   districtZoneId: string;
   districtName: string;
+};
+
+export type HeadteacherFeedbackDirectOpenTarget = {
+  targetHeadteacherUserId: string;
+  targetHeadteacherName: string | null;
+  targetTenantId: string;
+  schoolName: string;
+  circuitId: string;
+  circuitName: string;
+  districtId: string;
+  districtName: string;
+};
+
+export type HeadteacherFeedbackDirectOpenTargetCircuit = {
+  circuitId: string;
+  circuitName: string;
+  districtId: string;
+  districtName: string;
+  schoolCount: number;
+  targetCount: number;
+};
+
+export type HeadteacherFeedbackDirectOpenTargets = {
+  actorRole: "DISTRICT_DIRECTOR" | "SUPERADMIN";
+  circuits: HeadteacherFeedbackDirectOpenTargetCircuit[];
+  targets: HeadteacherFeedbackDirectOpenTarget[];
+  readOnly: true;
+  respondentIdentitiesIncluded: false;
+  individualStaffResponsesIncluded: false;
+  providerCalled: false;
+};
+
+type HeadteacherFeedbackDirectOpenTargetDatabase = {
+  membership: {
+    findMany(args: unknown): Promise<TargetMembershipRecord[]>;
+  };
 };
 
 type SharedOpenCycle = Parameters<
@@ -638,6 +675,234 @@ function existingDirectOpenResult(cycle: DirectOpenCycleRecord) {
   return {
     outcome: "EXISTING_OPEN" as const,
     cycle: safeDirectOpenSummary(cycle),
+  };
+}
+
+export async function readHeadteacherFeedbackDirectOpenTargets(input: {
+  actorUserId: string;
+  actorRoleName: unknown;
+  governanceScope: HeadteacherFeedbackGovernanceScope;
+  database?: HeadteacherFeedbackDirectOpenTargetDatabase;
+}): Promise<HeadteacherFeedbackDirectOpenTargets> {
+  const actorUserId = requireIdentifier(input.actorUserId, "actorUserId");
+  const actorRole = effectiveRole(input.actorRoleName);
+
+  if (actorRole !== "DISTRICT_DIRECTOR" && actorRole !== "SUPERADMIN") {
+    fail("HEADTEACHER_FEEDBACK_OPENER_ROLE_FORBIDDEN", 403, { actorRole });
+  }
+
+  const tenantIds = [
+    ...new Set(input.governanceScope.tenantIds.map(clean).filter(Boolean)),
+  ].sort();
+
+  if (!input.governanceScope.isSuperAdmin && tenantIds.length === 0) {
+    return {
+      actorRole,
+      circuits: [],
+      targets: [],
+      readOnly: true,
+      respondentIdentitiesIncluded: false,
+      individualStaffResponsesIncluded: false,
+      providerCalled: false,
+    };
+  }
+
+  const database =
+    input.database ??
+    (prisma as unknown as HeadteacherFeedbackDirectOpenTargetDatabase);
+
+  const memberships = await database.membership.findMany({
+    where: {
+      ...(input.governanceScope.isSuperAdmin
+        ? {}
+        : { tenantId: { in: tenantIds } }),
+      status: "ACTIVE",
+      role: {
+        name: {
+          equals: "HEADTEACHER",
+          mode: "insensitive",
+        },
+      },
+      tenant: {
+        status: "ACTIVE",
+      },
+    },
+    select: {
+      id: true,
+      userId: true,
+      tenantId: true,
+      status: true,
+      role: {
+        select: {
+          name: true,
+        },
+      },
+      user: {
+        select: {
+          id: true,
+          name: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+        },
+      },
+      tenant: {
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          zone: {
+            select: {
+              id: true,
+              name: true,
+              isActive: true,
+              parentZoneId: true,
+              zoneType: {
+                select: {
+                  level: true,
+                  countryCode: true,
+                },
+              },
+              parentZone: {
+                select: {
+                  id: true,
+                  name: true,
+                  isActive: true,
+                  zoneType: {
+                    select: {
+                      level: true,
+                      countryCode: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const targets: HeadteacherFeedbackDirectOpenTarget[] = [];
+  const seen = new Set<string>();
+
+  for (const membership of memberships) {
+    if (membership.userId === actorUserId) continue;
+
+    const target = assertActiveHeadteacherFeedbackTarget({
+      target: {
+        membershipId: membership.id,
+        userId: membership.userId,
+        tenantId: membership.tenantId,
+        membershipStatus: membership.status,
+        roleName: membership.role.name,
+        tenantStatus: membership.tenant.status,
+      },
+      expectedUserId: membership.userId,
+      expectedTenantId: membership.tenantId,
+    });
+
+    const circuit = membership.tenant.zone;
+    const district = circuit?.parentZone;
+
+    if (
+      !circuit ||
+      circuit.isActive !== true ||
+      circuit.zoneType.level !== 1 ||
+      !district ||
+      district.isActive !== true ||
+      district.zoneType.level !== 2 ||
+      circuit.parentZoneId !== district.id ||
+      circuit.zoneType.countryCode !== district.zoneType.countryCode
+    ) {
+      continue;
+    }
+
+    assertHeadteacherFeedbackDirectOpenAuthority({
+      actorUserId,
+      actorRoleName: actorRole,
+      targetHeadteacherUserId: target.userId,
+      targetTenantId: target.tenantId,
+      governanceScope: input.governanceScope,
+    });
+
+    const dedupeKey = `${target.tenantId}:${target.userId}`;
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+
+    targets.push({
+      targetHeadteacherUserId: target.userId,
+      targetHeadteacherName: displayName(membership.user),
+      targetTenantId: target.tenantId,
+      schoolName: membership.tenant.name,
+      circuitId: circuit.id,
+      circuitName: circuit.name,
+      districtId: district.id,
+      districtName: district.name,
+    });
+  }
+
+  targets.sort((left, right) =>
+    left.districtName.localeCompare(right.districtName) ||
+    left.circuitName.localeCompare(right.circuitName) ||
+    left.schoolName.localeCompare(right.schoolName) ||
+    (left.targetHeadteacherName ?? "").localeCompare(
+      right.targetHeadteacherName ?? "",
+    ) ||
+    left.targetHeadteacherUserId.localeCompare(
+      right.targetHeadteacherUserId,
+    ),
+  );
+
+  const circuitMap = new Map<
+    string,
+    {
+      circuitId: string;
+      circuitName: string;
+      districtId: string;
+      districtName: string;
+      schoolIds: Set<string>;
+      targetCount: number;
+    }
+  >();
+
+  for (const target of targets) {
+    const current = circuitMap.get(target.circuitId) ?? {
+      circuitId: target.circuitId,
+      circuitName: target.circuitName,
+      districtId: target.districtId,
+      districtName: target.districtName,
+      schoolIds: new Set<string>(),
+      targetCount: 0,
+    };
+
+    current.schoolIds.add(target.targetTenantId);
+    current.targetCount += 1;
+    circuitMap.set(target.circuitId, current);
+  }
+
+  const circuits = [...circuitMap.values()]
+    .map((circuit) => ({
+      circuitId: circuit.circuitId,
+      circuitName: circuit.circuitName,
+      districtId: circuit.districtId,
+      districtName: circuit.districtName,
+      schoolCount: circuit.schoolIds.size,
+      targetCount: circuit.targetCount,
+    }))
+    .sort((left, right) =>
+      left.districtName.localeCompare(right.districtName) ||
+      left.circuitName.localeCompare(right.circuitName),
+    );
+
+  return {
+    actorRole,
+    circuits,
+    targets,
+    readOnly: true,
+    respondentIdentitiesIncluded: false,
+    individualStaffResponsesIncluded: false,
+    providerCalled: false,
   };
 }
 

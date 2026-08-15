@@ -432,8 +432,70 @@ async function main() {
     typeof directOpen.directOpenHeadteacherFeedbackCycle === "function",
     "Direct-open service export missing",
   );
+  assert(
+    typeof directOpen.readHeadteacherFeedbackDirectOpenTargets === "function",
+    "Direct-open target discovery export missing",
+  );
 
   const fixture = makeFixture();
+  const discoveryDatabase = {
+    membership: {
+      async findMany() {
+        return [clone(fixture.target)];
+      },
+    },
+  };
+  const discovery =
+    await directOpen.readHeadteacherFeedbackDirectOpenTargets({
+      actorUserId: "director-user",
+      actorRoleName: "DISTRICT_DIRECTOR",
+      governanceScope: {
+        isSuperAdmin: false,
+        tenantIds: ["school-one"],
+      },
+      database: discoveryDatabase,
+    });
+
+  assertEqual(discovery.actorRole, "DISTRICT_DIRECTOR", "Discovery actor role");
+  assertEqual(discovery.circuits.length, 1, "One discovery circuit");
+  assertEqual(discovery.targets.length, 1, "One discovery Headteacher target");
+  assertEqual(discovery.targets[0].targetTenantId, "school-one", "Discovery school scope");
+  assertEqual(discovery.targets[0].circuitId, "circuit-one", "Discovery circuit scope");
+  assertEqual(discovery.targets[0].districtId, "district-one", "Discovery district scope");
+  assertEqual(discovery.readOnly, true, "Discovery is read only");
+  assertEqual(discovery.respondentIdentitiesIncluded, false, "Discovery excludes respondent identities");
+  assertEqual(discovery.individualStaffResponsesIncluded, false, "Discovery excludes staff responses");
+  assertEqual(discovery.providerCalled, false, "Discovery calls no provider");
+
+  const serializedDiscovery = JSON.stringify(discovery).toLowerCase();
+  for (const forbidden of [
+    "teacher-user-1",
+    "teacher-user-2",
+    "membership-teacher-1",
+    "membership-teacher-2",
+    "@example.test",
+  ]) {
+    assert(
+      !serializedDiscovery.includes(forbidden),
+      "Discovery leaked confidential respondent identity",
+      { forbidden },
+    );
+  }
+
+  await expectFailure(
+    () =>
+      directOpen.readHeadteacherFeedbackDirectOpenTargets({
+        actorUserId: "teacher-user-1",
+        actorRoleName: "TEACHER",
+        governanceScope: {
+          isSuperAdmin: false,
+          tenantIds: ["school-one"],
+        },
+        database: discoveryDatabase,
+      }),
+    "HEADTEACHER_FEEDBACK_OPENER_ROLE_FORBIDDEN",
+  );
+
   const database = makeDatabase(fixture);
 
   const created = await directOpen.directOpenHeadteacherFeedbackCycle(
@@ -678,6 +740,7 @@ async function main() {
   console.log("=== D3.4C4 HEADTEACHER DIRECT-OPEN TRANSACTION ===");
   console.log("");
   console.log("Direct-open authority          : Director/Superadmin within scope");
+  console.log("Target discovery               : read-only Director/Superadmin scope");
   console.log("Target selection               : one active in-scope Headteacher");
   console.log("Lifecycle path                 : transient DRAFT -> OPEN atomically");
   console.log("Pending approval state         : bypassed by authorized Director");

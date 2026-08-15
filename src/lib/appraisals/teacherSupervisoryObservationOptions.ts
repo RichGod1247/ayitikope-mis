@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import {
   normalizeJhsAssignmentsLoose,
   normalizeLevelToken,
-  normalizeSubjectKey,
+  normalizeSubjectKeyFromMaybeSlug,
 } from "@/lib/teacherScope";
 import {
   readTeacherSupervisoryAssessmentQueue,
@@ -220,6 +220,32 @@ function normalized(value: unknown) {
   return clean(value).toUpperCase().replace(/[\s-]+/g, "_");
 }
 
+function canonicalPhase(
+  value: unknown,
+): "KG" | "PRIMARY" | "JHS" | null {
+  const phase = normalized(value);
+
+  if (phase === "KG" || phase === "KINDERGARTEN") return "KG";
+  if (
+    phase === "PRIMARY" ||
+    phase === "LOWER_PRIMARY" ||
+    phase === "UPPER_PRIMARY" ||
+    phase === "BASIC" ||
+    phase === "BASIC_SCHOOL"
+  ) {
+    return "PRIMARY";
+  }
+  if (
+    phase === "JHS" ||
+    phase === "JUNIOR_HIGH" ||
+    phase === "JUNIOR_HIGH_SCHOOL"
+  ) {
+    return "JHS";
+  }
+
+  return null;
+}
+
 function fail(
   code: string,
   status: number,
@@ -405,14 +431,14 @@ function classroomMatchesPhaseLevel(
 ) {
   const token = classroomLevelToken(classroom);
   const wanted = normalizeLevelToken(level);
-  const wantedPhase = normalized(phase);
+  const wantedPhase = canonicalPhase(phase);
   const actualPhase = phaseForLevelToken(token);
   return Boolean(
     token &&
       wanted &&
       token === wanted &&
       actualPhase &&
-      (!wantedPhase || actualPhase === wantedPhase),
+      (!clean(phase) || (wantedPhase != null && actualPhase === wantedPhase)),
   );
 }
 
@@ -426,10 +452,10 @@ function curriculumMatchesClass(
   const classLevel = classroomLevelToken(classroom);
   const subjectLevel = normalizeLevelToken(subject.level);
   const classPhase = phaseForLevelToken(classLevel);
-  const subjectPhase = normalized(subject.phase);
+  const subjectPhase = canonicalPhase(subject.phase);
   if (!classLevel || !classPhase || !subjectLevel) return false;
   if (classLevel !== subjectLevel) return false;
-  if (subjectPhase && subjectPhase !== classPhase) return false;
+  if (clean(subject.phase) && subjectPhase !== classPhase) return false;
   return true;
 }
 
@@ -443,6 +469,40 @@ function uniqueClassroomByLevel(
     (classroom) => classroomLevelToken(classroom) === token,
   );
   return matches.length === 1 ? matches[0] : null;
+}
+
+function preferredProfileClassroomByLevel(input: {
+  classrooms: ClassroomRecord[];
+  level: unknown;
+  primaryClassroomId: string | null;
+}) {
+  const token = normalizeLevelToken(input.level);
+  if (!token) return null;
+
+  const activeMatches = input.classrooms.filter(
+    (classroom) =>
+      normalized(classroom.status) === "ACTIVE" &&
+      classroomLevelToken(classroom) === token,
+  );
+
+  // The armless classroom is the canonical single-stream record. When it
+  // exists uniquely, prefer it over A/B/C/D stream records. This keeps the
+  // profile fallback deterministic without inventing a stream assignment.
+  const armless = activeMatches.filter((classroom) => !clean(classroom.arm));
+  if (armless.length === 1) return armless[0];
+  if (armless.length > 1) return null;
+
+  // If a school has only streamed records, an exact server-stored primary
+  // classroom is acceptable evidence. We still never guess among streams.
+  const primaryClassroomId = clean(input.primaryClassroomId);
+  if (primaryClassroomId) {
+    const primary = activeMatches.find(
+      (classroom) => classroom.id === primaryClassroomId,
+    );
+    if (primary) return primary;
+  }
+
+  return activeMatches.length === 1 ? activeMatches[0] : null;
 }
 
 function addClassAuthorization(
@@ -479,7 +539,7 @@ function activeAssignmentAuthorizations(input: {
     const assignmentKind = kind as "CLASS_ALL_SUBJECTS" | "SUBJECT";
     const subjectKey =
       assignmentKind === "SUBJECT"
-        ? normalizeSubjectKey(clean(assignment.subject)) || null
+        ? normalizeSubjectKeyFromMaybeSlug(clean(assignment.subject)) || null
         : null;
     if (assignmentKind === "SUBJECT" && !subjectKey) continue;
 
@@ -528,7 +588,7 @@ function profileAuthorizations(input: {
   const profile = input.profile;
   if (!profile) return map;
 
-  const phase = normalized(profile.phase);
+  const phase = canonicalPhase(profile.phase);
   if (phase === "KG" || phase === "PRIMARY") {
     const classroom = profile.primaryClassroomId
       ? input.classrooms.find(
@@ -550,10 +610,14 @@ function profileAuthorizations(input: {
     for (const assignment of normalizeJhsAssignmentsLoose(
       profile.jhsAssignments,
     )) {
-      const subjectKey = normalizeSubjectKey(assignment.subject);
+      const subjectKey = normalizeSubjectKeyFromMaybeSlug(assignment.subject);
       if (!subjectKey) continue;
       for (const level of assignment.classes) {
-        const classroom = uniqueClassroomByLevel(input.classrooms, level);
+        const classroom = preferredProfileClassroomByLevel({
+          classrooms: input.classrooms,
+          level,
+          primaryClassroomId: profile.primaryClassroomId,
+        });
         addClassAuthorization(map, classroom, {
           source: "TEACHER_PROFILE_JHS_ASSIGNMENT",
           assignmentId: null,
@@ -576,7 +640,7 @@ function preferredCurriculumSubjects(input: {
   const bySubjectKey = new Map<string, CurriculumSubjectRecord[]>();
   for (const row of input.rows) {
     if (!curriculumMatchesClass(row, input.classroom)) continue;
-    const key = normalizeSubjectKey(row.name);
+    const key = normalizeSubjectKeyFromMaybeSlug(row.name);
     if (!key) continue;
     const list = bySubjectKey.get(key) ?? [];
     list.push(row);

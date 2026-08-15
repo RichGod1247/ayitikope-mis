@@ -1,7 +1,10 @@
-//src/app/api/district/headteacher-appraisals/route.ts
 import { NextRequest } from "next/server";
 import { readDirectorHeadteacherAppraisalStates } from "@/lib/appraisals/headteacherFeedbackReadStates";
-import { approveAndOpenHeadteacherFeedbackCycleWithNotifications } from "@/lib/appraisals/headteacherFeedbackNotifications";
+import {
+  approveAndOpenHeadteacherFeedbackCycleWithNotifications,
+  directOpenHeadteacherFeedbackCycleWithNotifications,
+} from "@/lib/appraisals/headteacherFeedbackNotifications";
+import { readHeadteacherFeedbackDirectOpenTargets } from "@/lib/appraisals/headteacherFeedbackDirectOpen";
 import { closeCompletedHeadteacherFeedbackCycleEarly } from "@/lib/appraisals/headteacherFeedbackDeadlineClosure";
 import { sealHeadteacherFeedbackAggregateSnapshot } from "@/lib/appraisals/headteacherFeedbackAggregateSnapshot";
 import {
@@ -25,6 +28,9 @@ export const HEADTEACHER_APPRAISAL_DIRECTOR_QUEUE_API_POLICY = {
   manualReferenceEntryRequired: false,
   cachePolicy: "NO_STORE",
   approvalRequiresConfirmation: true,
+  directOpenRequiresConfirmation: true,
+  directOpenTargetDiscoveryReadOnly: true,
+  directOpenUsesExistingLifecycleEngine: true,
   participantFreezeAtOpen: true,
   notificationRowsSeededAtOpen: true,
   earlyCompletionDetectedFromFrozenParticipantCounts: true,
@@ -55,6 +61,37 @@ async function readQueue(args: {
   });
 }
 
+async function readDirectOpenTargets(args: {
+  actorUserId: string;
+  actorRoleName: unknown;
+  scope: {
+    isSuperAdmin: boolean;
+    tenantIds: readonly string[];
+  };
+}) {
+  return readHeadteacherFeedbackDirectOpenTargets({
+    actorUserId: args.actorUserId,
+    actorRoleName: args.actorRoleName,
+    governanceScope: reviewGovernanceScope(args.scope),
+  });
+}
+
+async function readDirectorWork(args: {
+  actorUserId: string;
+  actorRoleName: unknown;
+  scope: {
+    isSuperAdmin: boolean;
+    tenantIds: readonly string[];
+  };
+}) {
+  const [queue, directOpenTargets] = await Promise.all([
+    readQueue(args),
+    readDirectOpenTargets(args),
+  ]);
+
+  return { queue, directOpenTargets };
+}
+
 export async function GET(req: NextRequest) {
   const meta = requestMeta(req);
   const auth = await requireDirectorReviewApiContext(req);
@@ -68,7 +105,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const queue = await readQueue({
+    const work = await readDirectorWork({
       actorUserId: auth.ctx.userId,
       actorRoleName: auth.ctx.roleName,
       scope: auth.scope,
@@ -77,7 +114,8 @@ export async function GET(req: NextRequest) {
     return jsonNoStore(200, {
       ok: true,
       reqId: meta.reqId,
-      queue,
+      ...work,
+      providerCalled: false,
     });
   } catch (error) {
     return directorReviewApiError({
@@ -104,9 +142,9 @@ export async function POST(req: NextRequest) {
   if (!parsed.ok) return parsed.response;
 
   const action = clean(parsed.body.action).toUpperCase();
-  const cycleId = clean(parsed.body.cycleId);
 
   if (
+    action !== "DIRECT_OPEN" &&
     action !== "APPROVE_AND_OPEN" &&
     action !== "CLOSE_COMPLETED_EARLY"
   ) {
@@ -114,14 +152,6 @@ export async function POST(req: NextRequest) {
       ok: false,
       reqId: meta.reqId,
       error: "INVALID_DIRECTOR_QUEUE_ACTION",
-    });
-  }
-
-  if (!isLikelyIdentifier(cycleId)) {
-    return jsonNoStore(400, {
-      ok: false,
-      reqId: meta.reqId,
-      error: "INVALID_CYCLE_ID",
     });
   }
 
@@ -134,6 +164,80 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    if (action === "DIRECT_OPEN") {
+      const targetHeadteacherUserId = clean(
+        parsed.body.targetHeadteacherUserId,
+      );
+      const targetTenantId = clean(parsed.body.targetTenantId);
+      const directOpenKey = clean(parsed.body.directOpenKey);
+
+      if (!isLikelyIdentifier(targetHeadteacherUserId)) {
+        return jsonNoStore(400, {
+          ok: false,
+          reqId: meta.reqId,
+          error: "INVALID_TARGET_HEADTEACHER_USER_ID",
+        });
+      }
+
+      if (!isLikelyIdentifier(targetTenantId)) {
+        return jsonNoStore(400, {
+          ok: false,
+          reqId: meta.reqId,
+          error: "INVALID_TARGET_TENANT_ID",
+        });
+      }
+
+      if (!directOpenKey) {
+        return jsonNoStore(400, {
+          ok: false,
+          reqId: meta.reqId,
+          error: "DIRECT_OPEN_KEY_REQUIRED",
+        });
+      }
+
+      const result =
+        await directOpenHeadteacherFeedbackCycleWithNotifications({
+          actorUserId: auth.ctx.userId,
+          actorRoleName: auth.ctx.roleName,
+          governanceScope: reviewGovernanceScope(auth.scope),
+          targetHeadteacherUserId,
+          targetTenantId,
+          directOpenKey,
+          openingNote: null,
+          requestedRespondentUserIds: undefined,
+          reqId: meta.reqId,
+          ip: meta.ip,
+          userAgent: meta.userAgent,
+        });
+
+      const work = await readDirectorWork({
+        actorUserId: auth.ctx.userId,
+        actorRoleName: auth.ctx.roleName,
+        scope: auth.scope,
+      });
+
+      return jsonNoStore(
+        result.outcome === "DIRECTLY_OPENED" ? 201 : 200,
+        {
+          ok: true,
+          reqId: meta.reqId,
+          result,
+          ...work,
+          providerCalled: false,
+        },
+      );
+    }
+
+    const cycleId = clean(parsed.body.cycleId);
+
+    if (!isLikelyIdentifier(cycleId)) {
+      return jsonNoStore(400, {
+        ok: false,
+        reqId: meta.reqId,
+        error: "INVALID_CYCLE_ID",
+      });
+    }
+
     if (action === "APPROVE_AND_OPEN") {
       const result =
         await approveAndOpenHeadteacherFeedbackCycleWithNotifications({
