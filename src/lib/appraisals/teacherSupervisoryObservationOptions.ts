@@ -15,6 +15,9 @@ export const TEACHER_SUPERVISORY_OBSERVATION_OPTIONS_POLICY = {
   readOnly: true,
   teacherScopeRequired: true,
   explicitAssignmentsOverrideTeacherProfileFallback: true,
+  levelOnlyAssignmentsUseArmlessDefault: true,
+  classArmRequiresExactClassroomAuthority: true,
+  profileFallbackPhaseIndependent: true,
   historicalLessonEvidenceMayWidenAuthority: false,
   curriculumSubStrandRequired: true,
   contactsIncluded: false,
@@ -459,16 +462,90 @@ function curriculumMatchesClass(
   return true;
 }
 
-function uniqueClassroomByLevel(
+function activeClassroomsByLevel(
   classrooms: ClassroomRecord[],
   level: unknown,
 ) {
   const token = normalizeLevelToken(level);
-  if (!token) return null;
-  const matches = classrooms.filter(
-    (classroom) => classroomLevelToken(classroom) === token,
+  if (!token) return [];
+
+  return classrooms.filter(
+    (classroom) =>
+      normalized(classroom.status) === "ACTIVE" &&
+      classroomLevelToken(classroom) === token,
   );
-  return matches.length === 1 ? matches[0] : null;
+}
+
+/**
+ * Resolves level-only classroom authority without inventing a stream.
+ *
+ * Institutional rule:
+ * - a unique armless classroom is the canonical/default class for that level;
+ * - if no armless row exists, exactly one active classroom is still
+ *   unambiguous and may be used;
+ * - multiple arms without an armless default are ambiguous and fail closed;
+ * - duplicate armless rows are ambiguous and fail closed.
+ *
+ * This rule is phase-independent: KG, Primary and JHS use the same resolver.
+ */
+function preferredDefaultClassroomByLevel(
+  classrooms: ClassroomRecord[],
+  level: unknown,
+) {
+  const activeMatches = activeClassroomsByLevel(classrooms, level);
+  if (!activeMatches.length) return null;
+
+  const armless = activeMatches.filter(
+    (classroom) => !clean(classroom.arm),
+  );
+
+  if (armless.length === 1) return armless[0];
+  if (armless.length > 1) return null;
+
+  return activeMatches.length === 1 ? activeMatches[0] : null;
+}
+
+function exactActiveClassroomForAssignment(input: {
+  classrooms: ClassroomRecord[];
+  classroomId: string;
+  phase: unknown;
+  level: unknown;
+}) {
+  const classroomId = clean(input.classroomId);
+  if (!classroomId) return null;
+
+  const classroom =
+    input.classrooms.find(
+      (candidate) =>
+        candidate.id === classroomId &&
+        normalized(candidate.status) === "ACTIVE",
+    ) ?? null;
+
+  if (!classroom) return null;
+
+  if (
+    clean(input.level) &&
+    !classroomMatchesPhaseLevel(
+      classroom,
+      input.phase,
+      input.level,
+    )
+  ) {
+    return null;
+  }
+
+  if (clean(input.phase) && !clean(input.level)) {
+    const actualPhase = phaseForLevelToken(
+      classroomLevelToken(classroom),
+    );
+    const wantedPhase = canonicalPhase(input.phase);
+
+    if (!actualPhase || !wantedPhase || actualPhase !== wantedPhase) {
+      return null;
+    }
+  }
+
+  return classroom;
 }
 
 function preferredProfileClassroomByLevel(input: {
@@ -479,30 +556,27 @@ function preferredProfileClassroomByLevel(input: {
   const token = normalizeLevelToken(input.level);
   if (!token) return null;
 
-  const activeMatches = input.classrooms.filter(
-    (classroom) =>
-      normalized(classroom.status) === "ACTIVE" &&
-      classroomLevelToken(classroom) === token,
+  const defaultClassroom = preferredDefaultClassroomByLevel(
+    input.classrooms,
+    input.level,
   );
 
-  // The armless classroom is the canonical single-stream record. When it
-  // exists uniquely, prefer it over A/B/C/D stream records. This keeps the
-  // profile fallback deterministic without inventing a stream assignment.
-  const armless = activeMatches.filter((classroom) => !clean(classroom.arm));
-  if (armless.length === 1) return armless[0];
-  if (armless.length > 1) return null;
+  if (defaultClassroom) return defaultClassroom;
 
-  // If a school has only streamed records, an exact server-stored primary
-  // classroom is acceptable evidence. We still never guess among streams.
+  // JHS TeacherProfile has no per-subject classroomId. If there is no
+  // canonical armless/default classroom, an exact server-stored primary
+  // classroom may be used only when it matches this exact level.
   const primaryClassroomId = clean(input.primaryClassroomId);
-  if (primaryClassroomId) {
-    const primary = activeMatches.find(
-      (classroom) => classroom.id === primaryClassroomId,
-    );
-    if (primary) return primary;
-  }
+  if (!primaryClassroomId) return null;
 
-  return activeMatches.length === 1 ? activeMatches[0] : null;
+  return (
+    activeClassroomsByLevel(
+      input.classrooms,
+      input.level,
+    ).find(
+      (classroom) => classroom.id === primaryClassroomId,
+    ) ?? null
+  );
 }
 
 function addClassAuthorization(
@@ -554,25 +628,32 @@ function activeAssignmentAuthorizations(input: {
     if (assignment.classroomId) {
       addClassAuthorization(
         map,
-        input.classrooms.find(
-          (classroom) => classroom.id === assignment.classroomId,
-        ),
+        exactActiveClassroomForAssignment({
+          classrooms: input.classrooms,
+          classroomId: assignment.classroomId,
+          phase: assignment.phase,
+          level: assignment.level,
+        }),
         source,
       );
       continue;
     }
 
-    if (assignmentKind === "SUBJECT" && assignment.level) {
-      for (const classroom of input.classrooms) {
-        if (
-          classroomMatchesPhaseLevel(
-            classroom,
-            assignment.phase,
-            assignment.level,
-          )
-        ) {
-          addClassAuthorization(map, classroom, source);
-        }
+    if (assignment.level) {
+      const classroom = preferredDefaultClassroomByLevel(
+        input.classrooms,
+        assignment.level,
+      );
+
+      if (
+        classroom &&
+        classroomMatchesPhaseLevel(
+          classroom,
+          assignment.phase,
+          assignment.level,
+        )
+      ) {
+        addClassAuthorization(map, classroom, source);
       }
     }
   }
@@ -591,10 +672,16 @@ function profileAuthorizations(input: {
   const phase = canonicalPhase(profile.phase);
   if (phase === "KG" || phase === "PRIMARY") {
     const classroom = profile.primaryClassroomId
-      ? input.classrooms.find(
-          (candidate) => candidate.id === profile.primaryClassroomId,
-        ) ?? null
-      : uniqueClassroomByLevel(input.classrooms, profile.classLevel);
+      ? exactActiveClassroomForAssignment({
+          classrooms: input.classrooms,
+          classroomId: profile.primaryClassroomId,
+          phase: profile.phase,
+          level: profile.classLevel,
+        })
+      : preferredDefaultClassroomByLevel(
+          input.classrooms,
+          profile.classLevel,
+        );
 
     addClassAuthorization(map, classroom, {
       source: "TEACHER_PROFILE_PRIMARY_CLASSROOM",
