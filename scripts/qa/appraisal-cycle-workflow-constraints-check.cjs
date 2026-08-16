@@ -92,6 +92,46 @@ for (const name of constraintNames) {
   });
 }
 
+const constraintDeparseCalls = [
+  ...migration.matchAll(
+    /pg_get_constraintdef\(\s*c\.oid\s*(?:,\s*(true|false))?\s*\)/gi,
+  ),
+];
+
+assert(
+  constraintDeparseCalls.length === 6,
+  "Migration must perform exactly six parent-constraint deparse reads",
+  {
+    calls: constraintDeparseCalls.map((match) => match[0]),
+  },
+);
+
+const nonPrettyConstraintDeparseCalls = constraintDeparseCalls.filter(
+  (match) => String(match[1] ?? "").toLowerCase() !== "true",
+);
+
+assert(
+  nonPrettyConstraintDeparseCalls.length === 0,
+  "Every parent-constraint drift read must use pg_get_constraintdef(c.oid, true)",
+  {
+    calls: nonPrettyConstraintDeparseCalls.map((match) => match[0]),
+  },
+);
+
+const guardedPrettyReads = [
+  ...migration.matchAll(
+    /SELECT\s+pg_get_constraintdef\(\s*c\.oid\s*,\s*true\s*\)\s*,\s*c\.convalidated/gi,
+  ),
+];
+
+assert(
+  guardedPrettyReads.length === 6,
+  "Each of the six parent constraints must be read with the canonical pretty deparse plus validation state",
+  {
+    count: guardedPrettyReads.length,
+  },
+);
+
 requireMarkers(
   migration,
   [
@@ -604,6 +644,7 @@ for (const fixture of fixtures) {
 console.log("=== N7-P2C3AD APPRAISAL CYCLE WORKFLOW CONSTRAINT SOURCE QA ===");
 console.log("Constraint ownership          : six production checks source-controlled");
 console.log("Production drift policy       : fail closed on unexpected same-name definitions");
+console.log("Constraint deparse policy     : pg_get_constraintdef(c.oid, true) for all six");
 console.log("Fresh/UAT path                : supported");
 console.log("Teacher supervisory lifecycle : OPEN 0/0, no approval/deadline");
 console.log("Headteacher respondent flow   : approval/open/deadline preserved");

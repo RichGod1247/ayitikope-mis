@@ -42,7 +42,7 @@ BEGIN
   -- 1. Deadline ordering — preserve exact observed production contract.
   current_def := NULL;
   current_validated := NULL;
-  SELECT pg_get_constraintdef(c.oid), c.convalidated
+  SELECT pg_get_constraintdef(c.oid, true), c.convalidated
     INTO current_def, current_validated
   FROM pg_constraint c
   JOIN pg_class t ON t.oid = c.conrelid
@@ -65,7 +65,7 @@ BEGIN
   -- 2. Extension count — preserve exact observed production contract.
   current_def := NULL;
   current_validated := NULL;
-  SELECT pg_get_constraintdef(c.oid), c.convalidated
+  SELECT pg_get_constraintdef(c.oid, true), c.convalidated
     INTO current_def, current_validated
   FROM pg_constraint c
   JOIN pg_class t ON t.oid = c.conrelid
@@ -89,7 +89,7 @@ BEGIN
   -- non-respondent cycles; every other/unknown workflow retains the old floor.
   current_def := NULL;
   current_validated := NULL;
-  SELECT pg_get_constraintdef(c.oid), c.convalidated
+  SELECT pg_get_constraintdef(c.oid, true), c.convalidated
     INTO current_def, current_validated
   FROM pg_constraint c
   JOIN pg_class t ON t.oid = c.conrelid
@@ -125,7 +125,7 @@ BEGIN
   -- them. No additional timestamp chronology is introduced here.
   current_def := NULL;
   current_validated := NULL;
-  SELECT pg_get_constraintdef(c.oid), c.convalidated
+  SELECT pg_get_constraintdef(c.oid, true), c.convalidated
     INTO current_def, current_validated
   FROM pg_constraint c
   JOIN pg_class t ON t.oid = c.conrelid
@@ -263,7 +263,7 @@ BEGIN
   -- 5. Target context — preserve exact observed production contract.
   current_def := NULL;
   current_validated := NULL;
-  SELECT pg_get_constraintdef(c.oid), c.convalidated
+  SELECT pg_get_constraintdef(c.oid, true), c.convalidated
     INTO current_def, current_validated
   FROM pg_constraint c
   JOIN pg_class t ON t.oid = c.conrelid
@@ -291,7 +291,7 @@ BEGIN
   -- non-respondent cycles; every other/unknown workflow retains 1..90 days.
   current_def := NULL;
   current_validated := NULL;
-  SELECT pg_get_constraintdef(c.oid), c.convalidated
+  SELECT pg_get_constraintdef(c.oid, true), c.convalidated
     INTO current_def, current_validated
   FROM pg_constraint c
   JOIN pg_class t ON t.oid = c.conrelid
