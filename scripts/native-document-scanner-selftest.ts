@@ -6,6 +6,7 @@ import {
 } from "../src/lib/security/documentScanner/nativeDocumentScanner";
 import type {
   NativeDocumentArchiveLimits,
+  NativeDocumentPdfLimits,
   NativeDocumentScannerResult,
 } from "../src/lib/security/documentScanner/types";
 
@@ -17,6 +18,14 @@ const ARCHIVE_LIMITS: NativeDocumentArchiveLimits = {
   maxTotalUncompressedBytes: 8 * 1024 * 1024,
   maxCompressionRatio: 200,
   maxControlPartBytes: 256 * 1024,
+};
+
+const PDF_LIMITS: NativeDocumentPdfLimits = {
+  maxObjects: 128,
+  maxIncrementalUpdates: 4,
+  maxNestingDepth: 24,
+  maxTokenBytes: 4096,
+  maxStringBytes: 64 * 1024,
 };
 
 type ZipFixtureEntry = {
@@ -114,11 +123,11 @@ function assertSanitized(result: NativeDocumentScannerResult) {
 
   assert(
     !serialized.includes('"verdict":"CLEAN"'),
-    "M3A must never emit CLEAN.",
+    "M3B1 must never emit CLEAN.",
   );
   assert(
     result.inspectionComplete === false,
-    "M3A inspectionComplete must always remain false.",
+    "M3B1 inspectionComplete must always remain false.",
   );
 }
 
@@ -308,6 +317,71 @@ function packageFixture(
   ]);
 }
 
+
+type ClassicPdfFixtureOptions = {
+  catalogExtra?: string;
+  catalogOverride?: string;
+  pageExtra?: string;
+  trailerExtra?: string;
+  extraObjects?: string[];
+};
+
+function buildClassicPdf(options: ClassicPdfFixtureOptions = {}) {
+  const objectBodies = [
+    options.catalogOverride ??
+      `<< /Type /Catalog /Pages 2 0 R ${options.catalogExtra ?? ""} >>`,
+    `<< /Type /Pages /Kids [3 0 R] /Count 1 >>`,
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] ${options.pageExtra ?? ""} >>`,
+    ...(options.extraObjects ?? []),
+  ];
+
+  const chunks: Buffer[] = [
+    Buffer.from("%PDF-1.7\n%HDS\n", "latin1"),
+  ];
+  const offsets: number[] = [0];
+  let byteLength = chunks[0]?.length ?? 0;
+
+  objectBodies.forEach((body, index) => {
+    offsets[index + 1] = byteLength;
+    const objectBytes = Buffer.from(
+      `${index + 1} 0 obj\n${body}\nendobj\n`,
+      "latin1",
+    );
+    chunks.push(objectBytes);
+    byteLength += objectBytes.length;
+  });
+
+  const xrefOffset = byteLength;
+  let xref = `xref\n0 ${objectBodies.length + 1}\n`;
+  xref += "0000000000 65535 f \n";
+
+  for (let objectNumber = 1; objectNumber <= objectBodies.length; objectNumber += 1) {
+    xref += `${String(offsets[objectNumber]).padStart(10, "0")} 00000 n \n`;
+  }
+
+  xref +=
+    `trailer\n<< /Size ${objectBodies.length + 1} /Root 1 0 R ${options.trailerExtra ?? ""} >>\n` +
+    `startxref\n${xrefOffset}\n%%EOF\n`;
+
+  chunks.push(Buffer.from(xref, "latin1"));
+  return Buffer.concat(chunks);
+}
+
+function buildXrefStreamPdf() {
+  const prefix = Buffer.from(
+    "%PDF-1.7\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n" +
+      "2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\n",
+    "latin1",
+  );
+  const xrefOffset = prefix.length;
+  const xrefObject = Buffer.from(
+    "3 0 obj\n<< /Type /XRef /Length 0 >>\nstream\n\nendstream\nendobj\n" +
+      `startxref\n${xrefOffset}\n%%EOF\n`,
+    "latin1",
+  );
+  return Buffer.concat([prefix, xrefObject]);
+}
+
 async function inspectFixture(args: {
   bytes: Buffer;
   filename: string;
@@ -317,6 +391,7 @@ async function inspectFixture(args: {
   expectedSha256?: string;
   maxBytes?: number;
   archiveLimits?: NativeDocumentArchiveLimits | null;
+  pdfLimits?: NativeDocumentPdfLimits | null;
 }) {
   return inspectNativeDocumentIdentity({
     source: sourceFromChunks(
@@ -337,15 +412,17 @@ async function inspectFixture(args: {
         : {
             archive: args.archiveLimits ?? ARCHIVE_LIMITS,
           }),
+      ...(args.pdfLimits === null
+        ? {}
+        : {
+            pdf: args.pdfLimits ?? PDF_LIMITS,
+          }),
     },
   });
 }
 
 async function run() {
-  const pdf = Buffer.from(
-    "%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\n",
-    "ascii",
-  );
+  const pdf = buildClassicPdf();
   const ole = Buffer.from([
     0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1,
     0x00, 0x00, 0x00, 0x00,
@@ -399,7 +476,12 @@ async function run() {
   assertVerdict(
     positiveCases[0] as NativeDocumentScannerResult,
     "IDENTITY_VERIFIED",
-    "IDENTITY_VERIFIED_DEEP_INSPECTION_REQUIRED",
+    "PDF_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+  );
+  assert(
+    (positiveCases[0] as NativeDocumentScannerResult)
+      .pdfStructuralInspectionComplete === true,
+    "Classic PDF structural inspection should complete.",
   );
   assertVerdict(
     positiveCases[4] as NativeDocumentScannerResult,
@@ -552,7 +634,7 @@ async function run() {
     declaredFilename: "notice.pdf",
     declaredExtension: "pdf",
     declaredMimeType: "application/pdf",
-    limits: { maxBytes: TEN_MB },
+    limits: { maxBytes: TEN_MB, pdf: PDF_LIMITS },
   });
   assertVerdict(emptySource, "BLOCKED", "EMPTY_SOURCE");
 
@@ -572,7 +654,7 @@ async function run() {
     declaredFilename: "notice.pdf",
     declaredExtension: "pdf",
     declaredMimeType: "application/pdf",
-    limits: { maxBytes: TEN_MB },
+    limits: { maxBytes: TEN_MB, pdf: PDF_LIMITS },
   });
   assertVerdict(streamFailure, "FAILED", "SOURCE_READ_FAILED");
 
@@ -1372,6 +1454,214 @@ async function run() {
     "An ordinary external HTTPS hyperlink should be observed but not treated as a trusted-document CLEAN verdict.",
   );
 
+
+  const missingPdfLimits = await inspectFixture({
+    bytes: pdf,
+    filename: "missing-limits.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+    pdfLimits: null,
+  });
+  assertVerdict(missingPdfLimits, "FAILED", "PDF_LIMITS_REQUIRED");
+
+  const pdfJavascript = await inspectFixture({
+    bytes: buildClassicPdf({
+      extraObjects: ["<< /S /JavaScript /JS (app.alert\\(1\\)) >>"],
+    }),
+    filename: "javascript.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(pdfJavascript, "BLOCKED", "PDF_JAVASCRIPT_BLOCKED");
+
+  const pdfOpenAction = await inspectFixture({
+    bytes: buildClassicPdf({ catalogExtra: "/OpenAction [3 0 R /Fit]" }),
+    filename: "open-action.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(pdfOpenAction, "BLOCKED", "PDF_OPEN_ACTION_BLOCKED");
+
+  const pdfAdditionalAction = await inspectFixture({
+    bytes: buildClassicPdf({ catalogExtra: "/AA << /WC 4 0 R >>", extraObjects: ["<< /S /Named /N /NextPage >>"] }),
+    filename: "additional-action.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(pdfAdditionalAction, "BLOCKED", "PDF_ADDITIONAL_ACTION_BLOCKED");
+
+  const pdfLaunch = await inspectFixture({
+    bytes: buildClassicPdf({ extraObjects: ["<< /S /Launch /F (calc.exe) >>"] }),
+    filename: "launch.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(pdfLaunch, "BLOCKED", "PDF_LAUNCH_ACTION_BLOCKED");
+
+  const pdfEmbedded = await inspectFixture({
+    bytes: buildClassicPdf({ extraObjects: ["<< /Type /Filespec /F (payload.bin) /EF << /F 5 0 R >> >>", "<< /Type /EmbeddedFile /Length 0 >>\nstream\n\nendstream"] }),
+    filename: "embedded.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(pdfEmbedded, "BLOCKED", "PDF_EMBEDDED_FILE_BLOCKED");
+
+  const pdfRichMedia = await inspectFixture({
+    bytes: buildClassicPdf({ extraObjects: ["<< /Type /Annot /Subtype /RichMedia >>"] }),
+    filename: "rich-media.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(pdfRichMedia, "BLOCKED", "PDF_RICH_MEDIA_BLOCKED");
+
+  const pdfXfa = await inspectFixture({
+    bytes: buildClassicPdf({ catalogExtra: "/AcroForm << /XFA (form) >>" }),
+    filename: "xfa.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(pdfXfa, "BLOCKED", "PDF_XFA_BLOCKED");
+
+  const pdfExternalAction = await inspectFixture({
+    bytes: buildClassicPdf({ extraObjects: ["<< /S /SubmitForm /F (https://example.org/submit) >>"] }),
+    filename: "submit.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(pdfExternalAction, "BLOCKED", "PDF_EXTERNAL_ACTION_BLOCKED");
+
+  const pdfUnsafeUri = await inspectFixture({
+    bytes: buildClassicPdf({ extraObjects: ["<< /S /URI /URI (file:///etc/passwd) >>"] }),
+    filename: "unsafe-uri.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(pdfUnsafeUri, "BLOCKED", "PDF_UNSAFE_URI_ACTION_BLOCKED");
+
+  const pdfSafeUri = await inspectFixture({
+    bytes: buildClassicPdf({ extraObjects: ["<< /S /URI /URI (https://example.org/policy) >>"] }),
+    filename: "safe-uri.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(
+    pdfSafeUri,
+    "IDENTITY_VERIFIED",
+    "PDF_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+  );
+  assert(
+    pdfSafeUri.pdfStructuralEvidence?.safeUriActionsObserved === 1,
+    "An ordinary HTTPS PDF hyperlink should be observed without earning CLEAN.",
+  );
+
+  const pdfEncrypted = await inspectFixture({
+    bytes: buildClassicPdf({
+      trailerExtra: "/Encrypt 4 0 R",
+      extraObjects: ["<< /Filter /Standard >>"],
+    }),
+    filename: "encrypted.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(pdfEncrypted, "BLOCKED", "PDF_ENCRYPTED_BLOCKED");
+
+  const pdfObjectStream = await inspectFixture({
+    bytes: buildClassicPdf({
+      extraObjects: ["<< /Type /ObjStm /Length 0 >>\nstream\n\nendstream"],
+    }),
+    filename: "object-stream.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(pdfObjectStream, "FAILED", "PDF_OBJECT_STREAM_UNSUPPORTED");
+
+  const pdfXrefStream = await inspectFixture({
+    bytes: buildXrefStreamPdf(),
+    filename: "xref-stream.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(pdfXrefStream, "FAILED", "PDF_XREF_STREAM_UNSUPPORTED");
+
+  const pdfMissingPageTree = await inspectFixture({
+    bytes: buildClassicPdf({ catalogOverride: "<< /Type /Catalog >>" }),
+    filename: "missing-pages.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(pdfMissingPageTree, "FAILED", "PDF_PAGE_TREE_MISSING");
+
+
+  const pdfObjectCountLimit = await inspectFixture({
+    bytes: pdf,
+    filename: "object-limit.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+    pdfLimits: {
+      ...PDF_LIMITS,
+      maxObjects: 3,
+    },
+  });
+  assertVerdict(
+    pdfObjectCountLimit,
+    "FAILED",
+    "PDF_OBJECT_COUNT_LIMIT_EXCEEDED",
+  );
+
+  const pdfNestingLimit = await inspectFixture({
+    bytes: buildClassicPdf({
+      extraObjects: ["<< /Nested [[[1]]] >>"],
+    }),
+    filename: "nesting-limit.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+    pdfLimits: {
+      ...PDF_LIMITS,
+      maxNestingDepth: 2,
+    },
+  });
+  assertVerdict(
+    pdfNestingLimit,
+    "FAILED",
+    "PDF_OBJECT_NESTING_LIMIT_EXCEEDED",
+  );
+
+  const pdfStringLimit = await inspectFixture({
+    bytes: buildClassicPdf({
+      extraObjects: ["<< /Title (123456789) >>"],
+    }),
+    filename: "string-limit.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+    pdfLimits: {
+      ...PDF_LIMITS,
+      maxStringBytes: 4,
+    },
+  });
+  assertVerdict(
+    pdfStringLimit,
+    "FAILED",
+    "PDF_STRING_LIMIT_EXCEEDED",
+  );
+
   const allResults = [
     ...positiveCases,
     unsupportedExtension,
@@ -1422,25 +1712,45 @@ async function run() {
     oversizedRelationshipXmlResult,
     absoluteInternalTargetResult,
     allowedHyperlinkResult,
+    missingPdfLimits,
+    pdfJavascript,
+    pdfOpenAction,
+    pdfAdditionalAction,
+    pdfLaunch,
+    pdfEmbedded,
+    pdfRichMedia,
+    pdfXfa,
+    pdfExternalAction,
+    pdfUnsafeUri,
+    pdfSafeUri,
+    pdfEncrypted,
+    pdfObjectStream,
+    pdfXrefStream,
+    pdfMissingPageTree,
+    pdfObjectCountLimit,
+    pdfNestingLimit,
+    pdfStringLimit,
   ];
 
   for (const result of allResults) {
     assertSanitized(result);
   }
 
-  console.log("HDS M3A native document scanner self-test: GREEN");
+  console.log("HDS M3B1 native document scanner self-test: GREEN");
   console.log(`Cases: ${allResults.length}`);
   console.log("M1 identity/integrity regression: GREEN");
   console.log("M2 bounded OOXML archive regression: GREEN");
-  console.log("VBA/macro/ActiveX/OLE structural blocks: GREEN");
-  console.log("External relationship + remote-template policy: GREEN");
-  console.log("Executable package-part policy: GREEN");
-  console.log("Bounded relationship-part inspection: GREEN");
-  console.log("OOXML structural pass remains non-CLEAN: GREEN");
+  console.log("M3A OOXML structural security regression: GREEN");
+  console.log("Classic PDF xref/object structural parsing: GREEN");
+  console.log("PDF object/nesting/string resource guards: GREEN");
+  console.log("PDF JavaScript/action/attachment/rich-media blocks: GREEN");
+  console.log("Encrypted/xref-stream/object-stream fail-closed policy: GREEN");
+  console.log("Ordinary HTTP(S) PDF hyperlink policy: GREEN");
+  console.log("OOXML/PDF structural passes remain non-CLEAN: GREEN");
   console.log("Sanitized result boundary: GREEN");
 }
 
 run().catch(() => {
-  console.error("HDS M3A native document scanner self-test: FAILED");
+  console.error("HDS M3B1 native document scanner self-test: FAILED");
   process.exitCode = 1;
 });

@@ -6,6 +6,7 @@ import {
 import {
   inspectOoxmlStructuralSecurity,
 } from "./ooxmlStructuralInspector";
+import { inspectPdfStructuralSecurity } from "./pdfStructuralInspector";
 import type {
   NativeDocumentArchiveEvidence,
   NativeDocumentContainer,
@@ -13,6 +14,7 @@ import type {
   NativeDocumentFormat,
   NativeDocumentIdentityEvidence,
   NativeDocumentOoxmlStructuralEvidence,
+  NativeDocumentPdfStructuralEvidence,
   NativeDocumentScannerFinding,
   NativeDocumentScannerInput,
   NativeDocumentScannerReasonCode,
@@ -24,14 +26,14 @@ export const HEHXAGON_DOCUMENT_SECURITY_ENGINE =
   "HEHXAGON_DOCUMENT_SECURITY" as const;
 
 export const HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION =
-  "0.3.0-m3a";
+  "0.3.1-m3b1";
 
 /**
- * This is the embedded M3A structural policy, not the future M4 versioned
+ * This is the embedded M3B1 structural policy, not the future M4 versioned
  * threat-rule pack. It deliberately cannot produce CLEAN.
  */
 export const HEHXAGON_DOCUMENT_SECURITY_RULE_PACK_VERSION =
-  "HDS-M3A-OOXML-STRUCTURE-V1";
+  "HDS-M3B1-PDF-CLASSIC-STRUCTURE-V1";
 
 const MAX_SIGNATURE_PREFIX_BYTES = 1024;
 
@@ -280,6 +282,8 @@ function result(args: {
   archiveEvidence?: NativeDocumentArchiveEvidence | null;
   ooxmlStructuralInspectionComplete?: boolean;
   ooxmlStructuralEvidence?: NativeDocumentOoxmlStructuralEvidence | null;
+  pdfStructuralInspectionComplete?: boolean;
+  pdfStructuralEvidence?: NativeDocumentPdfStructuralEvidence | null;
 }): NativeDocumentScannerResult {
   return {
     engine: HEHXAGON_DOCUMENT_SECURITY_ENGINE,
@@ -300,6 +304,10 @@ function result(args: {
       args.ooxmlStructuralInspectionComplete ?? false,
     ooxmlStructuralEvidence:
       args.ooxmlStructuralEvidence ?? null,
+    pdfStructuralInspectionComplete:
+      args.pdfStructuralInspectionComplete ?? false,
+    pdfStructuralEvidence:
+      args.pdfStructuralEvidence ?? null,
     inspectionComplete: false,
     identityEvidence: args.identityEvidence,
   };
@@ -316,6 +324,8 @@ function blocked(args: {
   archiveEvidence?: NativeDocumentArchiveEvidence | null;
   ooxmlStructuralInspectionComplete?: boolean;
   ooxmlStructuralEvidence?: NativeDocumentOoxmlStructuralEvidence | null;
+  pdfStructuralInspectionComplete?: boolean;
+  pdfStructuralEvidence?: NativeDocumentPdfStructuralEvidence | null;
 }) {
   return result({
     verdict: "BLOCKED",
@@ -333,6 +343,10 @@ function blocked(args: {
       args.ooxmlStructuralInspectionComplete ?? false,
     ooxmlStructuralEvidence:
       args.ooxmlStructuralEvidence ?? null,
+    pdfStructuralInspectionComplete:
+      args.pdfStructuralInspectionComplete ?? false,
+    pdfStructuralEvidence:
+      args.pdfStructuralEvidence ?? null,
   });
 }
 
@@ -347,6 +361,8 @@ function failed(args: {
   archiveEvidence?: NativeDocumentArchiveEvidence | null;
   ooxmlStructuralInspectionComplete?: boolean;
   ooxmlStructuralEvidence?: NativeDocumentOoxmlStructuralEvidence | null;
+  pdfStructuralInspectionComplete?: boolean;
+  pdfStructuralEvidence?: NativeDocumentPdfStructuralEvidence | null;
 }) {
   return result({
     verdict: "FAILED",
@@ -364,6 +380,10 @@ function failed(args: {
       args.ooxmlStructuralInspectionComplete ?? false,
     ooxmlStructuralEvidence:
       args.ooxmlStructuralEvidence ?? null,
+    pdfStructuralInspectionComplete:
+      args.pdfStructuralInspectionComplete ?? false,
+    pdfStructuralEvidence:
+      args.pdfStructuralEvidence ?? null,
   });
 }
 
@@ -473,13 +493,14 @@ async function readBoundedSource(args: {
 }
 
 /**
- * M2: bounded byte integrity + broad container identity + bounded OOXML ZIP
- * package identity.
+ * M3B1: bounded byte integrity + broad container identity + bounded OOXML
+ * package/structural security + bounded classic-PDF structural security.
  *
  * ZIP/OOXML inspection parses central-directory metadata and only decompresses
  * the small OPC control parts required to prove Word/Excel/PowerPoint package
- * identity. It still does not inspect macros, ActiveX, embedded payloads, PDF
- * object graphs, OLE streams, or exploit patterns. Those belong to M3+.
+ * OOXML is covered through M3A. Classic PDF xref tables and active structures
+ * are covered in M3B1. Modern PDF xref/object streams and legacy OLE remain
+ * explicitly outside this milestone and cannot earn CLEAN.
  */
 export async function inspectNativeDocumentIdentity(
   input: NativeDocumentScannerInput,
@@ -570,6 +591,16 @@ export async function inspectNativeDocumentIdentity(
   }
 
   const isOoxml = OOXML_EXTENSIONS.has(declaredExtension);
+  const isPdf = declaredExtension === "pdf";
+
+  if (isPdf && !input.limits.pdf) {
+    return failed({
+      code: "PDF_LIMITS_REQUIRED",
+      message:
+        "Explicit bounded PDF parser limits are required for PDF structural inspection.",
+      evidence,
+    });
+  }
 
   if (isOoxml && !input.limits.archive) {
     return failed({
@@ -584,7 +615,7 @@ export async function inspectNativeDocumentIdentity(
     input,
     expectedSizeBytes,
     maxBytes,
-    collectBytes: isOoxml,
+    collectBytes: isOoxml || isPdf,
   });
 
   if (!read.ok) {
@@ -690,6 +721,62 @@ export async function inspectNativeDocumentIdentity(
       sha256Hash: read.sha256Hash,
       identityInspectionComplete: true,
       evidence,
+    });
+  }
+
+  if (isPdf) {
+    if (!read.bytes || !input.limits.pdf) {
+      return failed({
+        code: "SCANNER_INPUT_INVALID",
+        message:
+          "Bounded PDF bytes and parser limits were not available for structural inspection.",
+        bytesScanned: read.bytesScanned,
+        sha256Hash: read.sha256Hash,
+        identityInspectionComplete: true,
+        evidence,
+      });
+    }
+
+    const pdf = inspectPdfStructuralSecurity({
+      bytes: read.bytes,
+      limits: input.limits.pdf,
+    });
+
+    if (!pdf.ok) {
+      const common = {
+        code: pdf.reasonCode,
+        message: pdf.message,
+        bytesScanned: read.bytesScanned,
+        sha256Hash: read.sha256Hash,
+        identityInspectionComplete: true,
+        evidence,
+      };
+
+      if (pdf.verdict === "FAILED") {
+        return failed(common);
+      }
+
+      return blocked(common);
+    }
+
+    return result({
+      verdict: "IDENTITY_VERIFIED",
+      reasonCodes: [
+        "PDF_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      ],
+      findings: [
+        finding(
+          "PDF_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+          "INFO",
+          "Byte integrity and the bounded M3B1 classic-PDF structural policy are verified; compressed PDF object/xref streams, legacy OLE inspection, and later rule-pack evaluation are still required before full document trust.",
+        ),
+      ],
+      bytesScanned: read.bytesScanned,
+      sha256Hash: read.sha256Hash,
+      identityInspectionComplete: true,
+      pdfStructuralInspectionComplete: true,
+      pdfStructuralEvidence: pdf.evidence,
+      identityEvidence: evidence,
     });
   }
 
