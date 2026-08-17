@@ -1,6 +1,10 @@
 import { createHash } from "crypto";
 
+import {
+  inspectOoxmlArchive,
+} from "./ooxmlArchiveInspector";
 import type {
+  NativeDocumentArchiveEvidence,
   NativeDocumentContainer,
   NativeDocumentExtension,
   NativeDocumentFormat,
@@ -16,13 +20,14 @@ export const HEHXAGON_DOCUMENT_SECURITY_ENGINE =
   "HEHXAGON_DOCUMENT_SECURITY" as const;
 
 export const HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION =
-  "0.1.0-m1";
+  "0.2.0-m2";
 
 /**
- * This is the embedded M1 identity rule set, not the future M4 threat rule pack.
+ * This is the embedded M2 identity/archive rule set, not the future M4 threat
+ * rule pack.
  */
 export const HEHXAGON_DOCUMENT_SECURITY_RULE_PACK_VERSION =
-  "HDS-M1-IDENTITY-V1";
+  "HDS-M2-OOXML-ARCHIVE-V1";
 
 const MAX_SIGNATURE_PREFIX_BYTES = 1024;
 
@@ -72,6 +77,7 @@ type StreamReadResult =
       bytesScanned: number;
       sha256Hash: string;
       prefix: Buffer;
+      bytes: Buffer | null;
     }
   | {
       ok: false;
@@ -266,6 +272,8 @@ function result(args: {
   sha256Hash: string | null;
   identityInspectionComplete: boolean;
   identityEvidence: NativeDocumentIdentityEvidence;
+  archiveInspectionComplete?: boolean;
+  archiveEvidence?: NativeDocumentArchiveEvidence | null;
 }): NativeDocumentScannerResult {
   return {
     engine: HEHXAGON_DOCUMENT_SECURITY_ENGINE,
@@ -279,6 +287,9 @@ function result(args: {
     sha256Hash: args.sha256Hash,
     identityInspectionComplete:
       args.identityInspectionComplete,
+    archiveInspectionComplete:
+      args.archiveInspectionComplete ?? false,
+    archiveEvidence: args.archiveEvidence ?? null,
     inspectionComplete: false,
     identityEvidence: args.identityEvidence,
   };
@@ -291,6 +302,8 @@ function blocked(args: {
   sha256Hash?: string | null;
   identityInspectionComplete?: boolean;
   evidence: NativeDocumentIdentityEvidence;
+  archiveInspectionComplete?: boolean;
+  archiveEvidence?: NativeDocumentArchiveEvidence | null;
 }) {
   return result({
     verdict: "BLOCKED",
@@ -301,6 +314,9 @@ function blocked(args: {
     identityInspectionComplete:
       args.identityInspectionComplete ?? false,
     identityEvidence: args.evidence,
+    archiveInspectionComplete:
+      args.archiveInspectionComplete ?? false,
+    archiveEvidence: args.archiveEvidence ?? null,
   });
 }
 
@@ -308,16 +324,24 @@ function failed(args: {
   code: NativeDocumentScannerReasonCode;
   message: string;
   bytesScanned?: number;
+  sha256Hash?: string | null;
+  identityInspectionComplete?: boolean;
   evidence: NativeDocumentIdentityEvidence;
+  archiveInspectionComplete?: boolean;
+  archiveEvidence?: NativeDocumentArchiveEvidence | null;
 }) {
   return result({
     verdict: "FAILED",
     reasonCodes: [args.code],
     findings: [finding(args.code, "ERROR", args.message)],
     bytesScanned: args.bytesScanned ?? 0,
-    sha256Hash: null,
-    identityInspectionComplete: false,
+    sha256Hash: args.sha256Hash ?? null,
+    identityInspectionComplete:
+      args.identityInspectionComplete ?? false,
     identityEvidence: args.evidence,
+    archiveInspectionComplete:
+      args.archiveInspectionComplete ?? false,
+    archiveEvidence: args.archiveEvidence ?? null,
   });
 }
 
@@ -325,11 +349,13 @@ async function readBoundedSource(args: {
   input: NativeDocumentScannerInput;
   expectedSizeBytes: number;
   maxBytes: number;
+  collectBytes: boolean;
 }): Promise<StreamReadResult> {
   const hash = createHash("sha256");
   const prefix = Buffer.alloc(MAX_SIGNATURE_PREFIX_BYTES);
   let prefixLength = 0;
   let bytesScanned = 0;
+  const collectedChunks: Buffer[] = [];
 
   try {
     for await (const rawChunk of args.input.source) {
@@ -371,6 +397,10 @@ async function readBoundedSource(args: {
       }
 
       hash.update(chunk);
+
+      if (args.collectBytes) {
+        collectedChunks.push(Buffer.from(chunk));
+      }
 
       if (prefixLength < MAX_SIGNATURE_PREFIX_BYTES) {
         const copyLength = Math.min(
@@ -414,15 +444,20 @@ async function readBoundedSource(args: {
     bytesScanned,
     sha256Hash: hash.digest("hex"),
     prefix: prefix.subarray(0, prefixLength),
+    bytes: args.collectBytes
+      ? Buffer.concat(collectedChunks, bytesScanned)
+      : null,
   };
 }
 
 /**
- * M1: bounded byte integrity + broad document/container identity.
+ * M2: bounded byte integrity + broad container identity + bounded OOXML ZIP
+ * package identity.
  *
- * This function intentionally does not parse ZIP members, PDF object graphs,
- * OLE streams, macros, embedded files, JavaScript, relationships, encryption,
- * or exploit patterns. Those capabilities belong to later milestones.
+ * ZIP/OOXML inspection parses central-directory metadata and only decompresses
+ * the small OPC control parts required to prove Word/Excel/PowerPoint package
+ * identity. It still does not inspect macros, ActiveX, embedded payloads, PDF
+ * object graphs, OLE streams, or exploit patterns. Those belong to M3+.
  */
 export async function inspectNativeDocumentIdentity(
   input: NativeDocumentScannerInput,
@@ -512,10 +547,22 @@ export async function inspectNativeDocumentIdentity(
     });
   }
 
+  const isOoxml = OOXML_EXTENSIONS.has(declaredExtension);
+
+  if (isOoxml && !input.limits.archive) {
+    return failed({
+      code: "OOXML_ARCHIVE_LIMITS_REQUIRED",
+      message:
+        "Explicit bounded archive limits are required for OOXML inspection.",
+      evidence,
+    });
+  }
+
   const read = await readBoundedSource({
     input,
     expectedSizeBytes,
     maxBytes,
+    collectBytes: isOoxml,
   });
 
   if (!read.ok) {
@@ -621,6 +668,71 @@ export async function inspectNativeDocumentIdentity(
       sha256Hash: read.sha256Hash,
       identityInspectionComplete: true,
       evidence,
+    });
+  }
+
+  if (isOoxml) {
+    if (!read.bytes || !input.limits.archive) {
+      return failed({
+        code: "SCANNER_INPUT_INVALID",
+        message:
+          "Bounded OOXML archive input was not available for package inspection.",
+        bytesScanned: read.bytesScanned,
+        sha256Hash: read.sha256Hash,
+        identityInspectionComplete: true,
+        evidence,
+      });
+    }
+
+    const archive = inspectOoxmlArchive({
+      bytes: read.bytes,
+      declaredExtension: declaredExtension as Extract<
+        NativeDocumentExtension,
+        "docx" | "pptx" | "xlsx"
+      >,
+      limits: input.limits.archive,
+    });
+
+    if (!archive.ok) {
+      const common = {
+        code: archive.reasonCode,
+        message: archive.message,
+        bytesScanned: read.bytesScanned,
+        sha256Hash: read.sha256Hash,
+        identityInspectionComplete: true,
+        evidence,
+      };
+
+      if (archive.verdict === "FAILED") {
+        return failed(common);
+      }
+
+      return blocked(common);
+    }
+
+    evidence = {
+      ...evidence,
+      detectedFormat: archive.format,
+    };
+
+    return result({
+      verdict: "IDENTITY_VERIFIED",
+      reasonCodes: [
+        "OOXML_PACKAGE_IDENTITY_VERIFIED_DEEP_INSPECTION_REQUIRED",
+      ],
+      findings: [
+        finding(
+          "OOXML_PACKAGE_IDENTITY_VERIFIED_DEEP_INSPECTION_REQUIRED",
+          "INFO",
+          "Byte integrity and bounded OOXML package identity are verified; deeper document security inspection is still required.",
+        ),
+      ],
+      bytesScanned: read.bytesScanned,
+      sha256Hash: read.sha256Hash,
+      identityInspectionComplete: true,
+      archiveInspectionComplete: true,
+      archiveEvidence: archive.evidence,
+      identityEvidence: evidence,
     });
   }
 
