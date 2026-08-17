@@ -7,6 +7,7 @@ import {
 import type {
   NativeDocumentArchiveLimits,
   NativeDocumentPdfLimits,
+  NativeDocumentOleLimits,
   NativeDocumentScannerResult,
 } from "../src/lib/security/documentScanner/types";
 
@@ -18,6 +19,18 @@ const ARCHIVE_LIMITS: NativeDocumentArchiveLimits = {
   maxTotalUncompressedBytes: 8 * 1024 * 1024,
   maxCompressionRatio: 200,
   maxControlPartBytes: 256 * 1024,
+};
+
+const OLE_LIMITS: NativeDocumentOleLimits = {
+  maxDirectoryEntries: 128,
+  maxDirectoryDepth: 16,
+  maxFatSectors: 32,
+  maxDifatSectors: 8,
+  maxMiniFatSectors: 8,
+  maxSectorChainLength: 256,
+  maxStreams: 64,
+  maxStreamBytes: 4 * 1024 * 1024,
+  maxTotalStreamBytes: 8 * 1024 * 1024,
 };
 
 const PDF_LIMITS: NativeDocumentPdfLimits = {
@@ -126,11 +139,11 @@ function assertSanitized(result: NativeDocumentScannerResult) {
 
   assert(
     !serialized.includes('"verdict":"CLEAN"'),
-    "M3B2 must never emit CLEAN.",
+    "M3C must never emit CLEAN.",
   );
   assert(
     result.inspectionComplete === false,
-    "M3B2 inspectionComplete must always remain false.",
+    "M3C inspectionComplete must always remain false.",
   );
 }
 
@@ -643,6 +656,301 @@ function buildHybridReferencePdf(hiddenObjectBody: string) {
   return Buffer.concat(chunks);
 }
 
+
+type CfbFixtureStream = {
+  path: string;
+  data: Buffer;
+};
+
+type CfbFixtureNode = {
+  id: number;
+  name: string;
+  type: 1 | 2 | 5;
+  parentPath: string | null;
+  data: Buffer | null;
+  startSector: number;
+  streamSize: number;
+  left: number;
+  right: number;
+  child: number;
+};
+
+function buildCfb(streams: CfbFixtureStream[], majorVersion: 3 | 4 = 3) {
+  const sectorSize = majorVersion === 3 ? 512 : 4096;
+  const miniSectorSize = 64;
+  const nodes: CfbFixtureNode[] = [
+    {
+      id: 0,
+      name: "Root Entry",
+      type: 5,
+      parentPath: null,
+      data: null,
+      startSector: 0xfffffffe,
+      streamSize: 0,
+      left: 0xffffffff,
+      right: 0xffffffff,
+      child: 0xffffffff,
+    },
+  ];
+  const storageIds = new Map<string, number>();
+
+  for (const stream of streams) {
+    const parts = stream.path.split("/").filter(Boolean);
+    assert(parts.length > 0, "CFB fixture stream path is required.");
+    let parentPath = "";
+    for (let index = 0; index < parts.length - 1; index += 1) {
+      const name = parts[index] as string;
+      const path = parentPath ? `${parentPath}/${name}` : name;
+      if (!storageIds.has(path)) {
+        const id = nodes.length;
+        storageIds.set(path, id);
+        nodes.push({
+          id,
+          name,
+          type: 1,
+          parentPath: parentPath || "",
+          data: null,
+          startSector: 0,
+          streamSize: 0,
+          left: 0xffffffff,
+          right: 0xffffffff,
+          child: 0xffffffff,
+        });
+      }
+      parentPath = path;
+    }
+    const name = parts[parts.length - 1] as string;
+    nodes.push({
+      id: nodes.length,
+      name,
+      type: 2,
+      parentPath: parentPath || "",
+      data: Buffer.from(stream.data),
+      startSector: 0xfffffffe,
+      streamSize: stream.data.length,
+      left: 0xffffffff,
+      right: 0xffffffff,
+      child: 0xffffffff,
+    });
+  }
+
+  const pathById = new Map<number, string>([[0, ""]]);
+  for (const [path, id] of storageIds) pathById.set(id, path);
+
+  const childrenByParent = new Map<string, number[]>();
+  for (const node of nodes.slice(1)) {
+    const parent = node.parentPath ?? "";
+    const list = childrenByParent.get(parent) ?? [];
+    list.push(node.id);
+    childrenByParent.set(parent, list);
+  }
+
+  for (const [parentPath, childIds] of childrenByParent) {
+    const parentId = parentPath === "" ? 0 : storageIds.get(parentPath);
+    assert(parentId !== undefined, "CFB fixture parent storage must exist.");
+    nodes[parentId]!.child = childIds[0] ?? 0xffffffff;
+    for (let index = 0; index < childIds.length - 1; index += 1) {
+      nodes[childIds[index]!]!.right = childIds[index + 1] as number;
+    }
+  }
+
+  const smallStreams = nodes.filter(
+    (node) => node.type === 2 && node.streamSize > 0 && node.streamSize < 4096,
+  );
+  const regularStreams = nodes.filter(
+    (node) => node.type === 2 && node.streamSize >= 4096,
+  );
+
+  const miniFatEntries: number[] = [];
+  const miniChunks: Buffer[] = [];
+  for (const node of smallStreams) {
+    const miniCount = Math.ceil(node.streamSize / miniSectorSize);
+    const firstMini = miniFatEntries.length;
+    node.startSector = firstMini;
+    for (let index = 0; index < miniCount; index += 1) {
+      const chunk = Buffer.alloc(miniSectorSize);
+      node.data!.subarray(index * miniSectorSize, (index + 1) * miniSectorSize).copy(chunk);
+      miniChunks.push(chunk);
+      miniFatEntries.push(index === miniCount - 1 ? 0xfffffffe : firstMini + index + 1);
+    }
+  }
+  const miniStream = Buffer.concat(miniChunks);
+  nodes[0]!.streamSize = miniStream.length;
+
+  const directoryBytesLength = Math.max(sectorSize, Math.ceil(nodes.length * 128 / sectorSize) * sectorSize);
+  const directorySectorCount = directoryBytesLength / sectorSize;
+  const miniFatSectorCount = miniFatEntries.length === 0 ? 0 : Math.ceil(miniFatEntries.length * 4 / sectorSize);
+  const rootMiniSectorCount = miniStream.length === 0 ? 0 : Math.ceil(miniStream.length / sectorSize);
+  const regularSectorCounts = regularStreams.map((node) => Math.ceil(node.streamSize / sectorSize));
+
+  const nonFatSectors = directorySectorCount + miniFatSectorCount + rootMiniSectorCount + regularSectorCounts.reduce((sum, count) => sum + count, 0);
+  let fatSectorCount = 1;
+  while (Math.ceil((nonFatSectors + fatSectorCount) / (sectorSize / 4)) > fatSectorCount) {
+    fatSectorCount += 1;
+  }
+  assert(fatSectorCount <= 109, "CFB fixture must fit the header DIFAT.");
+
+  let nextSector = 0;
+  const directoryStart = nextSector;
+  nextSector += directorySectorCount;
+  const miniFatStart = miniFatSectorCount ? nextSector : 0xfffffffe;
+  nextSector += miniFatSectorCount;
+  const rootMiniStart = rootMiniSectorCount ? nextSector : 0xfffffffe;
+  nextSector += rootMiniSectorCount;
+  nodes[0]!.startSector = rootMiniStart;
+
+  const regularStarts = new Map<number, number>();
+  for (let index = 0; index < regularStreams.length; index += 1) {
+    const node = regularStreams[index] as CfbFixtureNode;
+    regularStarts.set(node.id, nextSector);
+    node.startSector = nextSector;
+    nextSector += regularSectorCounts[index] as number;
+  }
+
+  const fatStart = nextSector;
+  const totalSectors = nonFatSectors + fatSectorCount;
+  assert(fatStart + fatSectorCount === totalSectors, "CFB fixture FAT allocation mismatch.");
+
+  const fat = new Array<number>(fatSectorCount * (sectorSize / 4)).fill(0xffffffff);
+  const chain = (start: number, count: number, terminal = 0xfffffffe) => {
+    for (let index = 0; index < count; index += 1) {
+      fat[start + index] = index === count - 1 ? terminal : start + index + 1;
+    }
+  };
+
+  chain(directoryStart, directorySectorCount);
+  if (miniFatSectorCount) chain(miniFatStart, miniFatSectorCount);
+  if (rootMiniSectorCount) chain(rootMiniStart, rootMiniSectorCount);
+  for (let index = 0; index < regularStreams.length; index += 1) {
+    chain(regularStarts.get(regularStreams[index]!.id) as number, regularSectorCounts[index] as number);
+  }
+  for (let index = 0; index < fatSectorCount; index += 1) {
+    fat[fatStart + index] = 0xfffffffd;
+  }
+
+  const directory = Buffer.alloc(directoryBytesLength);
+  for (const node of nodes) {
+    const entry = directory.subarray(node.id * 128, node.id * 128 + 128);
+    const nameBytes = Buffer.from(`${node.name}\u0000`, "utf16le");
+    assert(nameBytes.length <= 64, `CFB fixture directory name too long: ${node.name}`);
+    nameBytes.copy(entry, 0);
+    entry.writeUInt16LE(nameBytes.length, 64);
+    entry[66] = node.type;
+    entry[67] = 1;
+    entry.writeUInt32LE(node.left >>> 0, 68);
+    entry.writeUInt32LE(node.right >>> 0, 72);
+    entry.writeUInt32LE(node.child >>> 0, 76);
+    entry.writeUInt32LE(node.startSector >>> 0, 116);
+    entry.writeUInt32LE(node.streamSize >>> 0, 120);
+    entry.writeUInt32LE(0, 124);
+  }
+
+  const miniFatBytes = Buffer.alloc(miniFatSectorCount * sectorSize, 0xff);
+  for (let index = 0; index < miniFatEntries.length; index += 1) {
+    miniFatBytes.writeUInt32LE(miniFatEntries[index] as number, index * 4);
+  }
+
+  const rootMiniBytes = Buffer.alloc(rootMiniSectorCount * sectorSize);
+  miniStream.copy(rootMiniBytes);
+
+  const regularBytes: Buffer[] = [];
+  for (let index = 0; index < regularStreams.length; index += 1) {
+    const node = regularStreams[index] as CfbFixtureNode;
+    const allocated = Buffer.alloc((regularSectorCounts[index] as number) * sectorSize);
+    node.data!.copy(allocated);
+    regularBytes.push(allocated);
+  }
+
+  const fatBytes = Buffer.alloc(fatSectorCount * sectorSize, 0xff);
+  for (let index = 0; index < fat.length; index += 1) {
+    fatBytes.writeUInt32LE(fat[index] as number, index * 4);
+  }
+
+  const header = Buffer.alloc(sectorSize);
+  Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]).copy(header, 0);
+  header.writeUInt16LE(0x003e, 24);
+  header.writeUInt16LE(majorVersion, 26);
+  header.writeUInt16LE(0xfffe, 28);
+  header.writeUInt16LE(majorVersion === 3 ? 9 : 12, 30);
+  header.writeUInt16LE(6, 32);
+  header.writeUInt32LE(majorVersion === 4 ? directorySectorCount : 0, 40);
+  header.writeUInt32LE(fatSectorCount, 44);
+  header.writeUInt32LE(directoryStart, 48);
+  header.writeUInt32LE(0, 52);
+  header.writeUInt32LE(4096, 56);
+  header.writeUInt32LE(miniFatStart >>> 0, 60);
+  header.writeUInt32LE(miniFatSectorCount, 64);
+  header.writeUInt32LE(0xfffffffe, 68);
+  header.writeUInt32LE(0, 72);
+  for (let index = 0; index < 109; index += 1) {
+    header.writeUInt32LE(index < fatSectorCount ? fatStart + index : 0xffffffff, 76 + index * 4);
+  }
+
+  return Buffer.concat([
+    header,
+    directory,
+    miniFatBytes,
+    rootMiniBytes,
+    ...regularBytes,
+    fatBytes,
+  ]);
+}
+
+function legacyOfficeFixture(
+  extension: "doc" | "xls" | "ppt",
+  extras: CfbFixtureStream[] = [],
+  majorVersion: 3 | 4 = 3,
+) {
+  const applicationName =
+    extension === "doc"
+      ? "WordDocument"
+      : extension === "xls"
+        ? "Workbook"
+        : "PowerPoint Document";
+  return buildCfb([
+    {
+      path: applicationName,
+      data: Buffer.alloc(4096, extension === "doc" ? 0x57 : extension === "xls" ? 0x58 : 0x50),
+    },
+    { path: "\u0005SummaryInformation", data: Buffer.alloc(100, 0x53) },
+    ...extras,
+  ], majorVersion);
+}
+
+
+function cfbDirectoryEntryOffset(entryId: number) {
+  return 512 + entryId * 128;
+}
+
+function cfbDirectoryStartSector(bytes: Buffer, entryId: number) {
+  return bytes.readUInt32LE(cfbDirectoryEntryOffset(entryId) + 116);
+}
+
+function patchCfbDirectoryStartSector(bytes: Buffer, entryId: number, sectorId: number) {
+  const copy = Buffer.from(bytes);
+  copy.writeUInt32LE(sectorId >>> 0, cfbDirectoryEntryOffset(entryId) + 116);
+  return copy;
+}
+
+function patchCfbFatEntry(bytes: Buffer, sectorId: number, value: number) {
+  const copy = Buffer.from(bytes);
+  const sectorSize = 1 << copy.readUInt16LE(30);
+  const fatSectorId = copy.readUInt32LE(76);
+  const fatOffset = (fatSectorId + 1) * sectorSize;
+  copy.writeUInt32LE(value >>> 0, fatOffset + sectorId * 4);
+  return copy;
+}
+
+function patchCfbMiniFatEntry(bytes: Buffer, miniSectorId: number, value: number) {
+  const copy = Buffer.from(bytes);
+  const sectorSize = 1 << copy.readUInt16LE(30);
+  const miniFatSectorId = copy.readUInt32LE(60);
+  assert(miniFatSectorId < 0xfffffffa, "CFB fixture MiniFAT sector must exist.");
+  const miniFatOffset = (miniFatSectorId + 1) * sectorSize;
+  copy.writeUInt32LE(value >>> 0, miniFatOffset + miniSectorId * 4);
+  return copy;
+}
+
 async function inspectFixture(args: {
   bytes: Buffer;
   filename: string;
@@ -653,6 +961,7 @@ async function inspectFixture(args: {
   maxBytes?: number;
   archiveLimits?: NativeDocumentArchiveLimits | null;
   pdfLimits?: NativeDocumentPdfLimits | null;
+  oleLimits?: NativeDocumentOleLimits | null;
 }) {
   return inspectNativeDocumentIdentity({
     source: sourceFromChunks(
@@ -678,16 +987,18 @@ async function inspectFixture(args: {
         : {
             pdf: args.pdfLimits ?? PDF_LIMITS,
           }),
+      ...(args.oleLimits === null
+        ? {}
+        : {
+            ole: args.oleLimits ?? OLE_LIMITS,
+          }),
     },
   });
 }
 
 async function run() {
   const pdf = buildClassicPdf();
-  const ole = Buffer.from([
-    0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1,
-    0x00, 0x00, 0x00, 0x00,
-  ]);
+  const ole = legacyOfficeFixture("doc");
   const executable = Buffer.from([
     0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00,
   ]);
@@ -747,7 +1058,16 @@ async function run() {
   assertVerdict(
     positiveCases[4] as NativeDocumentScannerResult,
     "IDENTITY_VERIFIED",
-    "IDENTITY_VERIFIED_DEEP_INSPECTION_REQUIRED",
+    "OLE_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+  );
+  assert(
+    (positiveCases[4] as NativeDocumentScannerResult).oleStructuralInspectionComplete === true,
+    "Legacy Word CFB structural inspection should complete.",
+  );
+  assert(
+    (positiveCases[4] as NativeDocumentScannerResult).identityEvidence.detectedFormat ===
+      "WORD_BINARY",
+    "Legacy Word application identity should be established.",
   );
 
   const expectedFormats = [
@@ -2125,6 +2445,338 @@ async function run() {
     "PDF_STRING_LIMIT_EXCEEDED",
   );
 
+
+
+  const legacyV4 = await inspectFixture({
+    bytes: legacyOfficeFixture("doc", [], 4),
+    filename: "legacy-v4.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    archiveLimits: null,
+    pdfLimits: null,
+  });
+  assertVerdict(
+    legacyV4,
+    "IDENTITY_VERIFIED",
+    "OLE_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+  );
+  assert(
+    legacyV4.oleStructuralEvidence?.majorVersion === 4 &&
+      legacyV4.oleStructuralEvidence.sectorSize === 4096,
+    "Version 4 CFB sector geometry should be verified.",
+  );
+
+  const legacyXls = await inspectFixture({
+    bytes: legacyOfficeFixture("xls"),
+    filename: "legacy.xls",
+    extension: "xls",
+    mimeType: "application/vnd.ms-excel",
+    archiveLimits: null,
+    pdfLimits: null,
+  });
+  assertVerdict(
+    legacyXls,
+    "IDENTITY_VERIFIED",
+    "OLE_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+  );
+  assert(
+    legacyXls.identityEvidence.detectedFormat === "EXCEL_BINARY",
+    "Legacy Excel application identity should be established.",
+  );
+
+  const legacyPpt = await inspectFixture({
+    bytes: legacyOfficeFixture("ppt"),
+    filename: "legacy.ppt",
+    extension: "ppt",
+    mimeType: "application/vnd.ms-powerpoint",
+    archiveLimits: null,
+    pdfLimits: null,
+  });
+  assertVerdict(
+    legacyPpt,
+    "IDENTITY_VERIFIED",
+    "OLE_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+  );
+  assert(
+    legacyPpt.identityEvidence.detectedFormat === "POWERPOINT_BINARY",
+    "Legacy PowerPoint application identity should be established.",
+  );
+
+  const legacyMissingLimits = await inspectFixture({
+    bytes: legacyOfficeFixture("doc"),
+    filename: "no-ole-limits.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    archiveLimits: null,
+    pdfLimits: null,
+    oleLimits: null,
+  });
+  assertVerdict(legacyMissingLimits, "FAILED", "OLE_LIMITS_REQUIRED");
+
+  const legacyApplicationMismatch = await inspectFixture({
+    bytes: legacyOfficeFixture("xls"),
+    filename: "renamed.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    archiveLimits: null,
+    pdfLimits: null,
+  });
+  assertVerdict(legacyApplicationMismatch, "BLOCKED", "OLE_APPLICATION_MISMATCH");
+
+
+  const legacyConflictingApplication = await inspectFixture({
+    bytes: legacyOfficeFixture("doc", [
+      { path: "Workbook", data: Buffer.alloc(4096, 0x58) },
+    ]),
+    filename: "conflicting-app.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    archiveLimits: null,
+    pdfLimits: null,
+  });
+  assertVerdict(legacyConflictingApplication, "BLOCKED", "OLE_APPLICATION_MISMATCH");
+
+  const legacyApplicationMissing = await inspectFixture({
+    bytes: buildCfb([
+      { path: "\u0005SummaryInformation", data: Buffer.alloc(100, 0x53) },
+    ]),
+    filename: "missing-main.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    archiveLimits: null,
+    pdfLimits: null,
+  });
+  assertVerdict(legacyApplicationMissing, "FAILED", "OLE_APPLICATION_STREAM_MISSING");
+
+  const legacyVba = await inspectFixture({
+    bytes: legacyOfficeFixture("doc", [
+      { path: "VBA/dir", data: Buffer.from("compressed-vba-directory", "utf8") },
+      { path: "VBA/_VBA_PROJECT", data: Buffer.from("project", "utf8") },
+    ]),
+    filename: "macro.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    archiveLimits: null,
+    pdfLimits: null,
+  });
+  assertVerdict(legacyVba, "BLOCKED", "OLE_VBA_PROJECT_BLOCKED");
+
+  const legacyEmbedded = await inspectFixture({
+    bytes: legacyOfficeFixture("doc", [
+      { path: "ObjectPool/Object 1/\u0001Ole10Native", data: Buffer.from("payload", "utf8") },
+    ]),
+    filename: "embedded.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    archiveLimits: null,
+    pdfLimits: null,
+  });
+  assertVerdict(legacyEmbedded, "BLOCKED", "OLE_EMBEDDED_OBJECT_BLOCKED");
+
+  const legacyEncrypted = await inspectFixture({
+    bytes: legacyOfficeFixture("doc", [
+      { path: "EncryptionInfo", data: Buffer.from("info", "utf8") },
+      { path: "EncryptedPackage", data: Buffer.from("ciphertext", "utf8") },
+    ]),
+    filename: "encrypted.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    archiveLimits: null,
+    pdfLimits: null,
+  });
+  assertVerdict(legacyEncrypted, "BLOCKED", "OLE_ENCRYPTED_PACKAGE_BLOCKED");
+
+  const legacyExecutable = await inspectFixture({
+    bytes: legacyOfficeFixture("doc", [
+      { path: "payload.exe", data: Buffer.from([0x4d, 0x5a, 0x90, 0x00]) },
+    ]),
+    filename: "payload.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    archiveLimits: null,
+    pdfLimits: null,
+  });
+  assertVerdict(legacyExecutable, "BLOCKED", "OLE_EXECUTABLE_STREAM_BLOCKED");
+
+  const legacyDirectoryLimit = await inspectFixture({
+    bytes: legacyOfficeFixture("doc"),
+    filename: "directory-limit.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    archiveLimits: null,
+    pdfLimits: null,
+    oleLimits: { ...OLE_LIMITS, maxDirectoryEntries: 2 },
+  });
+  assertVerdict(legacyDirectoryLimit, "FAILED", "OLE_DIRECTORY_ENTRY_LIMIT_EXCEEDED");
+
+  const legacyStreamCountLimit = await inspectFixture({
+    bytes: legacyOfficeFixture("doc"),
+    filename: "stream-count.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    archiveLimits: null,
+    pdfLimits: null,
+    oleLimits: { ...OLE_LIMITS, maxStreams: 1 },
+  });
+  assertVerdict(legacyStreamCountLimit, "FAILED", "OLE_STREAM_COUNT_LIMIT_EXCEEDED");
+
+  const legacyStreamSizeLimit = await inspectFixture({
+    bytes: legacyOfficeFixture("doc"),
+    filename: "stream-size.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    archiveLimits: null,
+    pdfLimits: null,
+    oleLimits: { ...OLE_LIMITS, maxStreamBytes: 1024 },
+  });
+  assertVerdict(legacyStreamSizeLimit, "FAILED", "OLE_STREAM_SIZE_LIMIT_EXCEEDED");
+
+  const legacyTotalSizeLimit = await inspectFixture({
+    bytes: legacyOfficeFixture("doc"),
+    filename: "total-size.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    archiveLimits: null,
+    pdfLimits: null,
+    oleLimits: { ...OLE_LIMITS, maxTotalStreamBytes: 2048 },
+  });
+  assertVerdict(legacyTotalSizeLimit, "FAILED", "OLE_TOTAL_STREAM_SIZE_LIMIT_EXCEEDED");
+
+  const chainLoopBase = legacyOfficeFixture("doc");
+  const applicationStart = cfbDirectoryStartSector(chainLoopBase, 1);
+  const legacySectorLoop = await inspectFixture({
+    bytes: patchCfbFatEntry(chainLoopBase, applicationStart, applicationStart),
+    filename: "sector-loop.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    archiveLimits: null,
+    pdfLimits: null,
+  });
+  assertVerdict(legacySectorLoop, "FAILED", "OLE_SECTOR_CHAIN_LOOP");
+
+  const legacyMiniLoop = await inspectFixture({
+    bytes: patchCfbMiniFatEntry(legacyOfficeFixture("doc"), 0, 0),
+    filename: "mini-loop.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    archiveLimits: null,
+    pdfLimits: null,
+  });
+  assertVerdict(legacyMiniLoop, "FAILED", "OLE_SECTOR_CHAIN_LOOP");
+
+  const overlapBase = legacyOfficeFixture("doc", [
+    { path: "SecondBigStream", data: Buffer.alloc(4096, 0x41) },
+  ]);
+  const firstStart = cfbDirectoryStartSector(overlapBase, 1);
+  const legacySectorOverlap = await inspectFixture({
+    bytes: patchCfbDirectoryStartSector(overlapBase, 3, firstStart),
+    filename: "sector-overlap.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    archiveLimits: null,
+    pdfLimits: null,
+  });
+  assertVerdict(legacySectorOverlap, "FAILED", "OLE_SECTOR_OWNERSHIP_CONFLICT");
+
+  const difatBase = legacyOfficeFixture("doc");
+  const duplicatedDifat = Buffer.from(difatBase);
+  duplicatedDifat.writeUInt32LE(duplicatedDifat.readUInt32LE(76), 80);
+  const legacyDuplicateDifat = await inspectFixture({
+    bytes: duplicatedDifat,
+    filename: "duplicate-difat.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    archiveLimits: null,
+    pdfLimits: null,
+  });
+  assertVerdict(legacyDuplicateDifat, "FAILED", "OLE_DIFAT_INVALID");
+
+  const versionBase = legacyOfficeFixture("doc");
+  const badVersion = Buffer.from(versionBase);
+  badVersion.writeUInt16LE(5, 26);
+  const legacyBadVersion = await inspectFixture({
+    bytes: badVersion,
+    filename: "bad-version.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    archiveLimits: null,
+    pdfLimits: null,
+  });
+  assertVerdict(legacyBadVersion, "FAILED", "OLE_VERSION_UNSUPPORTED");
+
+
+  const legacyDirectoryDepth = await inspectFixture({
+    bytes: legacyOfficeFixture("doc", [
+      { path: "Level1/Level2/deep.bin", data: Buffer.from("deep", "utf8") },
+    ]),
+    filename: "directory-depth.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    archiveLimits: null,
+    pdfLimits: null,
+    oleLimits: { ...OLE_LIMITS, maxDirectoryDepth: 1 },
+  });
+  assertVerdict(legacyDirectoryDepth, "FAILED", "OLE_DIRECTORY_DEPTH_LIMIT_EXCEEDED");
+
+  const legacyChainLimit = await inspectFixture({
+    bytes: legacyOfficeFixture("doc"),
+    filename: "chain-limit.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    archiveLimits: null,
+    pdfLimits: null,
+    oleLimits: { ...OLE_LIMITS, maxSectorChainLength: 4 },
+  });
+  assertVerdict(legacyChainLimit, "FAILED", "OLE_SECTOR_CHAIN_LIMIT_EXCEEDED");
+
+  const fatLimitBytes = Buffer.from(legacyOfficeFixture("doc"));
+  fatLimitBytes.writeUInt32LE(OLE_LIMITS.maxFatSectors + 1, 44);
+  const legacyFatLimit = await inspectFixture({
+    bytes: fatLimitBytes,
+    filename: "fat-limit.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    archiveLimits: null,
+    pdfLimits: null,
+  });
+  assertVerdict(legacyFatLimit, "FAILED", "OLE_FAT_LIMIT_EXCEEDED");
+
+  const difatLimitBytes = Buffer.from(legacyOfficeFixture("doc"));
+  difatLimitBytes.writeUInt32LE(OLE_LIMITS.maxDifatSectors + 1, 72);
+  const legacyDifatLimit = await inspectFixture({
+    bytes: difatLimitBytes,
+    filename: "difat-limit.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    archiveLimits: null,
+    pdfLimits: null,
+  });
+  assertVerdict(legacyDifatLimit, "FAILED", "OLE_DIFAT_LIMIT_EXCEEDED");
+
+  const miniFatLimitBytes = Buffer.from(legacyOfficeFixture("doc"));
+  miniFatLimitBytes.writeUInt32LE(OLE_LIMITS.maxMiniFatSectors + 1, 64);
+  const legacyMiniFatLimit = await inspectFixture({
+    bytes: miniFatLimitBytes,
+    filename: "minifat-limit.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    archiveLimits: null,
+    pdfLimits: null,
+  });
+  assertVerdict(legacyMiniFatLimit, "FAILED", "OLE_MINIFAT_LIMIT_EXCEEDED");
+
+  const orphanBase = Buffer.from(legacyOfficeFixture("doc"));
+  orphanBase.writeUInt32LE(0xffffffff, cfbDirectoryEntryOffset(0) + 76);
+  const legacyOrphanDirectory = await inspectFixture({
+    bytes: orphanBase,
+    filename: "orphan-directory.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    archiveLimits: null,
+    pdfLimits: null,
+  });
+  assertVerdict(legacyOrphanDirectory, "FAILED", "OLE_DIRECTORY_TREE_INVALID");
+
   const allResults = [
     ...positiveCases,
     unsupportedExtension,
@@ -2206,13 +2858,39 @@ async function run() {
     pdfObjectCountLimit,
     pdfNestingLimit,
     pdfStringLimit,
+    legacyV4,
+    legacyXls,
+    legacyPpt,
+    legacyMissingLimits,
+    legacyApplicationMismatch,
+    legacyConflictingApplication,
+    legacyApplicationMissing,
+    legacyVba,
+    legacyEmbedded,
+    legacyEncrypted,
+    legacyExecutable,
+    legacyDirectoryLimit,
+    legacyStreamCountLimit,
+    legacyStreamSizeLimit,
+    legacyTotalSizeLimit,
+    legacySectorLoop,
+    legacyMiniLoop,
+    legacySectorOverlap,
+    legacyDuplicateDifat,
+    legacyBadVersion,
+    legacyDirectoryDepth,
+    legacyChainLimit,
+    legacyFatLimit,
+    legacyDifatLimit,
+    legacyMiniFatLimit,
+    legacyOrphanDirectory,
   ];
 
   for (const result of allResults) {
     assertSanitized(result);
   }
 
-  console.log("HDS M3B2 native document scanner self-test: GREEN");
+  console.log("HDS M3C native document scanner self-test: GREEN");
   console.log(`Cases: ${allResults.length}`);
   console.log("M1 identity/integrity regression: GREEN");
   console.log("M2 bounded OOXML archive regression: GREEN");
@@ -2223,11 +2901,14 @@ async function run() {
   console.log("PDF JavaScript/action/attachment/rich-media blocks: GREEN");
   console.log("Encrypted PDF fail-closed policy: GREEN");
   console.log("Ordinary HTTP(S) PDF hyperlink policy: GREEN");
-  console.log("OOXML/PDF structural passes remain non-CLEAN: GREEN");
+  console.log("Legacy DOC/XLS/PPT CFB structural parsing: GREEN");
+  console.log("OLE FAT/DIFAT/MiniFAT/directory/ownership guards: GREEN");
+  console.log("OLE VBA/embedded/encrypted/executable blocks: GREEN");
+  console.log("OOXML/PDF/OLE structural passes remain non-CLEAN: GREEN");
   console.log("Sanitized result boundary: GREEN");
 }
 
 run().catch(() => {
-  console.error("HDS M3B2 native document scanner self-test: FAILED");
+  console.error("HDS M3C native document scanner self-test: FAILED");
   process.exitCode = 1;
 });

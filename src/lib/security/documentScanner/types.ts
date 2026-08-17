@@ -25,17 +25,19 @@ export type NativeDocumentFormat =
   | "POWERPOINT_OOXML"
   | "EXCEL_OOXML"
   | "OLE_COMPOUND_FILE"
+  | "WORD_BINARY"
+  | "EXCEL_BINARY"
+  | "POWERPOINT_BINARY"
   | "UNKNOWN";
 
 /**
- * M3B2 still deliberately has no CLEAN verdict.
+ * M3C still deliberately has no CLEAN verdict.
  *
- * IDENTITY_VERIFIED means that byte integrity, broad container identity, and
- * (for OOXML) bounded package identity plus M3A OOXML structural policy, and
- * (for PDF) bounded classic/modern xref and object-stream structural policy have
- * been established. It is not a sendable or malware-clean state. Legacy OLE
- * structural inspection and the later versioned rule pack are still required
- * before any future milestone may earn CLEAN.
+ * IDENTITY_VERIFIED means that byte integrity and broad container identity have
+ * been established and, where applicable, the bounded structural policy for
+ * OOXML, PDF, or legacy OLE/CFBF has also passed. It is not a sendable or
+ * malware-clean state. The later versioned rule pack remains required before
+ * any future milestone may earn CLEAN.
  */
 export type NativeDocumentScannerVerdict =
   | "IDENTITY_VERIFIED"
@@ -141,7 +143,36 @@ export type NativeDocumentScannerReasonCode =
   | "PDF_XFA_BLOCKED"
   | "PDF_EXTERNAL_ACTION_BLOCKED"
   | "PDF_UNSAFE_URI_ACTION_BLOCKED"
-  | "PDF_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED";
+  | "PDF_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED"
+  | "OLE_LIMITS_REQUIRED"
+  | "OLE_HEADER_INVALID"
+  | "OLE_VERSION_UNSUPPORTED"
+  | "OLE_SECTOR_GEOMETRY_INVALID"
+  | "OLE_DIFAT_LIMIT_EXCEEDED"
+  | "OLE_DIFAT_INVALID"
+  | "OLE_FAT_LIMIT_EXCEEDED"
+  | "OLE_FAT_INVALID"
+  | "OLE_MINIFAT_LIMIT_EXCEEDED"
+  | "OLE_MINIFAT_INVALID"
+  | "OLE_SECTOR_CHAIN_LIMIT_EXCEEDED"
+  | "OLE_SECTOR_CHAIN_LOOP"
+  | "OLE_SECTOR_OWNERSHIP_CONFLICT"
+  | "OLE_DIRECTORY_INVALID"
+  | "OLE_DIRECTORY_ENTRY_LIMIT_EXCEEDED"
+  | "OLE_DIRECTORY_TREE_INVALID"
+  | "OLE_DIRECTORY_DEPTH_LIMIT_EXCEEDED"
+  | "OLE_STREAM_COUNT_LIMIT_EXCEEDED"
+  | "OLE_STREAM_SIZE_LIMIT_EXCEEDED"
+  | "OLE_TOTAL_STREAM_SIZE_LIMIT_EXCEEDED"
+  | "OLE_STREAM_CHAIN_INVALID"
+  | "OLE_MINISTREAM_INVALID"
+  | "OLE_APPLICATION_STREAM_MISSING"
+  | "OLE_APPLICATION_MISMATCH"
+  | "OLE_VBA_PROJECT_BLOCKED"
+  | "OLE_EMBEDDED_OBJECT_BLOCKED"
+  | "OLE_ENCRYPTED_PACKAGE_BLOCKED"
+  | "OLE_EXECUTABLE_STREAM_BLOCKED"
+  | "OLE_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED";
 
 export type NativeDocumentScannerFinding = {
   code: NativeDocumentScannerReasonCode;
@@ -178,6 +209,18 @@ export type NativeDocumentPdfLimits = {
   maxObjectsPerObjectStream: number;
 };
 
+export type NativeDocumentOleLimits = {
+  maxDirectoryEntries: number;
+  maxDirectoryDepth: number;
+  maxFatSectors: number;
+  maxDifatSectors: number;
+  maxMiniFatSectors: number;
+  maxSectorChainLength: number;
+  maxStreams: number;
+  maxStreamBytes: number;
+  maxTotalStreamBytes: number;
+};
+
 export type NativeDocumentScannerLimits = {
   /** Maximum number of compressed/source bytes the scanner may consume. */
   maxBytes: number;
@@ -187,6 +230,9 @@ export type NativeDocumentScannerLimits = {
 
   /** Required for PDF structural inspection beginning with M3B1 and extended in M3B2. */
   pdf?: NativeDocumentPdfLimits;
+
+  /** Required for legacy DOC/XLS/PPT compound-file inspection beginning with M3C. */
+  ole?: NativeDocumentOleLimits;
 };
 
 export type NativeDocumentScannerInput = {
@@ -287,6 +333,26 @@ export type NativeDocumentPdfStructuralEvidence = {
   blockedExternalActionDetected: false;
 };
 
+export type NativeDocumentOleStructuralEvidence = {
+  majorVersion: 3 | 4;
+  sectorSize: 512 | 4096;
+  miniSectorSize: 64;
+  fatSectorCount: number;
+  difatSectorCount: number;
+  miniFatSectorCount: number;
+  directoryEntryCount: number;
+  streamCount: number;
+  totalDeclaredStreamBytes: number;
+  applicationFormat: "WORD_BINARY" | "EXCEL_BINARY" | "POWERPOINT_BINARY";
+  applicationStreamVerified: true;
+  vbaProjectDetected: false;
+  embeddedObjectDetected: false;
+  encryptedPackageDetected: false;
+  executableStreamDetected: false;
+  sectorOwnershipVerified: true;
+  directoryTreeVerified: true;
+};
+
 export type NativeDocumentScannerResult = {
   engine: "HEHXAGON_DOCUMENT_SECURITY";
   engineVersion: string;
@@ -311,9 +377,13 @@ export type NativeDocumentScannerResult = {
   pdfStructuralInspectionComplete: boolean;
   pdfStructuralEvidence: NativeDocumentPdfStructuralEvidence | null;
 
+  /** True only when the M3C bounded OLE/CFBF structural policy ran to completion. */
+  oleStructuralInspectionComplete: boolean;
+  oleStructuralEvidence: NativeDocumentOleStructuralEvidence | null;
+
   /**
-   * Always false through M3B2. Legacy OLE structural inspection and later
-   * rule-pack evaluation still remain before full document trust exists.
+   * Always false through M3C. The future versioned rule-pack evaluation still
+   * remains before full document trust exists.
    */
   inspectionComplete: false;
 

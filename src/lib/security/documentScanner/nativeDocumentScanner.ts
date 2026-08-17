@@ -7,6 +7,7 @@ import {
   inspectOoxmlStructuralSecurity,
 } from "./ooxmlStructuralInspector";
 import { inspectPdfStructuralSecurity } from "./pdfStructuralInspector";
+import { inspectOleStructuralSecurity } from "./oleStructuralInspector";
 import type {
   NativeDocumentArchiveEvidence,
   NativeDocumentContainer,
@@ -15,6 +16,7 @@ import type {
   NativeDocumentIdentityEvidence,
   NativeDocumentOoxmlStructuralEvidence,
   NativeDocumentPdfStructuralEvidence,
+  NativeDocumentOleStructuralEvidence,
   NativeDocumentScannerFinding,
   NativeDocumentScannerInput,
   NativeDocumentScannerReasonCode,
@@ -26,14 +28,14 @@ export const HEHXAGON_DOCUMENT_SECURITY_ENGINE =
   "HEHXAGON_DOCUMENT_SECURITY" as const;
 
 export const HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION =
-  "0.3.2-m3b2";
+  "0.3.3-m3c";
 
 /**
- * This is the embedded M3B2 structural policy, not the future M4 versioned
+ * This is the embedded M3C structural policy, not the future M4 versioned
  * threat-rule pack. It deliberately cannot produce CLEAN.
  */
 export const HEHXAGON_DOCUMENT_SECURITY_RULE_PACK_VERSION =
-  "HDS-M3B2-PDF-MODERN-STRUCTURE-V1";
+  "HDS-M3C-OLE-COMPOUND-STRUCTURE-V1";
 
 const MAX_SIGNATURE_PREFIX_BYTES = 1024;
 
@@ -69,6 +71,11 @@ const OOXML_EXTENSIONS = new Set<NativeDocumentExtension>([
   "docx",
   "pptx",
   "xlsx",
+]);
+const LEGACY_OLE_EXTENSIONS = new Set<NativeDocumentExtension>([
+  "doc",
+  "ppt",
+  "xls",
 ]);
 
 type SignatureIdentity = {
@@ -284,6 +291,8 @@ function result(args: {
   ooxmlStructuralEvidence?: NativeDocumentOoxmlStructuralEvidence | null;
   pdfStructuralInspectionComplete?: boolean;
   pdfStructuralEvidence?: NativeDocumentPdfStructuralEvidence | null;
+  oleStructuralInspectionComplete?: boolean;
+  oleStructuralEvidence?: NativeDocumentOleStructuralEvidence | null;
 }): NativeDocumentScannerResult {
   return {
     engine: HEHXAGON_DOCUMENT_SECURITY_ENGINE,
@@ -308,6 +317,10 @@ function result(args: {
       args.pdfStructuralInspectionComplete ?? false,
     pdfStructuralEvidence:
       args.pdfStructuralEvidence ?? null,
+    oleStructuralInspectionComplete:
+      args.oleStructuralInspectionComplete ?? false,
+    oleStructuralEvidence:
+      args.oleStructuralEvidence ?? null,
     inspectionComplete: false,
     identityEvidence: args.identityEvidence,
   };
@@ -326,6 +339,8 @@ function blocked(args: {
   ooxmlStructuralEvidence?: NativeDocumentOoxmlStructuralEvidence | null;
   pdfStructuralInspectionComplete?: boolean;
   pdfStructuralEvidence?: NativeDocumentPdfStructuralEvidence | null;
+  oleStructuralInspectionComplete?: boolean;
+  oleStructuralEvidence?: NativeDocumentOleStructuralEvidence | null;
 }) {
   return result({
     verdict: "BLOCKED",
@@ -363,6 +378,8 @@ function failed(args: {
   ooxmlStructuralEvidence?: NativeDocumentOoxmlStructuralEvidence | null;
   pdfStructuralInspectionComplete?: boolean;
   pdfStructuralEvidence?: NativeDocumentPdfStructuralEvidence | null;
+  oleStructuralInspectionComplete?: boolean;
+  oleStructuralEvidence?: NativeDocumentOleStructuralEvidence | null;
 }) {
   return result({
     verdict: "FAILED",
@@ -592,6 +609,7 @@ export async function inspectNativeDocumentIdentity(
 
   const isOoxml = OOXML_EXTENSIONS.has(declaredExtension);
   const isPdf = declaredExtension === "pdf";
+  const isLegacyOle = LEGACY_OLE_EXTENSIONS.has(declaredExtension);
 
   if (isPdf && !input.limits.pdf) {
     return failed({
@@ -602,6 +620,14 @@ export async function inspectNativeDocumentIdentity(
     });
   }
 
+  if (isLegacyOle && !input.limits.ole) {
+    return failed({
+      code: "OLE_LIMITS_REQUIRED",
+      message:
+        "Explicit bounded OLE/CFBF parser limits are required for legacy Office structural inspection.",
+      evidence,
+    });
+  }
   if (isOoxml && !input.limits.archive) {
     return failed({
       code: "OOXML_ARCHIVE_LIMITS_REQUIRED",
@@ -615,7 +641,7 @@ export async function inspectNativeDocumentIdentity(
     input,
     expectedSizeBytes,
     maxBytes,
-    collectBytes: isOoxml || isPdf,
+    collectBytes: isOoxml || isPdf || isLegacyOle,
   });
 
   if (!read.ok) {
@@ -768,7 +794,7 @@ export async function inspectNativeDocumentIdentity(
         finding(
           "PDF_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
           "INFO",
-          "Byte integrity and the bounded M3B2 PDF structural policy are verified across classic and compressed xref/object-stream structures; legacy OLE inspection and later rule-pack evaluation are still required before full document trust.",
+          "Byte integrity and the bounded M3B2 PDF structural policy are verified across classic and compressed xref/object-stream structures; the later versioned rule-pack evaluation is still required before full document trust.",
         ),
       ],
       bytesScanned: read.bytesScanned,
@@ -858,7 +884,7 @@ export async function inspectNativeDocumentIdentity(
         finding(
           "OOXML_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
           "INFO",
-          "Byte integrity, bounded OOXML package identity, and the M3A OOXML structural policy are verified; PDF/OLE structural coverage and later rule-pack evaluation are still required before full document trust.",
+          "Byte integrity, bounded OOXML package identity, and the M3A OOXML structural policy are verified; the later versioned rule-pack evaluation is still required before full document trust.",
         ),
       ],
       bytesScanned: read.bytesScanned,
@@ -868,6 +894,69 @@ export async function inspectNativeDocumentIdentity(
       archiveEvidence: archive.evidence,
       ooxmlStructuralInspectionComplete: true,
       ooxmlStructuralEvidence: structural.evidence,
+      identityEvidence: evidence,
+    });
+  }
+
+  if (isLegacyOle) {
+    if (!read.bytes || !input.limits.ole) {
+      return failed({
+        code: "SCANNER_INPUT_INVALID",
+        message:
+          "Bounded OLE/CFBF bytes and parser limits were not available for structural inspection.",
+        bytesScanned: read.bytesScanned,
+        sha256Hash: read.sha256Hash,
+        identityInspectionComplete: true,
+        evidence,
+      });
+    }
+
+    const ole = inspectOleStructuralSecurity({
+      bytes: read.bytes,
+      declaredExtension: declaredExtension as Extract<
+        NativeDocumentExtension,
+        "doc" | "ppt" | "xls"
+      >,
+      limits: input.limits.ole,
+    });
+
+    if (!ole.ok) {
+      const common = {
+        code: ole.reasonCode,
+        message: ole.message,
+        bytesScanned: read.bytesScanned,
+        sha256Hash: read.sha256Hash,
+        identityInspectionComplete: true,
+        evidence,
+      };
+      if (ole.verdict === "FAILED") {
+        return failed(common);
+      }
+      return blocked(common);
+    }
+
+    evidence = {
+      ...evidence,
+      detectedFormat: ole.format,
+    };
+
+    return result({
+      verdict: "IDENTITY_VERIFIED",
+      reasonCodes: [
+        "OLE_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      ],
+      findings: [
+        finding(
+          "OLE_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+          "INFO",
+          "Byte integrity, legacy Office application identity, bounded CFB allocation structure, and the M3C OLE structural policy are verified; the later versioned rule-pack evaluation is still required before full document trust.",
+        ),
+      ],
+      bytesScanned: read.bytesScanned,
+      sha256Hash: read.sha256Hash,
+      identityInspectionComplete: true,
+      oleStructuralInspectionComplete: true,
+      oleStructuralEvidence: ole.evidence,
       identityEvidence: evidence,
     });
   }
