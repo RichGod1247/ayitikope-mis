@@ -17,6 +17,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "finance:qa": "node scripts/finance-sprint9-qa-gate.mjs",
     "security:clamav:qa": "tsc -p scripts/tsconfig.json --noEmit && ts-node --project scripts/tsconfig.json scripts/clamav-adapter-selftest.ts",
+    "security:native-document-scanner:qa": "tsc -p scripts/tsconfig.json --noEmit && ts-node --project scripts/tsconfig.json scripts/native-document-scanner-selftest.ts",
     "finance:cron:hosted": "node scripts/run-hosted-finance-cron.mjs",
     "postinstall": "node scripts/prisma-postinstall.mjs",
     "seed": "node prisma/seed.cjs",
