@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
-import { executeHeadteacherDirectorDirectRelease } from "@/lib/appraisals/headteacherDirectorDirectRelease";
-import { ensureHeadteacherDirectorReleaseNotifications } from "@/lib/appraisals/headteacherDirectorReleaseNotifications";
+import { executeHeadteacherSupervisoryDirectorDirectRelease } from "@/lib/appraisals/headteacherSupervisoryDirectorDirectRelease";
 import {
   clean,
   isUuidIdentifier,
@@ -33,13 +32,17 @@ function bodyFieldsAllowed(body: Record<string, unknown>) {
 }
 
 function browserReleaseResult(
-  result: Awaited<ReturnType<typeof executeHeadteacherDirectorDirectRelease>>,
+  result: Awaited<
+    ReturnType<typeof executeHeadteacherSupervisoryDirectorDirectRelease>
+  >,
 ) {
   return {
     outcome: result.outcome,
     releaseMode: result.releaseMode,
+    governanceReleaseStatus: result.governanceReleaseStatus,
+    assessmentId: result.assessmentId,
     cycleId: result.cycleId,
-    cycleStatus: result.cycleStatus,
+    staffFeedbackCycleStatus: result.staffFeedbackCycleStatus,
     releasedAt: result.releasedAt,
   };
 }
@@ -79,12 +82,15 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return jsonNoStore(415, {
         ok: false,
         reqId: meta.reqId,
-        error: "JSON_BODY_REQUIRED",
+        error: "CONTENT_TYPE_MUST_BE_JSON",
       });
     }
 
-    const contentLength = Number(req.headers.get("content-length") || 0);
-    if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
+    const contentLength = Number(req.headers.get("content-length") ?? "0");
+    if (
+      Number.isFinite(contentLength) &&
+      contentLength > MAX_BODY_BYTES
+    ) {
       return jsonNoStore(413, {
         ok: false,
         reqId: meta.reqId,
@@ -101,9 +107,9 @@ export async function POST(req: NextRequest, context: RouteContext) {
       });
     }
 
-    let parsedJson: unknown = null;
+    let parsed: unknown;
     try {
-      parsedJson = rawBody ? JSON.parse(rawBody) : null;
+      parsed = rawBody ? JSON.parse(rawBody) : {};
     } catch {
       return jsonNoStore(400, {
         ok: false,
@@ -112,12 +118,12 @@ export async function POST(req: NextRequest, context: RouteContext) {
       });
     }
 
-    const body = objectBody(parsedJson);
+    const body = objectBody(parsed);
     if (!body || !bodyFieldsAllowed(body)) {
       return jsonNoStore(400, {
         ok: false,
         reqId: meta.reqId,
-        error: "HEADTEACHER_SUPERVISORY_DIRECTOR_DIRECT_RELEASE_FIELDS_FORBIDDEN",
+        error: "INVALID_REQUEST_BODY",
       });
     }
 
@@ -125,73 +131,32 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return jsonNoStore(400, {
         ok: false,
         reqId: meta.reqId,
-        error:
-          "HEADTEACHER_SUPERVISORY_DIRECTOR_DIRECT_RELEASE_CONFIRMATION_REQUIRED",
+        error: "CONFIRMATION_REQUIRED",
       });
     }
 
-    const result = await executeHeadteacherDirectorDirectRelease({
-      actorUserId: auth.ctx.userId,
-      actorRoleName: auth.ctx.roleName,
-      assessmentId,
-      confirm: true,
-      governanceScope: auth.scope,
+    const result =
+      await executeHeadteacherSupervisoryDirectorDirectRelease({
+        actorUserId: auth.ctx.userId,
+        actorRoleName: auth.ctx.roleName,
+        assessmentId,
+        confirm: true,
+        governanceScope: auth.scope,
+        reqId: meta.reqId,
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+      });
+
+    return jsonNoStore(200, {
+      ok: true,
       reqId: meta.reqId,
-      ip: meta.ip,
-      userAgent: meta.userAgent,
+      result: browserReleaseResult(result),
     });
-
-    try {
-      const notifications =
-        await ensureHeadteacherDirectorReleaseNotifications({
-          cycleId: result.cycleId,
-          actorUserId: auth.ctx.userId,
-          releaseProofHash: result.releaseProofHash,
-          releasedAt: result.releasedAt,
-          reqId: meta.reqId,
-          ip: meta.ip,
-          userAgent: meta.userAgent,
-        });
-
-      return jsonNoStore(200, {
-        ok: true,
-        reqId: meta.reqId,
-        result: browserReleaseResult(result),
-        notifications,
-      });
-    } catch (notificationError) {
-      const failure = notificationError as Error & {
-        code?: unknown;
-        status?: unknown;
-      };
-      console.error(
-        "[HEADTEACHER_SUPERVISORY_DIRECTOR_DIRECT_RELEASE_NOTIFICATION_SEEDING_ERROR]",
-        {
-          reqId: meta.reqId,
-          cycleId: result.cycleId,
-          error: clean(failure.code || failure.message),
-          status: Number(failure.status) || null,
-        },
-      );
-
-      return jsonNoStore(503, {
-        ok: false,
-        reqId: meta.reqId,
-        error: "HEADTEACHER_RELEASE_NOTIFICATION_SEEDING_RETRY_REQUIRED",
-        releaseCommitted: true,
-        retrySafe: true,
-        result: browserReleaseResult(result),
-        notifications: {
-          outcome: "RETRY_REQUIRED",
-          providerCalled: false,
-        },
-      });
-    }
   } catch (error) {
     return supervisoryApiError({
       error,
       reqId: meta.reqId,
-      logTag: "[HEADTEACHER_SUPERVISORY_DIRECTOR_DIRECT_RELEASE_API_ERROR]",
+      logTag: "[HEADTEACHER_GOVERNANCE_DIRECT_RELEASE_API_ERROR]",
     });
   }
 }

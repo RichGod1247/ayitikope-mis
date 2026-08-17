@@ -1,11 +1,18 @@
 "use client";
 
+import Link from "next/link";
 import { Fragment, useState } from "react";
 import type { HeadteacherReleasedResult } from "@/lib/appraisals/headteacherReleasedResult";
 import type { HeadteacherOwnAppraisalReadState } from "@/lib/appraisals/headteacherFeedbackReadStates";
 
 export const HEADTEACHER_RELEASED_RESULT_UI_POLICY = {
   audience: "HEADTEACHER",
+  bbcLayoutVersion: 2,
+  topLevelRefreshBesideDashboard: true,
+  separateAppraisalActionCard: false,
+  journeyNestedInStatusCard: true,
+  separatePrivacyCard: false,
+  privacyMessageUnderStaffHeading: true,
   expectedSections: 4,
   expectedSupervisoryItems: 34,
   presentation: "AGGREGATE_STAFF_AND_NATIVE_SUPERVISORY",
@@ -1127,144 +1134,181 @@ export default function HeadteacherReleasedResultClient({ initialState }: Props)
   }
 
   return (
-    <div className="space-y-5">
-      <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(5,7,11,0.94),rgba(7,26,61,0.96),rgba(5,7,11,0.97))] p-5 shadow-[0_26px_90px_rgba(0,0,0,0.28)] sm:p-6">
-        <div className="absolute -left-12 top-0 h-44 w-44 rounded-full bg-[#1B66D1]/20 blur-3xl" />
-        <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-[#D4AF37]/14 blur-3xl" />
-        <div className="relative">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#E8C96A]">
-            Headteacher · My Appraisal
-          </p>
-          <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-[#F7F4ED] sm:text-3xl">
-            {guidance.title}
-          </h1>
-          <p className="mt-3 max-w-3xl text-sm leading-7 text-[#C9CDD6]">
-            {guidance.message}
-          </p>
+    <div className="space-y-4 sm:space-y-5">
+      <div className="flex items-center justify-between gap-3">
+        <Link
+          href="/headteacher/dashboard"
+          className="inline-flex min-h-11 items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-[#F7F4ED] transition hover:bg-white/10"
+        >
+          ← Dashboard
+        </Link>
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-[#F7F4ED]">
-              Status: {appraisalState?.label ?? "Unavailable"}
-            </span>
-            {appraisalState?.releasedAt ? (
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-[#F7F4ED]">
-                Released: {dateLabel(appraisalState.releasedAt)}
-              </span>
-            ) : null}
-          </div>
-        </div>
-      </section>
+        <button
+          type="button"
+          disabled={statusLoading}
+          onClick={() => void refreshStatus()}
+          className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-bold text-[#F7F4ED] transition hover:bg-white/10 disabled:cursor-wait disabled:opacity-70"
+        >
+          {statusLoading ? "Refreshing…" : "Refresh status"}
+        </button>
+      </div>
 
-      <section className={panelClass("p-4 sm:p-5")}>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-[#F7F4ED]">Appraisal action</h2>
-            <p className="mt-1 text-sm leading-6 text-[#C9CDD6]">
-              Request the appraisal here, then follow its progress without contacting staff individually.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row">
-            {appraisalState?.canRequestNewCycle ? (
-              <button
-                type="button"
-                disabled={requesting}
-                onClick={() => void requestAppraisal()}
-                className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-5 py-3 text-sm font-extrabold text-[#071A3D] transition hover:brightness-105 disabled:cursor-wait disabled:opacity-70"
-              >
-                {requesting ? "Submitting request…" : "Request appraisal"}
-              </button>
-            ) : null}
-
-            <button
-              type="button"
-              disabled={statusLoading}
-              onClick={() => void refreshStatus()}
-              className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-bold text-[#F7F4ED] transition hover:bg-white/10 disabled:cursor-wait disabled:opacity-70"
-            >
-              {statusLoading ? "Refreshing…" : "Refresh status"}
-            </button>
-          </div>
-        </div>
-
-        {requestNotice ? (
-          <p className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-100">
-            {requestNotice}
-          </p>
-        ) : null}
-
-        {error ? (
-          <p className="mt-4 rounded-2xl border border-rose-300/20 bg-rose-400/10 p-4 text-sm leading-6 text-rose-100">
-            {error}
-          </p>
-        ) : null}
-      </section>
-
-      <section className={panelClass("p-4 sm:p-5")}>
-        <h2 className="text-lg font-bold text-[#F7F4ED]">Appraisal journey</h2>
-        <p className="mt-1 text-sm leading-6 text-[#C9CDD6]">
-          The current stage is highlighted. Staff identities and individual answers remain hidden throughout.
+      <section
+        aria-labelledby="staff-feedback-appraisals-heading"
+        className="space-y-1 px-1"
+      >
+        <h1
+          id="staff-feedback-appraisals-heading"
+          className="text-sm font-black uppercase tracking-[0.15em] text-[#E8C96A]"
+        >
+          Staff Feedback Appraisals
+        </h1>
+        <p className="text-sm leading-6 text-[#C9CDD6]">
+          Confidential Teacher feedback follows its own request, participation,
+          review and release lifecycle.
         </p>
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {[
-            {
-              label: "1. Request",
-              complete: Boolean(appraisalState?.requestedAt),
-              active: lifecycleStep(appraisalState, ["REQUEST_APPRAISAL", "REQUEST_PROCESSING"]),
-            },
-            {
-              label: "2. Director approval",
-              complete: Boolean(appraisalState?.approvedAt),
-              active: lifecycleStep(appraisalState, ["AWAITING_DIRECTOR_APPROVAL"]),
-            },
-            {
-              label: "3. Staff feedback",
-              complete: Boolean(appraisalState?.closedAt),
-              active: lifecycleStep(appraisalState, ["FEEDBACK_PERIOD_OPEN"]),
-            },
-            {
-              label: "4. Official review",
-              complete: Boolean(appraisalState?.releasedAt),
-              active: lifecycleStep(appraisalState, [
-                "RESPONSES_CLOSED_AWAITING_REVIEW",
-                "DIRECTOR_REVIEWING_APPRAISAL",
-              ]),
-            },
-            {
-              label: "5. Released result",
-              complete: Boolean(appraisalState?.releasedAt),
-              active: lifecycleStep(appraisalState, ["VIEW_RELEASED_APPRAISAL"]),
-            },
-          ].map((step) => (
-            <div
-              key={step.label}
-              className={
-                step.active
-                  ? "rounded-2xl border border-amber-300/30 bg-amber-400/10 p-3"
-                  : step.complete
-                    ? "rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-3"
-                    : "rounded-2xl border border-white/10 bg-[#0C1730] p-3"
-              }
-            >
-              <p className="text-sm font-bold text-[#F7F4ED]">{step.label}</p>
-              <p className="mt-1 text-xs text-[#C9CDD6]">
-                {step.active ? "Current stage" : step.complete ? "Completed" : "Not reached"}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className={panelClass("p-4 sm:p-5")}>
-        <h2 className="text-base font-bold text-[#F7F4ED]">Privacy boundary</h2>
-        <p className="mt-2 text-sm leading-7 text-[#C9CDD6]">
+        <p className="text-xs leading-5 text-[#8F98A8]">
           This screen does not show individual staff responses, respondent
           identities, response counts, staff item-level averages, reviewer
           identity, assessor identity, or contact details. The native
           supervisory sheet shows only the finalized official assessment scores
           in read-only form.
         </p>
+      </section>
+
+      <section className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(5,7,11,0.94),rgba(7,26,61,0.96),rgba(5,7,11,0.97))] p-4 shadow-[0_22px_70px_rgba(0,0,0,0.24)] sm:p-5">
+        <div className="absolute -left-12 top-0 h-40 w-40 rounded-full bg-[#1B66D1]/18 blur-3xl" />
+        <div className="absolute right-0 top-0 h-36 w-36 rounded-full bg-[#D4AF37]/12 blur-3xl" />
+
+        <div className="relative">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#E8C96A]">
+                Headteacher · My Appraisal
+              </p>
+
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <h2 className="text-2xl font-extrabold tracking-tight text-[#F7F4ED] sm:text-3xl">
+                  {guidance.title}
+                </h2>
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-[#F7F4ED]">
+                  {appraisalState?.label ?? "Status unavailable"}
+                </span>
+              </div>
+
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-[#C9CDD6]">
+                {guidance.message}
+              </p>
+
+              {appraisalState?.releasedAt ? (
+                <p className="mt-2 text-xs font-semibold text-[#AEB6C4]">
+                  Released {dateLabel(appraisalState.releasedAt)}
+                </p>
+              ) : null}
+            </div>
+
+            {appraisalState?.canRequestNewCycle ? (
+              <button
+                type="button"
+                disabled={requesting}
+                onClick={() => void requestAppraisal()}
+                className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-5 py-3 text-sm font-extrabold text-[#071A3D] transition hover:brightness-105 disabled:cursor-wait disabled:opacity-70"
+              >
+                {requesting ? "Submitting request…" : "Request appraisal"}
+              </button>
+            ) : null}
+          </div>
+
+          {requestNotice ? (
+            <p className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-3 text-sm leading-6 text-emerald-100">
+              {requestNotice}
+            </p>
+          ) : null}
+
+          {error ? (
+            <p className="mt-4 rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm leading-6 text-rose-100">
+              {error}
+            </p>
+          ) : null}
+
+          <div className="mt-5 border-t border-white/10 pt-4">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h3 className="text-base font-bold text-[#F7F4ED]">
+                  Appraisal journey
+                </h3>
+                <p className="mt-1 text-xs leading-5 text-[#AEB6C4]">
+                  Current stage is highlighted. Completed stages stay visible at
+                  a glance.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+              {[
+                {
+                  label: "1. Request",
+                  complete: Boolean(appraisalState?.requestedAt),
+                  active: lifecycleStep(appraisalState, [
+                    "REQUEST_APPRAISAL",
+                    "REQUEST_PROCESSING",
+                  ]),
+                },
+                {
+                  label: "2. Director approval",
+                  complete: Boolean(appraisalState?.approvedAt),
+                  active: lifecycleStep(appraisalState, [
+                    "AWAITING_DIRECTOR_APPROVAL",
+                  ]),
+                },
+                {
+                  label: "3. Staff feedback",
+                  complete: Boolean(appraisalState?.closedAt),
+                  active: lifecycleStep(appraisalState, [
+                    "FEEDBACK_PERIOD_OPEN",
+                  ]),
+                },
+                {
+                  label: "4. Official review",
+                  complete: Boolean(appraisalState?.releasedAt),
+                  active: lifecycleStep(appraisalState, [
+                    "RESPONSES_CLOSED_AWAITING_REVIEW",
+                    "DIRECTOR_REVIEWING_APPRAISAL",
+                  ]),
+                },
+                {
+                  label: "5. Released result",
+                  complete: Boolean(appraisalState?.releasedAt),
+                  active: lifecycleStep(appraisalState, [
+                    "VIEW_RELEASED_APPRAISAL",
+                  ]),
+                },
+              ].map((step) => (
+                <div
+                  key={step.label}
+                  className={
+                    step.active
+                      ? "rounded-2xl border border-amber-300/30 bg-amber-400/10 px-3 py-2.5"
+                      : step.complete
+                        ? "rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2.5"
+                        : "rounded-2xl border border-white/10 bg-[#0C1730]/80 px-3 py-2.5"
+                  }
+                >
+                  <p className="text-sm font-bold text-[#F7F4ED]">
+                    {step.label}
+                  </p>
+                  <p className="mt-0.5 text-xs text-[#C9CDD6]">
+                    {step.active
+                      ? "Current stage"
+                      : step.complete
+                        ? "Completed"
+                        : "Not reached"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </section>
 
       {released ? (
@@ -1287,11 +1331,6 @@ export default function HeadteacherReleasedResultClient({ initialState }: Props)
             </button>
           </div>
 
-          {error ? (
-            <div className="mt-4 rounded-2xl border border-rose-300/20 bg-rose-400/10 p-4 text-sm leading-6 text-rose-100">
-              {error}
-            </div>
-          ) : null}
         </section>
       ) : null}
 

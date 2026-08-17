@@ -149,6 +149,38 @@ function main() {
     'directorAuthoredDecisionPath: "DIRECT_RELEASE_NO_SELF_REVIEW"',
     "Director-authored direct-release path",
   );
+  contains(
+    client,
+    'appraisalChannels: ["STAFF_FEEDBACK", "GOVERNANCE_SUPERVISORY"]',
+    "explicit two-channel appraisal policy",
+  );
+  contains(
+    client,
+    "directReleaseInspectionRequired: true",
+    "final inspection required before direct release",
+  );
+  contains(
+    client,
+    "directReleaseMutationFromInspectionOnly: true",
+    "direct release mutation restricted to inspection flow",
+  );
+  contains(client, "Staff Feedback Appraisals", "Staff Feedback channel heading");
+  contains(client, "Governance Appraisals", "Governance channel heading");
+  contains(
+    client,
+    "Confidential Teacher feedback about Headteachers",
+    "BBC-friendly Staff Feedback explanation",
+  );
+  contains(
+    client,
+    "Official governance assessments of Headteachers",
+    "BBC-friendly Governance Appraisal explanation",
+  );
+  contains(
+    client,
+    "the two outcomes meet later only for analytics",
+    "analytics does not create release dependency",
+  );
 
   contains(
     client,
@@ -220,8 +252,13 @@ function main() {
   );
   contains(
     client,
-    "Release my assessment",
-    "Director-authored direct-release action",
+    "Review governance assessment",
+    "Director-authored governance inspection action",
+  );
+  contains(
+    client,
+    "Release governance assessment",
+    "release action only after final inspection",
   );
   contains(
     client,
@@ -245,7 +282,78 @@ function main() {
   );
   contains(
     client,
-    "No self-review will be created.",
+    "function GovernanceQueueRecord",
+    "separate Governance Appraisal record renderer",
+  );
+  contains(
+    client,
+    "function DirectReleaseNativeForm",
+    "native final inspection renderer",
+  );
+  contains(
+    client,
+    "inspectDirectReleaseAssessment",
+    "explicit read-only inspection loader",
+  );
+  contains(
+    client,
+    'method: "GET"',
+    "read-only governance assessment inspection request",
+  );
+  contains(
+    client,
+    "governance-final-inspection",
+    "final inspection scroll target",
+  );
+  contains(
+    client,
+    "Review the official assessment before release",
+    "BBC-friendly final inspection heading",
+  );
+  contains(
+    client,
+    "same native 4-section, 34-indicator Monitoring and Inspection Sheet",
+    "native assessor-form continuity",
+  );
+  contains(
+    client,
+    "This screen is read-only. Nothing on the official form can be changed here.",
+    "read-only final inspection boundary",
+  );
+  contains(
+    client,
+    "workspace.assessment.progress.totalSections !== 4",
+    "four-section inspection verification",
+  );
+  contains(
+    client,
+    "workspace.assessment.progress.totalItems !== 34",
+    "34-indicator inspection verification",
+  );
+  contains(
+    client,
+    "workspace.assessment.progress.answeredItems !== 34",
+    "complete finalized inspection verification",
+  );
+  contains(
+    client,
+    "Review the complete governance assessment first.",
+    "release blocked until final inspection",
+  );
+  contains(
+    client,
+    "The confidential Staff Feedback appraisal remains separate and unchanged.",
+    "staff-feedback independence at final inspection",
+  );
+  precedes(
+    client,
+    "Review governance assessment",
+    "Release governance assessment",
+    "inspection action before release action",
+  );
+  contains(
+    client,
+    "No self-review will be created",
     "BBC-friendly no-self-review confirmation",
   );
   contains(
@@ -475,6 +583,26 @@ function main() {
   );
   contains(
     client,
+    "function QueueRecord",
+    "Staff Feedback record renderer",
+  );
+  contains(
+    client,
+    "Confidential Teacher feedback about the Headteacher",
+    "Staff Feedback record identity",
+  );
+  contains(
+    client,
+    "Official governance assessment of the Headteacher",
+    "Governance record identity",
+  );
+  contains(
+    client,
+    "No governance release action appears inside this channel.",
+    "governance release separated from Staff Feedback queue",
+  );
+  contains(
+    client,
     "function StaffNativeForm",
     "native anonymous staff form",
   );
@@ -635,7 +763,10 @@ function main() {
     "Attention badge semantics      : count only; does not select stage",
   );
   console.log(
-    "Director own assessment        : direct release, no self-review",
+    "Appraisal channels             : Staff Feedback / Governance separated",
+  );
+  console.log(
+    "Director own assessment        : inspect native form → direct release",
   );
   console.log(
     "Early completion               : all responses received attention state",
@@ -651,6 +782,9 @@ function main() {
   );
   console.log(
     "Evidence presentation          : native evidence first",
+  );
+  console.log(
+    "Governance final inspection    : required, read-only, native 4/34 form",
   );
   console.log(
     "Supervisory evidence           : native 4-section / 34-item sheet",

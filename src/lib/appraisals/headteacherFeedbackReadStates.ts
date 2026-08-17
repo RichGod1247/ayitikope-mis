@@ -126,6 +126,8 @@ export type DirectorHeadteacherAppraisalReadItem = {
   canExtendFeedbackWindow: boolean;
   canDirectReleaseOwnAssessment: boolean;
   directReleaseAssessmentId: string | null;
+  governanceAssessmentDirectReleased: boolean;
+  governanceAssessmentId: string | null;
 };
 
 export type DirectorHeadteacherAppraisalReadState = {
@@ -274,6 +276,43 @@ function iso(value: Date | null | undefined) {
 function objectValue(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
+}
+
+const HEADTEACHER_SUPERVISORY_RELEASES_METADATA_KEY =
+  "headteacherSupervisoryReleases";
+
+const DIRECTOR_OWN_ASSESSMENT_CARRIER_STATUSES = new Set<AppraisalCycleStatus>([
+  "OPEN",
+  "CLOSED",
+  "UNDER_REVIEW",
+  "RELEASED",
+]);
+
+function governanceAssessmentReleaseMarker(
+  metadata: unknown,
+  assessmentId: string,
+) {
+  return objectValue(
+    objectValue(
+      objectValue(metadata)[HEADTEACHER_SUPERVISORY_RELEASES_METADATA_KEY],
+    )[assessmentId],
+  );
+}
+
+function governanceAssessmentWasDirectReleased(
+  metadata: unknown,
+  assessmentId: string,
+) {
+  const release = governanceAssessmentReleaseMarker(metadata, assessmentId);
+  return (
+    clean(release.releaseMode) === "DIRECTOR_AUTHORED_DIRECT_RELEASE" &&
+    clean(release.assessmentId) === assessmentId &&
+    clean(release.workflow) === "HEADTEACHER_GOVERNANCE_SUPERVISORY_ASSESSMENT" &&
+    release.staffFeedbackRequired === false &&
+    release.staffFeedbackAccessed === false &&
+    release.carrierCycleStatusMutationPerformed === false &&
+    /^[a-f0-9]{64}$/i.test(clean(release.releaseProofHash))
+  );
 }
 
 async function assertActiveSchoolMembership(input: {
@@ -497,6 +536,7 @@ export function buildDirectorHeadteacherAppraisalReadItem(
   cycle: ReadCycleRecord,
   now = new Date(),
   directReleaseAssessmentId: string | null = null,
+  releasedDirectorAssessmentId: string | null = null,
 ): DirectorHeadteacherAppraisalReadItem {
   const targetTenantId = clean(cycle.targetTenantId);
   const schoolName = clean(cycle.targetSchoolNameSnapshot);
@@ -560,10 +600,13 @@ export function buildDirectorHeadteacherAppraisalReadItem(
       feedbackWindowExpired &&
       !deadlineExtension &&
       unfinishedParticipantCount > 0,
-    canDirectReleaseOwnAssessment:
-      cycle.status === "CLOSED" && !!clean(directReleaseAssessmentId),
-    directReleaseAssessmentId:
-      cycle.status === "CLOSED" ? clean(directReleaseAssessmentId) || null : null,
+    canDirectReleaseOwnAssessment: !!clean(directReleaseAssessmentId),
+    directReleaseAssessmentId: clean(directReleaseAssessmentId) || null,
+    governanceAssessmentDirectReleased: !!clean(releasedDirectorAssessmentId),
+    governanceAssessmentId:
+      clean(directReleaseAssessmentId) ||
+      clean(releasedDirectorAssessmentId) ||
+      null,
   };
 }
 
@@ -808,18 +851,22 @@ export async function readDirectorHeadteacherAppraisalStates(
   });
 
   const directReleaseAssessmentIdsByCycle = new Map<string, string>();
-  const closedCycleIds =
+  const releasedDirectorAssessmentIdsByCycle = new Map<string, string>();
+  const eligibleCarrierCycleIds =
     actorRole === "DISTRICT_DIRECTOR"
       ? cycles
-          .filter((cycle) => cycle.status === "CLOSED")
+          .filter((cycle) =>
+            DIRECTOR_OWN_ASSESSMENT_CARRIER_STATUSES.has(cycle.status),
+          )
           .map((cycle) => cycle.id)
       : [];
+  const cyclesById = new Map(cycles.map((cycle) => [cycle.id, cycle]));
 
   const appraisalAssessment = database.appraisalAssessment;
-  if (closedCycleIds.length > 0 && appraisalAssessment) {
+  if (eligibleCarrierCycleIds.length > 0 && appraisalAssessment) {
     const directReleaseCandidates = await appraisalAssessment.findMany({
       where: {
-        cycleId: { in: closedCycleIds },
+        cycleId: { in: eligibleCarrierCycleIds },
         assessorUserId: actorUserId,
         status: "FINALIZED",
         revision: 1,
@@ -847,7 +894,7 @@ export async function readDirectorHeadteacherAppraisalStates(
         assessment.priorAssessmentId !== null ||
         assessment.finalizedByUserId !== actorUserId ||
         !assessment.finalizedAt ||
-        !closedCycleIds.includes(assessment.cycleId)
+        !eligibleCarrierCycleIds.includes(assessment.cycleId)
       ) {
         continue;
       }
@@ -858,11 +905,16 @@ export async function readDirectorHeadteacherAppraisalStates(
     }
 
     for (const [candidateCycleId, assessmentIds] of candidateIdsByCycle) {
-      if (assessmentIds.length === 1) {
-        directReleaseAssessmentIdsByCycle.set(
-          candidateCycleId,
-          assessmentIds[0],
-        );
+      if (assessmentIds.length !== 1) continue;
+
+      const assessmentId = assessmentIds[0];
+      const cycle = cyclesById.get(candidateCycleId);
+      if (!cycle) continue;
+
+      if (governanceAssessmentWasDirectReleased(cycle.metadata, assessmentId)) {
+        releasedDirectorAssessmentIdsByCycle.set(candidateCycleId, assessmentId);
+      } else {
+        directReleaseAssessmentIdsByCycle.set(candidateCycleId, assessmentId);
       }
     }
   }
@@ -882,6 +934,7 @@ export async function readDirectorHeadteacherAppraisalStates(
       cycle,
       now,
       directReleaseAssessmentIdsByCycle.get(cycle.id) ?? null,
+      releasedDirectorAssessmentIdsByCycle.get(cycle.id) ?? null,
     );
   });
 
