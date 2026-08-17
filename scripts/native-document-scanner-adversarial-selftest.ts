@@ -57,6 +57,9 @@ export const HDS_M6D5_HARNESS_VERSION =
 export const HDS_M6D5B_HARNESS_VERSION =
   "HDS-M6D5B-HARNESS-V1" as const;
 
+export const HDS_M6D6_HARNESS_VERSION =
+  "HDS-M6D6-HARNESS-V1" as const;
+
 const ONE_MEBIBYTE = 1024 * 1024;
 
 const ARCHIVE_LIMITS: NativeDocumentArchiveLimits = Object.freeze({
@@ -4892,6 +4895,76 @@ async function run() {
     "M6D5B must certify the final PDF threat family while leaving formal M6D closeout to M6D6.",
   );
 
+  const m6dCertifiedThreatFamilies =
+    m6dThreatFamilies.map((entry) => entry.threatFamily);
+
+  const remainingM6dThreatFamilies =
+    m6dThreatFamilies
+      .filter(
+        (entry) => entry.certificationStatus === "NOT_CERTIFIED",
+      )
+      .map((entry) => entry.threatFamily);
+
+  const remainingNonPdfThreatFamilies =
+    THREAT_FAMILY_MANIFEST
+      .filter(
+        (entry) =>
+          entry.plannedPhase === "M6E" ||
+          entry.plannedPhase === "M6F" ||
+          entry.plannedPhase === "M6G",
+      )
+      .filter(
+        (entry) => entry.certificationStatus === "NOT_CERTIFIED",
+      )
+      .map((entry) => entry.threatFamily);
+
+  const m6dCertificationCaseCount =
+    M6D2_CERTIFICATION_CASES.length +
+    M6D3_CERTIFICATION_CASES.length +
+    M6D4_CERTIFICATION_CASES.length +
+    M6D5_CERTIFICATION_CASES.length +
+    M6D5B_CERTIFICATION_CASES.length;
+
+  const m6dCertificationCredit =
+    M6D2_CERTIFICATION_CASES.filter(
+      (testCase) => testCase.certificationCredit,
+    ).length +
+    M6D3_CERTIFICATION_CASES.filter(
+      (testCase) => testCase.certificationCredit,
+    ).length +
+    M6D4_CERTIFICATION_CASES.filter(
+      (testCase) => testCase.certificationCredit,
+    ).length +
+    M6D5_CERTIFICATION_CASES.filter(
+      (testCase) => testCase.certificationCredit,
+    ).length +
+    M6D5B_CERTIFICATION_CASES.filter(
+      (testCase) => testCase.certificationCredit,
+    ).length;
+
+  assert(
+    m6dCertifiedThreatFamilies.length === 6 &&
+      m6dCertifiedThreatFamilies.includes("PDF_INCREMENTAL_UPDATE_EVASION") &&
+      m6dCertifiedThreatFamilies.includes("PDF_XREF_EVASION") &&
+      m6dCertifiedThreatFamilies.includes("PDF_OBJECT_STREAM_EVASION") &&
+      m6dCertifiedThreatFamilies.includes("PDF_ACTION_EVASION") &&
+      m6dCertifiedThreatFamilies.includes("PDF_URI_EVASION") &&
+      m6dCertifiedThreatFamilies.includes("PDF_EMBEDDED_CONTENT_EVASION") &&
+      remainingM6dThreatFamilies.length === 0,
+    "M6D6 requires all six planned PDF threat families to be certified with none remaining open.",
+  );
+
+  assert(
+    m6dCertificationCaseCount === 55 &&
+      m6dCertificationCredit === 55,
+    "M6D6 requires all 55 bounded M6D certification cases to retain certification credit.",
+  );
+
+  assert(
+    remainingNonPdfThreatFamilies.length === 10,
+    "M6D6 must not silently certify M6E, M6F or M6G threat families.",
+  );
+
   assert(
     sentinelResults.every(
       (result) =>
@@ -4950,13 +5023,13 @@ async function run() {
       {
         ok: true,
         event:
-          "HDS_M6D5B_PDF_EMBEDDED_CONTENT_EVASION_CERTIFICATION_PASSED",
+          "HDS_M6D6_PDF_CERTIFICATION_CLOSEOUT_PASSED",
         corpusSchemaVersion:
           HDS_M6_ADVERSARIAL_CORPUS_SCHEMA_VERSION,
         harnessVersion:
-          HDS_M6D5B_HARNESS_VERSION,
+          HDS_M6D6_HARNESS_VERSION,
         priorHarnessVersion:
-          HDS_M6D5_HARNESS_VERSION,
+          HDS_M6D5B_HARNESS_VERSION,
         priorOoxmlHarnessVersion:
           HDS_M6C_HARNESS_VERSION,
         scannerEngine:
@@ -5145,14 +5218,16 @@ async function run() {
           ).length,
         m6d5bResults:
           m6d5bSummary,
-        m6dCertificationComplete: false,
-        remainingM6dThreatFamilies:
-          m6dThreatFamilies
-            .filter(
-              (entry) => entry.certificationStatus === "NOT_CERTIFIED",
-            )
-            .map((entry) => entry.threatFamily),
+        m6dCertificationComplete: true,
+        m6dCertifiedThreatFamilies,
+        m6dCertifiedThreatFamilyCount:
+          m6dCertifiedThreatFamilies.length,
+        m6dCertificationCaseCount,
+        m6dCertificationCredit,
+        remainingM6dThreatFamilies,
+        remainingNonPdfThreatFamilies,
         adversarialCertificationComplete: false,
+        fullM6CertificationComplete: false,
         cleanAuthorityGranted: false,
         immutablePromotionAuthorityGranted: false,
       },
@@ -5168,11 +5243,11 @@ run().catch((error) => {
       {
         ok: false,
         event:
-          "HDS_M6D5B_PDF_EMBEDDED_CONTENT_EVASION_CERTIFICATION_FAILED",
+          "HDS_M6D6_PDF_CERTIFICATION_CLOSEOUT_FAILED",
         errorCode:
           error instanceof Error
             ? error.message
-            : "M6D5B_UNKNOWN_FAILURE",
+            : "M6D6_UNKNOWN_FAILURE",
       },
       null,
       2,
