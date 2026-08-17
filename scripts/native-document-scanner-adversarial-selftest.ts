@@ -6,10 +6,18 @@ import {
   inspectNativeDocumentIdentity,
 } from "../src/lib/security/documentScanner/nativeDocumentScanner";
 import {
+  inspectOoxmlArchive,
+} from "../src/lib/security/documentScanner/ooxmlArchiveInspector";
+import { inspectPdfStructuralSecurity } from "../src/lib/security/documentScanner/pdfStructuralInspector";
+import {
   HEHXAGON_DOCUMENT_SECURITY_RULE_IDS,
   HEHXAGON_DOCUMENT_SECURITY_RULE_PACK_VERSION,
 } from "../src/lib/security/documentScanner/securityRulePack";
 import type {
+  NativeDocumentArchiveLimits,
+  NativeDocumentContainer,
+  NativeDocumentIdentityEvidence,
+  NativeDocumentOleLimits,
   NativeDocumentPdfLimits,
   NativeDocumentScannerReasonCode,
   NativeDocumentScannerResult,
@@ -23,7 +31,30 @@ export const HDS_M6_ADVERSARIAL_CORPUS_SCHEMA_VERSION =
 export const HDS_M6A_HARNESS_VERSION =
   "HDS-M6A-HARNESS-V1" as const;
 
+export const HDS_M6B_HARNESS_VERSION =
+  "HDS-M6B-HARNESS-V1" as const;
+
 const ONE_MEBIBYTE = 1024 * 1024;
+
+const ARCHIVE_LIMITS: NativeDocumentArchiveLimits = Object.freeze({
+  maxEntries: 128,
+  maxEntryUncompressedBytes: 2 * 1024 * 1024,
+  maxTotalUncompressedBytes: 8 * 1024 * 1024,
+  maxCompressionRatio: 200,
+  maxControlPartBytes: 256 * 1024,
+});
+
+const OLE_LIMITS: NativeDocumentOleLimits = Object.freeze({
+  maxDirectoryEntries: 128,
+  maxDirectoryDepth: 16,
+  maxFatSectors: 32,
+  maxDifatSectors: 8,
+  maxMiniFatSectors: 8,
+  maxSectorChainLength: 256,
+  maxStreams: 64,
+  maxStreamBytes: 4 * 1024 * 1024,
+  maxTotalStreamBytes: 8 * 1024 * 1024,
+});
 
 const PDF_LIMITS: NativeDocumentPdfLimits = Object.freeze({
   maxObjects: 128,
@@ -73,7 +104,7 @@ type CertificationPhase =
 type ThreatFamilyManifestEntry = Readonly<{
   threatFamily: ThreatFamily;
   plannedPhase: CertificationPhase;
-  certificationStatus: "NOT_CERTIFIED";
+  certificationStatus: "NOT_CERTIFIED" | "CERTIFIED_M6B";
   objective: string;
 }>;
 
@@ -85,6 +116,8 @@ type CorpusCaseContract = Readonly<{
   expectedVerdict: NativeDocumentScannerVerdict;
   expectedReasonCode: NativeDocumentScannerReasonCode;
   expectedRuleId: NativeDocumentSecurityRuleId | null;
+  expectedDetectedContainer?: NativeDocumentContainer;
+  expectedSignatureKind?: NativeDocumentIdentityEvidence["signatureKind"];
   benignControl: boolean;
   provenance: "DETERMINISTIC_GENERATED";
   certificationPhase: "M6A" | CertificationPhase;
@@ -97,14 +130,14 @@ const THREAT_FAMILY_MANIFEST: readonly ThreatFamilyManifestEntry[] =
     Object.freeze({
       threatFamily: "IDENTITY_AMBIGUITY",
       plannedPhase: "M6B",
-      certificationStatus: "NOT_CERTIFIED",
+      certificationStatus: "CERTIFIED_M6B",
       objective:
         "Challenge declared extension, MIME, filename, signature and container identity assumptions.",
     }),
     Object.freeze({
       threatFamily: "POLYGLOT",
       plannedPhase: "M6B",
-      certificationStatus: "NOT_CERTIFIED",
+      certificationStatus: "CERTIFIED_M6B",
       objective:
         "Construct multi-format byte sequences that intentionally satisfy competing container signatures.",
     }),
@@ -318,9 +351,204 @@ const HARNESS_SENTINEL_CASES: readonly CorpusCaseContract[] =
     }),
   ]);
 
+const M6B_CERTIFICATION_CASES: readonly CorpusCaseContract[] =
+  Object.freeze([
+    Object.freeze({
+      caseId: "HDS-M6B-001-ZIP-INNER-PDF-DOCX",
+      threatFamily: "IDENTITY_AMBIGUITY",
+      format: "OOXML",
+      attackTechnique:
+        "A leading ZIP container carries an inner PDF header marker and must retain ZIP identity.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "ZIP_END_OF_CENTRAL_DIRECTORY_MISSING",
+      expectedRuleId: null,
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6B",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6B-002-OLE-INNER-PDF-DOC",
+      threatFamily: "IDENTITY_AMBIGUITY",
+      format: "OLE",
+      attackTechnique:
+        "A leading OLE compound-file signature carries an inner PDF header marker and must retain OLE identity.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_VERSION_UNSUPPORTED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6B",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6B-003-PE-INNER-PDF",
+      threatFamily: "IDENTITY_AMBIGUITY",
+      format: "GENERIC",
+      attackTechnique:
+        "A PE executable with an embedded PDF header marker must preserve executable precedence.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "EXECUTABLE_SIGNATURE_DETECTED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "EXECUTABLE",
+      expectedSignatureKind: "PE_EXECUTABLE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6B",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6B-004-ELF-INNER-PDF",
+      threatFamily: "IDENTITY_AMBIGUITY",
+      format: "GENERIC",
+      attackTechnique:
+        "An ELF executable with an embedded PDF header marker must preserve executable precedence.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "EXECUTABLE_SIGNATURE_DETECTED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "EXECUTABLE",
+      expectedSignatureKind: "ELF_EXECUTABLE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6B",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6B-005-ZIP-INNER-PDF-AS-PDF",
+      threatFamily: "IDENTITY_AMBIGUITY",
+      format: "GENERIC",
+      attackTechnique:
+        "A ZIP-fronted object with an inner PDF marker masquerades as PDF and must fail the extension/container contract.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "EXTENSION_CONTAINER_MISMATCH",
+      expectedRuleId: null,
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6B",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6B-006-OLE-INNER-PDF-AS-PDF",
+      threatFamily: "IDENTITY_AMBIGUITY",
+      format: "GENERIC",
+      attackTechnique:
+        "An OLE-fronted object with an inner PDF marker masquerades as PDF and must fail the extension/container contract.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "EXTENSION_CONTAINER_MISMATCH",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6B",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6B-007-BOUNDED-PDF-PREAMBLE",
+      threatFamily: "IDENTITY_AMBIGUITY",
+      format: "PDF",
+      attackTechnique:
+        "A structurally valid PDF with a bounded non-container preamble must preserve the supported PDF-header window.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6B",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6B-008-PDF-INTERNAL-ZIP-MAGIC",
+      threatFamily: "IDENTITY_AMBIGUITY",
+      format: "PDF",
+      attackTechnique:
+        "A valid PDF carrying non-leading ZIP magic inside a comment must not be over-classified as a ZIP container.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6B",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6B-009-TRUE-OOXML-PDF-POLYGLOT-DOCX",
+      threatFamily: "POLYGLOT",
+      format: "OOXML",
+      attackTechnique:
+        "The same bytes are structurally valid OOXML and structurally valid PDF while byte-zero ZIP identity controls DOCX ingress.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6B",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6B-010-TRUE-OOXML-PDF-POLYGLOT-AS-PDF",
+      threatFamily: "POLYGLOT",
+      format: "GENERIC",
+      attackTechnique:
+        "A structurally dual-valid OOXML/PDF polyglot declared as PDF must not use its inner PDF interpretation to override byte-zero ZIP identity.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "EXTENSION_CONTAINER_MISMATCH",
+      expectedRuleId: null,
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6B",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6B-011-PDF-INTERNAL-OLE-MAGIC",
+      threatFamily: "IDENTITY_AMBIGUITY",
+      format: "PDF",
+      attackTechnique:
+        "A valid PDF carrying non-leading OLE magic inside a comment must retain PDF identity without broad magic-byte overblocking.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6B",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+  ]);
+
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
-    throw new Error(`M6A_ASSERTION_FAILED: ${message}`);
+    throw new Error(`M6B_ASSERTION_FAILED: ${message}`);
   }
 }
 
@@ -347,19 +575,39 @@ function sourceFromDeterministicFragments(bytes: Buffer) {
   })();
 }
 
-function buildClassicPdf() {
+function buildClassicPdf(args?: {
+  prefix?: Buffer;
+  headerComment?: Buffer;
+}) {
   const objectBodies = [
     "<< /Type /Catalog /Pages 2 0 R >>",
     "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
     "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>",
   ];
 
-  const chunks: Buffer[] = [
-    Buffer.from("%PDF-1.7\n%HDS-M6A\n", "latin1"),
-  ];
+  const chunks: Buffer[] = [];
+  let byteLength = 0;
+
+  if (args?.prefix?.length) {
+    chunks.push(Buffer.from(args.prefix));
+    byteLength += args.prefix.length;
+  }
+
+  const header = Buffer.from("%PDF-1.7\n%HDS-M6B\n", "latin1");
+  chunks.push(header);
+  byteLength += header.length;
+
+  if (args?.headerComment?.length) {
+    const comment = Buffer.concat([
+      Buffer.from("%", "latin1"),
+      Buffer.from(args.headerComment),
+      Buffer.from("\n", "latin1"),
+    ]);
+    chunks.push(comment);
+    byteLength += comment.length;
+  }
 
   const offsets: number[] = [0];
-  let byteLength = chunks[0]!.length;
 
   objectBodies.forEach((body, index) => {
     offsets[index + 1] = byteLength;
@@ -396,8 +644,270 @@ function buildClassicPdf() {
   return Buffer.concat(chunks);
 }
 
-async function inspectPdf(args: {
+function crc32(bytes: Buffer) {
+  let crc = 0xffffffff;
+
+  for (const byte of bytes) {
+    crc ^= byte;
+
+    for (let bit = 0; bit < 8; bit += 1) {
+      const mask = -(crc & 1);
+      crc = (crc >>> 1) ^ (0xedb88320 & mask);
+    }
+  }
+
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+type StoredZipEntry = Readonly<{
+  name: string;
+  data: Buffer;
+}>;
+
+function buildStoredZipRecords(entries: readonly StoredZipEntry[]) {
+  const localParts: Buffer[] = [];
+  const centralParts: Buffer[] = [];
+  const localOffsets: number[] = [];
+  let localOffset = 0;
+
+  for (const entry of entries) {
+    const name = Buffer.from(entry.name, "utf8");
+    const flags = 0x0800;
+    const checksum = crc32(entry.data);
+
+    localOffsets.push(localOffset);
+
+    const local = Buffer.alloc(30 + name.length);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(flags, 6);
+    local.writeUInt16LE(0, 8);
+    local.writeUInt32LE(checksum, 14);
+    local.writeUInt32LE(entry.data.length, 18);
+    local.writeUInt32LE(entry.data.length, 22);
+    local.writeUInt16LE(name.length, 26);
+    local.writeUInt16LE(0, 28);
+    name.copy(local, 30);
+
+    localParts.push(local, entry.data);
+    localOffset += local.length + entry.data.length;
+  }
+
+  entries.forEach((entry, index) => {
+    const name = Buffer.from(entry.name, "utf8");
+    const flags = 0x0800;
+    const checksum = crc32(entry.data);
+    const central = Buffer.alloc(46 + name.length);
+
+    central.writeUInt32LE(0x02014b50, 0);
+    central.writeUInt16LE(20, 4);
+    central.writeUInt16LE(20, 6);
+    central.writeUInt16LE(flags, 8);
+    central.writeUInt16LE(0, 10);
+    central.writeUInt32LE(checksum, 16);
+    central.writeUInt32LE(entry.data.length, 20);
+    central.writeUInt32LE(entry.data.length, 24);
+    central.writeUInt16LE(name.length, 28);
+    central.writeUInt16LE(0, 30);
+    central.writeUInt16LE(0, 32);
+    central.writeUInt16LE(0, 34);
+    central.writeUInt32LE(0, 38);
+    central.writeUInt32LE(localOffsets[index]!, 42);
+    name.copy(central, 46);
+
+    centralParts.push(central);
+  });
+
+  return {
+    localDirectory: Buffer.concat(localParts),
+    centralDirectory: Buffer.concat(centralParts),
+  };
+}
+
+function buildOoxmlPdfPolyglot() {
+  const contentTypes = Buffer.from(
+    '<?xml version="1.0" encoding="UTF-8"?>' +
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+      "</Types>",
+    "utf8",
+  );
+
+  const rootRelationships = Buffer.from(
+    '<?xml version="1.0" encoding="UTF-8"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
+      "</Relationships>",
+    "utf8",
+  );
+
+  const records = buildStoredZipRecords([
+    Object.freeze({
+      name: "[Content_Types].xml",
+      data: contentTypes,
+    }),
+    Object.freeze({
+      name: "_rels/.rels",
+      data: rootRelationships,
+    }),
+    Object.freeze({
+      name: "word/document.xml",
+      data: Buffer.from("<document/>", "utf8"),
+    }),
+  ]);
+
+  const objectBodies = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>",
+  ];
+
+  const pdfChunks: Buffer[] = [
+    Buffer.from("%PDF-1.7\n%HDS-M6B-TRUE-POLYGLOT\n", "latin1"),
+  ];
+  const objectOffsets: number[] = [0];
+  let absoluteLength =
+    records.localDirectory.length +
+    pdfChunks[0]!.length;
+
+  objectBodies.forEach((body, index) => {
+    objectOffsets[index + 1] = absoluteLength;
+    const objectBytes = Buffer.from(
+      `${index + 1} 0 obj\n${body}\nendobj\n`,
+      "latin1",
+    );
+    pdfChunks.push(objectBytes);
+    absoluteLength += objectBytes.length;
+  });
+
+  const pdfBody = Buffer.concat(pdfChunks);
+  const centralDirectoryOffset =
+    records.localDirectory.length +
+    pdfBody.length;
+
+  const eocdOffset =
+    centralDirectoryOffset +
+    records.centralDirectory.length;
+
+  const xrefOffset = eocdOffset + 22;
+
+  let xref = `xref\n0 ${objectBodies.length + 1}\n`;
+  xref += "0000000000 65535 f \n";
+
+  for (
+    let objectNumber = 1;
+    objectNumber <= objectBodies.length;
+    objectNumber += 1
+  ) {
+    xref +=
+      `${String(objectOffsets[objectNumber]).padStart(10, "0")}` +
+      " 00000 n \n";
+  }
+
+  xref +=
+    `trailer\n<< /Size ${objectBodies.length + 1} /Root 1 0 R >>\n` +
+    `startxref\n${xrefOffset}\n%%EOF\n`;
+
+  const zipComment = Buffer.from(xref, "latin1");
+
+  assert(
+    zipComment.length <= 0xffff,
+    "The deterministic ZIP/PDF polyglot comment must fit the ZIP EOCD comment field.",
+  );
+
+  assert(
+    records.localDirectory.length <= 1019,
+    "The deterministic ZIP/PDF polyglot PDF header must remain inside the supported 1024-byte PDF preamble window.",
+  );
+
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(0, 4);
+  eocd.writeUInt16LE(0, 6);
+  eocd.writeUInt16LE(3, 8);
+  eocd.writeUInt16LE(3, 10);
+  eocd.writeUInt32LE(
+    records.centralDirectory.length,
+    12,
+  );
+  eocd.writeUInt32LE(
+    centralDirectoryOffset,
+    16,
+  );
+  eocd.writeUInt16LE(
+    zipComment.length,
+    20,
+  );
+
+  return Buffer.concat([
+    records.localDirectory,
+    pdfBody,
+    records.centralDirectory,
+    eocd,
+    zipComment,
+  ]);
+}
+
+function zipFrontedWithInnerPdfMarker() {
+  return Buffer.concat([
+    Buffer.from([0x50, 0x4b, 0x03, 0x04]),
+    Buffer.alloc(48, 0x41),
+    Buffer.from("%PDF-1.7\n", "ascii"),
+    Buffer.alloc(128, 0x42),
+  ]);
+}
+
+function oleFrontedWithInnerPdfMarker() {
+  const bytes = Buffer.alloc(512);
+
+  Buffer.from([
+    0xd0,
+    0xcf,
+    0x11,
+    0xe0,
+    0xa1,
+    0xb1,
+    0x1a,
+    0xe1,
+  ]).copy(bytes, 0);
+
+  Buffer.from("%PDF-1.7\n", "ascii").copy(
+    bytes,
+    64,
+  );
+
+  return bytes;
+}
+
+function executableFrontedWithInnerPdfMarker(
+  kind: "PE" | "ELF",
+) {
+  const bytes = Buffer.alloc(128);
+
+  if (kind === "PE") {
+    Buffer.from([0x4d, 0x5a]).copy(bytes, 0);
+  } else {
+    Buffer.from([
+      0x7f,
+      0x45,
+      0x4c,
+      0x46,
+    ]).copy(bytes, 0);
+  }
+
+  Buffer.from("%PDF-1.7\n", "ascii").copy(
+    bytes,
+    24,
+  );
+
+  return bytes;
+}
+
+async function inspectDocument(args: {
   bytes: Buffer;
+  filename: string;
+  extension: string;
+  mimeType: string;
   expectedSizeBytes?: number;
   expectedSha256?: string;
 }) {
@@ -407,13 +917,30 @@ async function inspectPdf(args: {
       args.expectedSizeBytes ?? args.bytes.length,
     expectedSha256:
       args.expectedSha256 ?? sha256(args.bytes),
-    declaredFilename: "m6a-sentinel.pdf",
-    declaredExtension: "pdf",
-    declaredMimeType: "application/pdf",
+    declaredFilename: args.filename,
+    declaredExtension: args.extension,
+    declaredMimeType: args.mimeType,
     limits: {
       maxBytes: ONE_MEBIBYTE,
+      archive: ARCHIVE_LIMITS,
       pdf: PDF_LIMITS,
+      ole: OLE_LIMITS,
     },
+  });
+}
+
+async function inspectPdf(args: {
+  bytes: Buffer;
+  expectedSizeBytes?: number;
+  expectedSha256?: string;
+}) {
+  return inspectDocument({
+    bytes: args.bytes,
+    expectedSizeBytes: args.expectedSizeBytes,
+    expectedSha256: args.expectedSha256,
+    filename: "m6a-sentinel.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
   });
 }
 
@@ -433,13 +960,29 @@ function assertResultMatchesContract(
 
   assert(
     String(result.verdict) !== "CLEAN",
-    `${contract.caseId} must never grant CLEAN authority during M6A.`,
+    `${contract.caseId} must never grant CLEAN authority during M6.`,
   );
 
   assert(
     result.inspectionComplete === false,
-    `${contract.caseId} must preserve inspectionComplete=false during M6A.`,
+    `${contract.caseId} must preserve inspectionComplete=false during M6.`,
   );
+
+  if (contract.expectedDetectedContainer !== undefined) {
+    assert(
+      result.identityEvidence.detectedContainer ===
+        contract.expectedDetectedContainer,
+      `${contract.caseId} expected container ${contract.expectedDetectedContainer}, received ${result.identityEvidence.detectedContainer}.`,
+    );
+  }
+
+  if (contract.expectedSignatureKind !== undefined) {
+    assert(
+      result.identityEvidence.signatureKind ===
+        contract.expectedSignatureKind,
+      `${contract.caseId} expected signature ${contract.expectedSignatureKind}, received ${result.identityEvidence.signatureKind}.`,
+    );
+  }
 
   if (contract.expectedRuleId !== null) {
     assert(
@@ -478,9 +1021,15 @@ function validateManifest() {
       !observedFamilies.has(entry.threatFamily),
       `Threat family ${entry.threatFamily} is registered more than once.`,
     );
+    const expectedCertification =
+      entry.threatFamily === "IDENTITY_AMBIGUITY" ||
+      entry.threatFamily === "POLYGLOT"
+        ? "CERTIFIED_M6B"
+        : "NOT_CERTIFIED";
+
     assert(
-      entry.certificationStatus === "NOT_CERTIFIED",
-      `M6A must not pre-certify ${entry.threatFamily}.`,
+      entry.certificationStatus === expectedCertification,
+      `${entry.threatFamily} has an unexpected M6 certification state.`,
     );
     assert(
       entry.objective.trim().length >= 24,
@@ -492,12 +1041,12 @@ function validateManifest() {
 
   assert(
     observedFamilies.size === expectedFamilies.size,
-    "M6A manifest coverage must be complete and non-duplicated.",
+    "M6 manifest coverage must be complete and non-duplicated.",
   );
 
   assert(
     Object.isFrozen(THREAT_FAMILY_MANIFEST),
-    "M6A threat-family manifest must be immutable.",
+    "M6 threat-family manifest must be immutable.",
   );
 }
 
@@ -544,6 +1093,64 @@ function validateCaseContract() {
   );
 }
 
+function validateM6BCertificationCases() {
+  const caseIds = new Set<string>();
+
+  assert(
+    M6B_CERTIFICATION_CASES.length === 11,
+    "M6B must execute the exact 11-case identity/polyglot certification matrix.",
+  );
+
+  for (const testCase of M6B_CERTIFICATION_CASES) {
+    assert(
+      Object.isFrozen(testCase),
+      `M6B case ${testCase.caseId} must be immutable.`,
+    );
+    assert(
+      /^HDS-M6B-\d{3}-[A-Z0-9-]+$/.test(testCase.caseId),
+      `M6B case id is invalid: ${testCase.caseId}`,
+    );
+    assert(
+      !caseIds.has(testCase.caseId),
+      `Duplicate M6B case id: ${testCase.caseId}`,
+    );
+    assert(
+      testCase.threatFamily === "IDENTITY_AMBIGUITY" ||
+        testCase.threatFamily === "POLYGLOT",
+      `${testCase.caseId} must certify only the bounded M6B threat families.`,
+    );
+    assert(
+      testCase.provenance === "DETERMINISTIC_GENERATED",
+      `${testCase.caseId} must use deterministic generated provenance.`,
+    );
+    assert(
+      testCase.certificationPhase === "M6B" &&
+        testCase.certificationCredit === true,
+      `${testCase.caseId} must earn explicit M6B certification credit.`,
+    );
+    assert(
+      testCase.authorityImplication === "NO_CLEAN_AUTHORITY",
+      `${testCase.caseId} must preserve the no-CLEAN authority boundary.`,
+    );
+    assert(
+      testCase.expectedDetectedContainer !== undefined &&
+        testCase.expectedSignatureKind !== undefined,
+      `${testCase.caseId} must assert exact container and signature identity.`,
+    );
+    assert(
+      testCase.attackTechnique.trim().length >= 48,
+      `${testCase.caseId} must describe the adversarial identity technique precisely.`,
+    );
+
+    caseIds.add(testCase.caseId);
+  }
+
+  assert(
+    Object.isFrozen(M6B_CERTIFICATION_CASES),
+    "M6B certification registry must be immutable.",
+  );
+}
+
 function validateRulePackBoundary() {
   assert(
     HEHXAGON_DOCUMENT_SECURITY_RULE_IDS.length === 21,
@@ -570,8 +1177,8 @@ function validateRulePackBoundary() {
 
   assert(
     HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION ===
-      "0.4.0-m4",
-    "M6A must remain pinned to the M4 engine while adversarial certification begins.",
+      "0.4.1-m6b",
+    "M6B must run the identity-precedence repair while preserving the M4 rule pack.",
   );
 }
 
@@ -657,12 +1264,206 @@ async function executeSentinels() {
   ] as const;
 }
 
+async function executeM6BCertification() {
+  const zipInnerPdf = zipFrontedWithInnerPdfMarker();
+  const oleInnerPdf = oleFrontedWithInnerPdfMarker();
+  const peInnerPdf = executableFrontedWithInnerPdfMarker("PE");
+  const elfInnerPdf = executableFrontedWithInnerPdfMarker("ELF");
+
+  const boundedPreamblePdf = buildClassicPdf({
+    prefix: Buffer.from(
+      "HDS-M6B-BOUNDED-NON-CONTAINER-PREAMBLE\n",
+      "ascii",
+    ),
+  });
+
+  const pdfWithInternalZipMagic = buildClassicPdf({
+    headerComment: Buffer.concat([
+      Buffer.from("HDS-M6B-INTERNAL-ZIP:", "ascii"),
+      Buffer.from([0x50, 0x4b, 0x03, 0x04]),
+    ]),
+  });
+
+  const pdfWithInternalOleMagic = buildClassicPdf({
+    headerComment: Buffer.concat([
+      Buffer.from("HDS-M6B-INTERNAL-OLE:", "ascii"),
+      Buffer.from([
+        0xd0,
+        0xcf,
+        0x11,
+        0xe0,
+        0xa1,
+        0xb1,
+        0x1a,
+        0xe1,
+      ]),
+    ]),
+  });
+
+  const trueOoxmlPdfPolyglot =
+    buildOoxmlPdfPolyglot();
+
+  const directPolyglotPdf =
+    inspectPdfStructuralSecurity({
+      bytes: trueOoxmlPdfPolyglot,
+      limits: PDF_LIMITS,
+    });
+
+  assert(
+    directPolyglotPdf.ok &&
+      directPolyglotPdf.structuralInspectionComplete === true,
+    "The M6B true polyglot must independently satisfy the bounded PDF structural parser.",
+  );
+
+  const directPolyglotOoxml =
+    inspectOoxmlArchive({
+      bytes: trueOoxmlPdfPolyglot,
+      declaredExtension: "docx",
+      limits: ARCHIVE_LIMITS,
+    });
+
+  assert(
+    directPolyglotOoxml.ok &&
+      directPolyglotOoxml.format === "WORD_OOXML",
+    "The M6B true polyglot must independently satisfy the bounded OOXML archive parser.",
+  );
+
+  const results = [
+    await inspectDocument({
+      bytes: zipInnerPdf,
+      filename: "m6b-zip-inner-pdf.docx",
+      extension: "docx",
+      mimeType:
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }),
+    await inspectDocument({
+      bytes: oleInnerPdf,
+      filename: "m6b-ole-inner-pdf.doc",
+      extension: "doc",
+      mimeType: "application/msword",
+    }),
+    await inspectDocument({
+      bytes: peInnerPdf,
+      filename: "m6b-pe-inner-pdf.pdf",
+      extension: "pdf",
+      mimeType: "application/pdf",
+    }),
+    await inspectDocument({
+      bytes: elfInnerPdf,
+      filename: "m6b-elf-inner-pdf.pdf",
+      extension: "pdf",
+      mimeType: "application/pdf",
+    }),
+    await inspectDocument({
+      bytes: zipInnerPdf,
+      filename: "m6b-zip-masquerade.pdf",
+      extension: "pdf",
+      mimeType: "application/pdf",
+    }),
+    await inspectDocument({
+      bytes: oleInnerPdf,
+      filename: "m6b-ole-masquerade.pdf",
+      extension: "pdf",
+      mimeType: "application/pdf",
+    }),
+    await inspectDocument({
+      bytes: boundedPreamblePdf,
+      filename: "m6b-preamble.pdf",
+      extension: "pdf",
+      mimeType: "application/pdf",
+    }),
+    await inspectDocument({
+      bytes: pdfWithInternalZipMagic,
+      filename: "m6b-secondary-zip.pdf",
+      extension: "pdf",
+      mimeType: "application/pdf",
+    }),
+    await inspectDocument({
+      bytes: trueOoxmlPdfPolyglot,
+      filename: "m6b-true-polyglot.docx",
+      extension: "docx",
+      mimeType:
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }),
+    await inspectDocument({
+      bytes: trueOoxmlPdfPolyglot,
+      filename: "m6b-true-polyglot.pdf",
+      extension: "pdf",
+      mimeType: "application/pdf",
+    }),
+    await inspectDocument({
+      bytes: pdfWithInternalOleMagic,
+      filename: "m6b-secondary-ole.pdf",
+      extension: "pdf",
+      mimeType: "application/pdf",
+    }),
+  ] as const;
+
+  M6B_CERTIFICATION_CASES.forEach(
+    (testCase, index) => {
+      assertResultMatchesContract(
+        results[index]!,
+        testCase,
+      );
+    },
+  );
+
+  const polyglotAsDocx = results[8]!;
+  assert(
+    polyglotAsDocx.archiveInspectionComplete === true &&
+      polyglotAsDocx.ooxmlStructuralInspectionComplete === true &&
+      polyglotAsDocx.rulePackEvaluationComplete === true &&
+      polyglotAsDocx.rulePackEvaluation?.outcome === "PASS",
+    "The true OOXML/PDF polyglot must traverse complete OOXML structural inspection when ZIP identity is authoritative.",
+  );
+
+  const boundedPreambleResult = results[6]!;
+  assert(
+    boundedPreambleResult.pdfStructuralInspectionComplete === true &&
+      boundedPreambleResult.rulePackEvaluationComplete === true &&
+      boundedPreambleResult.rulePackEvaluation?.outcome === "PASS",
+    "The bounded PDF preamble control must preserve complete PDF structural inspection.",
+  );
+
+  const secondarySignatureControls = [
+    results[7]!,
+    results[10]!,
+  ];
+
+  assert(
+    secondarySignatureControls.every(
+      (result) =>
+        result.pdfStructuralInspectionComplete === true &&
+        result.rulePackEvaluationComplete === true &&
+        result.rulePackEvaluation?.outcome === "PASS",
+    ),
+    "Non-leading secondary ZIP/OLE magic inside valid PDFs must not trigger broad magic-byte overblocking.",
+  );
+
+  assert(
+    results.every(
+      (result) =>
+        String(result.verdict) !== "CLEAN" &&
+        result.inspectionComplete === false,
+    ),
+    "M6B certification must never grant CLEAN or completed document-trust authority.",
+  );
+
+  return {
+    results,
+    directPolyglotPdf,
+    directPolyglotOoxml,
+  } as const;
+}
+
 async function run() {
   validateManifest();
   validateCaseContract();
+  validateM6BCertificationCases();
   validateRulePackBoundary();
 
-  const results = await executeSentinels();
+  const sentinelResults = await executeSentinels();
+  const m6b = await executeM6BCertification();
 
   const sentinelSummary =
     HARNESS_SENTINEL_CASES.map((testCase, index) =>
@@ -672,22 +1473,67 @@ async function run() {
         benignControl: testCase.benignControl,
         certificationCredit: testCase.certificationCredit,
         expectedVerdict: testCase.expectedVerdict,
-        actualVerdict: results[index]!.verdict,
+        actualVerdict: sentinelResults[index]!.verdict,
         expectedReasonCode: testCase.expectedReasonCode,
         reasonMatched:
-          results[index]!.reasonCodes.includes(
+          sentinelResults[index]!.reasonCodes.includes(
             testCase.expectedReasonCode,
           ),
       }),
     );
 
+  const m6bSummary =
+    M6B_CERTIFICATION_CASES.map((testCase, index) =>
+      Object.freeze({
+        caseId: testCase.caseId,
+        threatFamily: testCase.threatFamily,
+        benignControl: testCase.benignControl,
+        certificationCredit: testCase.certificationCredit,
+        expectedVerdict: testCase.expectedVerdict,
+        actualVerdict: m6b.results[index]!.verdict,
+        expectedReasonCode: testCase.expectedReasonCode,
+        reasonMatched:
+          m6b.results[index]!.reasonCodes.includes(
+            testCase.expectedReasonCode,
+          ),
+        expectedDetectedContainer:
+          testCase.expectedDetectedContainer,
+        actualDetectedContainer:
+          m6b.results[index]!.identityEvidence.detectedContainer,
+        expectedSignatureKind:
+          testCase.expectedSignatureKind,
+        actualSignatureKind:
+          m6b.results[index]!.identityEvidence.signatureKind,
+      }),
+    );
+
+  const certifiedThreatFamilies =
+    THREAT_FAMILY_MANIFEST
+      .filter(
+        (entry) =>
+          entry.certificationStatus === "CERTIFIED_M6B",
+      )
+      .map((entry) => entry.threatFamily);
+
   assert(
-    results.every(
+    certifiedThreatFamilies.length === 2 &&
+      certifiedThreatFamilies.includes("IDENTITY_AMBIGUITY") &&
+      certifiedThreatFamilies.includes("POLYGLOT"),
+    "M6B must certify exactly IDENTITY_AMBIGUITY and POLYGLOT.",
+  );
+
+  assert(
+    sentinelResults.every(
       (result) =>
         String(result.verdict) !== "CLEAN" &&
         result.inspectionComplete === false,
-    ),
-    "M6A execution must never grant CLEAN or completed document-trust authority.",
+    ) &&
+      m6b.results.every(
+        (result) =>
+          String(result.verdict) !== "CLEAN" &&
+          result.inspectionComplete === false,
+      ),
+    "M6 execution must never grant CLEAN or completed document-trust authority.",
   );
 
   console.log(
@@ -695,10 +1541,12 @@ async function run() {
       {
         ok: true,
         event:
-          "HDS_M6A_ADVERSARIAL_CORPUS_HARNESS_SELFTEST_PASSED",
+          "HDS_M6B_IDENTITY_POLYGLOT_MASQUERADE_CERTIFICATION_PASSED",
         corpusSchemaVersion:
           HDS_M6_ADVERSARIAL_CORPUS_SCHEMA_VERSION,
         harnessVersion:
+          HDS_M6B_HARNESS_VERSION,
+        priorHarnessVersion:
           HDS_M6A_HARNESS_VERSION,
         scannerEngine:
           HEHXAGON_DOCUMENT_SECURITY_ENGINE,
@@ -719,6 +1567,28 @@ async function run() {
                 entry.certificationStatus,
             }),
           ),
+        m6bCertifiedThreatFamilies:
+          certifiedThreatFamilies,
+        m6bCertificationComplete: true,
+        identityPrecedenceInvariant:
+          "EXECUTABLE_THEN_LEADING_ZIP_OLE_THEN_BOUNDED_PDF_PREAMBLE",
+        truePolyglotProof: {
+          formatPair:
+            "OOXML_PDF",
+          sameBytesPassOoxmlArchive:
+            m6b.directPolyglotOoxml.ok,
+          sameBytesPassPdfStructure:
+            m6b.directPolyglotPdf.ok &&
+            m6b.directPolyglotPdf.structuralInspectionComplete,
+          scannerAuthoritativeContainer:
+            m6b.results[8]!.identityEvidence.detectedContainer,
+          pdfMasqueradeRejected:
+            m6b.results[9]!.verdict === "BLOCKED" &&
+            m6b.results[9]!.reasonCodes.includes(
+              "EXTENSION_CONTAINER_MISMATCH",
+            ),
+        },
+        masqueradeCaseCount: 3,
         corpusProvenance:
           "DETERMINISTIC_GENERATED",
         externalBinaryCorpusFiles: 0,
@@ -729,6 +1599,15 @@ async function run() {
         sentinelCertificationCredit: 0,
         sentinelResults:
           sentinelSummary,
+        m6bCaseCount:
+          M6B_CERTIFICATION_CASES.length,
+        m6bCertificationCredit:
+          M6B_CERTIFICATION_CASES.filter(
+            (testCase) =>
+              testCase.certificationCredit,
+          ).length,
+        m6bResults:
+          m6bSummary,
         adversarialCertificationComplete: false,
         cleanAuthorityGranted: false,
         immutablePromotionAuthorityGranted: false,
@@ -745,11 +1624,11 @@ run().catch((error) => {
       {
         ok: false,
         event:
-          "HDS_M6A_ADVERSARIAL_CORPUS_HARNESS_SELFTEST_FAILED",
+          "HDS_M6B_IDENTITY_POLYGLOT_MASQUERADE_CERTIFICATION_FAILED",
         errorCode:
           error instanceof Error
             ? error.message
-            : "M6A_UNKNOWN_FAILURE",
+            : "M6B_UNKNOWN_FAILURE",
       },
       null,
       2,

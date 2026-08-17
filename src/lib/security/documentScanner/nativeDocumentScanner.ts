@@ -35,7 +35,7 @@ export const HEHXAGON_DOCUMENT_SECURITY_ENGINE =
   "HEHXAGON_DOCUMENT_SECURITY" as const;
 
 export const HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION =
-  "0.4.0-m4";
+  "0.4.1-m6b";
 
 const MAX_SIGNATURE_PREFIX_BYTES = 1024;
 
@@ -191,21 +191,13 @@ function detectSignature(prefix: Buffer): SignatureIdentity {
     };
   }
 
-  const pdfHeaderPosition = prefix.indexOf(
-    Buffer.from("%PDF-", "ascii"),
-  );
-
-  if (
-    pdfHeaderPosition >= 0 &&
-    pdfHeaderPosition <= MAX_SIGNATURE_PREFIX_BYTES - 5
-  ) {
-    return {
-      container: "PDF",
-      format: "PDF",
-      signatureKind: "PDF_HEADER",
-    };
-  }
-
+  /*
+   * M6B identity precedence:
+   * fixed-position container signatures at byte zero are authoritative before
+   * the intentionally permissive PDF preamble search. A PDF header may appear
+   * within the first 1024 bytes, but an inner "%PDF-" marker must never
+   * override a genuine leading ZIP or OLE container.
+   */
   if (
     beginsWith(prefix, [0x50, 0x4b, 0x03, 0x04]) ||
     beginsWith(prefix, [0x50, 0x4b, 0x05, 0x06]) ||
@@ -234,6 +226,21 @@ function detectSignature(prefix: Buffer): SignatureIdentity {
       container: "OLE",
       format: "OLE_COMPOUND_FILE",
       signatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+    };
+  }
+
+  const pdfHeaderPosition = prefix.indexOf(
+    Buffer.from("%PDF-", "ascii"),
+  );
+
+  if (
+    pdfHeaderPosition >= 0 &&
+    pdfHeaderPosition <= MAX_SIGNATURE_PREFIX_BYTES - 5
+  ) {
+    return {
+      container: "PDF",
+      format: "PDF",
+      signatureKind: "PDF_HEADER",
     };
   }
 
