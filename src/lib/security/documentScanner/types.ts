@@ -31,13 +31,13 @@ export type NativeDocumentFormat =
   | "UNKNOWN";
 
 /**
- * M3C still deliberately has no CLEAN verdict.
+ * M4 still deliberately has no CLEAN verdict.
  *
  * IDENTITY_VERIFIED means that byte integrity and broad container identity have
- * been established and, where applicable, the bounded structural policy for
- * OOXML, PDF, or legacy OLE/CFBF has also passed. It is not a sendable or
- * malware-clean state. The later versioned rule pack remains required before
- * any future milestone may earn CLEAN.
+ * been established, the applicable bounded structural parser completed, and
+ * the versioned Hehxagon ingress rule pack found no prohibited structural
+ * capability. It is still not a sendable or malware-clean state. Worker
+ * integration and adversarial validation remain later milestones.
  */
 export type NativeDocumentScannerVerdict =
   | "IDENTITY_VERIFIED"
@@ -47,6 +47,7 @@ export type NativeDocumentScannerVerdict =
 export type NativeDocumentScannerReasonCode =
   | "IDENTITY_VERIFIED_DEEP_INSPECTION_REQUIRED"
   | "OOXML_PACKAGE_IDENTITY_VERIFIED_DEEP_INSPECTION_REQUIRED"
+  | "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED"
   | "SCANNER_INPUT_INVALID"
   | "FILENAME_INVALID"
   | "FILENAME_EXTENSION_MISMATCH"
@@ -298,13 +299,13 @@ export type NativeDocumentOoxmlStructuralEvidence = {
   relationshipPolicyVerified: true;
   packagePartPolicyVerified: true;
 
-  vbaProjectDetected: false;
-  macroEnabledContentTypeDetected: false;
-  activeXDetected: false;
-  embeddedObjectDetected: false;
-  blockedExternalRelationshipDetected: false;
-  remoteTemplateDetected: false;
-  executablePackagePartDetected: false;
+  vbaProjectDetected: boolean;
+  macroEnabledContentTypeDetected: boolean;
+  activeXDetected: boolean;
+  embeddedObjectDetected: boolean;
+  blockedExternalRelationshipDetected: boolean;
+  remoteTemplateDetected: boolean;
+  executablePackagePartDetected: boolean;
 };
 
 export type NativeDocumentPdfStructuralEvidence = {
@@ -314,23 +315,24 @@ export type NativeDocumentPdfStructuralEvidence = {
   incrementalUpdates: number;
   safeUriActionsObserved: number;
 
-  encrypted: false;
+  encrypted: boolean;
   xrefStreamsDetected: boolean;
   objectStreamsDetected: boolean;
   xrefStreamCount: number;
   objectStreamCount: number;
   compressedObjectCount: number;
-  catalogVerified: true;
-  pageTreeRootVerified: true;
+  catalogVerified: boolean;
+  pageTreeRootVerified: boolean;
 
-  javascriptDetected: false;
-  openActionDetected: false;
-  additionalActionDetected: false;
-  launchActionDetected: false;
-  embeddedFileDetected: false;
-  richMediaDetected: false;
-  xfaDetected: false;
-  blockedExternalActionDetected: false;
+  javascriptDetected: boolean;
+  openActionDetected: boolean;
+  additionalActionDetected: boolean;
+  launchActionDetected: boolean;
+  embeddedFileDetected: boolean;
+  richMediaDetected: boolean;
+  xfaDetected: boolean;
+  blockedExternalActionDetected: boolean;
+  unsafeUriActionDetected: boolean;
 };
 
 export type NativeDocumentOleStructuralEvidence = {
@@ -345,18 +347,64 @@ export type NativeDocumentOleStructuralEvidence = {
   totalDeclaredStreamBytes: number;
   applicationFormat: "WORD_BINARY" | "EXCEL_BINARY" | "POWERPOINT_BINARY";
   applicationStreamVerified: true;
-  vbaProjectDetected: false;
-  embeddedObjectDetected: false;
-  encryptedPackageDetected: false;
-  executableStreamDetected: false;
+  vbaProjectDetected: boolean;
+  embeddedObjectDetected: boolean;
+  encryptedPackageDetected: boolean;
+  executableStreamDetected: boolean;
   sectorOwnershipVerified: true;
   directoryTreeVerified: true;
+};
+
+export type NativeDocumentSecurityEvidenceFamily =
+  | "OOXML"
+  | "PDF"
+  | "OLE";
+
+export type NativeDocumentSecurityRuleId =
+  | "HDS-OOXML-001-VBA"
+  | "HDS-OOXML-002-MACRO-CONTENT-TYPE"
+  | "HDS-OOXML-003-ACTIVEX"
+  | "HDS-OOXML-004-EMBEDDED-OBJECT"
+  | "HDS-OOXML-005-EXTERNAL-RELATIONSHIP"
+  | "HDS-OOXML-006-REMOTE-TEMPLATE"
+  | "HDS-OOXML-007-EXECUTABLE-PART"
+  | "HDS-PDF-001-ENCRYPTED"
+  | "HDS-PDF-002-JAVASCRIPT"
+  | "HDS-PDF-003-OPEN-ACTION"
+  | "HDS-PDF-004-ADDITIONAL-ACTION"
+  | "HDS-PDF-005-LAUNCH-ACTION"
+  | "HDS-PDF-006-EMBEDDED-FILE"
+  | "HDS-PDF-007-RICH-MEDIA"
+  | "HDS-PDF-008-XFA"
+  | "HDS-PDF-009-EXTERNAL-ACTION"
+  | "HDS-PDF-010-UNSAFE-URI"
+  | "HDS-OLE-001-VBA"
+  | "HDS-OLE-002-EMBEDDED-OBJECT"
+  | "HDS-OLE-003-ENCRYPTED-PACKAGE"
+  | "HDS-OLE-004-EXECUTABLE-STREAM";
+
+export type NativeDocumentSecurityRuleMatch = {
+  ruleId: NativeDocumentSecurityRuleId;
+  family: NativeDocumentSecurityEvidenceFamily;
+  reasonCode: NativeDocumentScannerReasonCode;
+  severity: "BLOCK";
+  message: string;
+};
+
+export type NativeDocumentSecurityRulePackEvaluation = {
+  rulePackId: "HEHXAGON_BASELINE_DOCUMENT_INGRESS";
+  rulePackVersion: string;
+  outcome: "PASS" | "BLOCK";
+  evidenceFamily: NativeDocumentSecurityEvidenceFamily;
+  matchedRules: readonly NativeDocumentSecurityRuleMatch[];
 };
 
 export type NativeDocumentScannerResult = {
   engine: "HEHXAGON_DOCUMENT_SECURITY";
   engineVersion: string;
   rulePackVersion: string;
+  rulePackEvaluationComplete: boolean;
+  rulePackEvaluation: NativeDocumentSecurityRulePackEvaluation | null;
 
   verdict: NativeDocumentScannerVerdict;
   reasonCodes: NativeDocumentScannerReasonCode[];
@@ -382,8 +430,8 @@ export type NativeDocumentScannerResult = {
   oleStructuralEvidence: NativeDocumentOleStructuralEvidence | null;
 
   /**
-   * Always false through M3C. The future versioned rule-pack evaluation still
-   * remains before full document trust exists.
+   * Always false through M4. The rule pack is now evaluated, but worker
+   * integration and adversarial certification remain before full document trust.
    */
   inspectionComplete: false;
 

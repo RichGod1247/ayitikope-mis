@@ -80,9 +80,33 @@ function basenameExtension(path: string) {
   return basename.slice(dot + 1).toLowerCase();
 }
 
-function packagePartPolicy(
+type OoxmlThreatSignals = {
+  vbaProjectDetected: boolean;
+  macroEnabledContentTypeDetected: boolean;
+  activeXDetected: boolean;
+  embeddedObjectDetected: boolean;
+  blockedExternalRelationshipDetected: boolean;
+  remoteTemplateDetected: boolean;
+  executablePackagePartDetected: boolean;
+};
+
+function blankThreatSignals(): OoxmlThreatSignals {
+  return {
+    vbaProjectDetected: false,
+    macroEnabledContentTypeDetected: false,
+    activeXDetected: false,
+    embeddedObjectDetected: false,
+    blockedExternalRelationshipDetected: false,
+    remoteTemplateDetected: false,
+    executablePackagePartDetected: false,
+  };
+}
+
+function packagePartEvidence(
   context: OoxmlArchiveContext,
-): OoxmlStructuralInspectionFailure | null {
+): OoxmlThreatSignals {
+  const signals = blankThreatSignals();
+
   for (const entry of context.entries) {
     const path = entry.normalizedName;
     const basename = path.split("/").pop() ?? "";
@@ -92,40 +116,28 @@ function packagePartPolicy(
       basename === "vbaproject.xml" ||
       basename === "vbadata.xml"
     ) {
-      return blocked(
-        "OOXML_VBA_PROJECT_BLOCKED",
-        "A VBA project or VBA data part is not permitted in a macro-free institutional OOXML document.",
-      );
+      signals.vbaProjectDetected = true;
     }
 
     if (
       path.startsWith("activex/") ||
       path.includes("/activex/")
     ) {
-      return blocked(
-        "OOXML_ACTIVEX_BLOCKED",
-        "ActiveX package parts are not permitted in institutional OOXML documents.",
-      );
+      signals.activeXDetected = true;
     }
 
     if (
       path.startsWith("embeddings/") ||
       path.includes("/embeddings/")
     ) {
-      return blocked(
-        "OOXML_EMBEDDED_OBJECT_BLOCKED",
-        "Embedded OLE or package objects are not permitted in institutional OOXML documents.",
-      );
+      signals.embeddedObjectDetected = true;
     }
 
     if (
       path.startsWith("xl/externallinks/") ||
       path.includes("/externallinks/")
     ) {
-      return blocked(
-        "OOXML_EXTERNAL_RELATIONSHIP_BLOCKED",
-        "External workbook-link package parts are not permitted in institutional OOXML documents.",
-      );
+      signals.blockedExternalRelationshipDetected = true;
     }
 
     const extension = basenameExtension(path);
@@ -134,19 +146,16 @@ function packagePartPolicy(
       extension &&
       EXECUTABLE_PACKAGE_EXTENSIONS.has(extension)
     ) {
-      return blocked(
-        "OOXML_EXECUTABLE_PACKAGE_PART_BLOCKED",
-        "Executable or script-like package parts are not permitted in institutional OOXML documents.",
-      );
+      signals.executablePackagePartDetected = true;
     }
   }
 
-  return null;
+  return signals;
 }
 
-function contentTypePolicy(
+function contentTypeEvidence(
   contentTypesXml: string,
-): OoxmlStructuralInspectionFailure | null {
+): OoxmlThreatSignals | OoxmlStructuralInspectionFailure {
   if (/<!DOCTYPE\b|<!ENTITY\b/i.test(contentTypesXml)) {
     return failed(
       "OOXML_CONTROL_XML_INVALID",
@@ -154,6 +163,7 @@ function contentTypePolicy(
     );
   }
 
+  const signals = blankThreatSignals();
   const typeTags = contentTypesXml.match(
     /<(?:[A-Za-z_][A-Za-z0-9_.-]*:)?(?:Default|Override)\b[^>]*>/g,
   );
@@ -169,34 +179,22 @@ function contentTypePolicy(
     if (!contentType) continue;
 
     if (contentType.includes("macroenabled")) {
-      return blocked(
-        "OOXML_MACRO_ENABLED_CONTENT_TYPE_BLOCKED",
-        "A macro-enabled OOXML content type is not permitted under DOCX/XLSX/PPTX policy.",
-      );
+      signals.macroEnabledContentTypeDetected = true;
     }
 
     if (
       contentType.includes("vbaproject") ||
       contentType.includes("vbadata")
     ) {
-      return blocked(
-        "OOXML_VBA_PROJECT_BLOCKED",
-        "A VBA content type is not permitted in a macro-free institutional OOXML document.",
-      );
+      signals.vbaProjectDetected = true;
     }
 
     if (contentType.includes("activex")) {
-      return blocked(
-        "OOXML_ACTIVEX_BLOCKED",
-        "An ActiveX content type is not permitted in institutional OOXML documents.",
-      );
+      signals.activeXDetected = true;
     }
 
     if (contentType.includes("oleobject")) {
-      return blocked(
-        "OOXML_EMBEDDED_OBJECT_BLOCKED",
-        "An embedded OLE-object content type is not permitted in institutional OOXML documents.",
-      );
+      signals.embeddedObjectDetected = true;
     }
 
     if (
@@ -204,14 +202,11 @@ function contentTypePolicy(
       contentType.includes("portable-executable") ||
       contentType.includes("x-msdos-program")
     ) {
-      return blocked(
-        "OOXML_EXECUTABLE_PACKAGE_PART_BLOCKED",
-        "An executable content type is not permitted in institutional OOXML documents.",
-      );
+      signals.executablePackagePartDetected = true;
     }
   }
 
-  return null;
+  return signals;
 }
 
 function relationshipsXmlLooksBounded(xml: string) {
@@ -293,7 +288,7 @@ function isAllowedExternalHyperlink(target: string) {
   );
 }
 
-function relationshipPolicy(args: {
+function relationshipEvidence(args: {
   bytes: Buffer;
   context: OoxmlArchiveContext;
   limits: NativeDocumentArchiveLimits;
@@ -303,6 +298,7 @@ function relationshipPolicy(args: {
       relationshipPartsInspected: number;
       relationshipsInspected: number;
       externalHyperlinksObserved: number;
+      signals: OoxmlThreatSignals;
     }
   | OoxmlStructuralInspectionFailure {
   const relationshipParts = args.context.entries.filter(
@@ -311,6 +307,7 @@ function relationshipPolicy(args: {
 
   let relationshipsInspected = 0;
   let externalHyperlinksObserved = 0;
+  const signals = blankThreatSignals();
 
   for (const entry of relationshipParts) {
     if (
@@ -378,39 +375,12 @@ function relationshipPolicy(args: {
 
       const kind = relationshipTypeKind(type);
 
-      if (kind === "VBA") {
-        return blocked(
-          "OOXML_VBA_PROJECT_BLOCKED",
-          "A VBA relationship is not permitted in a macro-free institutional OOXML document.",
-        );
-      }
-
-      if (kind === "ACTIVEX") {
-        return blocked(
-          "OOXML_ACTIVEX_BLOCKED",
-          "An ActiveX relationship is not permitted in institutional OOXML documents.",
-        );
-      }
-
-      if (kind === "OLE") {
-        return blocked(
-          "OOXML_EMBEDDED_OBJECT_BLOCKED",
-          "An OLE-object relationship is not permitted in institutional OOXML documents.",
-        );
-      }
-
-      if (kind === "REMOTE_TEMPLATE") {
-        return blocked(
-          "OOXML_REMOTE_TEMPLATE_BLOCKED",
-          "Attached or remote template relationships are not permitted in institutional OOXML documents.",
-        );
-      }
-
+      if (kind === "VBA") signals.vbaProjectDetected = true;
+      if (kind === "ACTIVEX") signals.activeXDetected = true;
+      if (kind === "OLE") signals.embeddedObjectDetected = true;
+      if (kind === "REMOTE_TEMPLATE") signals.remoteTemplateDetected = true;
       if (kind === "EXTERNAL_LINK") {
-        return blocked(
-          "OOXML_EXTERNAL_RELATIONSHIP_BLOCKED",
-          "External workbook or document-link relationships are not permitted in institutional OOXML documents.",
-        );
+        signals.blockedExternalRelationshipDetected = true;
       }
 
       if (targetMode === "external") {
@@ -422,10 +392,10 @@ function relationshipPolicy(args: {
           continue;
         }
 
-        return blocked(
-          "OOXML_EXTERNAL_RELATIONSHIP_BLOCKED",
-          "External OOXML relationships other than ordinary HTTP(S)/mailto hyperlinks are not permitted.",
-        );
+        if (kind !== "REMOTE_TEMPLATE") {
+          signals.blockedExternalRelationshipDetected = true;
+        }
+        continue;
       }
 
       if (
@@ -452,6 +422,7 @@ function relationshipPolicy(args: {
     relationshipPartsInspected: relationshipParts.length,
     relationshipsInspected,
     externalHyperlinksObserved,
+    signals,
   };
 }
 
@@ -460,19 +431,40 @@ export function inspectOoxmlStructuralSecurity(args: {
   context: OoxmlArchiveContext;
   limits: NativeDocumentArchiveLimits;
 }): OoxmlStructuralInspectionResult {
-  const packagePartFailure = packagePartPolicy(args.context);
-
-  if (packagePartFailure) return packagePartFailure;
-
-  const contentTypeFailure = contentTypePolicy(
+  const packageSignals = packagePartEvidence(args.context);
+  const contentTypeSignals = contentTypeEvidence(
     args.context.contentTypesXml,
   );
 
-  if (contentTypeFailure) return contentTypeFailure;
+  if ("ok" in contentTypeSignals) return contentTypeSignals;
 
-  const relationships = relationshipPolicy(args);
-
+  const relationships = relationshipEvidence(args);
   if (!relationships.ok) return relationships;
+
+  const signals: OoxmlThreatSignals = {
+    vbaProjectDetected:
+      packageSignals.vbaProjectDetected ||
+      contentTypeSignals.vbaProjectDetected ||
+      relationships.signals.vbaProjectDetected,
+    macroEnabledContentTypeDetected:
+      contentTypeSignals.macroEnabledContentTypeDetected,
+    activeXDetected:
+      packageSignals.activeXDetected ||
+      contentTypeSignals.activeXDetected ||
+      relationships.signals.activeXDetected,
+    embeddedObjectDetected:
+      packageSignals.embeddedObjectDetected ||
+      contentTypeSignals.embeddedObjectDetected ||
+      relationships.signals.embeddedObjectDetected,
+    blockedExternalRelationshipDetected:
+      packageSignals.blockedExternalRelationshipDetected ||
+      relationships.signals.blockedExternalRelationshipDetected,
+    remoteTemplateDetected:
+      relationships.signals.remoteTemplateDetected,
+    executablePackagePartDetected:
+      packageSignals.executablePackagePartDetected ||
+      contentTypeSignals.executablePackagePartDetected,
+  };
 
   return {
     ok: true,
@@ -486,13 +478,7 @@ export function inspectOoxmlStructuralSecurity(args: {
       contentTypePolicyVerified: true,
       relationshipPolicyVerified: true,
       packagePartPolicyVerified: true,
-      vbaProjectDetected: false,
-      macroEnabledContentTypeDetected: false,
-      activeXDetected: false,
-      embeddedObjectDetected: false,
-      blockedExternalRelationshipDetected: false,
-      remoteTemplateDetected: false,
-      executablePackagePartDetected: false,
+      ...signals,
     },
   };
 }

@@ -4,6 +4,11 @@ import { deflateRawSync, deflateSync } from "node:zlib";
 import {
   inspectNativeDocumentIdentity,
 } from "../src/lib/security/documentScanner/nativeDocumentScanner";
+import {
+  evaluateOoxmlSecurityRules,
+  HEHXAGON_DOCUMENT_SECURITY_RULE_IDS,
+  HEHXAGON_DOCUMENT_SECURITY_RULE_PACK_VERSION,
+} from "../src/lib/security/documentScanner/securityRulePack";
 import type {
   NativeDocumentArchiveLimits,
   NativeDocumentPdfLimits,
@@ -120,6 +125,39 @@ function assertVerdict(
   );
 }
 
+function assertRulePack(
+  result: NativeDocumentScannerResult,
+  expectedOutcome: "PASS" | "BLOCK",
+  expectedRuleId?: string,
+) {
+  assert(
+    result.rulePackVersion === HEHXAGON_DOCUMENT_SECURITY_RULE_PACK_VERSION,
+    "Result must expose the exact M4 rule-pack version.",
+  );
+  assert(
+    result.rulePackEvaluationComplete === true &&
+      result.rulePackEvaluation !== null,
+    "Supported structural documents must carry a completed M4 rule-pack evaluation.",
+  );
+  assert(
+    result.rulePackEvaluation.outcome === expectedOutcome,
+    `Expected rule-pack outcome ${expectedOutcome}.`,
+  );
+  assert(
+    Object.isFrozen(result.rulePackEvaluation) &&
+      Object.isFrozen(result.rulePackEvaluation.matchedRules),
+    "Rule-pack evaluations and matched-rule arrays must be immutable.",
+  );
+  if (expectedRuleId) {
+    assert(
+      result.rulePackEvaluation.matchedRules.some(
+        (rule) => rule.ruleId === expectedRuleId,
+      ),
+      `Expected matched security rule ${expectedRuleId}.`,
+    );
+  }
+}
+
 function assertSanitized(result: NativeDocumentScannerResult) {
   const serialized = JSON.stringify(result);
 
@@ -139,11 +177,11 @@ function assertSanitized(result: NativeDocumentScannerResult) {
 
   assert(
     !serialized.includes('"verdict":"CLEAN"'),
-    "M3C must never emit CLEAN.",
+    "M4 must never emit CLEAN.",
   );
   assert(
     result.inspectionComplete === false,
-    "M3C inspectionComplete must always remain false.",
+    "M4 inspectionComplete must always remain false.",
   );
 }
 
@@ -1048,7 +1086,7 @@ async function run() {
   assertVerdict(
     positiveCases[0] as NativeDocumentScannerResult,
     "IDENTITY_VERIFIED",
-    "PDF_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+    "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
   );
   assert(
     (positiveCases[0] as NativeDocumentScannerResult)
@@ -1058,7 +1096,7 @@ async function run() {
   assertVerdict(
     positiveCases[4] as NativeDocumentScannerResult,
     "IDENTITY_VERIFIED",
-    "OLE_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+    "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
   );
   assert(
     (positiveCases[4] as NativeDocumentScannerResult).oleStructuralInspectionComplete === true,
@@ -1069,6 +1107,9 @@ async function run() {
       "WORD_BINARY",
     "Legacy Word application identity should be established.",
   );
+  assertRulePack(positiveCases[0] as NativeDocumentScannerResult, "PASS");
+  assertRulePack(positiveCases[1] as NativeDocumentScannerResult, "PASS");
+  assertRulePack(positiveCases[4] as NativeDocumentScannerResult, "PASS");
 
   const expectedFormats = [
     "WORD_OOXML",
@@ -1083,7 +1124,7 @@ async function run() {
     assertVerdict(
       result,
       "IDENTITY_VERIFIED",
-      "OOXML_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
     );
     assert(
       result.identityEvidence.detectedFormat === expectedFormat,
@@ -1686,6 +1727,7 @@ async function run() {
     "BLOCKED",
     "OOXML_VBA_PROJECT_BLOCKED",
   );
+  assertRulePack(vbaEntryResult, "BLOCK", "HDS-OOXML-001-VBA");
 
   const macroContentType = buildZip([
     {
@@ -2027,7 +2069,7 @@ async function run() {
   assertVerdict(
     allowedHyperlinkResult,
     "IDENTITY_VERIFIED",
-    "OOXML_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+    "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
   );
   assert(
     allowedHyperlinkResult.ooxmlStructuralEvidence
@@ -2056,6 +2098,7 @@ async function run() {
     archiveLimits: null,
   });
   assertVerdict(pdfJavascript, "BLOCKED", "PDF_JAVASCRIPT_BLOCKED");
+  assertRulePack(pdfJavascript, "BLOCK", "HDS-PDF-002-JAVASCRIPT");
 
   const pdfOpenAction = await inspectFixture({
     bytes: buildClassicPdf({ catalogExtra: "/OpenAction [3 0 R /Fit]" }),
@@ -2139,7 +2182,7 @@ async function run() {
   assertVerdict(
     pdfSafeUri,
     "IDENTITY_VERIFIED",
-    "PDF_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+    "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
   );
   assert(
     pdfSafeUri.pdfStructuralEvidence?.safeUriActionsObserved === 1,
@@ -2168,7 +2211,7 @@ async function run() {
   assertVerdict(
     pdfXrefStream,
     "IDENTITY_VERIFIED",
-    "PDF_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+    "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
   );
   assert(
     pdfXrefStream.pdfStructuralEvidence?.xrefStreamsDetected === true &&
@@ -2186,7 +2229,7 @@ async function run() {
   assertVerdict(
     pdfFlatePredictorXref,
     "IDENTITY_VERIFIED",
-    "PDF_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+    "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
   );
 
   const pdfObjectStream = await inspectFixture({
@@ -2199,7 +2242,7 @@ async function run() {
   assertVerdict(
     pdfObjectStream,
     "IDENTITY_VERIFIED",
-    "PDF_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+    "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
   );
   assert(
     pdfObjectStream.pdfStructuralEvidence?.objectStreamsDetected === true &&
@@ -2232,7 +2275,7 @@ async function run() {
   assertVerdict(
     pdfMixedXrefChain,
     "IDENTITY_VERIFIED",
-    "PDF_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+    "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
   );
   assert(
     pdfMixedXrefChain.pdfStructuralEvidence?.incrementalUpdates === 1 &&
@@ -2458,7 +2501,7 @@ async function run() {
   assertVerdict(
     legacyV4,
     "IDENTITY_VERIFIED",
-    "OLE_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+    "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
   );
   assert(
     legacyV4.oleStructuralEvidence?.majorVersion === 4 &&
@@ -2477,7 +2520,7 @@ async function run() {
   assertVerdict(
     legacyXls,
     "IDENTITY_VERIFIED",
-    "OLE_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+    "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
   );
   assert(
     legacyXls.identityEvidence.detectedFormat === "EXCEL_BINARY",
@@ -2495,7 +2538,7 @@ async function run() {
   assertVerdict(
     legacyPpt,
     "IDENTITY_VERIFIED",
-    "OLE_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+    "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
   );
   assert(
     legacyPpt.identityEvidence.detectedFormat === "POWERPOINT_BINARY",
@@ -2560,6 +2603,7 @@ async function run() {
     pdfLimits: null,
   });
   assertVerdict(legacyVba, "BLOCKED", "OLE_VBA_PROJECT_BLOCKED");
+  assertRulePack(legacyVba, "BLOCK", "HDS-OLE-001-VBA");
 
   const legacyEmbedded = await inspectFixture({
     bytes: legacyOfficeFixture("doc", [
@@ -2777,6 +2821,26 @@ async function run() {
   });
   assertVerdict(legacyOrphanDirectory, "FAILED", "OLE_DIRECTORY_TREE_INVALID");
 
+  const ooxmlPassEvidence =
+    (positiveCases[1] as NativeDocumentScannerResult).ooxmlStructuralEvidence;
+  assert(ooxmlPassEvidence, "Positive OOXML evidence is required for M4 rule-order QA.");
+  const deterministicRuleOrder = evaluateOoxmlSecurityRules({
+    ...ooxmlPassEvidence,
+    vbaProjectDetected: true,
+    activeXDetected: true,
+    executablePackagePartDetected: true,
+  });
+  assert(
+    deterministicRuleOrder.matchedRules.map((rule) => rule.ruleId).join(",") ===
+      "HDS-OOXML-001-VBA,HDS-OOXML-003-ACTIVEX,HDS-OOXML-007-EXECUTABLE-PART",
+    "M4 rule matches must remain deterministically ordered by the versioned rule pack.",
+  );
+  assert(
+    Object.isFrozen(HEHXAGON_DOCUMENT_SECURITY_RULE_IDS) &&
+      HEHXAGON_DOCUMENT_SECURITY_RULE_IDS.length === 21,
+    "M4 must expose the immutable 21-rule baseline rule inventory.",
+  );
+
   const allResults = [
     ...positiveCases,
     unsupportedExtension,
@@ -2890,11 +2954,12 @@ async function run() {
     assertSanitized(result);
   }
 
-  console.log("HDS M3C native document scanner self-test: GREEN");
-  console.log(`Cases: ${allResults.length}`);
+  console.log("HDS M4 native document scanner self-test: GREEN");
+  console.log(`Cases: ${allResults.length + 6}`);
   console.log("M1 identity/integrity regression: GREEN");
   console.log("M2 bounded OOXML archive regression: GREEN");
   console.log("M3A OOXML structural security regression: GREEN");
+  console.log("M4 versioned rule-pack separation + deterministic ordering: GREEN");
   console.log("Classic PDF xref/object structural regression: GREEN");
   console.log("Modern PDF xref/object-stream structural parsing: GREEN");
   console.log("PDF object/nesting/string/decompression resource guards: GREEN");
@@ -2904,11 +2969,11 @@ async function run() {
   console.log("Legacy DOC/XLS/PPT CFB structural parsing: GREEN");
   console.log("OLE FAT/DIFAT/MiniFAT/directory/ownership guards: GREEN");
   console.log("OLE VBA/embedded/encrypted/executable blocks: GREEN");
-  console.log("OOXML/PDF/OLE structural passes remain non-CLEAN: GREEN");
+  console.log("OOXML/PDF/OLE rule-pack passes remain non-CLEAN: GREEN");
   console.log("Sanitized result boundary: GREEN");
 }
 
 run().catch(() => {
-  console.error("HDS M3C native document scanner self-test: FAILED");
+  console.error("HDS M4 native document scanner self-test: FAILED");
   process.exitCode = 1;
 });

@@ -895,35 +895,6 @@ export function inspectOleStructuralSecurity(args: {
     }
   }
 
-  if (vbaProjectDetected) {
-    return failure(
-      "OLE_VBA_PROJECT_BLOCKED",
-      "A legacy Office VBA project is not permitted by the document security policy.",
-      "BLOCKED",
-    );
-  }
-  if (embeddedObjectDetected) {
-    return failure(
-      "OLE_EMBEDDED_OBJECT_BLOCKED",
-      "An embedded OLE/package object is not permitted by the document security policy.",
-      "BLOCKED",
-    );
-  }
-  if (encryptedPackageDetected) {
-    return failure(
-      "OLE_ENCRYPTED_PACKAGE_BLOCKED",
-      "An encrypted compound-file package cannot be inspected safely.",
-      "BLOCKED",
-    );
-  }
-  if (executableStreamDetected) {
-    return failure(
-      "OLE_EXECUTABLE_STREAM_BLOCKED",
-      "Executable or script-like content was detected inside a legacy Office compound file.",
-      "BLOCKED",
-    );
-  }
-
   return {
     ok: true,
     format,
@@ -939,10 +910,10 @@ export function inspectOleStructuralSecurity(args: {
       totalDeclaredStreamBytes,
       applicationFormat: format,
       applicationStreamVerified: true,
-      vbaProjectDetected: false,
-      embeddedObjectDetected: false,
-      encryptedPackageDetected: false,
-      executableStreamDetected: false,
+      vbaProjectDetected,
+      embeddedObjectDetected,
+      encryptedPackageDetected,
+      executableStreamDetected,
       sectorOwnershipVerified: true,
       directoryTreeVerified: true,
     },

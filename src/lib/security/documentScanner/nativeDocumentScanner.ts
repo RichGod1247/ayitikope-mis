@@ -8,6 +8,12 @@ import {
 } from "./ooxmlStructuralInspector";
 import { inspectPdfStructuralSecurity } from "./pdfStructuralInspector";
 import { inspectOleStructuralSecurity } from "./oleStructuralInspector";
+import {
+  evaluateOleSecurityRules,
+  evaluateOoxmlSecurityRules,
+  evaluatePdfSecurityRules,
+  HEHXAGON_DOCUMENT_SECURITY_RULE_PACK_VERSION,
+} from "./securityRulePack";
 import type {
   NativeDocumentArchiveEvidence,
   NativeDocumentContainer,
@@ -22,20 +28,14 @@ import type {
   NativeDocumentScannerReasonCode,
   NativeDocumentScannerResult,
   NativeDocumentScannerVerdict,
+  NativeDocumentSecurityRulePackEvaluation,
 } from "./types";
 
 export const HEHXAGON_DOCUMENT_SECURITY_ENGINE =
   "HEHXAGON_DOCUMENT_SECURITY" as const;
 
 export const HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION =
-  "0.3.3-m3c";
-
-/**
- * This is the embedded M3C structural policy, not the future M4 versioned
- * threat-rule pack. It deliberately cannot produce CLEAN.
- */
-export const HEHXAGON_DOCUMENT_SECURITY_RULE_PACK_VERSION =
-  "HDS-M3C-OLE-COMPOUND-STRUCTURE-V1";
+  "0.4.0-m4";
 
 const MAX_SIGNATURE_PREFIX_BYTES = 1024;
 
@@ -293,12 +293,15 @@ function result(args: {
   pdfStructuralEvidence?: NativeDocumentPdfStructuralEvidence | null;
   oleStructuralInspectionComplete?: boolean;
   oleStructuralEvidence?: NativeDocumentOleStructuralEvidence | null;
+  rulePackEvaluation?: NativeDocumentSecurityRulePackEvaluation | null;
 }): NativeDocumentScannerResult {
   return {
     engine: HEHXAGON_DOCUMENT_SECURITY_ENGINE,
     engineVersion: HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION,
     rulePackVersion:
       HEHXAGON_DOCUMENT_SECURITY_RULE_PACK_VERSION,
+    rulePackEvaluationComplete: Boolean(args.rulePackEvaluation),
+    rulePackEvaluation: args.rulePackEvaluation ?? null,
     verdict: args.verdict,
     reasonCodes: args.reasonCodes,
     findings: args.findings,
@@ -341,6 +344,7 @@ function blocked(args: {
   pdfStructuralEvidence?: NativeDocumentPdfStructuralEvidence | null;
   oleStructuralInspectionComplete?: boolean;
   oleStructuralEvidence?: NativeDocumentOleStructuralEvidence | null;
+  rulePackEvaluation?: NativeDocumentSecurityRulePackEvaluation | null;
 }) {
   return result({
     verdict: "BLOCKED",
@@ -362,6 +366,11 @@ function blocked(args: {
       args.pdfStructuralInspectionComplete ?? false,
     pdfStructuralEvidence:
       args.pdfStructuralEvidence ?? null,
+    oleStructuralInspectionComplete:
+      args.oleStructuralInspectionComplete ?? false,
+    oleStructuralEvidence:
+      args.oleStructuralEvidence ?? null,
+    rulePackEvaluation: args.rulePackEvaluation ?? null,
   });
 }
 
@@ -380,6 +389,7 @@ function failed(args: {
   pdfStructuralEvidence?: NativeDocumentPdfStructuralEvidence | null;
   oleStructuralInspectionComplete?: boolean;
   oleStructuralEvidence?: NativeDocumentOleStructuralEvidence | null;
+  rulePackEvaluation?: NativeDocumentSecurityRulePackEvaluation | null;
 }) {
   return result({
     verdict: "FAILED",
@@ -401,6 +411,58 @@ function failed(args: {
       args.pdfStructuralInspectionComplete ?? false,
     pdfStructuralEvidence:
       args.pdfStructuralEvidence ?? null,
+    oleStructuralInspectionComplete:
+      args.oleStructuralInspectionComplete ?? false,
+    oleStructuralEvidence:
+      args.oleStructuralEvidence ?? null,
+    rulePackEvaluation: args.rulePackEvaluation ?? null,
+  });
+}
+
+function blockedByRulePack(args: {
+  evaluation: NativeDocumentSecurityRulePackEvaluation;
+  bytesScanned: number;
+  sha256Hash: string;
+  identityEvidence: NativeDocumentIdentityEvidence;
+  archiveInspectionComplete?: boolean;
+  archiveEvidence?: NativeDocumentArchiveEvidence | null;
+  ooxmlStructuralInspectionComplete?: boolean;
+  ooxmlStructuralEvidence?: NativeDocumentOoxmlStructuralEvidence | null;
+  pdfStructuralInspectionComplete?: boolean;
+  pdfStructuralEvidence?: NativeDocumentPdfStructuralEvidence | null;
+  oleStructuralInspectionComplete?: boolean;
+  oleStructuralEvidence?: NativeDocumentOleStructuralEvidence | null;
+}) {
+  if (args.evaluation.outcome !== "BLOCK" || args.evaluation.matchedRules.length === 0) {
+    return failed({
+      code: "SCANNER_INPUT_INVALID",
+      message: "The security rule pack returned an invalid blocking evaluation.",
+      bytesScanned: args.bytesScanned,
+      sha256Hash: args.sha256Hash,
+      identityInspectionComplete: true,
+      evidence: args.identityEvidence,
+    });
+  }
+
+  return result({
+    verdict: "BLOCKED",
+    reasonCodes: args.evaluation.matchedRules.map((rule) => rule.reasonCode),
+    findings: args.evaluation.matchedRules.map((rule) =>
+      finding(rule.reasonCode, "BLOCK", rule.message),
+    ),
+    bytesScanned: args.bytesScanned,
+    sha256Hash: args.sha256Hash,
+    identityInspectionComplete: true,
+    identityEvidence: args.identityEvidence,
+    archiveInspectionComplete: args.archiveInspectionComplete ?? false,
+    archiveEvidence: args.archiveEvidence ?? null,
+    ooxmlStructuralInspectionComplete: args.ooxmlStructuralInspectionComplete ?? false,
+    ooxmlStructuralEvidence: args.ooxmlStructuralEvidence ?? null,
+    pdfStructuralInspectionComplete: args.pdfStructuralInspectionComplete ?? false,
+    pdfStructuralEvidence: args.pdfStructuralEvidence ?? null,
+    oleStructuralInspectionComplete: args.oleStructuralInspectionComplete ?? false,
+    oleStructuralEvidence: args.oleStructuralEvidence ?? null,
+    rulePackEvaluation: args.evaluation,
   });
 }
 
@@ -510,14 +572,11 @@ async function readBoundedSource(args: {
 }
 
 /**
- * M3B2: bounded byte integrity + broad container identity + bounded OOXML
- * package/structural security + bounded classic-PDF structural security.
+ * M4: bounded document parsing plus a versioned, deterministic ingress rule pack.
  *
- * ZIP/OOXML inspection parses central-directory metadata and only decompresses
- * the small OPC control parts required to prove Word/Excel/PowerPoint package
- * OOXML is covered through M3A. Classic and modern PDF xref/object streams
- * plus active structures are covered in M3B2. Legacy OLE remains
- * explicitly outside this milestone and cannot earn CLEAN.
+ * Structural parsers report what exists. The M4 rule pack owns threat-policy
+ * BLOCK decisions for OOXML, PDF, and legacy OLE. Parser/resource corruption
+ * remains FAILED/BLOCKED at the parser boundary. M4 still cannot emit CLEAN.
  */
 export async function inspectNativeDocumentIdentity(
   input: NativeDocumentScannerInput,
@@ -785,16 +844,42 @@ export async function inspectNativeDocumentIdentity(
       return blocked(common);
     }
 
+    const evaluation = evaluatePdfSecurityRules(pdf.evidence);
+
+    if (evaluation.outcome === "BLOCK") {
+      return blockedByRulePack({
+        evaluation,
+        bytesScanned: read.bytesScanned,
+        sha256Hash: read.sha256Hash,
+        identityEvidence: evidence,
+        pdfStructuralInspectionComplete: pdf.structuralInspectionComplete,
+        pdfStructuralEvidence: pdf.evidence,
+      });
+    }
+
+    if (!pdf.structuralInspectionComplete) {
+      return failed({
+        code: "SCANNER_INPUT_INVALID",
+        message: "The PDF rule pack passed evidence from an incomplete structural inspection.",
+        bytesScanned: read.bytesScanned,
+        sha256Hash: read.sha256Hash,
+        identityInspectionComplete: true,
+        evidence,
+        pdfStructuralEvidence: pdf.evidence,
+        rulePackEvaluation: evaluation,
+      });
+    }
+
     return result({
       verdict: "IDENTITY_VERIFIED",
       reasonCodes: [
-        "PDF_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
       ],
       findings: [
         finding(
-          "PDF_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+          "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
           "INFO",
-          "Byte integrity and the bounded M3B2 PDF structural policy are verified across classic and compressed xref/object-stream structures; the later versioned rule-pack evaluation is still required before full document trust.",
+          "Byte integrity, bounded PDF structural inspection, and the versioned Hehxagon M4 ingress rule pack passed; worker integration and adversarial certification remain before full document trust.",
         ),
       ],
       bytesScanned: read.bytesScanned,
@@ -802,6 +887,7 @@ export async function inspectNativeDocumentIdentity(
       identityInspectionComplete: true,
       pdfStructuralInspectionComplete: true,
       pdfStructuralEvidence: pdf.evidence,
+      rulePackEvaluation: evaluation,
       identityEvidence: evidence,
     });
   }
@@ -875,16 +961,31 @@ export async function inspectNativeDocumentIdentity(
       return blocked(common);
     }
 
+    const evaluation = evaluateOoxmlSecurityRules(structural.evidence);
+
+    if (evaluation.outcome === "BLOCK") {
+      return blockedByRulePack({
+        evaluation,
+        bytesScanned: read.bytesScanned,
+        sha256Hash: read.sha256Hash,
+        identityEvidence: evidence,
+        archiveInspectionComplete: true,
+        archiveEvidence: archive.evidence,
+        ooxmlStructuralInspectionComplete: true,
+        ooxmlStructuralEvidence: structural.evidence,
+      });
+    }
+
     return result({
       verdict: "IDENTITY_VERIFIED",
       reasonCodes: [
-        "OOXML_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
       ],
       findings: [
         finding(
-          "OOXML_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+          "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
           "INFO",
-          "Byte integrity, bounded OOXML package identity, and the M3A OOXML structural policy are verified; the later versioned rule-pack evaluation is still required before full document trust.",
+          "Byte integrity, bounded OOXML structure, and the versioned Hehxagon M4 ingress rule pack passed; worker integration and adversarial certification remain before full document trust.",
         ),
       ],
       bytesScanned: read.bytesScanned,
@@ -894,6 +995,7 @@ export async function inspectNativeDocumentIdentity(
       archiveEvidence: archive.evidence,
       ooxmlStructuralInspectionComplete: true,
       ooxmlStructuralEvidence: structural.evidence,
+      rulePackEvaluation: evaluation,
       identityEvidence: evidence,
     });
   }
@@ -940,16 +1042,29 @@ export async function inspectNativeDocumentIdentity(
       detectedFormat: ole.format,
     };
 
+    const evaluation = evaluateOleSecurityRules(ole.evidence);
+
+    if (evaluation.outcome === "BLOCK") {
+      return blockedByRulePack({
+        evaluation,
+        bytesScanned: read.bytesScanned,
+        sha256Hash: read.sha256Hash,
+        identityEvidence: evidence,
+        oleStructuralInspectionComplete: true,
+        oleStructuralEvidence: ole.evidence,
+      });
+    }
+
     return result({
       verdict: "IDENTITY_VERIFIED",
       reasonCodes: [
-        "OLE_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
       ],
       findings: [
         finding(
-          "OLE_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+          "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
           "INFO",
-          "Byte integrity, legacy Office application identity, bounded CFB allocation structure, and the M3C OLE structural policy are verified; the later versioned rule-pack evaluation is still required before full document trust.",
+          "Byte integrity, bounded OLE/CFBF structure, and the versioned Hehxagon M4 ingress rule pack passed; worker integration and adversarial certification remain before full document trust.",
         ),
       ],
       bytesScanned: read.bytesScanned,
@@ -957,6 +1072,7 @@ export async function inspectNativeDocumentIdentity(
       identityInspectionComplete: true,
       oleStructuralInspectionComplete: true,
       oleStructuralEvidence: ole.evidence,
+      rulePackEvaluation: evaluation,
       identityEvidence: evidence,
     });
   }

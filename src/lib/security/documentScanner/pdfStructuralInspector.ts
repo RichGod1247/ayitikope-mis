@@ -49,6 +49,7 @@ type ParsedObjectStream = {
 export type PdfStructuralInspectionResult =
   | {
       ok: true;
+      structuralInspectionComplete: boolean;
       evidence: NativeDocumentPdfStructuralEvidence;
     }
   | {
@@ -77,13 +78,6 @@ function failed(
   message: string,
 ): PdfStructuralInspectionResult {
   return { ok: false, verdict: "FAILED", reasonCode, message };
-}
-
-function blocked(
-  reasonCode: NativeDocumentScannerReasonCode,
-  message: string,
-): PdfStructuralInspectionResult {
-  return { ok: false, verdict: "BLOCKED", reasonCode, message };
 }
 
 function positiveSafeInteger(value: unknown) {
@@ -1446,71 +1440,55 @@ function parseXrefSectionAt(args: {
   return parseXrefStreamSection({ ...args, offset });
 }
 
+type PdfThreatCounters = {
+  safeUriActionsObserved: number;
+  javascriptDetected: boolean;
+  openActionDetected: boolean;
+  additionalActionDetected: boolean;
+  launchActionDetected: boolean;
+  embeddedFileDetected: boolean;
+  richMediaDetected: boolean;
+  xfaDetected: boolean;
+  blockedExternalActionDetected: boolean;
+  unsafeUriActionDetected: boolean;
+};
+
 function inspectValue(args: {
   value: PdfValue;
-  counters: {
-    safeUriActionsObserved: number;
-  };
-}): PdfStructuralInspectionResult | null {
+  counters: PdfThreatCounters;
+}): void {
   const { value, counters } = args;
 
-  if (!value || typeof value !== "object") return null;
+  if (!value || typeof value !== "object") return;
 
   if (value.kind === "array") {
     for (const nested of value.values) {
-      const result = inspectValue({ value: nested, counters });
-      if (result) return result;
+      inspectValue({ value: nested, counters });
     }
-    return null;
+    return;
   }
 
-  if (value.kind !== "dict") return null;
+  if (value.kind !== "dict") return;
 
   const values = value.values;
   const type = nameValue(values.get("Type"));
   const subtype = nameValue(values.get("Subtype"));
   const action = nameValue(values.get("S"));
 
-  if (values.has("OpenAction")) {
-    return blocked(
-      "PDF_OPEN_ACTION_BLOCKED",
-      "Automatic PDF open actions are not permitted for institutional document ingress.",
-    );
-  }
-
-  if (values.has("AA")) {
-    return blocked(
-      "PDF_ADDITIONAL_ACTION_BLOCKED",
-      "PDF additional actions are not permitted for institutional document ingress.",
-    );
-  }
-
-  if (values.has("XFA")) {
-    return blocked(
-      "PDF_XFA_BLOCKED",
-      "XFA content is not permitted because it can carry active form behavior outside the bounded PDF policy.",
-    );
-  }
+  if (values.has("OpenAction")) counters.openActionDetected = true;
+  if (values.has("AA")) counters.additionalActionDetected = true;
+  if (values.has("XFA")) counters.xfaDetected = true;
 
   if (values.has("EmbeddedFiles") || values.has("EF")) {
-    return blocked(
-      "PDF_EMBEDDED_FILE_BLOCKED",
-      "Embedded file content is not permitted in institutional PDF ingress.",
-    );
+    counters.embeddedFileDetected = true;
   }
 
   if (values.has("JavaScript") || values.has("JS") || action === "JavaScript") {
-    return blocked(
-      "PDF_JAVASCRIPT_BLOCKED",
-      "PDF JavaScript is not permitted in institutional document ingress.",
-    );
+    counters.javascriptDetected = true;
   }
 
   if (type === "Filespec" || type === "EmbeddedFile") {
-    return blocked(
-      "PDF_EMBEDDED_FILE_BLOCKED",
-      "PDF file-specification or embedded-file objects are not permitted.",
-    );
+    counters.embeddedFileDetected = true;
   }
 
   if (
@@ -1519,18 +1497,10 @@ function inspectValue(args: {
     subtype === "Sound" ||
     subtype === "3D"
   ) {
-    return blocked(
-      "PDF_RICH_MEDIA_BLOCKED",
-      "Interactive rich-media PDF content is not permitted.",
-    );
+    counters.richMediaDetected = true;
   }
 
-  if (action === "Launch") {
-    return blocked(
-      "PDF_LAUNCH_ACTION_BLOCKED",
-      "PDF Launch actions are not permitted.",
-    );
-  }
+  if (action === "Launch") counters.launchActionDetected = true;
 
   if (
     action === "SubmitForm" ||
@@ -1539,42 +1509,30 @@ function inspectValue(args: {
     action === "GoToE" ||
     action === "Rendition"
   ) {
-    return blocked(
-      "PDF_EXTERNAL_ACTION_BLOCKED",
-      "PDF actions that submit, import, launch remote content, or invoke renditions are not permitted.",
-    );
+    counters.blockedExternalActionDetected = true;
   }
 
   if (action === "URI") {
     const uri = stringValue(values.get("URI"));
     if (!uri) {
-      return blocked(
-        "PDF_UNSAFE_URI_ACTION_BLOCKED",
-        "A PDF URI action could not be reduced to a bounded ordinary hyperlink.",
-      );
+      counters.unsafeUriActionDetected = true;
+    } else {
+      const normalized = uri.trim().toLowerCase();
+      if (
+        normalized.startsWith("https://") ||
+        normalized.startsWith("http://") ||
+        normalized.startsWith("mailto:")
+      ) {
+        counters.safeUriActionsObserved += 1;
+      } else {
+        counters.unsafeUriActionDetected = true;
+      }
     }
-
-    const normalized = uri.trim().toLowerCase();
-    if (
-      !normalized.startsWith("https://") &&
-      !normalized.startsWith("http://") &&
-      !normalized.startsWith("mailto:")
-    ) {
-      return blocked(
-        "PDF_UNSAFE_URI_ACTION_BLOCKED",
-        "Only ordinary HTTP(S) and mailto PDF hyperlinks are permitted by the current structural policy.",
-      );
-    }
-
-    counters.safeUriActionsObserved += 1;
   }
 
   for (const nested of values.values()) {
-    const result = inspectValue({ value: nested, counters });
-    if (result) return result;
+    inspectValue({ value: nested, counters });
   }
-
-  return null;
 }
 
 export function inspectPdfStructuralSecurity(args: {
@@ -1752,10 +1710,34 @@ export function inspectPdfStructuralSecurity(args: {
   }
 
   if (encryptedDetected) {
-    return blocked(
-      "PDF_ENCRYPTED_BLOCKED",
-      "Encrypted PDFs are not accepted because the security engine cannot inspect their complete active structure.",
-    );
+    return {
+      ok: true,
+      structuralInspectionComplete: false,
+      evidence: {
+        pdfVersion: headerMatch[1] as NativeDocumentPdfStructuralEvidence["pdfVersion"],
+        xrefSections,
+        activeObjectCount: activeEntries.size,
+        incrementalUpdates: revisionCount - 1,
+        safeUriActionsObserved: 0,
+        encrypted: true,
+        xrefStreamsDetected: xrefStreamCount > 0,
+        objectStreamsDetected: false,
+        xrefStreamCount,
+        objectStreamCount: 0,
+        compressedObjectCount: 0,
+        catalogVerified: false,
+        pageTreeRootVerified: false,
+        javascriptDetected: false,
+        openActionDetected: false,
+        additionalActionDetected: false,
+        launchActionDetected: false,
+        embeddedFileDetected: false,
+        richMediaDetected: false,
+        xfaDetected: false,
+        blockedExternalActionDetected: false,
+        unsafeUriActionDetected: false,
+      },
+    };
   }
 
   const rootRef = refValue(newestTrailer.values.get("Root"));
@@ -2150,7 +2132,18 @@ export function inspectPdfStructuralSecurity(args: {
     );
   }
 
-  const counters = { safeUriActionsObserved: 0 };
+  const counters: PdfThreatCounters = {
+    safeUriActionsObserved: 0,
+    javascriptDetected: false,
+    openActionDetected: false,
+    additionalActionDetected: false,
+    launchActionDetected: false,
+    embeddedFileDetected: false,
+    richMediaDetected: false,
+    xfaDetected: false,
+    blockedExternalActionDetected: false,
+    unsafeUriActionDetected: false,
+  };
 
   for (const [objectNumber, entry] of activeEntries) {
     if (objectNumber === 0) continue;
@@ -2159,12 +2152,12 @@ export function inspectPdfStructuralSecurity(args: {
     if ("ok" in parsed) return parsed;
     if (entry.kind === "compressed") compressedObjectCount += 1;
 
-    const finding = inspectValue({ value: parsed.value, counters });
-    if (finding) return finding;
+    inspectValue({ value: parsed.value, counters });
   }
 
   return {
     ok: true,
+    structuralInspectionComplete: true,
     evidence: {
       pdfVersion: headerMatch[1] as NativeDocumentPdfStructuralEvidence["pdfVersion"],
       xrefSections,
@@ -2179,14 +2172,15 @@ export function inspectPdfStructuralSecurity(args: {
       compressedObjectCount,
       catalogVerified: true,
       pageTreeRootVerified: true,
-      javascriptDetected: false,
-      openActionDetected: false,
-      additionalActionDetected: false,
-      launchActionDetected: false,
-      embeddedFileDetected: false,
-      richMediaDetected: false,
-      xfaDetected: false,
-      blockedExternalActionDetected: false,
+      javascriptDetected: counters.javascriptDetected,
+      openActionDetected: counters.openActionDetected,
+      additionalActionDetected: counters.additionalActionDetected,
+      launchActionDetected: counters.launchActionDetected,
+      embeddedFileDetected: counters.embeddedFileDetected,
+      richMediaDetected: counters.richMediaDetected,
+      xfaDetected: counters.xfaDetected,
+      blockedExternalActionDetected: counters.blockedExternalActionDetected,
+      unsafeUriActionDetected: counters.unsafeUriActionDetected,
     },
   };
 }
