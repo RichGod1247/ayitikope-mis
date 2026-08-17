@@ -60,6 +60,9 @@ export const HDS_M6D5B_HARNESS_VERSION =
 export const HDS_M6D6_HARNESS_VERSION =
   "HDS-M6D6-HARNESS-V1" as const;
 
+export const HDS_M6E1_HARNESS_VERSION =
+  "HDS-M6E1-HARNESS-V1" as const;
+
 const ONE_MEBIBYTE = 1024 * 1024;
 
 const ARCHIVE_LIMITS: NativeDocumentArchiveLimits = Object.freeze({
@@ -138,7 +141,8 @@ type ThreatFamilyManifestEntry = Readonly<{
     | "CERTIFIED_M6D3"
     | "CERTIFIED_M6D4"
     | "CERTIFIED_M6D5"
-    | "CERTIFIED_M6D5B";
+    | "CERTIFIED_M6D5B"
+    | "CERTIFIED_M6E1";
   objective: string;
 }>;
 
@@ -241,14 +245,14 @@ const THREAT_FAMILY_MANIFEST: readonly ThreatFamilyManifestEntry[] =
     Object.freeze({
       threatFamily: "OLE_FAT_DIFAT_EVASION",
       plannedPhase: "M6E",
-      certificationStatus: "NOT_CERTIFIED",
+      certificationStatus: "CERTIFIED_M6E1",
       objective:
         "Attack FAT/DIFAT ownership, marker consistency, chain termination and sector aliasing.",
     }),
     Object.freeze({
       threatFamily: "OLE_MINIFAT_EVASION",
       plannedPhase: "M6E",
-      certificationStatus: "NOT_CERTIFIED",
+      certificationStatus: "CERTIFIED_M6E1",
       objective:
         "Attack MiniFAT chains, root mini-stream bounds, mini-sector aliasing and declared-size semantics.",
     }),
@@ -1705,6 +1709,238 @@ const M6D5B_CERTIFICATION_CASES: readonly CorpusCaseContract[] =
     }),
   ]);
 
+
+const M6E1_CERTIFICATION_CASES: readonly CorpusCaseContract[] =
+  Object.freeze([
+    Object.freeze({
+      caseId: "HDS-M6E1-001-BENIGN-FAT-DIFAT-CONTROL",
+      threatFamily: "OLE_FAT_DIFAT_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A deterministic legacy Word compound file with ordinary FAT and header-DIFAT allocation remains structurally accepted without earning CLEAN authority.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E1-002-DUPLICATE-HEADER-DIFAT",
+      threatFamily: "OLE_FAT_DIFAT_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "The CFB header repeats the same FAT sector in two DIFAT slots so allocation authority is ambiguous and must fail before policy trust.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_DIFAT_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E1-003-FAT-SECTOR-MARKER-CONTRADICTION",
+      threatFamily: "OLE_FAT_DIFAT_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A sector named by the DIFAT as FAT-owned is deliberately marked ENDOFCHAIN inside the FAT and must be rejected as contradictory allocation metadata.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_FAT_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E1-004-DIRECTORY-FAT-CHAIN-CYCLE",
+      threatFamily: "OLE_FAT_DIFAT_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "The directory sector FAT chain points back to itself, challenging cycle detection and bounded chain traversal before any directory evidence can be trusted.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_SECTOR_CHAIN_LOOP",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E1-005-REGULAR-STREAM-ALIASES-DIRECTORY-SECTOR",
+      threatFamily: "OLE_FAT_DIFAT_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "The primary Word stream is redirected onto a sector already owned by the directory chain and must fail the single-owner sector invariant.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_SECTOR_OWNERSHIP_CONFLICT",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E1-006-BENIGN-MINIFAT-CONTROL",
+      threatFamily: "OLE_MINIFAT_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A deterministic small metadata stream traverses the MiniFAT and root mini stream normally, proving benign mini-stream allocation remains accepted.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E1-007-MINIFAT-CHAIN-CYCLE",
+      threatFamily: "OLE_MINIFAT_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A small-stream MiniFAT entry points back to itself so the mini-sector chain becomes cyclic and must fail bounded traversal.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_SECTOR_CHAIN_LOOP",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E1-008-MINIFAT-EARLY-END",
+      threatFamily: "OLE_MINIFAT_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "The first mini sector terminates before enough sectors exist for the declared stream size, forcing an invalid subsequent mini-sector reference.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_MINISTREAM_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E1-009-MINIFAT-CHAIN-EXCEEDS-DECLARED-SIZE",
+      threatFamily: "OLE_MINIFAT_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A MiniFAT chain continues beyond the exact number of mini sectors implied by the stream size and must be rejected rather than silently ignored.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_STREAM_CHAIN_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E1-010-MINI-SECTOR-ALIASED-BETWEEN-STREAMS",
+      threatFamily: "OLE_MINIFAT_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "Two independent small streams claim the same starting mini sector and must fail the mini-sector single-owner invariant.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_SECTOR_OWNERSHIP_CONFLICT",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E1-011-MINIFAT-HEADER-COUNT-CONTRADICTION",
+      threatFamily: "OLE_MINIFAT_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "The header declares zero MiniFAT sectors while retaining a concrete first MiniFAT sector, which must fail as contradictory MiniFAT authority.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_MINIFAT_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+  ]);
+
+const M6E1_DIRECTORY_REPAIR_CASES: readonly CorpusCaseContract[] =
+  Object.freeze([
+    Object.freeze({
+      caseId: "HDS-M6E1-DIR-001-INVALID-COLOR-FLAG",
+      threatFamily: "OLE_DIRECTORY_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A reachable directory entry carries a Color Flag outside the CFB red-or-black domain and must fail directory conformance without certifying the wider directory family.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_DIRECTORY_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: false,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E1-DIR-002-PROHIBITED-DIRECTORY-NAME-CHARACTER",
+      threatFamily: "OLE_DIRECTORY_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A reachable stream name contains a CFB-prohibited slash character and must fail directory conformance without prematurely certifying sibling-tree ordering authority.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_DIRECTORY_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: false,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+  ]);
+
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
     throw new Error(`M6C_ASSERTION_FAILED: ${message}`);
@@ -1733,6 +1969,335 @@ function sourceFromDeterministicFragments(bytes: Buffer) {
     }
   })();
 }
+
+type CfbFixtureStream = {
+  path: string;
+  data: Buffer;
+};
+
+type CfbFixtureNode = {
+  id: number;
+  name: string;
+  type: 1 | 2 | 5;
+  parentPath: string | null;
+  data: Buffer | null;
+  startSector: number;
+  streamSize: number;
+  left: number;
+  right: number;
+  child: number;
+};
+
+function buildCfb(streams: CfbFixtureStream[], majorVersion: 3 | 4 = 3) {
+  const sectorSize = majorVersion === 3 ? 512 : 4096;
+  const miniSectorSize = 64;
+  const nodes: CfbFixtureNode[] = [
+    {
+      id: 0,
+      name: "Root Entry",
+      type: 5,
+      parentPath: null,
+      data: null,
+      startSector: 0xfffffffe,
+      streamSize: 0,
+      left: 0xffffffff,
+      right: 0xffffffff,
+      child: 0xffffffff,
+    },
+  ];
+  const storageIds = new Map<string, number>();
+
+  for (const stream of streams) {
+    const parts = stream.path.split("/").filter(Boolean);
+    assert(parts.length > 0, "CFB fixture stream path is required.");
+    let parentPath = "";
+    for (let index = 0; index < parts.length - 1; index += 1) {
+      const name = parts[index] as string;
+      const path = parentPath ? `${parentPath}/${name}` : name;
+      if (!storageIds.has(path)) {
+        const id = nodes.length;
+        storageIds.set(path, id);
+        nodes.push({
+          id,
+          name,
+          type: 1,
+          parentPath: parentPath || "",
+          data: null,
+          startSector: 0,
+          streamSize: 0,
+          left: 0xffffffff,
+          right: 0xffffffff,
+          child: 0xffffffff,
+        });
+      }
+      parentPath = path;
+    }
+    const name = parts[parts.length - 1] as string;
+    nodes.push({
+      id: nodes.length,
+      name,
+      type: 2,
+      parentPath: parentPath || "",
+      data: Buffer.from(stream.data),
+      startSector: 0xfffffffe,
+      streamSize: stream.data.length,
+      left: 0xffffffff,
+      right: 0xffffffff,
+      child: 0xffffffff,
+    });
+  }
+
+  const pathById = new Map<number, string>([[0, ""]]);
+  for (const [path, id] of storageIds) pathById.set(id, path);
+
+  const childrenByParent = new Map<string, number[]>();
+  for (const node of nodes.slice(1)) {
+    const parent = node.parentPath ?? "";
+    const list = childrenByParent.get(parent) ?? [];
+    list.push(node.id);
+    childrenByParent.set(parent, list);
+  }
+
+  for (const [parentPath, childIds] of childrenByParent) {
+    const parentId = parentPath === "" ? 0 : storageIds.get(parentPath);
+    assert(parentId !== undefined, "CFB fixture parent storage must exist.");
+    nodes[parentId]!.child = childIds[0] ?? 0xffffffff;
+    for (let index = 0; index < childIds.length - 1; index += 1) {
+      nodes[childIds[index]!]!.right = childIds[index + 1] as number;
+    }
+  }
+
+  const smallStreams = nodes.filter(
+    (node) => node.type === 2 && node.streamSize > 0 && node.streamSize < 4096,
+  );
+  const regularStreams = nodes.filter(
+    (node) => node.type === 2 && node.streamSize >= 4096,
+  );
+
+  const miniFatEntries: number[] = [];
+  const miniChunks: Buffer[] = [];
+  for (const node of smallStreams) {
+    const miniCount = Math.ceil(node.streamSize / miniSectorSize);
+    const firstMini = miniFatEntries.length;
+    node.startSector = firstMini;
+    for (let index = 0; index < miniCount; index += 1) {
+      const chunk = Buffer.alloc(miniSectorSize);
+      node.data!.subarray(index * miniSectorSize, (index + 1) * miniSectorSize).copy(chunk);
+      miniChunks.push(chunk);
+      miniFatEntries.push(index === miniCount - 1 ? 0xfffffffe : firstMini + index + 1);
+    }
+  }
+  const miniStream = Buffer.concat(miniChunks);
+  nodes[0]!.streamSize = miniStream.length;
+
+  const directoryBytesLength = Math.max(sectorSize, Math.ceil(nodes.length * 128 / sectorSize) * sectorSize);
+  const directorySectorCount = directoryBytesLength / sectorSize;
+  const miniFatSectorCount = miniFatEntries.length === 0 ? 0 : Math.ceil(miniFatEntries.length * 4 / sectorSize);
+  const rootMiniSectorCount = miniStream.length === 0 ? 0 : Math.ceil(miniStream.length / sectorSize);
+  const regularSectorCounts = regularStreams.map((node) => Math.ceil(node.streamSize / sectorSize));
+
+  const nonFatSectors = directorySectorCount + miniFatSectorCount + rootMiniSectorCount + regularSectorCounts.reduce((sum, count) => sum + count, 0);
+  let fatSectorCount = 1;
+  while (Math.ceil((nonFatSectors + fatSectorCount) / (sectorSize / 4)) > fatSectorCount) {
+    fatSectorCount += 1;
+  }
+  assert(fatSectorCount <= 109, "CFB fixture must fit the header DIFAT.");
+
+  let nextSector = 0;
+  const directoryStart = nextSector;
+  nextSector += directorySectorCount;
+  const miniFatStart = miniFatSectorCount ? nextSector : 0xfffffffe;
+  nextSector += miniFatSectorCount;
+  const rootMiniStart = rootMiniSectorCount ? nextSector : 0xfffffffe;
+  nextSector += rootMiniSectorCount;
+  nodes[0]!.startSector = rootMiniStart;
+
+  const regularStarts = new Map<number, number>();
+  for (let index = 0; index < regularStreams.length; index += 1) {
+    const node = regularStreams[index] as CfbFixtureNode;
+    regularStarts.set(node.id, nextSector);
+    node.startSector = nextSector;
+    nextSector += regularSectorCounts[index] as number;
+  }
+
+  const fatStart = nextSector;
+  const totalSectors = nonFatSectors + fatSectorCount;
+  assert(fatStart + fatSectorCount === totalSectors, "CFB fixture FAT allocation mismatch.");
+
+  const fat = new Array<number>(fatSectorCount * (sectorSize / 4)).fill(0xffffffff);
+  const chain = (start: number, count: number, terminal = 0xfffffffe) => {
+    for (let index = 0; index < count; index += 1) {
+      fat[start + index] = index === count - 1 ? terminal : start + index + 1;
+    }
+  };
+
+  chain(directoryStart, directorySectorCount);
+  if (miniFatSectorCount) chain(miniFatStart, miniFatSectorCount);
+  if (rootMiniSectorCount) chain(rootMiniStart, rootMiniSectorCount);
+  for (let index = 0; index < regularStreams.length; index += 1) {
+    chain(regularStarts.get(regularStreams[index]!.id) as number, regularSectorCounts[index] as number);
+  }
+  for (let index = 0; index < fatSectorCount; index += 1) {
+    fat[fatStart + index] = 0xfffffffd;
+  }
+
+  const directory = Buffer.alloc(directoryBytesLength);
+  for (const node of nodes) {
+    const entry = directory.subarray(node.id * 128, node.id * 128 + 128);
+    const nameBytes = Buffer.from(`${node.name}\u0000`, "utf16le");
+    assert(nameBytes.length <= 64, `CFB fixture directory name too long: ${node.name}`);
+    nameBytes.copy(entry, 0);
+    entry.writeUInt16LE(nameBytes.length, 64);
+    entry[66] = node.type;
+    entry[67] = 1;
+    entry.writeUInt32LE(node.left >>> 0, 68);
+    entry.writeUInt32LE(node.right >>> 0, 72);
+    entry.writeUInt32LE(node.child >>> 0, 76);
+    entry.writeUInt32LE(node.startSector >>> 0, 116);
+    entry.writeUInt32LE(node.streamSize >>> 0, 120);
+    entry.writeUInt32LE(0, 124);
+  }
+
+  const miniFatBytes = Buffer.alloc(miniFatSectorCount * sectorSize, 0xff);
+  for (let index = 0; index < miniFatEntries.length; index += 1) {
+    miniFatBytes.writeUInt32LE(miniFatEntries[index] as number, index * 4);
+  }
+
+  const rootMiniBytes = Buffer.alloc(rootMiniSectorCount * sectorSize);
+  miniStream.copy(rootMiniBytes);
+
+  const regularBytes: Buffer[] = [];
+  for (let index = 0; index < regularStreams.length; index += 1) {
+    const node = regularStreams[index] as CfbFixtureNode;
+    const allocated = Buffer.alloc((regularSectorCounts[index] as number) * sectorSize);
+    node.data!.copy(allocated);
+    regularBytes.push(allocated);
+  }
+
+  const fatBytes = Buffer.alloc(fatSectorCount * sectorSize, 0xff);
+  for (let index = 0; index < fat.length; index += 1) {
+    fatBytes.writeUInt32LE(fat[index] as number, index * 4);
+  }
+
+  const header = Buffer.alloc(sectorSize);
+  Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]).copy(header, 0);
+  header.writeUInt16LE(0x003e, 24);
+  header.writeUInt16LE(majorVersion, 26);
+  header.writeUInt16LE(0xfffe, 28);
+  header.writeUInt16LE(majorVersion === 3 ? 9 : 12, 30);
+  header.writeUInt16LE(6, 32);
+  header.writeUInt32LE(majorVersion === 4 ? directorySectorCount : 0, 40);
+  header.writeUInt32LE(fatSectorCount, 44);
+  header.writeUInt32LE(directoryStart, 48);
+  header.writeUInt32LE(0, 52);
+  header.writeUInt32LE(4096, 56);
+  header.writeUInt32LE(miniFatStart >>> 0, 60);
+  header.writeUInt32LE(miniFatSectorCount, 64);
+  header.writeUInt32LE(0xfffffffe, 68);
+  header.writeUInt32LE(0, 72);
+  for (let index = 0; index < 109; index += 1) {
+    header.writeUInt32LE(index < fatSectorCount ? fatStart + index : 0xffffffff, 76 + index * 4);
+  }
+
+  return Buffer.concat([
+    header,
+    directory,
+    miniFatBytes,
+    rootMiniBytes,
+    ...regularBytes,
+    fatBytes,
+  ]);
+}
+
+function legacyOfficeFixture(
+  extension: "doc" | "xls" | "ppt",
+  extras: CfbFixtureStream[] = [],
+  majorVersion: 3 | 4 = 3,
+) {
+  const applicationName =
+    extension === "doc"
+      ? "WordDocument"
+      : extension === "xls"
+        ? "Workbook"
+        : "PowerPoint Document";
+  return buildCfb([
+    {
+      path: applicationName,
+      data: Buffer.alloc(4096, extension === "doc" ? 0x57 : extension === "xls" ? 0x58 : 0x50),
+    },
+    { path: "\u0005SummaryInformation", data: Buffer.alloc(100, 0x53) },
+    ...extras,
+  ], majorVersion);
+}
+
+
+function cfbDirectoryEntryOffset(entryId: number) {
+  return 512 + entryId * 128;
+}
+
+function cfbDirectoryStartSector(bytes: Buffer, entryId: number) {
+  return bytes.readUInt32LE(cfbDirectoryEntryOffset(entryId) + 116);
+}
+
+function patchCfbDirectoryStartSector(bytes: Buffer, entryId: number, sectorId: number) {
+  const copy = Buffer.from(bytes);
+  copy.writeUInt32LE(sectorId >>> 0, cfbDirectoryEntryOffset(entryId) + 116);
+  return copy;
+}
+
+function patchCfbFatEntry(bytes: Buffer, sectorId: number, value: number) {
+  const copy = Buffer.from(bytes);
+  const sectorSize = 1 << copy.readUInt16LE(30);
+  const fatSectorId = copy.readUInt32LE(76);
+  const fatOffset = (fatSectorId + 1) * sectorSize;
+  copy.writeUInt32LE(value >>> 0, fatOffset + sectorId * 4);
+  return copy;
+}
+
+function patchCfbMiniFatEntry(bytes: Buffer, miniSectorId: number, value: number) {
+  const copy = Buffer.from(bytes);
+  const sectorSize = 1 << copy.readUInt16LE(30);
+  const miniFatSectorId = copy.readUInt32LE(60);
+  assert(miniFatSectorId < 0xfffffffa, "CFB fixture MiniFAT sector must exist.");
+  const miniFatOffset = (miniFatSectorId + 1) * sectorSize;
+  copy.writeUInt32LE(value >>> 0, miniFatOffset + miniSectorId * 4);
+  return copy;
+}
+
+
+function patchHeaderDifatEntry(bytes: Buffer, index: number, sectorId: number) {
+  const copy = Buffer.from(bytes);
+  copy.writeUInt32LE(sectorId >>> 0, 76 + index * 4);
+  return copy;
+}
+
+function patchHeaderMiniFatCount(bytes: Buffer, count: number) {
+  const copy = Buffer.from(bytes);
+  copy.writeUInt32LE(count >>> 0, 64);
+  return copy;
+}
+
+function patchCfbDirectoryColorFlag(
+  bytes: Buffer,
+  entryId: number,
+  colorFlag: number,
+) {
+  const copy = Buffer.from(bytes);
+  copy[cfbDirectoryEntryOffset(entryId) + 67] = colorFlag;
+  return copy;
+}
+
+function patchCfbDirectoryName(bytes: Buffer, entryId: number, name: string) {
+  const copy = Buffer.from(bytes);
+  const offset = cfbDirectoryEntryOffset(entryId);
+  copy.fill(0, offset, offset + 64);
+  const encoded = Buffer.from(`${name}\u0000`, "utf16le");
+  assert(encoded.length <= 64, "CFB adversarial directory name must fit the fixed field.");
+  encoded.copy(copy, offset);
+  copy.writeUInt16LE(encoded.length, offset + 64);
+  return copy;
+}
+
 
 function buildClassicPdf(args?: {
   prefix?: Buffer;
@@ -2824,7 +3389,10 @@ function validateManifest() {
                   ? "CERTIFIED_M6D5"
                   : entry.threatFamily === "PDF_EMBEDDED_CONTENT_EVASION"
                     ? "CERTIFIED_M6D5B"
-                    : "NOT_CERTIFIED";
+                    : entry.threatFamily === "OLE_FAT_DIFAT_EVASION" ||
+                        entry.threatFamily === "OLE_MINIFAT_EVASION"
+                      ? "CERTIFIED_M6E1"
+                      : "NOT_CERTIFIED";
 
     assert(
       entry.certificationStatus === expectedCertification,
@@ -3376,6 +3944,52 @@ function validateM6D5BCertificationCases() {
   );
 }
 
+
+function validateM6E1CertificationCases() {
+  assert(
+    M6E1_CERTIFICATION_CASES.length === 11,
+    "M6E1 must execute the exact 11-case FAT/DIFAT + MiniFAT certification matrix.",
+  );
+
+  const ids = new Set<string>();
+  for (const testCase of M6E1_CERTIFICATION_CASES) {
+    assert(Object.isFrozen(testCase), `${testCase.caseId} must be immutable.`);
+    assert(
+      /^HDS-M6E1-\d{3}-[A-Z0-9-]+$/.test(testCase.caseId),
+      `M6E1 certification case id is invalid: ${testCase.caseId}`,
+    );
+    assert(!ids.has(testCase.caseId), `Duplicate M6E1 case id: ${testCase.caseId}`);
+    assert(
+      testCase.threatFamily === "OLE_FAT_DIFAT_EVASION" ||
+        testCase.threatFamily === "OLE_MINIFAT_EVASION",
+      `${testCase.caseId} must certify only the bounded M6E1 allocator families.`,
+    );
+    assert(
+      testCase.certificationPhase === "M6E" &&
+        testCase.certificationCredit === true,
+      `${testCase.caseId} must earn bounded M6E1 certification credit.`,
+    );
+    assert(
+      testCase.provenance === "DETERMINISTIC_GENERATED" &&
+        testCase.authorityImplication === "NO_CLEAN_AUTHORITY",
+      `${testCase.caseId} must preserve deterministic no-CLEAN evidence.`,
+    );
+    ids.add(testCase.caseId);
+  }
+
+  assert(
+    M6E1_DIRECTORY_REPAIR_CASES.length === 2 &&
+      M6E1_DIRECTORY_REPAIR_CASES.every(
+        (testCase) =>
+          Object.isFrozen(testCase) &&
+          testCase.threatFamily === "OLE_DIRECTORY_EVASION" &&
+          testCase.certificationPhase === "M6E" &&
+          testCase.certificationCredit === false,
+      ),
+    "M6E1 directory conformance repairs must remain non-certifying evidence for the still-open directory family.",
+  );
+}
+
 function validateRulePackBoundary() {
   assert(
     HEHXAGON_DOCUMENT_SECURITY_RULE_IDS.length === 21,
@@ -3402,8 +4016,8 @@ function validateRulePackBoundary() {
 
   assert(
     HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION ===
-      "0.4.7-m6d5b",
-    "M6D5B must run the bounded embedded-content subtype repair while preserving the M4 rule pack.",
+      "0.4.8-m6e1",
+    "M6E1 must run the bounded OLE allocator and directory-conformance repair while preserving the M4 rule pack.",
   );
 }
 
@@ -4545,6 +5159,100 @@ async function executeM6D5BEmbeddedContentEvasionCertification() {
   return { results } as const;
 }
 
+
+async function executeM6E1AllocatorCertification() {
+  const base = legacyOfficeFixture("doc");
+  const fatSectorId = base.readUInt32LE(76);
+  const directoryStart = base.readUInt32LE(48);
+  const summaryStart = cfbDirectoryStartSector(base, 2);
+  const sectorSize = 1 << base.readUInt16LE(30);
+  const miniFatSectorId = base.readUInt32LE(60);
+  const miniFatOffset = (miniFatSectorId + 1) * sectorSize;
+  const summaryNext = base.readUInt32LE(miniFatOffset + summaryStart * 4);
+
+  const aliasBase = legacyOfficeFixture("doc", [
+    { path: "Extra", data: Buffer.alloc(10, 0x45) },
+  ]);
+  const aliasSummaryStart = cfbDirectoryStartSector(aliasBase, 2);
+
+  const fixtures = [
+    base,
+    patchHeaderDifatEntry(base, 1, fatSectorId),
+    patchCfbFatEntry(base, fatSectorId, 0xfffffffe),
+    patchCfbFatEntry(base, directoryStart, directoryStart),
+    patchCfbDirectoryStartSector(base, 1, directoryStart),
+    base,
+    patchCfbMiniFatEntry(base, summaryStart, summaryStart),
+    patchCfbMiniFatEntry(base, summaryStart, 0xfffffffe),
+    patchCfbMiniFatEntry(base, summaryNext, summaryNext + 1),
+    patchCfbDirectoryStartSector(aliasBase, 3, aliasSummaryStart),
+    patchHeaderMiniFatCount(base, 0),
+  ] as const;
+
+  const results: NativeDocumentScannerResult[] = [];
+  for (let index = 0; index < fixtures.length; index += 1) {
+    const result = await inspectDocument({
+      bytes: fixtures[index]!,
+      filename: "m6e1-legacy.doc",
+      extension: "doc",
+      mimeType: "application/msword",
+    });
+    const contract = M6E1_CERTIFICATION_CASES[index]!;
+    assertResultMatchesContract(result, contract);
+    if (contract.expectedVerdict === "FAILED") {
+      assert(
+        result.rulePackEvaluation === null,
+        `${contract.caseId} must fail before rule-pack trust evaluation.`,
+      );
+    } else {
+      assert(
+        result.oleStructuralInspectionComplete === true &&
+          result.rulePackEvaluation?.outcome === "PASS" &&
+          result.oleStructuralEvidence?.sectorOwnershipVerified === true &&
+          result.oleStructuralEvidence.directoryTreeVerified === true,
+        `${contract.caseId} must preserve successful bounded CFB structural evidence without CLEAN.`,
+      );
+    }
+    results.push(result);
+  }
+
+  const directoryBase = legacyOfficeFixture("doc", [
+    { path: "Extra", data: Buffer.from("x") },
+  ]);
+  const directoryFixtures = [
+    patchCfbDirectoryColorFlag(directoryBase, 3, 2),
+    patchCfbDirectoryName(directoryBase, 3, "Bad/Name"),
+  ] as const;
+  const directoryRepairResults: NativeDocumentScannerResult[] = [];
+
+  for (let index = 0; index < directoryFixtures.length; index += 1) {
+    const result = await inspectDocument({
+      bytes: directoryFixtures[index]!,
+      filename: "m6e1-directory-repair.doc",
+      extension: "doc",
+      mimeType: "application/msword",
+    });
+    const contract = M6E1_DIRECTORY_REPAIR_CASES[index]!;
+    assertResultMatchesContract(result, contract);
+    assert(
+      result.rulePackEvaluation === null,
+      `${contract.caseId} must fail during CFB parsing before rule-pack evaluation.`,
+    );
+    directoryRepairResults.push(result);
+  }
+
+  assert(
+    [...results, ...directoryRepairResults].every(
+      (result) =>
+        String(result.verdict) !== "CLEAN" &&
+        result.inspectionComplete === false,
+    ),
+    "M6E1 must preserve the no-CLEAN authority boundary.",
+  );
+
+  return { results, directoryRepairResults } as const;
+}
+
 async function run() {
   validateManifest();
   validateCaseContract();
@@ -4555,6 +5263,7 @@ async function run() {
   validateM6D4CertificationCases();
   validateM6D5CertificationCases();
   validateM6D5BCertificationCases();
+  validateM6E1CertificationCases();
   validateRulePackBoundary();
 
   const sentinelResults = await executeSentinels();
@@ -4566,6 +5275,7 @@ async function run() {
   const m6d4 = await executeM6D4ActionEvasionCertification();
   const m6d5 = await executeM6D5UriEvasionCertification();
   const m6d5b = await executeM6D5BEmbeddedContentEvasionCertification();
+  const m6e1 = await executeM6E1AllocatorCertification();
 
   const sentinelSummary =
     HARNESS_SENTINEL_CASES.map((testCase, index) =>
@@ -4895,6 +5605,44 @@ async function run() {
     "M6D5B must certify the final PDF threat family while leaving formal M6D closeout to M6D6.",
   );
 
+
+  const m6e1Summary = M6E1_CERTIFICATION_CASES.map((testCase, index) => {
+    const result = m6e1.results[index]!;
+    return Object.freeze({
+      caseId: testCase.caseId,
+      threatFamily: testCase.threatFamily,
+      benignControl: testCase.benignControl,
+      certificationCredit: testCase.certificationCredit,
+      expectedVerdict: testCase.expectedVerdict,
+      actualVerdict: result.verdict,
+      expectedReasonCode: testCase.expectedReasonCode,
+      reasonMatched: result.reasonCodes.includes(testCase.expectedReasonCode),
+      expectedDetectedContainer: testCase.expectedDetectedContainer ?? null,
+      actualDetectedContainer: result.identityEvidence.detectedContainer,
+      expectedSignatureKind: testCase.expectedSignatureKind ?? null,
+      actualSignatureKind: result.identityEvidence.signatureKind,
+    });
+  });
+
+  const m6e1DirectoryRepairSummary = M6E1_DIRECTORY_REPAIR_CASES.map(
+    (testCase, index) => {
+      const result = m6e1.directoryRepairResults[index]!;
+      return Object.freeze({
+        caseId: testCase.caseId,
+        threatFamily: testCase.threatFamily,
+        certificationCredit: testCase.certificationCredit,
+        expectedVerdict: testCase.expectedVerdict,
+        actualVerdict: result.verdict,
+        expectedReasonCode: testCase.expectedReasonCode,
+        reasonMatched: result.reasonCodes.includes(testCase.expectedReasonCode),
+      });
+    },
+  );
+
+  const m6e1CertifiedThreatFamilies = THREAT_FAMILY_MANIFEST.filter(
+    (entry) => entry.certificationStatus === "CERTIFIED_M6E1",
+  ).map((entry) => entry.threatFamily);
+
   const m6dCertifiedThreatFamilies =
     m6dThreatFamilies.map((entry) => entry.threatFamily);
 
@@ -4961,8 +5709,8 @@ async function run() {
   );
 
   assert(
-    remainingNonPdfThreatFamilies.length === 10,
-    "M6D6 must not silently certify M6E, M6F or M6G threat families.",
+    remainingNonPdfThreatFamilies.length === 8,
+    "M6E1 must leave exactly the three later OLE families plus M6F and M6G families uncertified.",
   );
 
   assert(
@@ -5014,6 +5762,16 @@ async function run() {
         (result) =>
           String(result.verdict) !== "CLEAN" &&
           result.inspectionComplete === false,
+      ) &&
+      m6e1.results.every(
+        (result) =>
+          String(result.verdict) !== "CLEAN" &&
+          result.inspectionComplete === false,
+      ) &&
+      m6e1.directoryRepairResults.every(
+        (result) =>
+          String(result.verdict) !== "CLEAN" &&
+          result.inspectionComplete === false,
       ),
     "M6 execution must never grant CLEAN or completed document-trust authority.",
   );
@@ -5023,13 +5781,13 @@ async function run() {
       {
         ok: true,
         event:
-          "HDS_M6D6_PDF_CERTIFICATION_CLOSEOUT_PASSED",
+          "HDS_M6E1_OLE_ALLOCATOR_CERTIFICATION_PASSED",
         corpusSchemaVersion:
           HDS_M6_ADVERSARIAL_CORPUS_SCHEMA_VERSION,
         harnessVersion:
-          HDS_M6D6_HARNESS_VERSION,
+          HDS_M6E1_HARNESS_VERSION,
         priorHarnessVersion:
-          HDS_M6D5B_HARNESS_VERSION,
+          HDS_M6D6_HARNESS_VERSION,
         priorOoxmlHarnessVersion:
           HDS_M6C_HARNESS_VERSION,
         scannerEngine:
@@ -5225,6 +5983,30 @@ async function run() {
         m6dCertificationCaseCount,
         m6dCertificationCredit,
         remainingM6dThreatFamilies,
+        m6e1CertifiedThreatFamilies,
+        m6e1CertificationComplete:
+          m6e1CertifiedThreatFamilies.length === 2,
+        m6e1CaseCount:
+          M6E1_CERTIFICATION_CASES.length,
+        m6e1CertificationCredit:
+          M6E1_CERTIFICATION_CASES.filter(
+            (testCase) => testCase.certificationCredit,
+          ).length,
+        m6e1BenignControlCount:
+          M6E1_CERTIFICATION_CASES.filter(
+            (testCase) => testCase.benignControl,
+          ).length,
+        m6e1Results:
+          m6e1Summary,
+        m6e1DirectoryConformanceRepairComplete: true,
+        m6e1DirectoryRepairCaseCount:
+          M6E1_DIRECTORY_REPAIR_CASES.length,
+        m6e1DirectoryRepairCertificationCredit: 0,
+        m6e1DirectoryRepairResults:
+          m6e1DirectoryRepairSummary,
+        oleDirectoryCertificationComplete: false,
+        oleVbaCertificationComplete: false,
+        oleEmbeddedObjectCertificationComplete: false,
         remainingNonPdfThreatFamilies,
         adversarialCertificationComplete: false,
         fullM6CertificationComplete: false,
@@ -5243,7 +6025,7 @@ run().catch((error) => {
       {
         ok: false,
         event:
-          "HDS_M6D6_PDF_CERTIFICATION_CLOSEOUT_FAILED",
+          "HDS_M6E1_OLE_ALLOCATOR_CERTIFICATION_FAILED",
         errorCode:
           error instanceof Error
             ? error.message

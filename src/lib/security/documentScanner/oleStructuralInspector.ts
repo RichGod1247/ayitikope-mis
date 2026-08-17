@@ -434,6 +434,20 @@ function parseDirectory(context: OleContext): DirectoryEntry[] | OleFailure {
       if (!name || /[\u0000]/.test(name)) {
         return failure("OLE_DIRECTORY_INVALID", "A compound-file directory name is invalid.");
       }
+      if (/[\/\\:!]/u.test(name)) {
+        return failure(
+          "OLE_DIRECTORY_INVALID",
+          "A compound-file directory name contains a prohibited character.",
+        );
+      }
+    }
+
+    const colorFlag = entryBytes[67];
+    if (colorFlag !== 0 && colorFlag !== 1) {
+      return failure(
+        "OLE_DIRECTORY_INVALID",
+        "A compound-file directory entry has an invalid color flag.",
+      );
     }
 
     const streamSize = parseStreamSize(entryBytes);
