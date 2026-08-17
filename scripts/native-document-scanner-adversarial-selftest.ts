@@ -51,6 +51,9 @@ export const HDS_M6D3_HARNESS_VERSION =
 export const HDS_M6D4_HARNESS_VERSION =
   "HDS-M6D4-HARNESS-V1" as const;
 
+export const HDS_M6D5_HARNESS_VERSION =
+  "HDS-M6D5-HARNESS-V1" as const;
+
 const ONE_MEBIBYTE = 1024 * 1024;
 
 const ARCHIVE_LIMITS: NativeDocumentArchiveLimits = Object.freeze({
@@ -127,7 +130,8 @@ type ThreatFamilyManifestEntry = Readonly<{
     | "CERTIFIED_M6C"
     | "CERTIFIED_M6D2"
     | "CERTIFIED_M6D3"
-    | "CERTIFIED_M6D4";
+    | "CERTIFIED_M6D4"
+    | "CERTIFIED_M6D5";
   objective: string;
 }>;
 
@@ -216,7 +220,7 @@ const THREAT_FAMILY_MANIFEST: readonly ThreatFamilyManifestEntry[] =
     Object.freeze({
       threatFamily: "PDF_URI_EVASION",
       plannedPhase: "M6D",
-      certificationStatus: "NOT_CERTIFIED",
+      certificationStatus: "CERTIFIED_M6D5",
       objective:
         "Challenge URI normalization and allowed-scheme boundaries with encoded and ambiguous targets.",
     }),
@@ -1265,6 +1269,219 @@ const M6D4_CERTIFICATION_CASES: readonly CorpusCaseContract[] =
       expectedDetectedContainer: "PDF",
       expectedSignatureKind: "PDF_HEADER",
       benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+  ]);
+
+
+const M6D5_CERTIFICATION_CASES: readonly CorpusCaseContract[] =
+  Object.freeze([
+    Object.freeze({
+      caseId: "HDS-M6D5-001-BENIGN-DIRECT-HTTPS-CONTROL",
+      threatFamily: "PDF_URI_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A direct ordinary HTTPS URI action remains an allowed benign control so URI evasion hardening preserves the existing bounded HTTP(S) ingress policy.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D5-002-BENIGN-MIXED-CASE-HTTP-CONTROL",
+      threatFamily: "PDF_URI_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "An ordinary HTTP URI action uses mixed-case scheme characters and must normalize case-insensitively without being mistaken for an unsafe external scheme.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D5-003-BENIGN-MAILTO-CONTROL",
+      threatFamily: "PDF_URI_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A direct ordinary mailto URI action remains an allowed benign control under the existing M4 rule-pack policy while dangerous schemes stay blocked.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D5-004-BENIGN-OCTAL-HTTPS-CONTROL",
+      threatFamily: "PDF_URI_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "An HTTPS target encodes the leading h with a PDF literal-string octal escape and must decode to the same ordinary allowed HTTPS URI semantics.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D5-005-JAVASCRIPT-SCHEME",
+      threatFamily: "PDF_URI_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A URI action directly supplies a javascript scheme and must be rejected by the existing unsafe-URI rule rather than treated as an ordinary hyperlink.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_UNSAFE_URI_ACTION_BLOCKED",
+      expectedRuleId: "HDS-PDF-010-UNSAFE-URI",
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D5-006-DATA-SCHEME",
+      threatFamily: "PDF_URI_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A URI action uses a data scheme carrying inline content and must remain outside the bounded HTTP(S)/mailto URI allowlist and be blocked deterministically.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_UNSAFE_URI_ACTION_BLOCKED",
+      expectedRuleId: "HDS-PDF-010-UNSAFE-URI",
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D5-007-FILE-SCHEME",
+      threatFamily: "PDF_URI_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A URI action attempts a local file scheme and must be classified as unsafe instead of inheriting ordinary external-link permission from the PDF URI action type.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_UNSAFE_URI_ACTION_BLOCKED",
+      expectedRuleId: "HDS-PDF-010-UNSAFE-URI",
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D5-008-OCTAL-ESCAPED-JAVASCRIPT-SCHEME",
+      threatFamily: "PDF_URI_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A javascript URI hides its leading j behind a PDF literal-string octal escape and must be evaluated after string decoding rather than by raw source spelling.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_UNSAFE_URI_ACTION_BLOCKED",
+      expectedRuleId: "HDS-PDF-010-UNSAFE-URI",
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D5-009-HEX-STRING-JAVASCRIPT-SCHEME",
+      threatFamily: "PDF_URI_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A javascript URI is represented as a PDF hexadecimal string and must decode to the prohibited scheme before the M4 URI policy is evaluated.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_UNSAFE_URI_ACTION_BLOCKED",
+      expectedRuleId: "HDS-PDF-010-UNSAFE-URI",
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D5-010-ENCODED-URI-DICTIONARY-KEY",
+      threatFamily: "PDF_URI_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A dangerous javascript target hides one character of the URI dictionary key with PDF name hexadecimal escaping and must still reach unsafe-URI policy evaluation.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_UNSAFE_URI_ACTION_BLOCKED",
+      expectedRuleId: "HDS-PDF-010-UNSAFE-URI",
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D5-011-INDIRECT-URI-JAVASCRIPT-FAIL-CLOSED",
+      threatFamily: "PDF_URI_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A URI action stores its dangerous javascript target in an indirect string object; the current bounded parser must fail closed as unsafe rather than silently allow an unresolved URI value.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_UNSAFE_URI_ACTION_BLOCKED",
+      expectedRuleId: "HDS-PDF-010-UNSAFE-URI",
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D5-012-NUL-PREFIXED-JAVASCRIPT-SCHEME",
+      threatFamily: "PDF_URI_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A dangerous javascript URI is prefixed with a decoded NUL byte and must not become an allowed target through trimming, case folding, or prefix-based scheme classification.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_UNSAFE_URI_ACTION_BLOCKED",
+      expectedRuleId: "HDS-PDF-010-UNSAFE-URI",
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
       provenance: "DETERMINISTIC_GENERATED",
       certificationPhase: "M6D",
       certificationCredit: true,
@@ -2387,7 +2604,9 @@ function validateManifest() {
               ? "CERTIFIED_M6D3"
               : entry.threatFamily === "PDF_ACTION_EVASION"
                 ? "CERTIFIED_M6D4"
-                : "NOT_CERTIFIED";
+                : entry.threatFamily === "PDF_URI_EVASION"
+                  ? "CERTIFIED_M6D5"
+                  : "NOT_CERTIFIED";
 
     assert(
       entry.certificationStatus === expectedCertification,
@@ -2810,6 +3029,71 @@ function validateM6D4CertificationCases() {
   );
 }
 
+
+function validateM6D5CertificationCases() {
+  const caseIds = new Set<string>();
+
+  assert(
+    M6D5_CERTIFICATION_CASES.length === 12,
+    "M6D5 must execute the exact twelve-case PDF URI-evasion certification matrix.",
+  );
+
+  for (const testCase of M6D5_CERTIFICATION_CASES) {
+    assert(
+      Object.isFrozen(testCase),
+      `M6D5 case ${testCase.caseId} must be immutable.`,
+    );
+    assert(
+      /^HDS-M6D5-\d{3}-[A-Z0-9-]+$/.test(testCase.caseId),
+      `M6D5 case id is invalid: ${testCase.caseId}`,
+    );
+    assert(
+      !caseIds.has(testCase.caseId),
+      `Duplicate M6D5 case id: ${testCase.caseId}`,
+    );
+    assert(
+      testCase.threatFamily === "PDF_URI_EVASION",
+      `${testCase.caseId} must certify only PDF URI evasion.`,
+    );
+    assert(
+      testCase.format === "PDF" &&
+        testCase.provenance === "DETERMINISTIC_GENERATED",
+      `${testCase.caseId} must be a deterministic generated PDF fixture.`,
+    );
+    assert(
+      testCase.certificationPhase === "M6D" &&
+        testCase.certificationCredit === true,
+      `${testCase.caseId} must earn explicit M6D5 certification credit.`,
+    );
+    assert(
+      testCase.authorityImplication === "NO_CLEAN_AUTHORITY",
+      `${testCase.caseId} must preserve the no-CLEAN authority boundary.`,
+    );
+    assert(
+      testCase.expectedDetectedContainer === "PDF" &&
+        testCase.expectedSignatureKind === "PDF_HEADER",
+      `${testCase.caseId} must preserve exact PDF identity.`,
+    );
+    assert(
+      testCase.attackTechnique.trim().length >= 80,
+      `${testCase.caseId} must describe the URI-evasion technique precisely.`,
+    );
+
+    caseIds.add(testCase.caseId);
+  }
+
+  assert(
+    M6D5_CERTIFICATION_CASES.filter(
+      (testCase) => testCase.benignControl,
+    ).length === 4,
+    "M6D5 must preserve exactly four ordinary HTTP(S)/mailto URI benign controls.",
+  );
+  assert(
+    Object.isFrozen(M6D5_CERTIFICATION_CASES),
+    "M6D5 certification registry must be immutable.",
+  );
+}
+
 function validateRulePackBoundary() {
   assert(
     HEHXAGON_DOCUMENT_SECURITY_RULE_IDS.length === 21,
@@ -2837,7 +3121,7 @@ function validateRulePackBoundary() {
   assert(
     HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION ===
       "0.4.6-m6d4",
-    "M6D4 must run the bounded PDF action-authority repair while preserving the M4 rule pack.",
+    "M6D5 is a test-only URI certification slice and must preserve the M6D4 engine version and M4 rule pack.",
   );
 }
 
@@ -3731,6 +4015,109 @@ async function executeM6D4ActionEvasionCertification() {
   return { results } as const;
 }
 
+
+async function executeM6D5UriEvasionCertification() {
+  const baseObjects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>",
+  ] as const;
+
+  const fixtures = [
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Action /S /URI /URI (https://example.com/policy) >>",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Action /S /URI /URI (HtTp://example.com/policy) >>",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Action /S /URI /URI (mailto:records@example.com) >>",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Action /S /URI /URI (\\150ttps://example.com/escaped) >>",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Action /S /URI /URI (javascript:alert\\(1\\)) >>",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Action /S /URI /URI (data:text/html,HDS-M6D5) >>",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Action /S /URI /URI (file:///C:/Windows/System32/calc.exe) >>",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Action /S /URI /URI (\\152avascript:alert\\(1\\)) >>",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Action /S /URI /URI <6A6176617363726970743A616C657274283129> >>",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Action /S /URI /U#52I (javascript:alert\\(1\\)) >>",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Action /S /URI /URI 5 0 R >>",
+      "(javascript:alert\\(1\\))",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Action /S /URI /URI (\\000javascript:alert\\(1\\)) >>",
+    ]),
+  ] as const;
+
+  const results: NativeDocumentScannerResult[] = [];
+
+  for (let index = 0; index < fixtures.length; index += 1) {
+    const result = await inspectPdf({ bytes: fixtures[index]! });
+    const contract = M6D5_CERTIFICATION_CASES[index]!;
+    assertResultMatchesContract(result, contract);
+    results.push(result);
+  }
+
+  for (const index of [0, 1, 2, 3] as const) {
+    const result = results[index]!;
+    assert(
+      result.pdfStructuralInspectionComplete === true &&
+        result.rulePackEvaluation?.outcome === "PASS" &&
+        result.pdfStructuralEvidence?.safeUriActionsObserved === 1 &&
+        result.pdfStructuralEvidence.unsafeUriActionDetected === false,
+      `${M6D5_CERTIFICATION_CASES[index]!.caseId} must remain an ordinary allowed URI control.`,
+    );
+  }
+
+  for (let index = 4; index < results.length; index += 1) {
+    const result = results[index]!;
+    assert(
+      result.pdfStructuralEvidence?.unsafeUriActionDetected === true &&
+        result.rulePackEvaluation?.matchedRules.some(
+          (rule) => rule.ruleId === "HDS-PDF-010-UNSAFE-URI",
+        ) === true,
+      `${M6D5_CERTIFICATION_CASES[index]!.caseId} must reach the existing unsafe-URI M4 rule.`,
+    );
+  }
+
+  assert(
+    results.every(
+      (result) =>
+        String(result.verdict) !== "CLEAN" &&
+        result.inspectionComplete === false,
+    ),
+    "M6D5 certification must preserve the no-CLEAN authority boundary.",
+  );
+
+  return { results } as const;
+}
+
 async function run() {
   validateManifest();
   validateCaseContract();
@@ -3739,6 +4126,7 @@ async function run() {
   validateM6D2CertificationCases();
   validateM6D3CertificationCases();
   validateM6D4CertificationCases();
+  validateM6D5CertificationCases();
   validateRulePackBoundary();
 
   const sentinelResults = await executeSentinels();
@@ -3748,6 +4136,7 @@ async function run() {
   const m6d2 = await executeM6D2RevisionXrefAuthorityCertification();
   const m6d3 = await executeM6D3ObjectStreamEvasionCertification();
   const m6d4 = await executeM6D4ActionEvasionCertification();
+  const m6d5 = await executeM6D5UriEvasionCertification();
 
   const sentinelSummary =
     HARNESS_SENTINEL_CASES.map((testCase, index) =>
@@ -3896,6 +4285,32 @@ async function run() {
       }),
     );
 
+
+  const m6d5Summary =
+    M6D5_CERTIFICATION_CASES.map((testCase, index) =>
+      Object.freeze({
+        caseId: testCase.caseId,
+        threatFamily: testCase.threatFamily,
+        benignControl: testCase.benignControl,
+        certificationCredit: testCase.certificationCredit,
+        expectedVerdict: testCase.expectedVerdict,
+        actualVerdict: m6d5.results[index]!.verdict,
+        expectedReasonCode: testCase.expectedReasonCode,
+        reasonMatched:
+          m6d5.results[index]!.reasonCodes.includes(
+            testCase.expectedReasonCode,
+          ),
+        expectedDetectedContainer:
+          testCase.expectedDetectedContainer,
+        actualDetectedContainer:
+          m6d5.results[index]!.identityEvidence.detectedContainer,
+        expectedSignatureKind:
+          testCase.expectedSignatureKind,
+        actualSignatureKind:
+          m6d5.results[index]!.identityEvidence.signatureKind,
+      }),
+    );
+
   const m6bCertifiedThreatFamilies =
     THREAT_FAMILY_MANIFEST
       .filter(
@@ -3934,6 +4349,14 @@ async function run() {
       .filter(
         (entry) =>
           entry.certificationStatus === "CERTIFIED_M6D4",
+      )
+      .map((entry) => entry.threatFamily);
+
+  const m6d5CertifiedThreatFamilies =
+    THREAT_FAMILY_MANIFEST
+      .filter(
+        (entry) =>
+          entry.certificationStatus === "CERTIFIED_M6D5",
       )
       .map((entry) => entry.threatFamily);
 
@@ -3976,6 +4399,12 @@ async function run() {
   );
 
   assert(
+    m6d5CertifiedThreatFamilies.length === 1 &&
+      m6d5CertifiedThreatFamilies.includes("PDF_URI_EVASION"),
+    "M6D5 must certify exactly PDF URI evasion.",
+  );
+
+  assert(
     m6dThreatFamilies.length === 6 &&
       m6dThreatFamilies.filter(
         (entry) => entry.certificationStatus === "CERTIFIED_M6D2",
@@ -3987,9 +4416,12 @@ async function run() {
         (entry) => entry.certificationStatus === "CERTIFIED_M6D4",
       ).length === 1 &&
       m6dThreatFamilies.filter(
+        (entry) => entry.certificationStatus === "CERTIFIED_M6D5",
+      ).length === 1 &&
+      m6dThreatFamilies.filter(
         (entry) => entry.certificationStatus === "NOT_CERTIFIED",
-      ).length === 2,
-    "M6D4 must leave exactly URI and embedded-content PDF evasion uncertified.",
+      ).length === 1,
+    "M6D5 must leave exactly embedded-content PDF evasion uncertified.",
   );
 
   assert(
@@ -4031,6 +4463,11 @@ async function run() {
         (result) =>
           String(result.verdict) !== "CLEAN" &&
           result.inspectionComplete === false,
+      ) &&
+      m6d5.results.every(
+        (result) =>
+          String(result.verdict) !== "CLEAN" &&
+          result.inspectionComplete === false,
       ),
     "M6 execution must never grant CLEAN or completed document-trust authority.",
   );
@@ -4040,13 +4477,13 @@ async function run() {
       {
         ok: true,
         event:
-          "HDS_M6D4_PDF_ACTION_EVASION_CERTIFICATION_PASSED",
+          "HDS_M6D5_PDF_URI_EVASION_CERTIFICATION_PASSED",
         corpusSchemaVersion:
           HDS_M6_ADVERSARIAL_CORPUS_SCHEMA_VERSION,
         harnessVersion:
-          HDS_M6D4_HARNESS_VERSION,
+          HDS_M6D5_HARNESS_VERSION,
         priorHarnessVersion:
-          HDS_M6D3_HARNESS_VERSION,
+          HDS_M6D4_HARNESS_VERSION,
         priorOoxmlHarnessVersion:
           HDS_M6C_HARNESS_VERSION,
         scannerEngine:
@@ -4078,6 +4515,8 @@ async function run() {
         m6d3CertificationComplete: true,
         m6d4CertifiedThreatFamilies,
         m6d4CertificationComplete: true,
+        m6d5CertifiedThreatFamilies,
+        m6d5CertificationComplete: true,
         ooxmlNormalizationInvariant:
           "SINGLE_PASS_NAMED_DECIMAL_AND_HEX_XML_ATTRIBUTE_ENTITIES",
         identityPrecedenceInvariant:
@@ -4204,6 +4643,20 @@ async function run() {
           ).length,
         m6d4Results:
           m6d4Summary,
+        m6d5UriEvasionCertificationComplete: true,
+        m6d5CaseCount:
+          M6D5_CERTIFICATION_CASES.length,
+        m6d5CertificationCredit:
+          M6D5_CERTIFICATION_CASES.filter(
+            (testCase) => testCase.certificationCredit,
+          ).length,
+        m6d5BenignControlCount:
+          M6D5_CERTIFICATION_CASES.filter(
+            (testCase) => testCase.benignControl,
+          ).length,
+        m6d5IndirectSafeUriCompatibilityDeferredToM6G: true,
+        m6d5Results:
+          m6d5Summary,
         m6dCertificationComplete: false,
         remainingM6dThreatFamilies:
           m6dThreatFamilies
@@ -4227,11 +4680,11 @@ run().catch((error) => {
       {
         ok: false,
         event:
-          "HDS_M6D4_PDF_ACTION_EVASION_CERTIFICATION_FAILED",
+          "HDS_M6D5_PDF_URI_EVASION_CERTIFICATION_FAILED",
         errorCode:
           error instanceof Error
             ? error.message
-            : "M6D4_UNKNOWN_FAILURE",
+            : "M6D5_UNKNOWN_FAILURE",
       },
       null,
       2,
