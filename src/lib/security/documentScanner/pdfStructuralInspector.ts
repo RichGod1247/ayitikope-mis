@@ -1472,6 +1472,16 @@ function parseXrefStreamSection(args: {
           generation: field2,
         });
       } else if (type === 2) {
+        if (objectNumber === 0) {
+          return {
+            ok: false as const,
+            result: failed(
+              "PDF_XREF_STREAM_ENTRY_INVALID",
+              "PDF object number 0 is reserved for the free-list head and cannot be a compressed object.",
+            ),
+          };
+        }
+
         entries.set(objectNumber, {
           kind: "compressed",
           objectStreamObjectNumber: field1,
@@ -2125,6 +2135,13 @@ export function inspectPdfStructuralSecurity(args: {
       );
     }
 
+    if (objectStreamObjectNumber === 0 || xrefEntry.generation !== 0) {
+      return failed(
+        "PDF_OBJECT_STREAM_DICTIONARY_INVALID",
+        "A PDF object stream must use a nonzero object number with generation zero.",
+      );
+    }
+
     resolvingObjectStreams.add(objectStreamObjectNumber);
 
     try {
@@ -2142,6 +2159,17 @@ export function inspectPdfStructuralSecurity(args: {
           "PDF_OBJECT_STREAM_DICTIONARY_INVALID",
           "A compressed-object reference points to an invalid Type ObjStm stream.",
         );
+      }
+
+      const lengthReference = refValue(parsed.value.values.get("Length"));
+      if (lengthReference) {
+        const lengthEntry = activeEntries.get(lengthReference.objectNumber);
+        if (lengthEntry?.kind === "compressed") {
+          return failed(
+            "PDF_OBJECT_STREAM_DICTIONARY_INVALID",
+            "The Length value of a PDF object stream cannot itself be stored as a compressed object.",
+          );
+        }
       }
 
       const count = numberValue(parsed.value.values.get("N"));
@@ -2246,6 +2274,14 @@ export function inspectPdfStructuralSecurity(args: {
           const parser = new PdfValueParser(objectBytes, 0, limits);
           const value = parser.parseValue();
           parser.skipSpace();
+
+          if (value && typeof value === "object" && value.kind === "ref") {
+            return failed(
+              "PDF_OBJECT_STREAM_INDEX_INVALID",
+              "A compressed PDF object cannot consist solely of an indirect object reference.",
+            );
+          }
+
           if (parser.position() !== objectBytes.length) {
             return failed(
               "PDF_OBJECT_STREAM_INDEX_INVALID",

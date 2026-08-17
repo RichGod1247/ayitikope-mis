@@ -1,4 +1,5 @@
 import { createHash } from "crypto";
+import { deflateSync } from "node:zlib";
 
 import {
   HEHXAGON_DOCUMENT_SECURITY_ENGINE,
@@ -43,6 +44,9 @@ export const HDS_M6D1_HARNESS_VERSION =
 
 export const HDS_M6D2_HARNESS_VERSION =
   "HDS-M6D2-HARNESS-V1" as const;
+
+export const HDS_M6D3_HARNESS_VERSION =
+  "HDS-M6D3-HARNESS-V1" as const;
 
 const ONE_MEBIBYTE = 1024 * 1024;
 
@@ -118,7 +122,8 @@ type ThreatFamilyManifestEntry = Readonly<{
     | "NOT_CERTIFIED"
     | "CERTIFIED_M6B"
     | "CERTIFIED_M6C"
-    | "CERTIFIED_M6D2";
+    | "CERTIFIED_M6D2"
+    | "CERTIFIED_M6D3";
   objective: string;
 }>;
 
@@ -193,7 +198,7 @@ const THREAT_FAMILY_MANIFEST: readonly ThreatFamilyManifestEntry[] =
     Object.freeze({
       threatFamily: "PDF_OBJECT_STREAM_EVASION",
       plannedPhase: "M6D",
-      certificationStatus: "NOT_CERTIFIED",
+      certificationStatus: "CERTIFIED_M6D3",
       objective:
         "Hide active structures in compressed objects and challenge object-stream indexing and precedence.",
     }),
@@ -929,6 +934,147 @@ const M6D2_CERTIFICATION_CASES: readonly CorpusCaseContract[] =
     }),
   ]);
 
+const M6D3_CERTIFICATION_CASES: readonly CorpusCaseContract[] =
+  Object.freeze([
+    Object.freeze({
+      caseId: "HDS-M6D3-001-VALID-OBJECT-STREAM-CONTROL",
+      threatFamily: "PDF_OBJECT_STREAM_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A valid PDF 1.7 object stream stores the Catalog and Pages objects with matching type-2 xref indexes and must remain accepted at the current non-CLEAN structural-pass level.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D3-002-OBJECT-STREAM-NONZERO-GENERATION",
+      threatFamily: "PDF_OBJECT_STREAM_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A type-2 compressed-object entry points at an ObjStm whose active indirect-object generation is one even though object streams are required to use generation zero, creating consumer-dependent object-stream authority.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_OBJECT_STREAM_DICTIONARY_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D3-003-COMPRESSED-OBJECT-SOLE-REFERENCE",
+      threatFamily: "PDF_OBJECT_STREAM_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "An active compressed object consists solely of an indirect reference, a representation forbidden inside ObjStm content and therefore rejected instead of leaving its interpretation to consumer-specific repair behavior.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_OBJECT_STREAM_INDEX_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D3-004-COMPRESSED-OBJECT-STREAM-LENGTH",
+      threatFamily: "PDF_OBJECT_STREAM_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "An ObjStm resolves its Length through an indirect integer that is itself stored as a compressed object in a second ObjStm, violating the object-stream Length storage restriction and requiring fail-closed rejection.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_OBJECT_STREAM_DICTIONARY_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D3-005-COMPRESSED-OBJECT-ZERO",
+      threatFamily: "PDF_OBJECT_STREAM_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A cross-reference stream marks reserved object number zero as a type-2 compressed object, which must fail before the scanner can silently skip the free-list head as though it were harmless compressed content.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_XREF_STREAM_ENTRY_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D3-006-DUPLICATE-CONTAINED-OBJECT-NUMBER",
+      threatFamily: "PDF_OBJECT_STREAM_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "An object-stream header declares the same contained object number twice, creating ambiguous index-to-object membership that must remain rejected before any compressed-object policy evaluation.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_OBJECT_STREAM_HEADER_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D3-007-XREF-OBJECT-STREAM-INDEX-MISMATCH",
+      threatFamily: "PDF_OBJECT_STREAM_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "The type-2 xref entry for the Catalog names index one while index one belongs to the Pages object, proving the existing compressed-object index agreement check remains fail closed.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_COMPRESSED_OBJECT_REFERENCE_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D3-008-DESCENDING-OBJECT-OFFSETS",
+      threatFamily: "PDF_OBJECT_STREAM_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "An ObjStm header declares contained-object relative offsets in descending order, violating monotonic indexed boundaries and proving the existing object-stream index guard remains fail closed.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_OBJECT_STREAM_INDEX_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+  ]);
+
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
     throw new Error(`M6C_ASSERTION_FAILED: ${message}`);
@@ -1240,6 +1386,303 @@ function buildM6D2LengthGenerationMismatchPdf() {
       "<< /Length 4 1 R >>\nstream\nHELLO\nendstream",
     ],
   }).bytes;
+}
+
+type M6D3ObjectStreamOptions = Readonly<{
+  objectStreamGeneration?: number;
+  extraCompressedObject?: Readonly<{
+    objectNumber: number;
+    body: string;
+  }>;
+  compressedObjectZero?: boolean;
+  duplicateContainedObjectNumber?: boolean;
+  rootObjectStreamIndex?: number;
+  relativeOffsetsOverride?: readonly number[];
+}>;
+
+function buildM6D3ObjectStreamPdf(
+  options: M6D3ObjectStreamOptions = {},
+) {
+  const chunks: Buffer[] = [
+    Buffer.from("%PDF-1.7\n%HDS-M6D3\n", "latin1"),
+  ];
+  const offsets = new Map<number, number>();
+  let byteLength = chunks[0]!.length;
+
+  const addObject = (
+    objectNumber: number,
+    generation: number,
+    body: Buffer,
+  ) => {
+    offsets.set(objectNumber, byteLength);
+    const objectBytes = Buffer.concat([
+      Buffer.from(`${objectNumber} ${generation} obj\n`, "latin1"),
+      body,
+      Buffer.from("\nendobj\n", "latin1"),
+    ]);
+    chunks.push(objectBytes);
+    byteLength += objectBytes.length;
+  };
+
+  addObject(
+    3,
+    0,
+    Buffer.from(
+      "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>",
+      "latin1",
+    ),
+  );
+
+  const objectNumbers: number[] = [1, 2];
+  const objectBodies: Buffer[] = [
+    Buffer.from("<< /Type /Catalog /Pages 2 0 R >>", "latin1"),
+    Buffer.from("<< /Type /Pages /Kids [3 0 R] /Count 1 >>", "latin1"),
+  ];
+
+  if (options.compressedObjectZero) {
+    objectNumbers.unshift(0);
+    objectBodies.unshift(
+      Buffer.from(
+        "<< /S /JavaScript /JS (HDS-M6D3-OBJECT-ZERO) >>",
+        "latin1",
+      ),
+    );
+  }
+
+  if (options.extraCompressedObject) {
+    objectNumbers.push(options.extraCompressedObject.objectNumber);
+    objectBodies.push(
+      Buffer.from(options.extraCompressedObject.body, "latin1"),
+    );
+  }
+
+  if (options.duplicateContainedObjectNumber) {
+    objectNumbers.splice(1, 0, objectNumbers[0]!);
+    objectBodies.splice(
+      1,
+      0,
+      Buffer.from("<< /Type /DuplicateProbe >>", "latin1"),
+    );
+  }
+
+  const calculatedOffsets: number[] = [];
+  let objectDataOffset = 0;
+  for (const body of objectBodies) {
+    calculatedOffsets.push(objectDataOffset);
+    objectDataOffset += body.length + 1;
+  }
+
+  const relativeOffsets =
+    options.relativeOffsetsOverride
+      ? [...options.relativeOffsetsOverride]
+      : calculatedOffsets;
+
+  assert(
+    relativeOffsets.length === objectNumbers.length,
+    "M6D3 fixture relative offsets must match the contained-object count.",
+  );
+
+  let header = "";
+  objectNumbers.forEach((objectNumber, index) => {
+    header += `${objectNumber} ${relativeOffsets[index]} `;
+  });
+
+  const headerBytes = Buffer.from(header, "latin1");
+  const decodedParts: Buffer[] = [headerBytes];
+  objectBodies.forEach((body, index) => {
+    decodedParts.push(body);
+    if (index + 1 < objectBodies.length) {
+      decodedParts.push(Buffer.from(" ", "latin1"));
+    }
+  });
+
+  const decodedObjectStream = Buffer.concat(decodedParts);
+  const encodedObjectStream = deflateSync(decodedObjectStream);
+  const objectStreamGeneration = options.objectStreamGeneration ?? 0;
+
+  addObject(
+    4,
+    objectStreamGeneration,
+    Buffer.concat([
+      Buffer.from(
+        `<< /Type /ObjStm /N ${objectNumbers.length}` +
+          ` /First ${headerBytes.length} /Length ${encodedObjectStream.length}` +
+          " /Filter /FlateDecode >>\nstream\n",
+        "latin1",
+      ),
+      encodedObjectStream,
+      Buffer.from("\nendstream", "latin1"),
+    ]),
+  );
+
+  const xrefObjectNumber = 5;
+  const xrefOffset = byteLength;
+  const highestObjectNumber = Math.max(5, ...objectNumbers);
+  const size = highestObjectNumber + 1;
+  const rows: Buffer[] = [];
+
+  for (let objectNumber = 0; objectNumber < size; objectNumber += 1) {
+    const containedIndex = objectNumbers.indexOf(objectNumber);
+
+    if (containedIndex >= 0) {
+      rows.push(
+        m6d2XrefRow(
+          2,
+          4,
+          objectNumber === 1
+            ? options.rootObjectStreamIndex ?? containedIndex
+            : containedIndex,
+        ),
+      );
+    } else if (objectNumber === 3) {
+      rows.push(m6d2XrefRow(1, offsets.get(3)!, 0));
+    } else if (objectNumber === 4) {
+      rows.push(
+        m6d2XrefRow(1, offsets.get(4)!, objectStreamGeneration),
+      );
+    } else if (objectNumber === xrefObjectNumber) {
+      rows.push(m6d2XrefRow(1, xrefOffset, 0));
+    } else {
+      rows.push(
+        m6d2XrefRow(
+          0,
+          0,
+          objectNumber === 0 ? 65535 : 0,
+        ),
+      );
+    }
+  }
+
+  const xrefData = deflateSync(Buffer.concat(rows));
+  chunks.push(
+    Buffer.concat([
+      Buffer.from(
+        `${xrefObjectNumber} 0 obj\n` +
+          `<< /Type /XRef /Size ${size} /Root 1 0 R /W [1 4 2]` +
+          ` /Index [0 ${size}] /Length ${xrefData.length}` +
+          " /Filter /FlateDecode >>\nstream\n",
+        "latin1",
+      ),
+      xrefData,
+      Buffer.from(
+        `\nendstream\nendobj\nstartxref\n${xrefOffset}\n%%EOF\n`,
+        "latin1",
+      ),
+    ]),
+  );
+
+  return Buffer.concat(chunks);
+}
+
+function buildM6D3CompressedLengthPdf() {
+  const chunks: Buffer[] = [
+    Buffer.from("%PDF-1.7\n%HDS-M6D3-LENGTH\n", "latin1"),
+  ];
+  const offsets = new Map<number, number>();
+  let byteLength = chunks[0]!.length;
+
+  const addObject = (objectNumber: number, body: Buffer) => {
+    offsets.set(objectNumber, byteLength);
+    const objectBytes = Buffer.concat([
+      Buffer.from(`${objectNumber} 0 obj\n`, "latin1"),
+      body,
+      Buffer.from("\nendobj\n", "latin1"),
+    ]);
+    chunks.push(objectBytes);
+    byteLength += objectBytes.length;
+  };
+
+  addObject(
+    1,
+    Buffer.from("<< /Type /Catalog /Pages 2 0 R >>", "latin1"),
+  );
+  addObject(
+    2,
+    Buffer.from("<< /Type /Pages /Kids [3 0 R] /Count 1 >>", "latin1"),
+  );
+  addObject(
+    3,
+    Buffer.from(
+      "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>",
+      "latin1",
+    ),
+  );
+
+  const targetDecoded = Buffer.from("8 0 << /Type /Example >>", "latin1");
+  const targetEncoded = deflateSync(targetDecoded);
+
+  const lengthDecoded = Buffer.from(
+    `7 0 ${targetEncoded.length}`,
+    "latin1",
+  );
+  const lengthEncoded = deflateSync(lengthDecoded);
+
+  addObject(
+    6,
+    Buffer.concat([
+      Buffer.from(
+        `<< /Type /ObjStm /N 1 /First 4 /Length ${lengthEncoded.length}` +
+          " /Filter /FlateDecode >>\nstream\n",
+        "latin1",
+      ),
+      lengthEncoded,
+      Buffer.from("\nendstream", "latin1"),
+    ]),
+  );
+
+  addObject(
+    4,
+    Buffer.concat([
+      Buffer.from(
+        "<< /Type /ObjStm /N 1 /First 4 /Length 7 0 R" +
+          " /Filter /FlateDecode >>\nstream\n",
+        "latin1",
+      ),
+      targetEncoded,
+      Buffer.from("\nendstream", "latin1"),
+    ]),
+  );
+
+  const xrefObjectNumber = 5;
+  const xrefOffset = byteLength;
+  const size = 9;
+  const rows: Buffer[] = [];
+
+  for (let objectNumber = 0; objectNumber < size; objectNumber += 1) {
+    if (objectNumber === 0) {
+      rows.push(m6d2XrefRow(0, 0, 65535));
+    } else if ([1, 2, 3, 4, 6].includes(objectNumber)) {
+      rows.push(m6d2XrefRow(1, offsets.get(objectNumber)!, 0));
+    } else if (objectNumber === xrefObjectNumber) {
+      rows.push(m6d2XrefRow(1, xrefOffset, 0));
+    } else if (objectNumber === 7) {
+      rows.push(m6d2XrefRow(2, 6, 0));
+    } else if (objectNumber === 8) {
+      rows.push(m6d2XrefRow(2, 4, 0));
+    } else {
+      rows.push(m6d2XrefRow(0, 0, 0));
+    }
+  }
+
+  const xrefData = deflateSync(Buffer.concat(rows));
+  chunks.push(
+    Buffer.concat([
+      Buffer.from(
+        `${xrefObjectNumber} 0 obj\n` +
+          `<< /Type /XRef /Size ${size} /Root 1 0 R /W [1 4 2]` +
+          ` /Index [0 ${size}] /Length ${xrefData.length}` +
+          " /Filter /FlateDecode >>\nstream\n",
+        "latin1",
+      ),
+      xrefData,
+      Buffer.from(
+        `\nendstream\nendobj\nstartxref\n${xrefOffset}\n%%EOF\n`,
+        "latin1",
+      ),
+    ]),
+  );
+
+  return Buffer.concat(chunks);
 }
 
 function crc32(bytes: Buffer) {
@@ -1743,7 +2186,9 @@ function validateManifest() {
           : entry.threatFamily === "PDF_INCREMENTAL_UPDATE_EVASION" ||
               entry.threatFamily === "PDF_XREF_EVASION"
             ? "CERTIFIED_M6D2"
-            : "NOT_CERTIFIED";
+            : entry.threatFamily === "PDF_OBJECT_STREAM_EVASION"
+              ? "CERTIFIED_M6D3"
+              : "NOT_CERTIFIED";
 
     assert(
       entry.certificationStatus === expectedCertification,
@@ -2034,6 +2479,74 @@ function validateM6D2CertificationCases() {
   );
 }
 
+function validateM6D3CertificationCases() {
+  const caseIds = new Set<string>();
+
+  assert(
+    M6D3_CERTIFICATION_CASES.length === 8,
+    "M6D3 must execute the exact eight-case PDF object-stream evasion certification matrix.",
+  );
+
+  for (const testCase of M6D3_CERTIFICATION_CASES) {
+    assert(
+      Object.isFrozen(testCase),
+      `M6D3 case ${testCase.caseId} must be immutable.`,
+    );
+    assert(
+      /^HDS-M6D3-\d{3}-[A-Z0-9-]+$/.test(testCase.caseId),
+      `M6D3 case id is invalid: ${testCase.caseId}`,
+    );
+    assert(
+      !caseIds.has(testCase.caseId),
+      `Duplicate M6D3 case id: ${testCase.caseId}`,
+    );
+    assert(
+      testCase.threatFamily === "PDF_OBJECT_STREAM_EVASION",
+      `${testCase.caseId} must certify only PDF object-stream evasion.`,
+    );
+    assert(
+      testCase.format === "PDF" &&
+        testCase.provenance === "DETERMINISTIC_GENERATED",
+      `${testCase.caseId} must be a deterministic generated PDF fixture.`,
+    );
+    assert(
+      testCase.certificationPhase === "M6D" &&
+        testCase.certificationCredit === true,
+      `${testCase.caseId} must earn explicit M6D3 certification credit.`,
+    );
+    assert(
+      testCase.authorityImplication === "NO_CLEAN_AUTHORITY",
+      `${testCase.caseId} must preserve the no-CLEAN authority boundary.`,
+    );
+    assert(
+      testCase.expectedDetectedContainer === "PDF" &&
+        testCase.expectedSignatureKind === "PDF_HEADER",
+      `${testCase.caseId} must preserve exact PDF identity.`,
+    );
+    assert(
+      testCase.expectedRuleId === null,
+      `${testCase.caseId} must exercise parser authority rather than invent a new M4 threat rule.`,
+    );
+    assert(
+      testCase.attackTechnique.trim().length >= 80,
+      `${testCase.caseId} must describe the object-stream evasion technique precisely.`,
+    );
+
+    caseIds.add(testCase.caseId);
+  }
+
+  assert(
+    M6D3_CERTIFICATION_CASES.filter(
+      (testCase) => testCase.benignControl,
+    ).length === 1,
+    "M6D3 must preserve exactly one valid object-stream benign control.",
+  );
+  assert(
+    Object.isFrozen(M6D3_CERTIFICATION_CASES),
+    "M6D3 certification registry must be immutable.",
+  );
+}
+
 function validateRulePackBoundary() {
   assert(
     HEHXAGON_DOCUMENT_SECURITY_RULE_IDS.length === 21,
@@ -2060,8 +2573,8 @@ function validateRulePackBoundary() {
 
   assert(
     HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION ===
-      "0.4.4-m6d2",
-    "M6D2 must run the bounded PDF revision/xref authority repair while preserving the M4 rule pack.",
+      "0.4.5-m6d3",
+    "M6D3 must run the bounded PDF object-stream authority repair while preserving the M4 rule pack.",
   );
 }
 
@@ -2777,12 +3290,88 @@ async function executeM6D2RevisionXrefAuthorityCertification() {
   return { results } as const;
 }
 
+async function executeM6D3ObjectStreamEvasionCertification() {
+  const validControl = buildM6D3ObjectStreamPdf();
+  const nonzeroGeneration = buildM6D3ObjectStreamPdf({
+    objectStreamGeneration: 1,
+  });
+  const soleReference = buildM6D3ObjectStreamPdf({
+    extraCompressedObject: {
+      objectNumber: 6,
+      body: "3 0 R",
+    },
+  });
+  const compressedLength = buildM6D3CompressedLengthPdf();
+  const compressedObjectZero = buildM6D3ObjectStreamPdf({
+    compressedObjectZero: true,
+  });
+  const duplicateContainedObject = buildM6D3ObjectStreamPdf({
+    duplicateContainedObjectNumber: true,
+  });
+  const xrefIndexMismatch = buildM6D3ObjectStreamPdf({
+    rootObjectStreamIndex: 1,
+  });
+  const descendingOffsets = buildM6D3ObjectStreamPdf({
+    relativeOffsetsOverride: [32, 0],
+  });
+
+  const fixtureBytes = [
+    validControl,
+    nonzeroGeneration,
+    soleReference,
+    compressedLength,
+    compressedObjectZero,
+    duplicateContainedObject,
+    xrefIndexMismatch,
+    descendingOffsets,
+  ] as const;
+
+  const results: NativeDocumentScannerResult[] = [];
+
+  for (let index = 0; index < fixtureBytes.length; index += 1) {
+    const result = await inspectPdf({ bytes: fixtureBytes[index]! });
+    const contract = M6D3_CERTIFICATION_CASES[index]!;
+    assertResultMatchesContract(result, contract);
+
+    if (contract.expectedVerdict === "FAILED") {
+      assert(
+        result.rulePackEvaluation === null,
+        `${contract.caseId} must fail before M4 rule-pack trust evaluation.`,
+      );
+    }
+
+    results.push(result);
+  }
+
+  const control = results[0]!;
+  assert(
+    control.pdfStructuralInspectionComplete === true &&
+      control.rulePackEvaluation?.outcome === "PASS" &&
+      control.pdfStructuralEvidence?.objectStreamsDetected === true &&
+      control.pdfStructuralEvidence.objectStreamCount === 1 &&
+      control.pdfStructuralEvidence.compressedObjectCount === 2,
+    "The M6D3 valid control must preserve complete bounded object-stream parsing without granting CLEAN.",
+  );
+
+  assert(
+    results.every(
+      (result) =>
+        String(result.verdict) !== "CLEAN" &&
+        result.inspectionComplete === false,
+    ),
+    "M6D3 certification must preserve the no-CLEAN authority boundary.",
+  );
+
+  return { results } as const;
+}
+
 async function run() {
   validateManifest();
   validateCaseContract();
   validateM6BCertificationCases();
   validateM6CCertificationCases();
   validateM6D2CertificationCases();
+  validateM6D3CertificationCases();
   validateRulePackBoundary();
 
   const sentinelResults = await executeSentinels();
@@ -2790,6 +3379,7 @@ async function run() {
   const m6c = await executeM6CCertification();
   const m6d1 = await executeM6D1ParserAmbiguityRepair();
   const m6d2 = await executeM6D2RevisionXrefAuthorityCertification();
+  const m6d3 = await executeM6D3ObjectStreamEvasionCertification();
 
   const sentinelSummary =
     HARNESS_SENTINEL_CASES.map((testCase, index) =>
@@ -2888,6 +3478,31 @@ async function run() {
       }),
     );
 
+  const m6d3Summary =
+    M6D3_CERTIFICATION_CASES.map((testCase, index) =>
+      Object.freeze({
+        caseId: testCase.caseId,
+        threatFamily: testCase.threatFamily,
+        benignControl: testCase.benignControl,
+        certificationCredit: testCase.certificationCredit,
+        expectedVerdict: testCase.expectedVerdict,
+        actualVerdict: m6d3.results[index]!.verdict,
+        expectedReasonCode: testCase.expectedReasonCode,
+        reasonMatched:
+          m6d3.results[index]!.reasonCodes.includes(
+            testCase.expectedReasonCode,
+          ),
+        expectedDetectedContainer:
+          testCase.expectedDetectedContainer,
+        actualDetectedContainer:
+          m6d3.results[index]!.identityEvidence.detectedContainer,
+        expectedSignatureKind:
+          testCase.expectedSignatureKind,
+        actualSignatureKind:
+          m6d3.results[index]!.identityEvidence.signatureKind,
+      }),
+    );
+
   const m6bCertifiedThreatFamilies =
     THREAT_FAMILY_MANIFEST
       .filter(
@@ -2910,6 +3525,14 @@ async function run() {
       .filter(
         (entry) =>
           entry.certificationStatus === "CERTIFIED_M6D2",
+      )
+      .map((entry) => entry.threatFamily);
+
+  const m6d3CertifiedThreatFamilies =
+    THREAT_FAMILY_MANIFEST
+      .filter(
+        (entry) =>
+          entry.certificationStatus === "CERTIFIED_M6D3",
       )
       .map((entry) => entry.threatFamily);
 
@@ -2940,14 +3563,23 @@ async function run() {
   );
 
   assert(
+    m6d3CertifiedThreatFamilies.length === 1 &&
+      m6d3CertifiedThreatFamilies.includes("PDF_OBJECT_STREAM_EVASION"),
+    "M6D3 must certify exactly PDF object-stream evasion.",
+  );
+
+  assert(
     m6dThreatFamilies.length === 6 &&
       m6dThreatFamilies.filter(
         (entry) => entry.certificationStatus === "CERTIFIED_M6D2",
       ).length === 2 &&
       m6dThreatFamilies.filter(
+        (entry) => entry.certificationStatus === "CERTIFIED_M6D3",
+      ).length === 1 &&
+      m6dThreatFamilies.filter(
         (entry) => entry.certificationStatus === "NOT_CERTIFIED",
-      ).length === 4,
-    "M6D2 must leave the four later PDF evasion families uncertified.",
+      ).length === 3,
+    "M6D3 must leave exactly the action, URI and embedded-content PDF evasion families uncertified.",
   );
 
   assert(
@@ -2979,6 +3611,11 @@ async function run() {
         (result) =>
           String(result.verdict) !== "CLEAN" &&
           result.inspectionComplete === false,
+      ) &&
+      m6d3.results.every(
+        (result) =>
+          String(result.verdict) !== "CLEAN" &&
+          result.inspectionComplete === false,
       ),
     "M6 execution must never grant CLEAN or completed document-trust authority.",
   );
@@ -2988,13 +3625,13 @@ async function run() {
       {
         ok: true,
         event:
-          "HDS_M6D2_PDF_REVISION_XREF_AUTHORITY_CERTIFICATION_PASSED",
+          "HDS_M6D3_PDF_OBJECT_STREAM_EVASION_CERTIFICATION_PASSED",
         corpusSchemaVersion:
           HDS_M6_ADVERSARIAL_CORPUS_SCHEMA_VERSION,
         harnessVersion:
-          HDS_M6D2_HARNESS_VERSION,
+          HDS_M6D3_HARNESS_VERSION,
         priorHarnessVersion:
-          HDS_M6D1_HARNESS_VERSION,
+          HDS_M6D2_HARNESS_VERSION,
         priorOoxmlHarnessVersion:
           HDS_M6C_HARNESS_VERSION,
         scannerEngine:
@@ -3022,6 +3659,8 @@ async function run() {
         m6cCertificationComplete: true,
         m6d2CertifiedThreatFamilies,
         m6d2CertificationComplete: true,
+        m6d3CertifiedThreatFamilies,
+        m6d3CertificationComplete: true,
         ooxmlNormalizationInvariant:
           "SINGLE_PASS_NAMED_DECIMAL_AND_HEX_XML_ATTRIBUTE_ENTITIES",
         identityPrecedenceInvariant:
@@ -3122,6 +3761,19 @@ async function run() {
           ).length,
         m6d2Results:
           m6d2Summary,
+        m6d3ObjectStreamRepairComplete: true,
+        m6d3CaseCount:
+          M6D3_CERTIFICATION_CASES.length,
+        m6d3CertificationCredit:
+          M6D3_CERTIFICATION_CASES.filter(
+            (testCase) => testCase.certificationCredit,
+          ).length,
+        m6d3BenignControlCount:
+          M6D3_CERTIFICATION_CASES.filter(
+            (testCase) => testCase.benignControl,
+          ).length,
+        m6d3Results:
+          m6d3Summary,
         m6dCertificationComplete: false,
         remainingM6dThreatFamilies:
           m6dThreatFamilies
@@ -3145,11 +3797,11 @@ run().catch((error) => {
       {
         ok: false,
         event:
-          "HDS_M6D2_PDF_REVISION_XREF_AUTHORITY_CERTIFICATION_FAILED",
+          "HDS_M6D3_PDF_OBJECT_STREAM_EVASION_CERTIFICATION_FAILED",
         errorCode:
           error instanceof Error
             ? error.message
-            : "M6D2_UNKNOWN_FAILURE",
+            : "M6D3_UNKNOWN_FAILURE",
       },
       null,
       2,
