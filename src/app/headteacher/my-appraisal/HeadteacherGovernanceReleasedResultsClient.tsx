@@ -144,12 +144,6 @@ function dateLabel(value: string | null | undefined) {
   });
 }
 
-function percentageLabel(value: number | null | undefined) {
-  return typeof value === "number" && Number.isFinite(value)
-    ? `${value.toFixed(2)}%`
-    : "—";
-}
-
 function scoredTotal(
   items: Array<{ score: number | null; notApplicable: boolean }>,
 ) {
@@ -665,7 +659,7 @@ export default function HeadteacherGovernanceReleasedResultsClient() {
                         Released
                       </span>
                       <span className="text-sm font-black text-white">
-                        {percentageLabel(item.overallPercentage)}
+                        {wholePercentage(item.overallPercentage)}
                       </span>
                     </div>
                     <p className="mt-2 text-sm font-bold text-[#F7F4ED]">
