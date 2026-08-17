@@ -568,6 +568,48 @@ function numberValue(value: PdfValue | undefined) {
     : null;
 }
 
+type OptionalDirectInteger =
+  | { present: false }
+  | { present: true; valid: false }
+  | { present: true; valid: true; value: number };
+
+function optionalDirectInteger(
+  dictionary: PdfDict,
+  key: string,
+): OptionalDirectInteger {
+  const raw = dictionary.values.get(key);
+  if (raw === undefined) return { present: false };
+
+  const value = numberValue(raw);
+  return value === null
+    ? { present: true, valid: false }
+    : { present: true, valid: true, value };
+}
+
+function xrefEntriesEqual(left: XrefEntry, right: XrefEntry) {
+  if (left.kind !== right.kind) return false;
+
+  if (left.kind === "free" && right.kind === "free") {
+    return left.generation === right.generation;
+  }
+
+  if (left.kind === "uncompressed" && right.kind === "uncompressed") {
+    return (
+      left.offset === right.offset &&
+      left.generation === right.generation
+    );
+  }
+
+  if (left.kind === "compressed" && right.kind === "compressed") {
+    return (
+      left.objectStreamObjectNumber === right.objectStreamObjectNumber &&
+      left.objectStreamIndex === right.objectStreamIndex
+    );
+  }
+
+  return false;
+}
+
 function parseTrailerDictionary(
   bytes: Buffer,
   start: number,
@@ -683,6 +725,18 @@ function parseClassicXrefSection(args: {
       const objectNumber = first.value + index;
       const generation = Number(match[2]);
 
+      if (!Number.isSafeInteger(objectNumber) || entries.has(objectNumber)) {
+        return {
+          ok: false as const,
+          result: failed(
+            "PDF_XREF_TABLE_INVALID",
+            entries.has(objectNumber)
+              ? "A PDF classic cross-reference section defines the same object number more than once."
+              : "A PDF classic cross-reference object number cannot be represented safely.",
+          ),
+        };
+      }
+
       entries.set(
         objectNumber,
         match[3] === "n"
@@ -703,6 +757,29 @@ function parseClassicXrefSection(args: {
   try {
     const trailerStart = skipWhitespaceAndComments(bytes, offset);
     const trailer = parseTrailerDictionary(bytes, trailerStart, limits);
+    const size = numberValue(trailer.dictionary.values.get("Size"));
+
+    if (size === null || size <= 0) {
+      return {
+        ok: false as const,
+        result: failed(
+          "PDF_XREF_TABLE_INVALID",
+          "A PDF classic trailer must contain a positive direct integer Size value.",
+        ),
+      };
+    }
+
+    for (const objectNumber of entries.keys()) {
+      if (objectNumber < 0 || objectNumber >= size) {
+        return {
+          ok: false as const,
+          result: failed(
+            "PDF_XREF_TABLE_INVALID",
+            "A PDF classic cross-reference entry falls outside the trailer Size authority boundary.",
+          ),
+        };
+      }
+    }
 
     return {
       ok: true as const,
@@ -1623,8 +1700,20 @@ export function inspectPdfStructuralSecurity(args: {
     const revisionEntries = new Map<number, XrefEntry>(primary.entries);
 
     if (primary.kind === "classic") {
-      const supplementalOffset = numberValue(primary.trailer.values.get("XRefStm"));
-      if (supplementalOffset !== null) {
+      const supplementalPointer = optionalDirectInteger(
+        primary.trailer,
+        "XRefStm",
+      );
+
+      if (supplementalPointer.present && !supplementalPointer.valid) {
+        return failed(
+          "PDF_XREF_STREAM_DICTIONARY_INVALID",
+          "A hybrid PDF XRefStm entry must be a direct integer byte offset.",
+        );
+      }
+
+      if (supplementalPointer.present && supplementalPointer.valid) {
+        const supplementalOffset = supplementalPointer.value;
         if (
           supplementalOffset < 0 ||
           supplementalOffset >= bytes.length ||
@@ -1667,17 +1756,49 @@ export function inspectPdfStructuralSecurity(args: {
         }
 
         for (const [objectNumber, entry] of supplemental.entries) {
-          if (!revisionEntries.has(objectNumber)) {
-            revisionEntries.set(objectNumber, entry);
+          const primaryEntry = revisionEntries.get(objectNumber);
+          if (primaryEntry) {
+            if (!xrefEntriesEqual(primaryEntry, entry)) {
+              return failed(
+                "PDF_XREF_STREAM_ENTRY_INVALID",
+                "A hybrid PDF classic table and supplemental XRefStm define conflicting authority for the same object number.",
+              );
+            }
+            continue;
           }
+
+          revisionEntries.set(objectNumber, entry);
         }
 
-        const supplementalPrev = numberValue(supplemental.trailer.values.get("Prev"));
-        const primaryPrev = numberValue(primary.trailer.values.get("Prev"));
+        const supplementalPrev = optionalDirectInteger(
+          supplemental.trailer,
+          "Prev",
+        );
+        const primaryPrev = optionalDirectInteger(
+          primary.trailer,
+          "Prev",
+        );
+
+        if (supplementalPrev.present && !supplementalPrev.valid) {
+          return failed(
+            "PDF_XREF_STREAM_DICTIONARY_INVALID",
+            "A hybrid PDF XRefStm Prev entry must be a direct integer byte offset when present.",
+          );
+        }
+
+        if (primaryPrev.present && !primaryPrev.valid) {
+          return failed(
+            "PDF_XREF_TABLE_INVALID",
+            "A PDF classic trailer Prev entry must be a direct integer byte offset when present.",
+          );
+        }
+
         if (
-          supplementalPrev !== null &&
-          primaryPrev !== null &&
-          supplementalPrev !== primaryPrev
+          supplementalPrev.present &&
+          supplementalPrev.valid &&
+          primaryPrev.present &&
+          primaryPrev.valid &&
+          supplementalPrev.value !== primaryPrev.value
         ) {
           return failed(
             "PDF_XREF_STREAM_DICTIONARY_INVALID",
@@ -1700,9 +1821,23 @@ export function inspectPdfStructuralSecurity(args: {
       );
     }
 
-    const previous = numberValue(primary.trailer.values.get("Prev"));
-    if (previous === null) break;
+    const previousPointer = optionalDirectInteger(
+      primary.trailer,
+      "Prev",
+    );
 
+    if (!previousPointer.present) break;
+
+    if (!previousPointer.valid) {
+      return failed(
+        primary.kind === "stream"
+          ? "PDF_XREF_STREAM_DICTIONARY_INVALID"
+          : "PDF_XREF_TABLE_INVALID",
+        "A PDF Prev entry must be a direct integer byte offset when present.",
+      );
+    }
+
+    const previous = previousPointer.value;
     if (previous < 0 || previous >= bytes.length) {
       return failed(
         "PDF_XREF_TABLE_INVALID",
@@ -1718,6 +1853,23 @@ export function inspectPdfStructuralSecurity(args: {
       "PDF_XREF_TABLE_INVALID",
       "The PDF trailer could not be established.",
     );
+  }
+
+  const newestSize = numberValue(newestTrailer.values.get("Size"));
+  if (newestSize === null || newestSize <= 0) {
+    return failed(
+      "PDF_XREF_TABLE_INVALID",
+      "The newest PDF trailer must contain a positive direct integer Size value.",
+    );
+  }
+
+  for (const objectNumber of seenObjects) {
+    if (objectNumber < 0 || objectNumber >= newestSize) {
+      return failed(
+        "PDF_XREF_TABLE_INVALID",
+        "The newest PDF trailer Size does not cover every object number in the active revision chain.",
+      );
+    }
   }
 
   if (encryptedDetected) {
@@ -1768,10 +1920,8 @@ export function inspectPdfStructuralSecurity(args: {
 
   const parseObject = (
     objectNumber: number,
+    expectedGeneration?: number,
   ): ParsedIndirectObject | PdfStructuralInspectionResult => {
-    const cached = objectCache.get(objectNumber);
-    if (cached) return cached;
-
     const entry = activeEntries.get(objectNumber);
     if (!entry) {
       return failed(
@@ -1779,6 +1929,19 @@ export function inspectPdfStructuralSecurity(args: {
         "A referenced PDF indirect object does not have an active cross-reference entry.",
       );
     }
+
+    if (
+      expectedGeneration !== undefined &&
+      entry.generation !== expectedGeneration
+    ) {
+      return failed(
+        "PDF_OBJECT_OFFSET_INVALID",
+        "A PDF indirect reference generation does not match the active cross-reference entry generation.",
+      );
+    }
+
+    const cached = objectCache.get(objectNumber);
+    if (cached) return cached;
 
     if (entry.kind === "compressed") {
       const objectStream = parseObjectStream(entry.objectStreamObjectNumber);
@@ -1859,7 +2022,10 @@ export function inspectPdfStructuralSecurity(args: {
             );
           }
 
-          const lengthObject = parseObject(lengthRef.objectNumber);
+          const lengthObject = parseObject(
+            lengthRef.objectNumber,
+            lengthRef.generation,
+          );
           if ("ok" in lengthObject) return lengthObject;
           streamLength = numberValue(lengthObject.value);
         }
@@ -2105,7 +2271,10 @@ export function inspectPdfStructuralSecurity(args: {
     }
   };
 
-  const rootObject = parseObject(rootRef.objectNumber);
+  const rootObject = parseObject(
+    rootRef.objectNumber,
+    rootRef.generation,
+  );
   if ("ok" in rootObject) return rootObject;
 
   if (
@@ -2128,7 +2297,10 @@ export function inspectPdfStructuralSecurity(args: {
     );
   }
 
-  const pagesObject = parseObject(pagesRef.objectNumber);
+  const pagesObject = parseObject(
+    pagesRef.objectNumber,
+    pagesRef.generation,
+  );
   if ("ok" in pagesObject) return pagesObject;
 
   if (

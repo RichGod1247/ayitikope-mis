@@ -41,6 +41,9 @@ export const HDS_M6C_HARNESS_VERSION =
 export const HDS_M6D1_HARNESS_VERSION =
   "HDS-M6D1-HARNESS-V1" as const;
 
+export const HDS_M6D2_HARNESS_VERSION =
+  "HDS-M6D2-HARNESS-V1" as const;
+
 const ONE_MEBIBYTE = 1024 * 1024;
 
 const ARCHIVE_LIMITS: NativeDocumentArchiveLimits = Object.freeze({
@@ -114,7 +117,8 @@ type ThreatFamilyManifestEntry = Readonly<{
   certificationStatus:
     | "NOT_CERTIFIED"
     | "CERTIFIED_M6B"
-    | "CERTIFIED_M6C";
+    | "CERTIFIED_M6C"
+    | "CERTIFIED_M6D2";
   objective: string;
 }>;
 
@@ -175,14 +179,14 @@ const THREAT_FAMILY_MANIFEST: readonly ThreatFamilyManifestEntry[] =
     Object.freeze({
       threatFamily: "PDF_INCREMENTAL_UPDATE_EVASION",
       plannedPhase: "M6D",
-      certificationStatus: "NOT_CERTIFIED",
+      certificationStatus: "CERTIFIED_M6D2",
       objective:
         "Challenge revision precedence, Prev chains, hybrid references and active-object selection.",
     }),
     Object.freeze({
       threatFamily: "PDF_XREF_EVASION",
       plannedPhase: "M6D",
-      certificationStatus: "NOT_CERTIFIED",
+      certificationStatus: "CERTIFIED_M6D2",
       objective:
         "Attack classic and stream cross-reference consistency, offsets, generations and supplemental xrefs.",
     }),
@@ -714,6 +718,217 @@ const M6C_CERTIFICATION_CASES: readonly CorpusCaseContract[] =
     }),
   ]);
 
+const M6D2_CERTIFICATION_CASES: readonly CorpusCaseContract[] =
+  Object.freeze([
+    Object.freeze({
+      caseId: "HDS-M6D2-001-NEWEST-REVISION-REPLACES-OLDER-OBJECT",
+      threatFamily: "PDF_INCREMENTAL_UPDATE_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "An older active JavaScript object is replaced by a benign object in the newest incremental revision, proving newest-revision object authority without scanning stale bytes as active content.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D2-002-NEWEST-FREE-ENTRY-SUPPRESSES-OLDER-OBJECT",
+      threatFamily: "PDF_INCREMENTAL_UPDATE_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A newest-revision free xref entry suppresses an older live JavaScript object so that a stale object cannot re-enter the active object graph from an earlier revision.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D2-003-PREV-CYCLE",
+      threatFamily: "PDF_INCREMENTAL_UPDATE_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "The newest classic trailer points Prev back to its own startxref offset, creating a revision-chain cycle that must terminate deterministically rather than loop or reinterpret history.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_XREF_TABLE_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D2-004-PREV-PRESENT-WRONG-TYPE",
+      threatFamily: "PDF_INCREMENTAL_UPDATE_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A classic trailer contains a present but non-integer Prev value, which must not be treated as though revision history were simply absent and complete.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_XREF_TABLE_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D2-005-XREFSTM-PRESENT-WRONG-TYPE",
+      threatFamily: "PDF_XREF_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A classic trailer contains a present but non-integer XRefStm value, which must fail closed instead of silently discarding a claimed supplemental cross-reference authority source.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_XREF_STREAM_DICTIONARY_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D2-006-CLASSIC-XREF-DUPLICATE-OBJECT-NUMBER",
+      threatFamily: "PDF_XREF_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "Overlapping classic xref subsections define the same object number twice inside one revision, creating an order-dependent authority ambiguity that must be rejected.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_XREF_TABLE_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D2-007-HYBRID-CONFLICTING-SAME-OBJECT-AUTHORITY",
+      threatFamily: "PDF_XREF_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A hybrid revision gives the same object number different locations in the companion classic table and supplemental XRefStm, forcing HDS to reject consumer-dependent precedence ambiguity.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_XREF_STREAM_ENTRY_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D2-008-ROOT-GENERATION-MISMATCH",
+      threatFamily: "PDF_XREF_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "The trailer Root reference requests a generation different from the active xref generation for the same object number, which must not collapse to object-number-only lookup.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_OBJECT_OFFSET_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D2-009-PAGES-GENERATION-MISMATCH",
+      threatFamily: "PDF_XREF_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "The Catalog Pages reference requests a non-active generation for the Pages object and must fail instead of resolving solely by object number.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_OBJECT_OFFSET_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D2-010-STREAM-LENGTH-GENERATION-MISMATCH",
+      threatFamily: "PDF_XREF_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A stream Length indirect reference requests a different generation from the active integer object, which must fail before stream boundaries are trusted.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_OBJECT_OFFSET_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D2-011-CLASSIC-SIZE-AUTHORITY-CONTRADICTION",
+      threatFamily: "PDF_XREF_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A classic trailer Size excludes an object number that its own xref section declares, creating contradictory object-number authority that must fail closed.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_XREF_TABLE_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D2-012-ORDINARY-INCREMENTAL-CONTROL",
+      threatFamily: "PDF_INCREMENTAL_UPDATE_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A normal one-revision incremental update adds a benign object with a valid Prev chain and must remain accepted at the current non-CLEAN structural-pass authority level.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+  ]);
+
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
     throw new Error(`M6C_ASSERTION_FAILED: ${message}`);
@@ -848,6 +1063,183 @@ function buildM6DClassicPdf(objectBodies: readonly string[]) {
 
   chunks.push(Buffer.from(xref, "latin1"));
   return Buffer.concat(chunks);
+}
+
+type M6D2ClassicFixture = Readonly<{
+  bytes: Buffer;
+  xrefOffset: number;
+  objectOffsets: readonly number[];
+}>;
+
+function buildM6D2ClassicFixture(args?: {
+  objectBodies?: readonly string[];
+  rootGeneration?: number;
+  sizeOverride?: number;
+}): M6D2ClassicFixture {
+  const objectBodies = args?.objectBodies ?? [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>",
+  ];
+
+  const chunks: Buffer[] = [
+    Buffer.from("%PDF-1.7\n%HDS-M6D2\n", "latin1"),
+  ];
+  const objectOffsets: number[] = [0];
+  let byteLength = chunks[0]!.length;
+
+  objectBodies.forEach((body, index) => {
+    objectOffsets[index + 1] = byteLength;
+    const objectBytes = Buffer.from(
+      `${index + 1} 0 obj\n${body}\nendobj\n`,
+      "latin1",
+    );
+    chunks.push(objectBytes);
+    byteLength += objectBytes.length;
+  });
+
+  const xrefOffset = byteLength;
+  let xref = `xref\n0 ${objectBodies.length + 1}\n`;
+  xref += "0000000000 65535 f \n";
+
+  for (let objectNumber = 1; objectNumber <= objectBodies.length; objectNumber += 1) {
+    xref +=
+      `${String(objectOffsets[objectNumber]).padStart(10, "0")}` +
+      " 00000 n \n";
+  }
+
+  xref +=
+    `trailer\n<< /Size ${args?.sizeOverride ?? objectBodies.length + 1}` +
+    ` /Root 1 ${args?.rootGeneration ?? 0} R >>\n` +
+    `startxref\n${xrefOffset}\n%%EOF\n`;
+
+  chunks.push(Buffer.from(xref, "latin1"));
+
+  return Object.freeze({
+    bytes: Buffer.concat(chunks),
+    xrefOffset,
+    objectOffsets: Object.freeze([...objectOffsets]),
+  });
+}
+
+function appendM6D2IncrementalObject(args: {
+  base: M6D2ClassicFixture;
+  objectNumber: number;
+  body: string;
+  size: number;
+}) {
+  const objectOffset = args.base.bytes.length;
+  const objectBytes = Buffer.from(
+    `${args.objectNumber} 0 obj\n${args.body}\nendobj\n`,
+    "latin1",
+  );
+  const xrefOffset = objectOffset + objectBytes.length;
+  const xref =
+    `xref\n${args.objectNumber} 1\n` +
+    `${String(objectOffset).padStart(10, "0")} 00000 n \n` +
+    `trailer\n<< /Size ${args.size} /Root 1 0 R /Prev ${args.base.xrefOffset} >>\n` +
+    `startxref\n${xrefOffset}\n%%EOF\n`;
+
+  return Buffer.concat([
+    args.base.bytes,
+    objectBytes,
+    Buffer.from(xref, "latin1"),
+  ]);
+}
+
+function appendM6D2FreeEntry(args: {
+  base: M6D2ClassicFixture;
+  objectNumber: number;
+  size: number;
+}) {
+  const xrefOffset = args.base.bytes.length;
+  const xref =
+    `xref\n${args.objectNumber} 1\n` +
+    "0000000000 00001 f \n" +
+    `trailer\n<< /Size ${args.size} /Root 1 0 R /Prev ${args.base.xrefOffset} >>\n` +
+    `startxref\n${xrefOffset}\n%%EOF\n`;
+
+  return Buffer.concat([
+    args.base.bytes,
+    Buffer.from(xref, "latin1"),
+  ]);
+}
+
+function appendM6D2RawClassicUpdate(args: {
+  base: M6D2ClassicFixture;
+  xrefBody: string;
+  trailerBody: string;
+}) {
+  const xrefOffset = args.base.bytes.length;
+  const update = Buffer.from(
+    `${args.xrefBody}trailer\n<< ${args.trailerBody} >>\n` +
+      `startxref\n${xrefOffset}\n%%EOF\n`,
+    "latin1",
+  );
+
+  return Buffer.concat([args.base.bytes, update]);
+}
+
+function m6d2XrefRow(type: number, field1: number, field2: number) {
+  const row = Buffer.alloc(7);
+  row[0] = type & 0xff;
+  row.writeUInt32BE(field1 >>> 0, 1);
+  row.writeUInt16BE(field2 & 0xffff, 5);
+  return row;
+}
+
+function buildM6D2HybridConflictPdf() {
+  const base = buildM6D2ClassicFixture();
+  const chunks: Buffer[] = [base.bytes];
+  let byteLength = base.bytes.length;
+
+  const conflictingObjectOffset = byteLength;
+  const conflictingObject = Buffer.from(
+    "1 0 obj\n<< /Type /Catalog /Pages 2 0 R /OpenAction << /S /JavaScript /JS (HDS-M6D2) >> >>\nendobj\n",
+    "latin1",
+  );
+  chunks.push(conflictingObject);
+  byteLength += conflictingObject.length;
+
+  const xrefStreamOffset = byteLength;
+  const xrefRow = m6d2XrefRow(1, conflictingObjectOffset, 0);
+  const xrefStream = Buffer.concat([
+    Buffer.from(
+      `5 0 obj\n<< /Type /XRef /Size 6 /W [1 4 2] /Index [1 1]` +
+        ` /Length ${xrefRow.length} >>\nstream\n`,
+      "latin1",
+    ),
+    xrefRow,
+    Buffer.from("\nendstream\nendobj\n", "latin1"),
+  ]);
+  chunks.push(xrefStream);
+  byteLength += xrefStream.length;
+
+  const updateXrefOffset = byteLength;
+  const updateXref =
+    "xref\n" +
+    "1 1\n" +
+    `${String(base.objectOffsets[1]).padStart(10, "0")} 00000 n \n` +
+    "5 1\n" +
+    `${String(xrefStreamOffset).padStart(10, "0")} 00000 n \n` +
+    `trailer\n<< /Size 6 /Root 1 0 R /Prev ${base.xrefOffset}` +
+    ` /XRefStm ${xrefStreamOffset} >>\n` +
+    `startxref\n${updateXrefOffset}\n%%EOF\n`;
+
+  chunks.push(Buffer.from(updateXref, "latin1"));
+  return Buffer.concat(chunks);
+}
+
+function buildM6D2LengthGenerationMismatchPdf() {
+  return buildM6D2ClassicFixture({
+    objectBodies: [
+      "<< /Type /Catalog /Pages 2 0 R >>",
+      "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+      "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>",
+      "5",
+      "<< /Length 4 1 R >>\nstream\nHELLO\nendstream",
+    ],
+  }).bytes;
 }
 
 function crc32(bytes: Buffer) {
@@ -1348,7 +1740,10 @@ function validateManifest() {
             entry.threatFamily === "OOXML_RELATIONSHIP_EVASION" ||
             entry.threatFamily === "OOXML_MACRO_EVASION"
           ? "CERTIFIED_M6C"
-          : "NOT_CERTIFIED";
+          : entry.threatFamily === "PDF_INCREMENTAL_UPDATE_EVASION" ||
+              entry.threatFamily === "PDF_XREF_EVASION"
+            ? "CERTIFIED_M6D2"
+            : "NOT_CERTIFIED";
 
     assert(
       entry.certificationStatus === expectedCertification,
@@ -1557,6 +1952,88 @@ function validateM6CCertificationCases() {
   );
 }
 
+function validateM6D2CertificationCases() {
+  const caseIds = new Set<string>();
+  const familyCounts = new Map<ThreatFamily, number>();
+
+  assert(
+    M6D2_CERTIFICATION_CASES.length === 12,
+    "M6D2 must execute the exact twelve-case PDF revision/xref authority certification matrix.",
+  );
+
+  for (const testCase of M6D2_CERTIFICATION_CASES) {
+    assert(
+      Object.isFrozen(testCase),
+      `M6D2 case ${testCase.caseId} must be immutable.`,
+    );
+    assert(
+      /^HDS-M6D2-\d{3}-[A-Z0-9-]+$/.test(testCase.caseId),
+      `M6D2 case id is invalid: ${testCase.caseId}`,
+    );
+    assert(
+      !caseIds.has(testCase.caseId),
+      `Duplicate M6D2 case id: ${testCase.caseId}`,
+    );
+    assert(
+      testCase.threatFamily === "PDF_INCREMENTAL_UPDATE_EVASION" ||
+        testCase.threatFamily === "PDF_XREF_EVASION",
+      `${testCase.caseId} must certify only the bounded M6D2 PDF authority families.`,
+    );
+    assert(
+      testCase.format === "PDF" &&
+        testCase.provenance === "DETERMINISTIC_GENERATED",
+      `${testCase.caseId} must be a deterministic generated PDF fixture.`,
+    );
+    assert(
+      testCase.certificationPhase === "M6D" &&
+        testCase.certificationCredit === true,
+      `${testCase.caseId} must earn explicit M6D2 certification credit.`,
+    );
+    assert(
+      testCase.authorityImplication === "NO_CLEAN_AUTHORITY",
+      `${testCase.caseId} must preserve the no-CLEAN authority boundary.`,
+    );
+    assert(
+      testCase.expectedDetectedContainer === "PDF" &&
+        testCase.expectedSignatureKind === "PDF_HEADER",
+      `${testCase.caseId} must preserve exact PDF identity.`,
+    );
+    assert(
+      testCase.expectedRuleId === null,
+      `${testCase.caseId} must fail/pass at parser authority rather than invent a new M4 threat rule.`,
+    );
+    assert(
+      testCase.attackTechnique.trim().length >= 80,
+      `${testCase.caseId} must describe the revision/xref ambiguity precisely.`,
+    );
+
+    familyCounts.set(
+      testCase.threatFamily,
+      (familyCounts.get(testCase.threatFamily) ?? 0) + 1,
+    );
+    caseIds.add(testCase.caseId);
+  }
+
+  assert(
+    familyCounts.get("PDF_INCREMENTAL_UPDATE_EVASION") === 5,
+    "PDF incremental-update evasion must have exactly five M6D2 certification cases.",
+  );
+  assert(
+    familyCounts.get("PDF_XREF_EVASION") === 7,
+    "PDF xref evasion must have exactly seven M6D2 certification cases.",
+  );
+  assert(
+    M6D2_CERTIFICATION_CASES.filter(
+      (testCase) => testCase.benignControl,
+    ).length === 1,
+    "M6D2 must preserve one ordinary incremental-update benign control.",
+  );
+  assert(
+    Object.isFrozen(M6D2_CERTIFICATION_CASES),
+    "M6D2 certification registry must be immutable.",
+  );
+}
+
 function validateRulePackBoundary() {
   assert(
     HEHXAGON_DOCUMENT_SECURITY_RULE_IDS.length === 21,
@@ -1583,8 +2060,8 @@ function validateRulePackBoundary() {
 
   assert(
     HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION ===
-      "0.4.3-m6d1",
-    "M6D1 must run the PDF dictionary-ambiguity repair while preserving the M4 rule pack.",
+      "0.4.4-m6d2",
+    "M6D2 must run the bounded PDF revision/xref authority repair while preserving the M4 rule pack.",
   );
 }
 
@@ -2152,17 +2629,167 @@ async function executeM6D1ParserAmbiguityRepair() {
   } as const;
 }
 
+async function executeM6D2RevisionXrefAuthorityCertification() {
+  const maliciousBase = buildM6D2ClassicFixture({
+    objectBodies: [
+      "<< /Type /Catalog /Pages 2 0 R >>",
+      "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+      "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>",
+      "<< /S /JavaScript /JS (HDS-M6D2-OLDER-ACTIVE) >>",
+    ],
+  });
+
+  const newestReplacement = appendM6D2IncrementalObject({
+    base: maliciousBase,
+    objectNumber: 4,
+    body: "<< /Type /Example >>",
+    size: 5,
+  });
+
+  const newestFree = appendM6D2FreeEntry({
+    base: maliciousBase,
+    objectNumber: 4,
+    size: 5,
+  });
+
+  const cycleBase = buildM6D2ClassicFixture();
+  const cycleOffset = cycleBase.bytes.length;
+  const prevCycle = Buffer.concat([
+    cycleBase.bytes,
+    Buffer.from(
+      `xref\n0 1\n0000000000 65535 f \n` +
+        `trailer\n<< /Size 4 /Root 1 0 R /Prev ${cycleOffset} >>\n` +
+        `startxref\n${cycleOffset}\n%%EOF\n`,
+      "latin1",
+    ),
+  ]);
+
+  const invalidPrevBase = buildM6D2ClassicFixture();
+  const invalidPrev = appendM6D2RawClassicUpdate({
+    base: invalidPrevBase,
+    xrefBody: "xref\n0 1\n0000000000 65535 f \n",
+    trailerBody: "/Size 4 /Root 1 0 R /Prev /Bad",
+  });
+
+  const invalidXrefStmBase = buildM6D2ClassicFixture();
+  const invalidXrefStm = appendM6D2RawClassicUpdate({
+    base: invalidXrefStmBase,
+    xrefBody: "xref\n0 1\n0000000000 65535 f \n",
+    trailerBody: "/Size 4 /Root 1 0 R /XRefStm /Bad",
+  });
+
+  const duplicateBase = buildM6D2ClassicFixture();
+  const duplicateXrefOffset = duplicateBase.bytes.length;
+  const duplicateClassicXref = Buffer.concat([
+    duplicateBase.bytes,
+    Buffer.from(
+      "xref\n1 2\n" +
+        `${String(duplicateBase.objectOffsets[1]).padStart(10, "0")} 00000 n \n` +
+        `${String(duplicateBase.objectOffsets[2]).padStart(10, "0")} 00000 n \n` +
+        "2 1\n" +
+        `${String(duplicateBase.objectOffsets[2]).padStart(10, "0")} 00000 n \n` +
+        `trailer\n<< /Size 4 /Root 1 0 R /Prev ${duplicateBase.xrefOffset} >>\n` +
+        `startxref\n${duplicateXrefOffset}\n%%EOF\n`,
+      "latin1",
+    ),
+  ]);
+
+  const hybridConflict = buildM6D2HybridConflictPdf();
+
+  const rootGenerationMismatch = buildM6D2ClassicFixture({
+    rootGeneration: 1,
+  }).bytes;
+
+  const pagesGenerationMismatch = buildM6D2ClassicFixture({
+    objectBodies: [
+      "<< /Type /Catalog /Pages 2 1 R >>",
+      "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+      "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>",
+    ],
+  }).bytes;
+
+  const lengthGenerationMismatch = buildM6D2LengthGenerationMismatchPdf();
+
+  const sizeContradiction = buildM6D2ClassicFixture({
+    sizeOverride: 3,
+  }).bytes;
+
+  const ordinaryBase = buildM6D2ClassicFixture();
+  const ordinaryIncremental = appendM6D2IncrementalObject({
+    base: ordinaryBase,
+    objectNumber: 4,
+    body: "<< /Type /Example >>",
+    size: 5,
+  });
+
+  const fixtureBytes = [
+    newestReplacement,
+    newestFree,
+    prevCycle,
+    invalidPrev,
+    invalidXrefStm,
+    duplicateClassicXref,
+    hybridConflict,
+    rootGenerationMismatch,
+    pagesGenerationMismatch,
+    lengthGenerationMismatch,
+    sizeContradiction,
+    ordinaryIncremental,
+  ] as const;
+
+  const results: NativeDocumentScannerResult[] = [];
+
+  for (let index = 0; index < fixtureBytes.length; index += 1) {
+    const result = await inspectPdf({ bytes: fixtureBytes[index]! });
+    const contract = M6D2_CERTIFICATION_CASES[index]!;
+    assertResultMatchesContract(result, contract);
+
+    if (contract.expectedVerdict === "FAILED") {
+      assert(
+        result.rulePackEvaluation === null,
+        `${contract.caseId} must fail before the M4 rule pack can grant structural-pass evidence.`,
+      );
+    }
+
+    results.push(result);
+  }
+
+  for (const index of [0, 1, 11] as const) {
+    const result = results[index]!;
+    assert(
+      result.pdfStructuralInspectionComplete === true &&
+        result.rulePackEvaluation?.outcome === "PASS" &&
+        result.pdfStructuralEvidence?.javascriptDetected === false &&
+        result.pdfStructuralEvidence.incrementalUpdates === 1,
+      `${M6D2_CERTIFICATION_CASES[index]!.caseId} must preserve a complete one-update PDF pass without stale JavaScript authority.`,
+    );
+  }
+
+  assert(
+    results.every(
+      (result) =>
+        String(result.verdict) !== "CLEAN" &&
+        result.inspectionComplete === false,
+    ),
+    "M6D2 certification must preserve the no-CLEAN authority boundary.",
+  );
+
+  return { results } as const;
+}
+
 async function run() {
   validateManifest();
   validateCaseContract();
   validateM6BCertificationCases();
   validateM6CCertificationCases();
+  validateM6D2CertificationCases();
   validateRulePackBoundary();
 
   const sentinelResults = await executeSentinels();
   const m6b = await executeM6BCertification();
   const m6c = await executeM6CCertification();
   const m6d1 = await executeM6D1ParserAmbiguityRepair();
+  const m6d2 = await executeM6D2RevisionXrefAuthorityCertification();
 
   const sentinelSummary =
     HARNESS_SENTINEL_CASES.map((testCase, index) =>
@@ -2236,6 +2863,31 @@ async function run() {
       }),
     );
 
+  const m6d2Summary =
+    M6D2_CERTIFICATION_CASES.map((testCase, index) =>
+      Object.freeze({
+        caseId: testCase.caseId,
+        threatFamily: testCase.threatFamily,
+        benignControl: testCase.benignControl,
+        certificationCredit: testCase.certificationCredit,
+        expectedVerdict: testCase.expectedVerdict,
+        actualVerdict: m6d2.results[index]!.verdict,
+        expectedReasonCode: testCase.expectedReasonCode,
+        reasonMatched:
+          m6d2.results[index]!.reasonCodes.includes(
+            testCase.expectedReasonCode,
+          ),
+        expectedDetectedContainer:
+          testCase.expectedDetectedContainer,
+        actualDetectedContainer:
+          m6d2.results[index]!.identityEvidence.detectedContainer,
+        expectedSignatureKind:
+          testCase.expectedSignatureKind,
+        actualSignatureKind:
+          m6d2.results[index]!.identityEvidence.signatureKind,
+      }),
+    );
+
   const m6bCertifiedThreatFamilies =
     THREAT_FAMILY_MANIFEST
       .filter(
@@ -2249,6 +2901,15 @@ async function run() {
       .filter(
         (entry) =>
           entry.certificationStatus === "CERTIFIED_M6C",
+      )
+      .map((entry) => entry.threatFamily);
+
+
+  const m6d2CertifiedThreatFamilies =
+    THREAT_FAMILY_MANIFEST
+      .filter(
+        (entry) =>
+          entry.certificationStatus === "CERTIFIED_M6D2",
       )
       .map((entry) => entry.threatFamily);
 
@@ -2272,11 +2933,21 @@ async function run() {
   );
 
   assert(
+    m6d2CertifiedThreatFamilies.length === 2 &&
+      m6d2CertifiedThreatFamilies.includes("PDF_INCREMENTAL_UPDATE_EVASION") &&
+      m6d2CertifiedThreatFamilies.includes("PDF_XREF_EVASION"),
+    "M6D2 must certify exactly incremental-update and xref authority evasion.",
+  );
+
+  assert(
     m6dThreatFamilies.length === 6 &&
-      m6dThreatFamilies.every(
+      m6dThreatFamilies.filter(
+        (entry) => entry.certificationStatus === "CERTIFIED_M6D2",
+      ).length === 2 &&
+      m6dThreatFamilies.filter(
         (entry) => entry.certificationStatus === "NOT_CERTIFIED",
-      ),
-    "M6D1 repairs one parser ambiguity and must not certify the six M6D threat families.",
+      ).length === 4,
+    "M6D2 must leave the four later PDF evasion families uncertified.",
   );
 
   assert(
@@ -2303,6 +2974,11 @@ async function run() {
         (result) =>
           String(result.verdict) !== "CLEAN" &&
           result.inspectionComplete === false,
+      ) &&
+      m6d2.results.every(
+        (result) =>
+          String(result.verdict) !== "CLEAN" &&
+          result.inspectionComplete === false,
       ),
     "M6 execution must never grant CLEAN or completed document-trust authority.",
   );
@@ -2312,12 +2988,14 @@ async function run() {
       {
         ok: true,
         event:
-          "HDS_M6D1_PDF_DICTIONARY_AMBIGUITY_REPAIR_PASSED",
+          "HDS_M6D2_PDF_REVISION_XREF_AUTHORITY_CERTIFICATION_PASSED",
         corpusSchemaVersion:
           HDS_M6_ADVERSARIAL_CORPUS_SCHEMA_VERSION,
         harnessVersion:
-          HDS_M6D1_HARNESS_VERSION,
+          HDS_M6D2_HARNESS_VERSION,
         priorHarnessVersion:
+          HDS_M6D1_HARNESS_VERSION,
+        priorOoxmlHarnessVersion:
           HDS_M6C_HARNESS_VERSION,
         scannerEngine:
           HEHXAGON_DOCUMENT_SECURITY_ENGINE,
@@ -2342,6 +3020,8 @@ async function run() {
         m6bCertificationComplete: true,
         m6cCertifiedThreatFamilies,
         m6cCertificationComplete: true,
+        m6d2CertifiedThreatFamilies,
+        m6d2CertificationComplete: true,
         ooxmlNormalizationInvariant:
           "SINGLE_PASS_NAMED_DECIMAL_AND_HEX_XML_ATTRIBUTE_ENTITIES",
         identityPrecedenceInvariant:
@@ -2397,7 +3077,6 @@ async function run() {
           m6cSummary,
         m6d1ParserAmbiguityRepairComplete: true,
         m6d1RepairCaseCount: 3,
-        m6dCertificationComplete: false,
         m6d1Results: [
           {
             caseId: "HDS-M6D1-001-DUPLICATE-ACTION-KEY",
@@ -2428,6 +3107,28 @@ async function run() {
             ),
           },
         ],
+        m6d2RevisionXrefAuthorityRepairComplete: true,
+        m6d2CaseCount:
+          M6D2_CERTIFICATION_CASES.length,
+        m6d2CertificationCredit:
+          M6D2_CERTIFICATION_CASES.filter(
+            (testCase) =>
+              testCase.certificationCredit,
+          ).length,
+        m6d2BenignControlCount:
+          M6D2_CERTIFICATION_CASES.filter(
+            (testCase) =>
+              testCase.benignControl,
+          ).length,
+        m6d2Results:
+          m6d2Summary,
+        m6dCertificationComplete: false,
+        remainingM6dThreatFamilies:
+          m6dThreatFamilies
+            .filter(
+              (entry) => entry.certificationStatus === "NOT_CERTIFIED",
+            )
+            .map((entry) => entry.threatFamily),
         adversarialCertificationComplete: false,
         cleanAuthorityGranted: false,
         immutablePromotionAuthorityGranted: false,
@@ -2444,11 +3145,11 @@ run().catch((error) => {
       {
         ok: false,
         event:
-          "HDS_M6D1_PDF_DICTIONARY_AMBIGUITY_REPAIR_FAILED",
+          "HDS_M6D2_PDF_REVISION_XREF_AUTHORITY_CERTIFICATION_FAILED",
         errorCode:
           error instanceof Error
             ? error.message
-            : "M6D1_UNKNOWN_FAILURE",
+            : "M6D2_UNKNOWN_FAILURE",
       },
       null,
       2,
