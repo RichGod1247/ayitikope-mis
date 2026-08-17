@@ -1551,27 +1551,91 @@ type PdfThreatCounters = {
   unsafeUriActionDetected: boolean;
 };
 
+const PDF_STANDARD_ACTION_NAMES = new Set([
+  "GoTo",
+  "GoToR",
+  "GoToE",
+  "Launch",
+  "Thread",
+  "URI",
+  "Sound",
+  "Movie",
+  "Hide",
+  "Named",
+  "SubmitForm",
+  "ResetForm",
+  "ImportData",
+  "JavaScript",
+  "SetOCGState",
+  "Rendition",
+  "Trans",
+  "GoTo3DView",
+  "RichMediaExecute",
+]);
+
+type ResolvePdfReference = (
+  reference: PdfRef,
+) => PdfValue | PdfStructuralInspectionResult;
+
+function isStructuralResult(
+  value: PdfValue | PdfStructuralInspectionResult,
+): value is PdfStructuralInspectionResult {
+  return value !== null && typeof value === "object" && "ok" in value;
+}
+
 function inspectValue(args: {
   value: PdfValue;
   counters: PdfThreatCounters;
-}): void {
-  const { value, counters } = args;
+  resolveReference: ResolvePdfReference;
+}): PdfStructuralInspectionResult | null {
+  const { value, counters, resolveReference } = args;
 
-  if (!value || typeof value !== "object") return;
+  if (!value || typeof value !== "object") return null;
 
   if (value.kind === "array") {
     for (const nested of value.values) {
-      inspectValue({ value: nested, counters });
+      const nestedResult = inspectValue({
+        value: nested,
+        counters,
+        resolveReference,
+      });
+      if (nestedResult) return nestedResult;
     }
-    return;
+    return null;
   }
 
-  if (value.kind !== "dict") return;
+  if (value.kind !== "dict") return null;
 
   const values = value.values;
   const type = nameValue(values.get("Type"));
   const subtype = nameValue(values.get("Subtype"));
-  const action = nameValue(values.get("S"));
+  const rawAction = values.get("S");
+  const actionReference = refValue(rawAction);
+  let actionValue = rawAction;
+
+  if (actionReference) {
+    const resolved = resolveReference(actionReference);
+    if (isStructuralResult(resolved)) return resolved;
+    actionValue = resolved;
+  }
+
+  const action = nameValue(actionValue);
+
+  if (type === "Action") {
+    if (!action) {
+      return failed(
+        "PDF_OBJECT_SYNTAX_INVALID",
+        "A PDF action dictionary must resolve S to a supported action name.",
+      );
+    }
+
+    if (!PDF_STANDARD_ACTION_NAMES.has(action)) {
+      return failed(
+        "PDF_OBJECT_SYNTAX_INVALID",
+        "A PDF action dictionary uses an unsupported action subtype that cannot be inspected safely.",
+      );
+    }
+  }
 
   if (values.has("OpenAction")) counters.openActionDetected = true;
   if (values.has("AA")) counters.additionalActionDetected = true;
@@ -1593,7 +1657,11 @@ function inspectValue(args: {
     subtype === "RichMedia" ||
     subtype === "Movie" ||
     subtype === "Sound" ||
-    subtype === "3D"
+    subtype === "3D" ||
+    action === "Sound" ||
+    action === "Movie" ||
+    action === "GoTo3DView" ||
+    action === "RichMediaExecute"
   ) {
     counters.richMediaDetected = true;
   }
@@ -1629,8 +1697,15 @@ function inspectValue(args: {
   }
 
   for (const nested of values.values()) {
-    inspectValue({ value: nested, counters });
+    const nestedResult = inspectValue({
+      value: nested,
+      counters,
+      resolveReference,
+    });
+    if (nestedResult) return nestedResult;
   }
+
+  return null;
 }
 
 export function inspectPdfStructuralSecurity(args: {
@@ -2371,7 +2446,18 @@ export function inspectPdfStructuralSecurity(args: {
     if ("ok" in parsed) return parsed;
     if (entry.kind === "compressed") compressedObjectCount += 1;
 
-    inspectValue({ value: parsed.value, counters });
+    const valueInspection = inspectValue({
+      value: parsed.value,
+      counters,
+      resolveReference: (reference) => {
+        const resolved = parseObject(
+          reference.objectNumber,
+          reference.generation,
+        );
+        return "ok" in resolved ? resolved : resolved.value;
+      },
+    });
+    if (valueInspection) return valueInspection;
   }
 
   return {

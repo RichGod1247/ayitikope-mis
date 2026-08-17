@@ -48,6 +48,9 @@ export const HDS_M6D2_HARNESS_VERSION =
 export const HDS_M6D3_HARNESS_VERSION =
   "HDS-M6D3-HARNESS-V1" as const;
 
+export const HDS_M6D4_HARNESS_VERSION =
+  "HDS-M6D4-HARNESS-V1" as const;
+
 const ONE_MEBIBYTE = 1024 * 1024;
 
 const ARCHIVE_LIMITS: NativeDocumentArchiveLimits = Object.freeze({
@@ -123,7 +126,8 @@ type ThreatFamilyManifestEntry = Readonly<{
     | "CERTIFIED_M6B"
     | "CERTIFIED_M6C"
     | "CERTIFIED_M6D2"
-    | "CERTIFIED_M6D3";
+    | "CERTIFIED_M6D3"
+    | "CERTIFIED_M6D4";
   objective: string;
 }>;
 
@@ -205,7 +209,7 @@ const THREAT_FAMILY_MANIFEST: readonly ThreatFamilyManifestEntry[] =
     Object.freeze({
       threatFamily: "PDF_ACTION_EVASION",
       plannedPhase: "M6D",
-      certificationStatus: "NOT_CERTIFIED",
+      certificationStatus: "CERTIFIED_M6D4",
       objective:
         "Represent prohibited PDF actions through indirect, nested, encoded and revision-dependent structures.",
     }),
@@ -1068,6 +1072,199 @@ const M6D3_CERTIFICATION_CASES: readonly CorpusCaseContract[] =
       expectedDetectedContainer: "PDF",
       expectedSignatureKind: "PDF_HEADER",
       benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+  ]);
+
+const M6D4_CERTIFICATION_CASES: readonly CorpusCaseContract[] =
+  Object.freeze([
+    Object.freeze({
+      caseId: "HDS-M6D4-001-BENIGN-DIRECT-GOTO-CONTROL",
+      threatFamily: "PDF_ACTION_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A standard internal GoTo action remains an allowed benign control so action hardening does not over-block ordinary in-document navigation semantics.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D4-002-ENCODED-JAVASCRIPT-ACTION-NAME",
+      threatFamily: "PDF_ACTION_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A JavaScript action encodes one character of its S name with PDF name hexadecimal escaping and must normalize to the same prohibited action semantics.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_JAVASCRIPT_BLOCKED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D4-003-DIRECT-NEXT-JAVASCRIPT",
+      threatFamily: "PDF_ACTION_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "An otherwise internal GoTo action carries a direct nested Next action dictionary whose JavaScript subtype must remain visible to recursive structural inspection.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_JAVASCRIPT_BLOCKED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D4-004-INDIRECT-NEXT-LAUNCH",
+      threatFamily: "PDF_ACTION_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "An internal GoTo action points Next at a separate active Launch action object and must remain blocked even when the dangerous chained action is indirect.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_LAUNCH_ACTION_BLOCKED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D4-005-INDIRECT-S-LAUNCH",
+      threatFamily: "PDF_ACTION_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A Type Action dictionary resolves S through an indirect name object containing Launch, proving action subtype authority cannot depend on direct-name syntax alone.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_LAUNCH_ACTION_BLOCKED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D4-006-INDIRECT-S-GOTOR",
+      threatFamily: "PDF_ACTION_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A Type Action dictionary resolves S through an indirect GoToR name so remote-navigation capability must be classified identically to a directly encoded prohibited action subtype.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_EXTERNAL_ACTION_BLOCKED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D4-007-INDIRECT-S-SUBMITFORM",
+      threatFamily: "PDF_ACTION_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A Type Action dictionary resolves S through an indirect SubmitForm name and must retain the existing blocked external-action policy after indirect resolution.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_EXTERNAL_ACTION_BLOCKED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D4-008-INDIRECT-S-GENERATION-MISMATCH",
+      threatFamily: "PDF_ACTION_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "An action S reference requests generation one while the active name object exists only at generation zero, requiring generation-aware fail-closed resolution before action policy evaluation.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_OBJECT_OFFSET_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D4-009-SOUND-ACTION",
+      threatFamily: "PDF_ACTION_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A standard Sound action uses action subtype semantics rather than annotation Subtype Sound and must still produce the existing rich-media blocking evidence.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_RICH_MEDIA_BLOCKED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D4-010-UNKNOWN-EXPLICIT-ACTION-SUBTYPE",
+      threatFamily: "PDF_ACTION_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "An explicit Type Action dictionary declares an unknown vendor-specific S subtype, which must fail closed because HDS cannot safely certify semantics it does not understand.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_OBJECT_SYNTAX_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D4-011-BENIGN-INDIRECT-S-GOTO-CONTROL",
+      threatFamily: "PDF_ACTION_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A valid internal GoTo action resolves S through an indirect name object and must remain accepted, proving indirect action resolution does not become a blanket false-positive block.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: true,
       provenance: "DETERMINISTIC_GENERATED",
       certificationPhase: "M6D",
       certificationCredit: true,
@@ -2188,7 +2385,9 @@ function validateManifest() {
             ? "CERTIFIED_M6D2"
             : entry.threatFamily === "PDF_OBJECT_STREAM_EVASION"
               ? "CERTIFIED_M6D3"
-              : "NOT_CERTIFIED";
+              : entry.threatFamily === "PDF_ACTION_EVASION"
+                ? "CERTIFIED_M6D4"
+                : "NOT_CERTIFIED";
 
     assert(
       entry.certificationStatus === expectedCertification,
@@ -2547,6 +2746,70 @@ function validateM6D3CertificationCases() {
   );
 }
 
+function validateM6D4CertificationCases() {
+  const caseIds = new Set<string>();
+
+  assert(
+    M6D4_CERTIFICATION_CASES.length === 11,
+    "M6D4 must execute the exact eleven-case PDF action-evasion certification matrix.",
+  );
+
+  for (const testCase of M6D4_CERTIFICATION_CASES) {
+    assert(
+      Object.isFrozen(testCase),
+      `M6D4 case ${testCase.caseId} must be immutable.`,
+    );
+    assert(
+      /^HDS-M6D4-\d{3}-[A-Z0-9-]+$/.test(testCase.caseId),
+      `M6D4 case id is invalid: ${testCase.caseId}`,
+    );
+    assert(
+      !caseIds.has(testCase.caseId),
+      `Duplicate M6D4 case id: ${testCase.caseId}`,
+    );
+    assert(
+      testCase.threatFamily === "PDF_ACTION_EVASION",
+      `${testCase.caseId} must certify only PDF action evasion.`,
+    );
+    assert(
+      testCase.format === "PDF" &&
+        testCase.provenance === "DETERMINISTIC_GENERATED",
+      `${testCase.caseId} must be a deterministic generated PDF fixture.`,
+    );
+    assert(
+      testCase.certificationPhase === "M6D" &&
+        testCase.certificationCredit === true,
+      `${testCase.caseId} must earn explicit M6D4 certification credit.`,
+    );
+    assert(
+      testCase.authorityImplication === "NO_CLEAN_AUTHORITY",
+      `${testCase.caseId} must preserve the no-CLEAN authority boundary.`,
+    );
+    assert(
+      testCase.expectedDetectedContainer === "PDF" &&
+        testCase.expectedSignatureKind === "PDF_HEADER",
+      `${testCase.caseId} must preserve exact PDF identity.`,
+    );
+    assert(
+      testCase.attackTechnique.trim().length >= 80,
+      `${testCase.caseId} must describe the action-evasion technique precisely.`,
+    );
+
+    caseIds.add(testCase.caseId);
+  }
+
+  assert(
+    M6D4_CERTIFICATION_CASES.filter(
+      (testCase) => testCase.benignControl,
+    ).length === 2,
+    "M6D4 must preserve exactly two internal-navigation benign controls.",
+  );
+  assert(
+    Object.isFrozen(M6D4_CERTIFICATION_CASES),
+    "M6D4 certification registry must be immutable.",
+  );
+}
+
 function validateRulePackBoundary() {
   assert(
     HEHXAGON_DOCUMENT_SECURITY_RULE_IDS.length === 21,
@@ -2573,8 +2836,8 @@ function validateRulePackBoundary() {
 
   assert(
     HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION ===
-      "0.4.5-m6d3",
-    "M6D3 must run the bounded PDF object-stream authority repair while preserving the M4 rule pack.",
+      "0.4.6-m6d4",
+    "M6D4 must run the bounded PDF action-authority repair while preserving the M4 rule pack.",
   );
 }
 
@@ -3365,6 +3628,109 @@ async function executeM6D3ObjectStreamEvasionCertification() {
   return { results } as const;
 }
 
+async function executeM6D4ActionEvasionCertification() {
+  const baseObjects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>",
+  ] as const;
+
+  const fixtures = [
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Action /S /GoTo /D [3 0 R /Fit] >>",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Action /S /J#61vaScript /JS (HDS-M6D4) >>",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Action /S /GoTo /D [3 0 R /Fit] /Next << /Type /Action /S /JavaScript /JS (HDS-M6D4-NEXT) >> >>",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Action /S /GoTo /D [3 0 R /Fit] /Next 5 0 R >>",
+      "<< /Type /Action /S /Launch /F (payload.exe) >>",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Action /S 5 0 R /F (payload.exe) >>",
+      "/Launch",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Action /S 5 0 R /F (remote.pdf) >>",
+      "/GoToR",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Action /S 5 0 R /F (https://example.invalid/submit) >>",
+      "/SubmitForm",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Action /S 5 1 R /F (payload.exe) >>",
+      "/Launch",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Action /S /Sound /Sound 5 0 R >>",
+      "<< /Type /Example >>",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Action /S /HdsUnknownVendorAction >>",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Action /S 5 0 R /D [3 0 R /Fit] >>",
+      "/GoTo",
+    ]),
+  ] as const;
+
+  const results: NativeDocumentScannerResult[] = [];
+
+  for (let index = 0; index < fixtures.length; index += 1) {
+    const result = await inspectPdf({ bytes: fixtures[index]! });
+    const contract = M6D4_CERTIFICATION_CASES[index]!;
+    assertResultMatchesContract(result, contract);
+
+    if (contract.expectedVerdict === "FAILED") {
+      assert(
+        result.rulePackEvaluation === null,
+        `${contract.caseId} must fail before rule-pack trust evaluation.`,
+      );
+    }
+
+    results.push(result);
+  }
+
+  for (const index of [0, 10] as const) {
+    const result = results[index]!;
+    assert(
+      result.pdfStructuralInspectionComplete === true &&
+        result.rulePackEvaluation?.outcome === "PASS" &&
+        result.pdfStructuralEvidence?.javascriptDetected === false &&
+        result.pdfStructuralEvidence.launchActionDetected === false &&
+        result.pdfStructuralEvidence.blockedExternalActionDetected === false &&
+        result.pdfStructuralEvidence.richMediaDetected === false,
+      `${M6D4_CERTIFICATION_CASES[index]!.caseId} must remain an allowed internal-navigation control.`,
+    );
+  }
+
+  assert(
+    results.every(
+      (result) =>
+        String(result.verdict) !== "CLEAN" &&
+        result.inspectionComplete === false,
+    ),
+    "M6D4 certification must preserve the no-CLEAN authority boundary.",
+  );
+
+  return { results } as const;
+}
+
 async function run() {
   validateManifest();
   validateCaseContract();
@@ -3372,6 +3738,7 @@ async function run() {
   validateM6CCertificationCases();
   validateM6D2CertificationCases();
   validateM6D3CertificationCases();
+  validateM6D4CertificationCases();
   validateRulePackBoundary();
 
   const sentinelResults = await executeSentinels();
@@ -3380,6 +3747,7 @@ async function run() {
   const m6d1 = await executeM6D1ParserAmbiguityRepair();
   const m6d2 = await executeM6D2RevisionXrefAuthorityCertification();
   const m6d3 = await executeM6D3ObjectStreamEvasionCertification();
+  const m6d4 = await executeM6D4ActionEvasionCertification();
 
   const sentinelSummary =
     HARNESS_SENTINEL_CASES.map((testCase, index) =>
@@ -3503,6 +3871,31 @@ async function run() {
       }),
     );
 
+  const m6d4Summary =
+    M6D4_CERTIFICATION_CASES.map((testCase, index) =>
+      Object.freeze({
+        caseId: testCase.caseId,
+        threatFamily: testCase.threatFamily,
+        benignControl: testCase.benignControl,
+        certificationCredit: testCase.certificationCredit,
+        expectedVerdict: testCase.expectedVerdict,
+        actualVerdict: m6d4.results[index]!.verdict,
+        expectedReasonCode: testCase.expectedReasonCode,
+        reasonMatched:
+          m6d4.results[index]!.reasonCodes.includes(
+            testCase.expectedReasonCode,
+          ),
+        expectedDetectedContainer:
+          testCase.expectedDetectedContainer,
+        actualDetectedContainer:
+          m6d4.results[index]!.identityEvidence.detectedContainer,
+        expectedSignatureKind:
+          testCase.expectedSignatureKind,
+        actualSignatureKind:
+          m6d4.results[index]!.identityEvidence.signatureKind,
+      }),
+    );
+
   const m6bCertifiedThreatFamilies =
     THREAT_FAMILY_MANIFEST
       .filter(
@@ -3533,6 +3926,14 @@ async function run() {
       .filter(
         (entry) =>
           entry.certificationStatus === "CERTIFIED_M6D3",
+      )
+      .map((entry) => entry.threatFamily);
+
+  const m6d4CertifiedThreatFamilies =
+    THREAT_FAMILY_MANIFEST
+      .filter(
+        (entry) =>
+          entry.certificationStatus === "CERTIFIED_M6D4",
       )
       .map((entry) => entry.threatFamily);
 
@@ -3569,6 +3970,12 @@ async function run() {
   );
 
   assert(
+    m6d4CertifiedThreatFamilies.length === 1 &&
+      m6d4CertifiedThreatFamilies.includes("PDF_ACTION_EVASION"),
+    "M6D4 must certify exactly PDF action evasion.",
+  );
+
+  assert(
     m6dThreatFamilies.length === 6 &&
       m6dThreatFamilies.filter(
         (entry) => entry.certificationStatus === "CERTIFIED_M6D2",
@@ -3577,9 +3984,12 @@ async function run() {
         (entry) => entry.certificationStatus === "CERTIFIED_M6D3",
       ).length === 1 &&
       m6dThreatFamilies.filter(
+        (entry) => entry.certificationStatus === "CERTIFIED_M6D4",
+      ).length === 1 &&
+      m6dThreatFamilies.filter(
         (entry) => entry.certificationStatus === "NOT_CERTIFIED",
-      ).length === 3,
-    "M6D3 must leave exactly the action, URI and embedded-content PDF evasion families uncertified.",
+      ).length === 2,
+    "M6D4 must leave exactly URI and embedded-content PDF evasion uncertified.",
   );
 
   assert(
@@ -3616,6 +4026,11 @@ async function run() {
         (result) =>
           String(result.verdict) !== "CLEAN" &&
           result.inspectionComplete === false,
+      ) &&
+      m6d4.results.every(
+        (result) =>
+          String(result.verdict) !== "CLEAN" &&
+          result.inspectionComplete === false,
       ),
     "M6 execution must never grant CLEAN or completed document-trust authority.",
   );
@@ -3625,13 +4040,13 @@ async function run() {
       {
         ok: true,
         event:
-          "HDS_M6D3_PDF_OBJECT_STREAM_EVASION_CERTIFICATION_PASSED",
+          "HDS_M6D4_PDF_ACTION_EVASION_CERTIFICATION_PASSED",
         corpusSchemaVersion:
           HDS_M6_ADVERSARIAL_CORPUS_SCHEMA_VERSION,
         harnessVersion:
-          HDS_M6D3_HARNESS_VERSION,
+          HDS_M6D4_HARNESS_VERSION,
         priorHarnessVersion:
-          HDS_M6D2_HARNESS_VERSION,
+          HDS_M6D3_HARNESS_VERSION,
         priorOoxmlHarnessVersion:
           HDS_M6C_HARNESS_VERSION,
         scannerEngine:
@@ -3661,6 +4076,8 @@ async function run() {
         m6d2CertificationComplete: true,
         m6d3CertifiedThreatFamilies,
         m6d3CertificationComplete: true,
+        m6d4CertifiedThreatFamilies,
+        m6d4CertificationComplete: true,
         ooxmlNormalizationInvariant:
           "SINGLE_PASS_NAMED_DECIMAL_AND_HEX_XML_ATTRIBUTE_ENTITIES",
         identityPrecedenceInvariant:
@@ -3774,6 +4191,19 @@ async function run() {
           ).length,
         m6d3Results:
           m6d3Summary,
+        m6d4ActionAuthorityRepairComplete: true,
+        m6d4CaseCount:
+          M6D4_CERTIFICATION_CASES.length,
+        m6d4CertificationCredit:
+          M6D4_CERTIFICATION_CASES.filter(
+            (testCase) => testCase.certificationCredit,
+          ).length,
+        m6d4BenignControlCount:
+          M6D4_CERTIFICATION_CASES.filter(
+            (testCase) => testCase.benignControl,
+          ).length,
+        m6d4Results:
+          m6d4Summary,
         m6dCertificationComplete: false,
         remainingM6dThreatFamilies:
           m6dThreatFamilies
@@ -3797,11 +4227,11 @@ run().catch((error) => {
       {
         ok: false,
         event:
-          "HDS_M6D3_PDF_OBJECT_STREAM_EVASION_CERTIFICATION_FAILED",
+          "HDS_M6D4_PDF_ACTION_EVASION_CERTIFICATION_FAILED",
         errorCode:
           error instanceof Error
             ? error.message
-            : "M6D3_UNKNOWN_FAILURE",
+            : "M6D4_UNKNOWN_FAILURE",
       },
       null,
       2,
