@@ -54,6 +54,9 @@ export const HDS_M6D4_HARNESS_VERSION =
 export const HDS_M6D5_HARNESS_VERSION =
   "HDS-M6D5-HARNESS-V1" as const;
 
+export const HDS_M6D5B_HARNESS_VERSION =
+  "HDS-M6D5B-HARNESS-V1" as const;
+
 const ONE_MEBIBYTE = 1024 * 1024;
 
 const ARCHIVE_LIMITS: NativeDocumentArchiveLimits = Object.freeze({
@@ -131,7 +134,8 @@ type ThreatFamilyManifestEntry = Readonly<{
     | "CERTIFIED_M6D2"
     | "CERTIFIED_M6D3"
     | "CERTIFIED_M6D4"
-    | "CERTIFIED_M6D5";
+    | "CERTIFIED_M6D5"
+    | "CERTIFIED_M6D5B";
   objective: string;
 }>;
 
@@ -227,7 +231,7 @@ const THREAT_FAMILY_MANIFEST: readonly ThreatFamilyManifestEntry[] =
     Object.freeze({
       threatFamily: "PDF_EMBEDDED_CONTENT_EVASION",
       plannedPhase: "M6D",
-      certificationStatus: "NOT_CERTIFIED",
+      certificationStatus: "CERTIFIED_M6D5B",
       objective:
         "Hide files, rich media or executable-like payload capability behind indirect structural references.",
     }),
@@ -1489,6 +1493,215 @@ const M6D5_CERTIFICATION_CASES: readonly CorpusCaseContract[] =
     }),
   ]);
 
+const M6D5B_CERTIFICATION_CASES: readonly CorpusCaseContract[] =
+  Object.freeze([
+    Object.freeze({
+      caseId: "HDS-M6D5B-001-BENIGN-INDIRECT-TEXT-ANNOTATION-CONTROL",
+      threatFamily: "PDF_EMBEDDED_CONTENT_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A benign Text annotation resolves its required Subtype through an indirect name object and must remain accepted, proving semantic subtype resolution does not become a blanket annotation block.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D5B-002-DIRECT-FILESPEC-EF",
+      threatFamily: "PDF_EMBEDDED_CONTENT_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A file specification exposes an EF dictionary that points to an embedded-file stream and must deterministically reach the existing embedded-file ingress rule.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_EMBEDDED_FILE_BLOCKED",
+      expectedRuleId: "HDS-PDF-006-EMBEDDED-FILE",
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D5B-003-ENCODED-EF-DICTIONARY-KEY",
+      threatFamily: "PDF_EMBEDDED_CONTENT_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A file specification hides one character of the EF dictionary key using PDF name hexadecimal escaping and must still expose embedded-file capability after name decoding.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_EMBEDDED_FILE_BLOCKED",
+      expectedRuleId: "HDS-PDF-006-EMBEDDED-FILE",
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D5B-004-EMBEDDEDFILES-NAME-TREE",
+      threatFamily: "PDF_EMBEDDED_CONTENT_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "The document catalog advertises an EmbeddedFiles name tree whose file specification points to an embedded stream, and document-level attachment capability must be blocked.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_EMBEDDED_FILE_BLOCKED",
+      expectedRuleId: "HDS-PDF-006-EMBEDDED-FILE",
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D5B-005-FILEATTACHMENT-ANNOTATION-WITH-EF",
+      threatFamily: "PDF_EMBEDDED_CONTENT_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A FileAttachment annotation references a file specification containing EF and must be blocked even when attachment capability is reached through an indirect annotation file-specification reference.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_EMBEDDED_FILE_BLOCKED",
+      expectedRuleId: "HDS-PDF-006-EMBEDDED-FILE",
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D5B-006-ASSOCIATED-FILE-WITH-EF",
+      threatFamily: "PDF_EMBEDDED_CONTENT_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "The catalog associates a file specification through AF while that specification carries EF-backed embedded content, proving associated-file indirection cannot evade the embedded-file rule.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_EMBEDDED_FILE_BLOCKED",
+      expectedRuleId: "HDS-PDF-006-EMBEDDED-FILE",
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D5B-007-DIRECT-RICHMEDIA-SUBTYPE",
+      threatFamily: "PDF_EMBEDDED_CONTENT_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A direct RichMedia annotation subtype must continue to reach the existing rich-media rule, preserving the current block while indirect-subtype semantics are hardened.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_RICH_MEDIA_BLOCKED",
+      expectedRuleId: "HDS-PDF-007-RICH-MEDIA",
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D5B-008-INDIRECT-RICHMEDIA-SUBTYPE",
+      threatFamily: "PDF_EMBEDDED_CONTENT_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A RichMedia annotation stores its required Subtype name in a separate indirect object and must be classified identically to the direct form rather than bypass rich-media evidence.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_RICH_MEDIA_BLOCKED",
+      expectedRuleId: "HDS-PDF-007-RICH-MEDIA",
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D5B-009-INDIRECT-SOUND-SUBTYPE",
+      threatFamily: "PDF_EMBEDDED_CONTENT_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A Sound annotation resolves Subtype through an indirect name while retaining a sound stream reference, and indirect annotation typing must not bypass interactive-media blocking.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_RICH_MEDIA_BLOCKED",
+      expectedRuleId: "HDS-PDF-007-RICH-MEDIA",
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D5B-010-INDIRECT-MOVIE-SUBTYPE",
+      threatFamily: "PDF_EMBEDDED_CONTENT_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A Movie annotation resolves Subtype through an indirect name object and must retain the same rich-media block as a directly declared Movie annotation.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_RICH_MEDIA_BLOCKED",
+      expectedRuleId: "HDS-PDF-007-RICH-MEDIA",
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D5B-011-INDIRECT-3D-SUBTYPE",
+      threatFamily: "PDF_EMBEDDED_CONTENT_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A 3D annotation resolves its required Subtype through an indirect name and must still produce rich-media evidence rather than depend on surface-level direct-name syntax.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "PDF_RICH_MEDIA_BLOCKED",
+      expectedRuleId: "HDS-PDF-007-RICH-MEDIA",
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6D5B-012-INDIRECT-SUBTYPE-GENERATION-MISMATCH",
+      threatFamily: "PDF_EMBEDDED_CONTENT_EVASION",
+      format: "PDF",
+      attackTechnique:
+        "A rich-media annotation requests a non-active generation for its indirect Subtype name, which must fail closed before rule-pack trust instead of falling back to an untyped benign interpretation.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_OBJECT_OFFSET_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6D",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+  ]);
+
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
     throw new Error(`M6C_ASSERTION_FAILED: ${message}`);
@@ -2606,7 +2819,9 @@ function validateManifest() {
                 ? "CERTIFIED_M6D4"
                 : entry.threatFamily === "PDF_URI_EVASION"
                   ? "CERTIFIED_M6D5"
-                  : "NOT_CERTIFIED";
+                  : entry.threatFamily === "PDF_EMBEDDED_CONTENT_EVASION"
+                    ? "CERTIFIED_M6D5B"
+                    : "NOT_CERTIFIED";
 
     assert(
       entry.certificationStatus === expectedCertification,
@@ -3094,6 +3309,70 @@ function validateM6D5CertificationCases() {
   );
 }
 
+function validateM6D5BCertificationCases() {
+  const caseIds = new Set<string>();
+
+  assert(
+    M6D5B_CERTIFICATION_CASES.length === 12,
+    "M6D5B must execute the exact twelve-case PDF embedded-content evasion certification matrix.",
+  );
+
+  for (const testCase of M6D5B_CERTIFICATION_CASES) {
+    assert(
+      Object.isFrozen(testCase),
+      `M6D5B case ${testCase.caseId} must be immutable.`,
+    );
+    assert(
+      /^HDS-M6D5B-\d{3}-[A-Z0-9-]+$/.test(testCase.caseId),
+      `M6D5B case id is invalid: ${testCase.caseId}`,
+    );
+    assert(
+      !caseIds.has(testCase.caseId),
+      `Duplicate M6D5B case id: ${testCase.caseId}`,
+    );
+    assert(
+      testCase.threatFamily === "PDF_EMBEDDED_CONTENT_EVASION",
+      `${testCase.caseId} must certify only PDF embedded-content evasion.`,
+    );
+    assert(
+      testCase.format === "PDF" &&
+        testCase.provenance === "DETERMINISTIC_GENERATED",
+      `${testCase.caseId} must be a deterministic generated PDF fixture.`,
+    );
+    assert(
+      testCase.certificationPhase === "M6D" &&
+        testCase.certificationCredit === true,
+      `${testCase.caseId} must earn explicit M6D5B certification credit.`,
+    );
+    assert(
+      testCase.authorityImplication === "NO_CLEAN_AUTHORITY",
+      `${testCase.caseId} must preserve the no-CLEAN authority boundary.`,
+    );
+    assert(
+      testCase.expectedDetectedContainer === "PDF" &&
+        testCase.expectedSignatureKind === "PDF_HEADER",
+      `${testCase.caseId} must preserve exact PDF identity.`,
+    );
+    assert(
+      testCase.attackTechnique.trim().length >= 80,
+      `${testCase.caseId} must describe the embedded-content evasion technique precisely.`,
+    );
+
+    caseIds.add(testCase.caseId);
+  }
+
+  assert(
+    M6D5B_CERTIFICATION_CASES.filter(
+      (testCase) => testCase.benignControl,
+    ).length === 1,
+    "M6D5B must preserve exactly one benign indirect annotation-subtype control.",
+  );
+  assert(
+    Object.isFrozen(M6D5B_CERTIFICATION_CASES),
+    "M6D5B certification registry must be immutable.",
+  );
+}
+
 function validateRulePackBoundary() {
   assert(
     HEHXAGON_DOCUMENT_SECURITY_RULE_IDS.length === 21,
@@ -3120,8 +3399,8 @@ function validateRulePackBoundary() {
 
   assert(
     HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION ===
-      "0.4.6-m6d4",
-    "M6D5 is a test-only URI certification slice and must preserve the M6D4 engine version and M4 rule pack.",
+      "0.4.7-m6d5b",
+    "M6D5B must run the bounded embedded-content subtype repair while preserving the M4 rule pack.",
   );
 }
 
@@ -4118,6 +4397,151 @@ async function executeM6D5UriEvasionCertification() {
   return { results } as const;
 }
 
+async function executeM6D5BEmbeddedContentEvasionCertification() {
+  const baseObjects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>",
+  ] as const;
+
+  const embeddedStream =
+    "<< /Type /EmbeddedFile /Length 1 >>\nstream\nX\nendstream";
+
+  const soundStream =
+    "<< /R 8000 /C 1 /B 8 /Length 1 >>\nstream\nX\nendstream";
+
+  const threeDStream =
+    "<< /Type /3D /Subtype /U3D /Length 1 >>\nstream\nX\nendstream";
+
+  const fixtures = [
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "/Text",
+      "<< /Type /Annot /Subtype 4 0 R /Rect [0 0 10 10] /Contents (HDS-M6D5B control) >>",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Filespec /F (payload.bin) /EF << /F 5 0 R >> >>",
+      embeddedStream,
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Filespec /F (payload.bin) /E#46 << /F 5 0 R >> >>",
+      embeddedStream,
+    ]),
+    buildM6DClassicPdf([
+      "<< /Type /Catalog /Pages 2 0 R /Names << /EmbeddedFiles << /Names [(payload.bin) 4 0 R] >> >> >>",
+      baseObjects[1],
+      baseObjects[2],
+      "<< /Type /Filespec /F (payload.bin) /EF << /F 5 0 R >> >>",
+      embeddedStream,
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Filespec /F (payload.bin) /EF << /F 6 0 R >> >>",
+      "<< /Type /Annot /Subtype /FileAttachment /Rect [0 0 10 10] /FS 4 0 R >>",
+      embeddedStream,
+    ]),
+    buildM6DClassicPdf([
+      "<< /Type /Catalog /Pages 2 0 R /AF [4 0 R] >>",
+      baseObjects[1],
+      baseObjects[2],
+      "<< /Type /Filespec /F (payload.bin) /EF << /F 5 0 R >> >>",
+      embeddedStream,
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "<< /Type /Annot /Subtype /RichMedia /Rect [0 0 10 10] /RichMediaContent << >> >>",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "/RichMedia",
+      "<< /Type /Annot /Subtype 4 0 R /Rect [0 0 10 10] /RichMediaContent << >> >>",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "/Sound",
+      "<< /Type /Annot /Subtype 4 0 R /Rect [0 0 10 10] /Sound 6 0 R >>",
+      soundStream,
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "/Movie",
+      "<< /Type /Annot /Subtype 4 0 R /Rect [0 0 10 10] /Movie << /F (movie.mov) >> >>",
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "/3D",
+      "<< /Type /Annot /Subtype 4 0 R /Rect [0 0 10 10] /3DD 6 0 R >>",
+      threeDStream,
+    ]),
+    buildM6DClassicPdf([
+      ...baseObjects,
+      "/RichMedia",
+      "<< /Type /Annot /Subtype 4 1 R /Rect [0 0 10 10] /RichMediaContent << >> >>",
+    ]),
+  ] as const;
+
+  const results: NativeDocumentScannerResult[] = [];
+
+  for (let index = 0; index < fixtures.length; index += 1) {
+    const result = await inspectPdf({ bytes: fixtures[index]! });
+    const contract = M6D5B_CERTIFICATION_CASES[index]!;
+    assertResultMatchesContract(result, contract);
+
+    if (contract.expectedVerdict === "FAILED") {
+      assert(
+        result.rulePackEvaluation === null,
+        `${contract.caseId} must fail before rule-pack trust evaluation.`,
+      );
+    }
+
+    results.push(result);
+  }
+
+  const control = results[0]!;
+  assert(
+    control.pdfStructuralInspectionComplete === true &&
+      control.rulePackEvaluation?.outcome === "PASS" &&
+      control.pdfStructuralEvidence?.embeddedFileDetected === false &&
+      control.pdfStructuralEvidence.richMediaDetected === false,
+    "The M6D5B indirect Text annotation control must remain accepted without embedded/rich-media evidence.",
+  );
+
+  for (const index of [1, 2, 3, 4, 5] as const) {
+    const result = results[index]!;
+    assert(
+      result.pdfStructuralEvidence?.embeddedFileDetected === true &&
+        result.rulePackEvaluation?.matchedRules.some(
+          (rule) => rule.ruleId === "HDS-PDF-006-EMBEDDED-FILE",
+        ) === true,
+      `${M6D5B_CERTIFICATION_CASES[index]!.caseId} must reach the existing embedded-file M4 rule.`,
+    );
+  }
+
+  for (const index of [6, 7, 8, 9, 10] as const) {
+    const result = results[index]!;
+    assert(
+      result.pdfStructuralEvidence?.richMediaDetected === true &&
+        result.rulePackEvaluation?.matchedRules.some(
+          (rule) => rule.ruleId === "HDS-PDF-007-RICH-MEDIA",
+        ) === true,
+      `${M6D5B_CERTIFICATION_CASES[index]!.caseId} must reach the existing rich-media M4 rule.`,
+    );
+  }
+
+  assert(
+    results.every(
+      (result) =>
+        String(result.verdict) !== "CLEAN" &&
+        result.inspectionComplete === false,
+    ),
+    "M6D5B certification must preserve the no-CLEAN authority boundary.",
+  );
+
+  return { results } as const;
+}
+
 async function run() {
   validateManifest();
   validateCaseContract();
@@ -4127,6 +4551,7 @@ async function run() {
   validateM6D3CertificationCases();
   validateM6D4CertificationCases();
   validateM6D5CertificationCases();
+  validateM6D5BCertificationCases();
   validateRulePackBoundary();
 
   const sentinelResults = await executeSentinels();
@@ -4137,6 +4562,7 @@ async function run() {
   const m6d3 = await executeM6D3ObjectStreamEvasionCertification();
   const m6d4 = await executeM6D4ActionEvasionCertification();
   const m6d5 = await executeM6D5UriEvasionCertification();
+  const m6d5b = await executeM6D5BEmbeddedContentEvasionCertification();
 
   const sentinelSummary =
     HARNESS_SENTINEL_CASES.map((testCase, index) =>
@@ -4311,6 +4737,31 @@ async function run() {
       }),
     );
 
+  const m6d5bSummary =
+    M6D5B_CERTIFICATION_CASES.map((testCase, index) =>
+      Object.freeze({
+        caseId: testCase.caseId,
+        threatFamily: testCase.threatFamily,
+        benignControl: testCase.benignControl,
+        certificationCredit: testCase.certificationCredit,
+        expectedVerdict: testCase.expectedVerdict,
+        actualVerdict: m6d5b.results[index]!.verdict,
+        expectedReasonCode: testCase.expectedReasonCode,
+        reasonMatched:
+          m6d5b.results[index]!.reasonCodes.includes(
+            testCase.expectedReasonCode,
+          ),
+        expectedDetectedContainer:
+          testCase.expectedDetectedContainer,
+        actualDetectedContainer:
+          m6d5b.results[index]!.identityEvidence.detectedContainer,
+        expectedSignatureKind:
+          testCase.expectedSignatureKind,
+        actualSignatureKind:
+          m6d5b.results[index]!.identityEvidence.signatureKind,
+      }),
+    );
+
   const m6bCertifiedThreatFamilies =
     THREAT_FAMILY_MANIFEST
       .filter(
@@ -4360,6 +4811,14 @@ async function run() {
       )
       .map((entry) => entry.threatFamily);
 
+  const m6d5bCertifiedThreatFamilies =
+    THREAT_FAMILY_MANIFEST
+      .filter(
+        (entry) =>
+          entry.certificationStatus === "CERTIFIED_M6D5B",
+      )
+      .map((entry) => entry.threatFamily);
+
   assert(
     m6bCertifiedThreatFamilies.length === 2 &&
       m6bCertifiedThreatFamilies.includes("IDENTITY_AMBIGUITY") &&
@@ -4405,6 +4864,12 @@ async function run() {
   );
 
   assert(
+    m6d5bCertifiedThreatFamilies.length === 1 &&
+      m6d5bCertifiedThreatFamilies.includes("PDF_EMBEDDED_CONTENT_EVASION"),
+    "M6D5B must certify exactly PDF embedded-content evasion.",
+  );
+
+  assert(
     m6dThreatFamilies.length === 6 &&
       m6dThreatFamilies.filter(
         (entry) => entry.certificationStatus === "CERTIFIED_M6D2",
@@ -4419,9 +4884,12 @@ async function run() {
         (entry) => entry.certificationStatus === "CERTIFIED_M6D5",
       ).length === 1 &&
       m6dThreatFamilies.filter(
+        (entry) => entry.certificationStatus === "CERTIFIED_M6D5B",
+      ).length === 1 &&
+      m6dThreatFamilies.filter(
         (entry) => entry.certificationStatus === "NOT_CERTIFIED",
-      ).length === 1,
-    "M6D5 must leave exactly embedded-content PDF evasion uncertified.",
+      ).length === 0,
+    "M6D5B must certify the final PDF threat family while leaving formal M6D closeout to M6D6.",
   );
 
   assert(
@@ -4468,6 +4936,11 @@ async function run() {
         (result) =>
           String(result.verdict) !== "CLEAN" &&
           result.inspectionComplete === false,
+      ) &&
+      m6d5b.results.every(
+        (result) =>
+          String(result.verdict) !== "CLEAN" &&
+          result.inspectionComplete === false,
       ),
     "M6 execution must never grant CLEAN or completed document-trust authority.",
   );
@@ -4477,13 +4950,13 @@ async function run() {
       {
         ok: true,
         event:
-          "HDS_M6D5_PDF_URI_EVASION_CERTIFICATION_PASSED",
+          "HDS_M6D5B_PDF_EMBEDDED_CONTENT_EVASION_CERTIFICATION_PASSED",
         corpusSchemaVersion:
           HDS_M6_ADVERSARIAL_CORPUS_SCHEMA_VERSION,
         harnessVersion:
-          HDS_M6D5_HARNESS_VERSION,
+          HDS_M6D5B_HARNESS_VERSION,
         priorHarnessVersion:
-          HDS_M6D4_HARNESS_VERSION,
+          HDS_M6D5_HARNESS_VERSION,
         priorOoxmlHarnessVersion:
           HDS_M6C_HARNESS_VERSION,
         scannerEngine:
@@ -4517,6 +4990,8 @@ async function run() {
         m6d4CertificationComplete: true,
         m6d5CertifiedThreatFamilies,
         m6d5CertificationComplete: true,
+        m6d5bCertifiedThreatFamilies,
+        m6d5bCertificationComplete: true,
         ooxmlNormalizationInvariant:
           "SINGLE_PASS_NAMED_DECIMAL_AND_HEX_XML_ATTRIBUTE_ENTITIES",
         identityPrecedenceInvariant:
@@ -4657,6 +5132,19 @@ async function run() {
         m6d5IndirectSafeUriCompatibilityDeferredToM6G: true,
         m6d5Results:
           m6d5Summary,
+        m6d5bEmbeddedContentRepairComplete: true,
+        m6d5bCaseCount:
+          M6D5B_CERTIFICATION_CASES.length,
+        m6d5bCertificationCredit:
+          M6D5B_CERTIFICATION_CASES.filter(
+            (testCase) => testCase.certificationCredit,
+          ).length,
+        m6d5bBenignControlCount:
+          M6D5B_CERTIFICATION_CASES.filter(
+            (testCase) => testCase.benignControl,
+          ).length,
+        m6d5bResults:
+          m6d5bSummary,
         m6dCertificationComplete: false,
         remainingM6dThreatFamilies:
           m6dThreatFamilies
@@ -4680,11 +5168,11 @@ run().catch((error) => {
       {
         ok: false,
         event:
-          "HDS_M6D5_PDF_URI_EVASION_CERTIFICATION_FAILED",
+          "HDS_M6D5B_PDF_EMBEDDED_CONTENT_EVASION_CERTIFICATION_FAILED",
         errorCode:
           error instanceof Error
             ? error.message
-            : "M6D5_UNKNOWN_FAILURE",
+            : "M6D5B_UNKNOWN_FAILURE",
       },
       null,
       2,

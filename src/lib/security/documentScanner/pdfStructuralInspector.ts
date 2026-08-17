@@ -1608,7 +1608,17 @@ function inspectValue(args: {
 
   const values = value.values;
   const type = nameValue(values.get("Type"));
-  const subtype = nameValue(values.get("Subtype"));
+  const rawSubtype = values.get("Subtype");
+  const subtypeReference = refValue(rawSubtype);
+  let subtypeValue = rawSubtype;
+
+  if (subtypeReference) {
+    const resolved = resolveReference(subtypeReference);
+    if (isStructuralResult(resolved)) return resolved;
+    subtypeValue = resolved;
+  }
+
+  const subtype = nameValue(subtypeValue);
   const rawAction = values.get("S");
   const actionReference = refValue(rawAction);
   let actionValue = rawAction;
