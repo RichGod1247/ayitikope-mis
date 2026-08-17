@@ -28,12 +28,13 @@ export type NativeDocumentFormat =
   | "UNKNOWN";
 
 /**
- * M2 still deliberately has no CLEAN verdict.
+ * M3A still deliberately has no CLEAN verdict.
  *
  * IDENTITY_VERIFIED means that byte integrity, broad container identity, and
- * (for OOXML) bounded package identity have been established. It is not a
- * sendable or malware-clean state. M3 format-specific security inspection is
- * still required before a later milestone may earn CLEAN.
+ * (for OOXML) bounded package identity plus the M3A structural policy have
+ * been established. It is not a sendable or malware-clean state. PDF/OLE
+ * structural inspection and the later versioned rule pack are still required
+ * before any future milestone may earn CLEAN.
  */
 export type NativeDocumentScannerVerdict =
   | "IDENTITY_VERIFIED"
@@ -88,7 +89,18 @@ export type NativeDocumentScannerReasonCode =
   | "OOXML_MAIN_DOCUMENT_RELATIONSHIP_EXTERNAL"
   | "OOXML_MAIN_DOCUMENT_PART_MISSING"
   | "OOXML_MAIN_DOCUMENT_CONTENT_TYPE_MISMATCH"
-  | "OOXML_APPLICATION_MISMATCH";
+  | "OOXML_APPLICATION_MISMATCH"
+  | "OOXML_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED"
+  | "OOXML_RELATIONSHIP_PART_TOO_LARGE"
+  | "OOXML_RELATIONSHIP_XML_INVALID"
+  | "OOXML_RELATIONSHIP_TARGET_INVALID"
+  | "OOXML_VBA_PROJECT_BLOCKED"
+  | "OOXML_MACRO_ENABLED_CONTENT_TYPE_BLOCKED"
+  | "OOXML_ACTIVEX_BLOCKED"
+  | "OOXML_EMBEDDED_OBJECT_BLOCKED"
+  | "OOXML_EXTERNAL_RELATIONSHIP_BLOCKED"
+  | "OOXML_REMOTE_TEMPLATE_BLOCKED"
+  | "OOXML_EXECUTABLE_PACKAGE_PART_BLOCKED";
 
 export type NativeDocumentScannerFinding = {
   code: NativeDocumentScannerReasonCode;
@@ -170,6 +182,24 @@ export type NativeDocumentArchiveEvidence = {
   pathTraversalDetected: false;
 };
 
+export type NativeDocumentOoxmlStructuralEvidence = {
+  relationshipPartsInspected: number;
+  relationshipsInspected: number;
+  externalHyperlinksObserved: number;
+
+  contentTypePolicyVerified: true;
+  relationshipPolicyVerified: true;
+  packagePartPolicyVerified: true;
+
+  vbaProjectDetected: false;
+  macroEnabledContentTypeDetected: false;
+  activeXDetected: false;
+  embeddedObjectDetected: false;
+  blockedExternalRelationshipDetected: false;
+  remoteTemplateDetected: false;
+  executablePackagePartDetected: false;
+};
+
 export type NativeDocumentScannerResult = {
   engine: "HEHXAGON_DOCUMENT_SECURITY";
   engineVersion: string;
@@ -186,9 +216,13 @@ export type NativeDocumentScannerResult = {
   archiveInspectionComplete: boolean;
   archiveEvidence: NativeDocumentArchiveEvidence | null;
 
+  /** True only when the M3A OOXML structural policy ran to completion. */
+  ooxmlStructuralInspectionComplete: boolean;
+  ooxmlStructuralEvidence: NativeDocumentOoxmlStructuralEvidence | null;
+
   /**
-   * Always false through M2. Full document security inspection does not exist
-   * until format-specific structural/security milestones are implemented.
+   * Always false through M3A. PDF and legacy OLE structural inspection plus
+   * later rule-pack evaluation still remain before full document trust exists.
    */
   inspectionComplete: false;
 

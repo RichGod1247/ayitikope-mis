@@ -114,11 +114,11 @@ function assertSanitized(result: NativeDocumentScannerResult) {
 
   assert(
     !serialized.includes('"verdict":"CLEAN"'),
-    "M2 must never emit CLEAN.",
+    "M3A must never emit CLEAN.",
   );
   assert(
     result.inspectionComplete === false,
-    "M2 inspectionComplete must always remain false.",
+    "M3A inspectionComplete must always remain false.",
   );
 }
 
@@ -213,11 +213,20 @@ function buildZip(entries: ZipFixtureEntry[]): BuiltZip {
 function contentTypesXml(args: {
   mainPart: string;
   contentType: string;
+  extraOverrides?: Array<{ partName: string; contentType: string }>;
 }) {
+  const extras = (args.extraOverrides ?? [])
+    .map(
+      (item) =>
+        `<Override PartName="/${item.partName}" ContentType="${item.contentType}"/>`,
+    )
+    .join("");
+
   return Buffer.from(
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
       `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">` +
       `<Override PartName="/${args.mainPart}" ContentType="${args.contentType}"/>` +
+      extras +
       `</Types>`,
     "utf8",
   );
@@ -228,6 +237,32 @@ function relationshipsXml(mainPart: string) {
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
       `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
       `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="${mainPart}"/>` +
+      `</Relationships>`,
+    "utf8",
+  );
+}
+
+function relationshipPartXml(
+  relationships: Array<{
+    id: string;
+    type: string;
+    target: string;
+    targetMode?: string;
+  }>,
+) {
+  return Buffer.from(
+    `<?xml version="1.0" encoding="UTF-8"?>\n` +
+      `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+      relationships
+        .map(
+          (item) =>
+            `<Relationship Id="${item.id}" Type="${item.type}" Target="${item.target}"${
+              item.targetMode
+                ? ` TargetMode="${item.targetMode}"`
+                : ""
+            }/>`,
+        )
+        .join("") +
       `</Relationships>`,
     "utf8",
   );
@@ -385,7 +420,7 @@ async function run() {
     assertVerdict(
       result,
       "IDENTITY_VERIFIED",
-      "OOXML_PACKAGE_IDENTITY_VERIFIED_DEEP_INSPECTION_REQUIRED",
+      "OOXML_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
     );
     assert(
       result.identityEvidence.detectedFormat === expectedFormat,
@@ -403,6 +438,16 @@ async function run() {
       result.archiveEvidence?.zip64 === false &&
         result.archiveEvidence.multiDisk === false,
       "Bounded OOXML evidence must exclude ZIP64 and multi-disk containers.",
+    );
+    assert(
+      result.ooxmlStructuralInspectionComplete === true,
+      "M3A OOXML structural inspection should complete for safe fixtures.",
+    );
+    assert(
+      result.ooxmlStructuralEvidence?.vbaProjectDetected === false &&
+        result.ooxmlStructuralEvidence.activeXDetected === false &&
+        result.ooxmlStructuralEvidence.embeddedObjectDetected === false,
+      "Safe OOXML fixtures must have clean M3A structural evidence without earning CLEAN.",
     );
   }
 
@@ -960,6 +1005,373 @@ async function run() {
     "Corrupt OOXML control data must fail closed.",
   );
 
+  const vbaEntry = packageFixture("docx", [
+    {
+      name: "word/vbaProject.bin",
+      data: Buffer.from("VBA", "ascii"),
+    },
+  ]);
+  const vbaEntryResult = await inspectFixture({
+    bytes: vbaEntry.bytes,
+    filename: "vba.docx",
+    extension: "docx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
+  assertVerdict(
+    vbaEntryResult,
+    "BLOCKED",
+    "OOXML_VBA_PROJECT_BLOCKED",
+  );
+
+  const macroContentType = buildZip([
+    {
+      name: "[Content_Types].xml",
+      data: contentTypesXml({
+        mainPart: "word/document.xml",
+        contentType:
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+        extraOverrides: [
+          {
+            partName: "custom/macro.xml",
+            contentType:
+              "application/vnd.ms-word.document.macroEnabled.main+xml",
+          },
+        ],
+      }),
+    },
+    {
+      name: "_rels/.rels",
+      data: relationshipsXml("word/document.xml"),
+    },
+    {
+      name: "word/document.xml",
+      data: Buffer.from("<root/>", "utf8"),
+    },
+    {
+      name: "custom/macro.xml",
+      data: Buffer.from("<root/>", "utf8"),
+    },
+  ]);
+  const macroContentTypeResult = await inspectFixture({
+    bytes: macroContentType.bytes,
+    filename: "macro-type.docx",
+    extension: "docx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
+  assertVerdict(
+    macroContentTypeResult,
+    "BLOCKED",
+    "OOXML_MACRO_ENABLED_CONTENT_TYPE_BLOCKED",
+  );
+
+  const activeXPath = packageFixture("xlsx", [
+    {
+      name: "xl/activeX/activeX1.xml",
+      data: Buffer.from("<ocx/>", "utf8"),
+    },
+  ]);
+  const activeXPathResult = await inspectFixture({
+    bytes: activeXPath.bytes,
+    filename: "activex.xlsx",
+    extension: "xlsx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  assertVerdict(activeXPathResult, "BLOCKED", "OOXML_ACTIVEX_BLOCKED");
+
+  const activeXRelationship = packageFixture("xlsx", [
+    {
+      name: "xl/worksheets/_rels/sheet1.xml.rels",
+      data: relationshipPartXml([
+        {
+          id: "rId1",
+          type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/control",
+          target: "../activeX/activeX1.xml",
+        },
+      ]),
+    },
+  ]);
+  const activeXRelationshipResult = await inspectFixture({
+    bytes: activeXRelationship.bytes,
+    filename: "activex-rel.xlsx",
+    extension: "xlsx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  assertVerdict(
+    activeXRelationshipResult,
+    "BLOCKED",
+    "OOXML_ACTIVEX_BLOCKED",
+  );
+
+  const embeddedObject = packageFixture("docx", [
+    {
+      name: "word/embeddings/oleObject1.bin",
+      data: Buffer.from("OLE", "ascii"),
+    },
+  ]);
+  const embeddedObjectResult = await inspectFixture({
+    bytes: embeddedObject.bytes,
+    filename: "embedded.docx",
+    extension: "docx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
+  assertVerdict(
+    embeddedObjectResult,
+    "BLOCKED",
+    "OOXML_EMBEDDED_OBJECT_BLOCKED",
+  );
+
+  const oleRelationship = packageFixture("pptx", [
+    {
+      name: "ppt/slides/_rels/slide1.xml.rels",
+      data: relationshipPartXml([
+        {
+          id: "rId1",
+          type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject",
+          target: "../embeddings/oleObject1.bin",
+        },
+      ]),
+    },
+  ]);
+  const oleRelationshipResult = await inspectFixture({
+    bytes: oleRelationship.bytes,
+    filename: "ole-rel.pptx",
+    extension: "pptx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  });
+  assertVerdict(
+    oleRelationshipResult,
+    "BLOCKED",
+    "OOXML_EMBEDDED_OBJECT_BLOCKED",
+  );
+
+  const remoteTemplate = packageFixture("docx", [
+    {
+      name: "word/_rels/settings.xml.rels",
+      data: relationshipPartXml([
+        {
+          id: "rId1",
+          type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/attachedTemplate",
+          target: "https://example.invalid/template.dotm",
+          targetMode: "External",
+        },
+      ]),
+    },
+  ]);
+  const remoteTemplateResult = await inspectFixture({
+    bytes: remoteTemplate.bytes,
+    filename: "template.docx",
+    extension: "docx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
+  assertVerdict(
+    remoteTemplateResult,
+    "BLOCKED",
+    "OOXML_REMOTE_TEMPLATE_BLOCKED",
+  );
+
+  const externalImage = packageFixture("docx", [
+    {
+      name: "word/_rels/document.xml.rels",
+      data: relationshipPartXml([
+        {
+          id: "rId1",
+          type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+          target: "https://example.invalid/image.png",
+          targetMode: "External",
+        },
+      ]),
+    },
+  ]);
+  const externalImageResult = await inspectFixture({
+    bytes: externalImage.bytes,
+    filename: "external-image.docx",
+    extension: "docx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
+  assertVerdict(
+    externalImageResult,
+    "BLOCKED",
+    "OOXML_EXTERNAL_RELATIONSHIP_BLOCKED",
+  );
+
+  const externalLinkPart = packageFixture("xlsx", [
+    {
+      name: "xl/externalLinks/externalLink1.xml",
+      data: Buffer.from("<externalLink/>", "utf8"),
+    },
+  ]);
+  const externalLinkPartResult = await inspectFixture({
+    bytes: externalLinkPart.bytes,
+    filename: "external-link.xlsx",
+    extension: "xlsx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  assertVerdict(
+    externalLinkPartResult,
+    "BLOCKED",
+    "OOXML_EXTERNAL_RELATIONSHIP_BLOCKED",
+  );
+
+  const executablePart = packageFixture("docx", [
+    {
+      name: "custom/payload.exe",
+      data: Buffer.from([0x4d, 0x5a, 0x90, 0x00]),
+    },
+  ]);
+  const executablePartResult = await inspectFixture({
+    bytes: executablePart.bytes,
+    filename: "payload.docx",
+    extension: "docx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
+  assertVerdict(
+    executablePartResult,
+    "BLOCKED",
+    "OOXML_EXECUTABLE_PACKAGE_PART_BLOCKED",
+  );
+
+  const vbaRelationship = packageFixture("pptx", [
+    {
+      name: "ppt/_rels/presentation.xml.rels",
+      data: relationshipPartXml([
+        {
+          id: "rId9",
+          type: "http://schemas.microsoft.com/office/2006/relationships/vbaProject",
+          target: "vbaProject.bin",
+        },
+      ]),
+    },
+  ]);
+  const vbaRelationshipResult = await inspectFixture({
+    bytes: vbaRelationship.bytes,
+    filename: "vba-rel.pptx",
+    extension: "pptx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  });
+  assertVerdict(
+    vbaRelationshipResult,
+    "BLOCKED",
+    "OOXML_VBA_PROJECT_BLOCKED",
+  );
+
+  const invalidRelationshipXml = packageFixture("docx", [
+    {
+      name: "word/_rels/document.xml.rels",
+      data: Buffer.from(
+        `<!DOCTYPE Relationships [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>` +
+          `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`,
+        "utf8",
+      ),
+    },
+  ]);
+  const invalidRelationshipXmlResult = await inspectFixture({
+    bytes: invalidRelationshipXml.bytes,
+    filename: "invalid-rel.docx",
+    extension: "docx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
+  assertVerdict(
+    invalidRelationshipXmlResult,
+    "FAILED",
+    "OOXML_RELATIONSHIP_XML_INVALID",
+  );
+
+  const oversizedRelationshipXml = packageFixture("docx", [
+    {
+      name: "word/_rels/document.xml.rels",
+      data: Buffer.from(
+        `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+          `${" ".repeat(400)}` +
+          `</Relationships>`,
+        "utf8",
+      ),
+    },
+  ]);
+  const oversizedRelationshipXmlResult = await inspectFixture({
+    bytes: oversizedRelationshipXml.bytes,
+    filename: "large-rel.docx",
+    extension: "docx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    archiveLimits: {
+      ...ARCHIVE_LIMITS,
+      maxControlPartBytes: 320,
+    },
+  });
+  assertVerdict(
+    oversizedRelationshipXmlResult,
+    "BLOCKED",
+    "OOXML_RELATIONSHIP_PART_TOO_LARGE",
+  );
+
+  const absoluteInternalTarget = packageFixture("docx", [
+    {
+      name: "word/_rels/document.xml.rels",
+      data: relationshipPartXml([
+        {
+          id: "rId1",
+          type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+          target: "https://example.invalid/not-marked-external.png",
+        },
+      ]),
+    },
+  ]);
+  const absoluteInternalTargetResult = await inspectFixture({
+    bytes: absoluteInternalTarget.bytes,
+    filename: "absolute-target.docx",
+    extension: "docx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
+  assertVerdict(
+    absoluteInternalTargetResult,
+    "BLOCKED",
+    "OOXML_RELATIONSHIP_TARGET_INVALID",
+  );
+
+  const allowedHyperlink = packageFixture("docx", [
+    {
+      name: "word/_rels/document.xml.rels",
+      data: relationshipPartXml([
+        {
+          id: "rId1",
+          type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+          target: "https://example.org/policy",
+          targetMode: "External",
+        },
+      ]),
+    },
+  ]);
+  const allowedHyperlinkResult = await inspectFixture({
+    bytes: allowedHyperlink.bytes,
+    filename: "hyperlink.docx",
+    extension: "docx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
+  assertVerdict(
+    allowedHyperlinkResult,
+    "IDENTITY_VERIFIED",
+    "OOXML_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+  );
+  assert(
+    allowedHyperlinkResult.ooxmlStructuralEvidence
+      ?.externalHyperlinksObserved === 1,
+    "An ordinary external HTTPS hyperlink should be observed but not treated as a trusted-document CLEAN verdict.",
+  );
+
   const allResults = [
     ...positiveCases,
     unsupportedExtension,
@@ -995,23 +1407,40 @@ async function run() {
     badContentTypeResult,
     externalRelationshipResult,
     corruptControlResult,
+    vbaEntryResult,
+    macroContentTypeResult,
+    activeXPathResult,
+    activeXRelationshipResult,
+    embeddedObjectResult,
+    oleRelationshipResult,
+    remoteTemplateResult,
+    externalImageResult,
+    externalLinkPartResult,
+    executablePartResult,
+    vbaRelationshipResult,
+    invalidRelationshipXmlResult,
+    oversizedRelationshipXmlResult,
+    absoluteInternalTargetResult,
+    allowedHyperlinkResult,
   ];
 
   for (const result of allResults) {
     assertSanitized(result);
   }
 
-  console.log("HDS M2 native document scanner self-test: GREEN");
+  console.log("HDS M3A native document scanner self-test: GREEN");
   console.log(`Cases: ${allResults.length}`);
   console.log("M1 identity/integrity regression: GREEN");
-  console.log("DOCX/XLSX/PPTX package identity: GREEN");
-  console.log("Central-directory/path/encryption/resource guards: GREEN");
-  console.log("Only bounded OPC control parts are decompressed: GREEN");
-  console.log("Identity-valid documents remain non-CLEAN: GREEN");
+  console.log("M2 bounded OOXML archive regression: GREEN");
+  console.log("VBA/macro/ActiveX/OLE structural blocks: GREEN");
+  console.log("External relationship + remote-template policy: GREEN");
+  console.log("Executable package-part policy: GREEN");
+  console.log("Bounded relationship-part inspection: GREEN");
+  console.log("OOXML structural pass remains non-CLEAN: GREEN");
   console.log("Sanitized result boundary: GREEN");
 }
 
 run().catch(() => {
-  console.error("HDS M2 native document scanner self-test: FAILED");
+  console.error("HDS M3A native document scanner self-test: FAILED");
   process.exitCode = 1;
 });

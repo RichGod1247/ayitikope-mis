@@ -44,7 +44,18 @@ type OoxmlPackageFormat = Extract<
   "WORD_OOXML" | "POWERPOINT_OOXML" | "EXCEL_OOXML"
 >;
 
-type ZipEntry = {
+export type OoxmlArchiveContext = {
+  entries: readonly OoxmlArchiveEntry[];
+  contentTypesXml: string;
+  rootRelationshipsXml: string;
+  packageFormat: OoxmlPackageFormat;
+  mainPartPath:
+    | typeof WORD_MAIN_PART
+    | typeof PRESENTATION_MAIN_PART
+    | typeof SPREADSHEET_MAIN_PART;
+};
+
+export type OoxmlArchiveEntry = {
   name: string;
   normalizedName: string;
   flags: number;
@@ -62,6 +73,7 @@ export type OoxmlArchiveInspectionResult =
       ok: true;
       format: OoxmlPackageFormat;
       evidence: NativeDocumentArchiveEvidence;
+      context: OoxmlArchiveContext;
     }
   | {
       ok: false;
@@ -241,7 +253,7 @@ function parseZipEntries(args: {
 }):
   | {
       ok: true;
-      entries: ZipEntry[];
+      entries: OoxmlArchiveEntry[];
       centralDirectoryOffset: number;
       centralDirectorySize: number;
       totalCompressedBytes: number;
@@ -317,7 +329,7 @@ function parseZipEntries(args: {
     );
   }
 
-  const entries: ZipEntry[] = [];
+  const entries: OoxmlArchiveEntry[] = [];
   const seenNames = new Set<string>();
   const seenLocalOffsets = new Set<number>();
   let cursor = centralDirectoryOffset;
@@ -609,9 +621,9 @@ function crc32(bytes: Buffer) {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
-function readControlPart(args: {
+export function readOoxmlArchivePart(args: {
   bytes: Buffer;
-  entry: ZipEntry;
+  entry: OoxmlArchiveEntry;
   maxControlPartBytes: number;
 }):
   | { ok: true; bytes: Buffer }
@@ -667,7 +679,7 @@ function readControlPart(args: {
   return { ok: true, bytes: output };
 }
 
-function decodeXml(bytes: Buffer) {
+export function decodeOoxmlXml(bytes: Buffer) {
   try {
     if (
       bytes.length >= 3 &&
@@ -713,7 +725,7 @@ function decodeXmlAttribute(value: string) {
     .replace(/&amp;/g, "&");
 }
 
-function tagAttributes(tag: string) {
+export function ooxmlTagAttributes(tag: string) {
   const attributes = new Map<string, string>();
   const pattern = /([A-Za-z_:][A-Za-z0-9_.:-]*)\s*=\s*(["'])([\s\S]*?)\2/g;
 
@@ -774,7 +786,7 @@ function parseMainDocumentRelationship(xml: string):
   );
 
   for (const tag of relationshipTags ?? []) {
-    const attributes = tagAttributes(tag);
+    const attributes = ooxmlTagAttributes(tag);
     const type = attributes.get("Type") ?? "";
     const target = attributes.get("Target") ?? "";
     const targetMode = attributes.get("TargetMode") ?? null;
@@ -840,7 +852,7 @@ function contentTypeForMainPart(args: {
   const wantedPartName = `/${args.mainPartPath}`;
 
   for (const tag of overrideTags ?? []) {
-    const attributes = tagAttributes(tag);
+    const attributes = ooxmlTagAttributes(tag);
     const partName = attributes.get("PartName") ?? "";
     const contentType = attributes.get("ContentType") ?? "";
 
@@ -941,7 +953,7 @@ export function inspectOoxmlArchive(args: {
     );
   }
 
-  const contentTypesPart = readControlPart({
+  const contentTypesPart = readOoxmlArchivePart({
     bytes: args.bytes,
     entry: contentTypesEntry,
     maxControlPartBytes: args.limits.maxControlPartBytes,
@@ -949,7 +961,7 @@ export function inspectOoxmlArchive(args: {
 
   if (!contentTypesPart.ok) return contentTypesPart;
 
-  const relationshipsPart = readControlPart({
+  const relationshipsPart = readOoxmlArchivePart({
     bytes: args.bytes,
     entry: relationshipsEntry,
     maxControlPartBytes: args.limits.maxControlPartBytes,
@@ -957,8 +969,8 @@ export function inspectOoxmlArchive(args: {
 
   if (!relationshipsPart.ok) return relationshipsPart;
 
-  const contentTypesXml = decodeXml(contentTypesPart.bytes);
-  const relationshipsXml = decodeXml(relationshipsPart.bytes);
+  const contentTypesXml = decodeOoxmlXml(contentTypesPart.bytes);
+  const relationshipsXml = decodeOoxmlXml(relationshipsPart.bytes);
 
   if (!contentTypesXml || !relationshipsXml) {
     return failed(
@@ -1031,6 +1043,13 @@ export function inspectOoxmlArchive(args: {
       encryptedEntriesDetected: false,
       duplicatePathsDetected: false,
       pathTraversalDetected: false,
+    },
+    context: {
+      entries: parsed.entries,
+      contentTypesXml,
+      rootRelationshipsXml: relationshipsXml,
+      packageFormat: identity.format,
+      mainPartPath: identity.mainPartPath,
     },
   };
 }

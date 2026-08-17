@@ -3,12 +3,16 @@ import { createHash } from "crypto";
 import {
   inspectOoxmlArchive,
 } from "./ooxmlArchiveInspector";
+import {
+  inspectOoxmlStructuralSecurity,
+} from "./ooxmlStructuralInspector";
 import type {
   NativeDocumentArchiveEvidence,
   NativeDocumentContainer,
   NativeDocumentExtension,
   NativeDocumentFormat,
   NativeDocumentIdentityEvidence,
+  NativeDocumentOoxmlStructuralEvidence,
   NativeDocumentScannerFinding,
   NativeDocumentScannerInput,
   NativeDocumentScannerReasonCode,
@@ -20,14 +24,14 @@ export const HEHXAGON_DOCUMENT_SECURITY_ENGINE =
   "HEHXAGON_DOCUMENT_SECURITY" as const;
 
 export const HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION =
-  "0.2.0-m2";
+  "0.3.0-m3a";
 
 /**
- * This is the embedded M2 identity/archive rule set, not the future M4 threat
- * rule pack.
+ * This is the embedded M3A structural policy, not the future M4 versioned
+ * threat-rule pack. It deliberately cannot produce CLEAN.
  */
 export const HEHXAGON_DOCUMENT_SECURITY_RULE_PACK_VERSION =
-  "HDS-M2-OOXML-ARCHIVE-V1";
+  "HDS-M3A-OOXML-STRUCTURE-V1";
 
 const MAX_SIGNATURE_PREFIX_BYTES = 1024;
 
@@ -274,6 +278,8 @@ function result(args: {
   identityEvidence: NativeDocumentIdentityEvidence;
   archiveInspectionComplete?: boolean;
   archiveEvidence?: NativeDocumentArchiveEvidence | null;
+  ooxmlStructuralInspectionComplete?: boolean;
+  ooxmlStructuralEvidence?: NativeDocumentOoxmlStructuralEvidence | null;
 }): NativeDocumentScannerResult {
   return {
     engine: HEHXAGON_DOCUMENT_SECURITY_ENGINE,
@@ -290,6 +296,10 @@ function result(args: {
     archiveInspectionComplete:
       args.archiveInspectionComplete ?? false,
     archiveEvidence: args.archiveEvidence ?? null,
+    ooxmlStructuralInspectionComplete:
+      args.ooxmlStructuralInspectionComplete ?? false,
+    ooxmlStructuralEvidence:
+      args.ooxmlStructuralEvidence ?? null,
     inspectionComplete: false,
     identityEvidence: args.identityEvidence,
   };
@@ -304,6 +314,8 @@ function blocked(args: {
   evidence: NativeDocumentIdentityEvidence;
   archiveInspectionComplete?: boolean;
   archiveEvidence?: NativeDocumentArchiveEvidence | null;
+  ooxmlStructuralInspectionComplete?: boolean;
+  ooxmlStructuralEvidence?: NativeDocumentOoxmlStructuralEvidence | null;
 }) {
   return result({
     verdict: "BLOCKED",
@@ -317,6 +329,10 @@ function blocked(args: {
     archiveInspectionComplete:
       args.archiveInspectionComplete ?? false,
     archiveEvidence: args.archiveEvidence ?? null,
+    ooxmlStructuralInspectionComplete:
+      args.ooxmlStructuralInspectionComplete ?? false,
+    ooxmlStructuralEvidence:
+      args.ooxmlStructuralEvidence ?? null,
   });
 }
 
@@ -329,6 +345,8 @@ function failed(args: {
   evidence: NativeDocumentIdentityEvidence;
   archiveInspectionComplete?: boolean;
   archiveEvidence?: NativeDocumentArchiveEvidence | null;
+  ooxmlStructuralInspectionComplete?: boolean;
+  ooxmlStructuralEvidence?: NativeDocumentOoxmlStructuralEvidence | null;
 }) {
   return result({
     verdict: "FAILED",
@@ -342,6 +360,10 @@ function failed(args: {
     archiveInspectionComplete:
       args.archiveInspectionComplete ?? false,
     archiveEvidence: args.archiveEvidence ?? null,
+    ooxmlStructuralInspectionComplete:
+      args.ooxmlStructuralInspectionComplete ?? false,
+    ooxmlStructuralEvidence:
+      args.ooxmlStructuralEvidence ?? null,
   });
 }
 
@@ -715,16 +737,41 @@ export async function inspectNativeDocumentIdentity(
       detectedFormat: archive.format,
     };
 
+    const structural = inspectOoxmlStructuralSecurity({
+      bytes: read.bytes,
+      context: archive.context,
+      limits: input.limits.archive,
+    });
+
+    if (!structural.ok) {
+      const common = {
+        code: structural.reasonCode,
+        message: structural.message,
+        bytesScanned: read.bytesScanned,
+        sha256Hash: read.sha256Hash,
+        identityInspectionComplete: true,
+        evidence,
+        archiveInspectionComplete: true,
+        archiveEvidence: archive.evidence,
+      };
+
+      if (structural.verdict === "FAILED") {
+        return failed(common);
+      }
+
+      return blocked(common);
+    }
+
     return result({
       verdict: "IDENTITY_VERIFIED",
       reasonCodes: [
-        "OOXML_PACKAGE_IDENTITY_VERIFIED_DEEP_INSPECTION_REQUIRED",
+        "OOXML_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
       ],
       findings: [
         finding(
-          "OOXML_PACKAGE_IDENTITY_VERIFIED_DEEP_INSPECTION_REQUIRED",
+          "OOXML_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
           "INFO",
-          "Byte integrity and bounded OOXML package identity are verified; deeper document security inspection is still required.",
+          "Byte integrity, bounded OOXML package identity, and the M3A OOXML structural policy are verified; PDF/OLE structural coverage and later rule-pack evaluation are still required before full document trust.",
         ),
       ],
       bytesScanned: read.bytesScanned,
@@ -732,6 +779,8 @@ export async function inspectNativeDocumentIdentity(
       identityInspectionComplete: true,
       archiveInspectionComplete: true,
       archiveEvidence: archive.evidence,
+      ooxmlStructuralInspectionComplete: true,
+      ooxmlStructuralEvidence: structural.evidence,
       identityEvidence: evidence,
     });
   }
