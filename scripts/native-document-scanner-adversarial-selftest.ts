@@ -7,6 +7,7 @@ import {
 } from "../src/lib/security/documentScanner/nativeDocumentScanner";
 import {
   inspectOoxmlArchive,
+  ooxmlTagAttributes,
 } from "../src/lib/security/documentScanner/ooxmlArchiveInspector";
 import { inspectPdfStructuralSecurity } from "../src/lib/security/documentScanner/pdfStructuralInspector";
 import {
@@ -33,6 +34,9 @@ export const HDS_M6A_HARNESS_VERSION =
 
 export const HDS_M6B_HARNESS_VERSION =
   "HDS-M6B-HARNESS-V1" as const;
+
+export const HDS_M6C_HARNESS_VERSION =
+  "HDS-M6C-HARNESS-V1" as const;
 
 const ONE_MEBIBYTE = 1024 * 1024;
 
@@ -104,7 +108,10 @@ type CertificationPhase =
 type ThreatFamilyManifestEntry = Readonly<{
   threatFamily: ThreatFamily;
   plannedPhase: CertificationPhase;
-  certificationStatus: "NOT_CERTIFIED" | "CERTIFIED_M6B";
+  certificationStatus:
+    | "NOT_CERTIFIED"
+    | "CERTIFIED_M6B"
+    | "CERTIFIED_M6C";
   objective: string;
 }>;
 
@@ -144,21 +151,21 @@ const THREAT_FAMILY_MANIFEST: readonly ThreatFamilyManifestEntry[] =
     Object.freeze({
       threatFamily: "OOXML_CONTAINER_EVASION",
       plannedPhase: "M6C",
-      certificationStatus: "NOT_CERTIFIED",
+      certificationStatus: "CERTIFIED_M6C",
       objective:
         "Attack ZIP local/central metadata, path normalization, overlap, bounds and archive identity assumptions.",
     }),
     Object.freeze({
       threatFamily: "OOXML_RELATIONSHIP_EVASION",
       plannedPhase: "M6C",
-      certificationStatus: "NOT_CERTIFIED",
+      certificationStatus: "CERTIFIED_M6C",
       objective:
         "Attack relationship type, target, target mode, XML representation and external-reference interpretation.",
     }),
     Object.freeze({
       threatFamily: "OOXML_MACRO_EVASION",
       plannedPhase: "M6C",
-      certificationStatus: "NOT_CERTIFIED",
+      certificationStatus: "CERTIFIED_M6C",
       objective:
         "Hide macro or active-content capability through alternate package paths, types and relationships.",
     }),
@@ -546,9 +553,167 @@ const M6B_CERTIFICATION_CASES: readonly CorpusCaseContract[] =
     }),
   ]);
 
+const M6C_CERTIFICATION_CASES: readonly CorpusCaseContract[] =
+  Object.freeze([
+    Object.freeze({
+      caseId: "HDS-M6C-001-DOCX-CASE-COLLISION",
+      threatFamily: "OOXML_CONTAINER_EVASION",
+      format: "OOXML",
+      attackTechnique:
+        "A DOCX package carries two ZIP entries whose names differ only by case and must collapse to one normalized package identity.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "ZIP_DUPLICATE_ENTRY",
+      expectedRuleId: null,
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6C",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6C-002-XLSX-PATH-TRAVERSAL",
+      threatFamily: "OOXML_CONTAINER_EVASION",
+      format: "OOXML",
+      attackTechnique:
+        "An XLSX package includes a ZIP entry containing parent-directory traversal and must fail before semantic Office inspection begins.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "ZIP_ENTRY_PATH_TRAVERSAL",
+      expectedRuleId: null,
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6C",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6C-003-PPTX-UNICODE-COLLISION",
+      threatFamily: "OOXML_CONTAINER_EVASION",
+      format: "OOXML",
+      attackTechnique:
+        "A PPTX package presents canonically equivalent Unicode ZIP entry names and must reject the normalized-name collision deterministically.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "ZIP_DUPLICATE_ENTRY",
+      expectedRuleId: null,
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6C",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6C-004-DOCX-REMOTE-TEMPLATE-ENTITY",
+      threatFamily: "OOXML_RELATIONSHIP_EVASION",
+      format: "OOXML",
+      attackTechnique:
+        "A DOCX attached-template relationship hides one character of its relationship type behind a numeric XML character reference.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "OOXML_REMOTE_TEMPLATE_BLOCKED",
+      expectedRuleId: "HDS-OOXML-006-REMOTE-TEMPLATE",
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6C",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6C-005-XLSX-HYPERLINK-ENTITY-CONTROL",
+      threatFamily: "OOXML_RELATIONSHIP_EVASION",
+      format: "OOXML",
+      attackTechnique:
+        "An ordinary XLSX HTTPS hyperlink encodes one URI character as a numeric XML reference and must remain an allowed benign control.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6C",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6C-006-PPTX-OLE-RELATIONSHIP-ENTITY",
+      threatFamily: "OOXML_RELATIONSHIP_EVASION",
+      format: "OOXML",
+      attackTechnique:
+        "A PPTX internal OLE-object relationship encodes part of its relationship type numerically and must still produce embedded-object evidence.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "OOXML_EMBEDDED_OBJECT_BLOCKED",
+      expectedRuleId: "HDS-OOXML-004-EMBEDDED-OBJECT",
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6C",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6C-007-DOCX-VBA-RELATIONSHIP-ENTITY",
+      threatFamily: "OOXML_MACRO_EVASION",
+      format: "OOXML",
+      attackTechnique:
+        "A DOCX VBA relationship targets an innocuously named part while hiding one relationship-type character behind a hexadecimal XML reference.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "OOXML_VBA_PROJECT_BLOCKED",
+      expectedRuleId: "HDS-OOXML-001-VBA",
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6C",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6C-008-XLSX-VBA-CONTENT-TYPE-ENTITY",
+      threatFamily: "OOXML_MACRO_EVASION",
+      format: "OOXML",
+      attackTechnique:
+        "An XLSX auxiliary part hides the VBA content-type token behind a decimal XML character reference and must still trigger VBA policy.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "OOXML_VBA_PROJECT_BLOCKED",
+      expectedRuleId: "HDS-OOXML-001-VBA",
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6C",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6C-009-PPTX-MACRO-CONTENT-TYPE-ENTITY",
+      threatFamily: "OOXML_MACRO_EVASION",
+      format: "OOXML",
+      attackTechnique:
+        "A PPTX auxiliary content type encodes one character of macroEnabled numerically and must still be rejected by macro-content policy.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "OOXML_MACRO_ENABLED_CONTENT_TYPE_BLOCKED",
+      expectedRuleId: "HDS-OOXML-002-MACRO-CONTENT-TYPE",
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6C",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+  ]);
+
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
-    throw new Error(`M6B_ASSERTION_FAILED: ${message}`);
+    throw new Error(`M6C_ASSERTION_FAILED: ${message}`);
   }
 }
 
@@ -722,6 +887,119 @@ function buildStoredZipRecords(entries: readonly StoredZipEntry[]) {
     localDirectory: Buffer.concat(localParts),
     centralDirectory: Buffer.concat(centralParts),
   };
+}
+
+function buildStoredZip(entries: readonly StoredZipEntry[]) {
+  const records = buildStoredZipRecords(entries);
+  const eocd = Buffer.alloc(22);
+
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(0, 4);
+  eocd.writeUInt16LE(0, 6);
+  eocd.writeUInt16LE(entries.length, 8);
+  eocd.writeUInt16LE(entries.length, 10);
+  eocd.writeUInt32LE(records.centralDirectory.length, 12);
+  eocd.writeUInt32LE(records.localDirectory.length, 16);
+  eocd.writeUInt16LE(0, 20);
+
+  return Buffer.concat([
+    records.localDirectory,
+    records.centralDirectory,
+    eocd,
+  ]);
+}
+
+type M6COoxmlApplication = "docx" | "xlsx" | "pptx";
+
+const M6C_OOXML_PROFILES = Object.freeze({
+  docx: Object.freeze({
+    mainPartPath: "word/document.xml",
+    mainRelationshipsPath: "word/_rels/document.xml.rels",
+    mainContentType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    mainXml: "<document/>",
+  }),
+  xlsx: Object.freeze({
+    mainPartPath: "xl/workbook.xml",
+    mainRelationshipsPath: "xl/_rels/workbook.xml.rels",
+    mainContentType:
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    mainXml: "<workbook/>",
+  }),
+  pptx: Object.freeze({
+    mainPartPath: "ppt/presentation.xml",
+    mainRelationshipsPath: "ppt/_rels/presentation.xml.rels",
+    mainContentType:
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    mainXml: "<presentation/>",
+  }),
+});
+
+function buildM6COoxmlPackage(args: {
+  application: M6COoxmlApplication;
+  mainRelationships?: readonly string[];
+  additionalEntries?: readonly StoredZipEntry[];
+  additionalContentTypeOverrides?: readonly string[];
+}) {
+  const profile = M6C_OOXML_PROFILES[args.application];
+  const contentTypes = Buffer.from(
+    '<?xml version="1.0" encoding="UTF-8"?>' +
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      `<Override PartName="/${profile.mainPartPath}" ContentType="${profile.mainContentType}"/>` +
+      (args.additionalContentTypeOverrides ?? []).join("") +
+      "</Types>",
+    "utf8",
+  );
+
+  const rootRelationships = Buffer.from(
+    '<?xml version="1.0" encoding="UTF-8"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="${profile.mainPartPath}"/>` +
+      "</Relationships>",
+    "utf8",
+  );
+
+  const entries: StoredZipEntry[] = [
+    Object.freeze({
+      name: "[Content_Types].xml",
+      data: contentTypes,
+    }),
+    Object.freeze({
+      name: "_rels/.rels",
+      data: rootRelationships,
+    }),
+    Object.freeze({
+      name: profile.mainPartPath,
+      data: Buffer.from(profile.mainXml, "utf8"),
+    }),
+  ];
+
+  if (args.mainRelationships?.length) {
+    entries.push(
+      Object.freeze({
+        name: profile.mainRelationshipsPath,
+        data: Buffer.from(
+          '<?xml version="1.0" encoding="UTF-8"?>' +
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+            args.mainRelationships.join("") +
+            "</Relationships>",
+          "utf8",
+        ),
+      }),
+    );
+  }
+
+  for (const entry of args.additionalEntries ?? []) {
+    entries.push(entry);
+  }
+
+  return buildStoredZip(entries);
 }
 
 function buildOoxmlPdfPolyglot() {
@@ -1025,7 +1303,11 @@ function validateManifest() {
       entry.threatFamily === "IDENTITY_AMBIGUITY" ||
       entry.threatFamily === "POLYGLOT"
         ? "CERTIFIED_M6B"
-        : "NOT_CERTIFIED";
+        : entry.threatFamily === "OOXML_CONTAINER_EVASION" ||
+            entry.threatFamily === "OOXML_RELATIONSHIP_EVASION" ||
+            entry.threatFamily === "OOXML_MACRO_EVASION"
+          ? "CERTIFIED_M6C"
+          : "NOT_CERTIFIED";
 
     assert(
       entry.certificationStatus === expectedCertification,
@@ -1151,6 +1433,89 @@ function validateM6BCertificationCases() {
   );
 }
 
+function validateM6CCertificationCases() {
+  const caseIds = new Set<string>();
+  const familyCounts = new Map<ThreatFamily, number>();
+
+  assert(
+    M6C_CERTIFICATION_CASES.length === 9,
+    "M6C must execute the exact nine-case OOXML evasion certification matrix.",
+  );
+
+  for (const testCase of M6C_CERTIFICATION_CASES) {
+    assert(
+      Object.isFrozen(testCase),
+      `M6C case ${testCase.caseId} must be immutable.`,
+    );
+    assert(
+      /^HDS-M6C-\d{3}-[A-Z0-9-]+$/.test(testCase.caseId),
+      `M6C case id is invalid: ${testCase.caseId}`,
+    );
+    assert(
+      !caseIds.has(testCase.caseId),
+      `Duplicate M6C case id: ${testCase.caseId}`,
+    );
+    assert(
+      testCase.threatFamily === "OOXML_CONTAINER_EVASION" ||
+        testCase.threatFamily === "OOXML_RELATIONSHIP_EVASION" ||
+        testCase.threatFamily === "OOXML_MACRO_EVASION",
+      `${testCase.caseId} must certify only the bounded M6C OOXML threat families.`,
+    );
+    assert(
+      testCase.format === "OOXML" &&
+        testCase.provenance === "DETERMINISTIC_GENERATED",
+      `${testCase.caseId} must be a deterministic generated OOXML fixture.`,
+    );
+    assert(
+      testCase.certificationPhase === "M6C" &&
+        testCase.certificationCredit === true,
+      `${testCase.caseId} must earn explicit M6C certification credit.`,
+    );
+    assert(
+      testCase.authorityImplication === "NO_CLEAN_AUTHORITY",
+      `${testCase.caseId} must preserve the no-CLEAN authority boundary.`,
+    );
+    assert(
+      testCase.expectedDetectedContainer === "ZIP" &&
+        testCase.expectedSignatureKind === "ZIP_SIGNATURE",
+      `${testCase.caseId} must preserve exact OOXML ZIP identity.`,
+    );
+    assert(
+      testCase.attackTechnique.trim().length >= 64,
+      `${testCase.caseId} must describe the OOXML evasion technique precisely.`,
+    );
+
+    familyCounts.set(
+      testCase.threatFamily,
+      (familyCounts.get(testCase.threatFamily) ?? 0) + 1,
+    );
+    caseIds.add(testCase.caseId);
+  }
+
+  for (const family of [
+    "OOXML_CONTAINER_EVASION",
+    "OOXML_RELATIONSHIP_EVASION",
+    "OOXML_MACRO_EVASION",
+  ] as const) {
+    assert(
+      familyCounts.get(family) === 3,
+      `${family} must have exactly three bounded M6C certification cases.`,
+    );
+  }
+
+  assert(
+    M6C_CERTIFICATION_CASES.filter(
+      (testCase) => testCase.benignControl,
+    ).length === 1,
+    "M6C must preserve one encoded ordinary-hyperlink benign control.",
+  );
+
+  assert(
+    Object.isFrozen(M6C_CERTIFICATION_CASES),
+    "M6C certification registry must be immutable.",
+  );
+}
+
 function validateRulePackBoundary() {
   assert(
     HEHXAGON_DOCUMENT_SECURITY_RULE_IDS.length === 21,
@@ -1177,8 +1542,8 @@ function validateRulePackBoundary() {
 
   assert(
     HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION ===
-      "0.4.1-m6b",
-    "M6B must run the identity-precedence repair while preserving the M4 rule pack.",
+      "0.4.2-m6c",
+    "M6C must run the OOXML semantic-normalization repair while preserving the M4 rule pack.",
   );
 }
 
@@ -1456,14 +1821,241 @@ async function executeM6BCertification() {
   } as const;
 }
 
+async function executeM6CCertification() {
+  const docxCaseCollision = buildM6COoxmlPackage({
+    application: "docx",
+    additionalEntries: [
+      Object.freeze({
+        name: "word/custom/item.xml",
+        data: Buffer.from("<item/>", "utf8"),
+      }),
+      Object.freeze({
+        name: "WORD/CUSTOM/ITEM.XML",
+        data: Buffer.from("<other/>", "utf8"),
+      }),
+    ],
+  });
+
+  const xlsxPathTraversal = buildM6COoxmlPackage({
+    application: "xlsx",
+    additionalEntries: [
+      Object.freeze({
+        name: "xl/../outside.xml",
+        data: Buffer.from("<outside/>", "utf8"),
+      }),
+    ],
+  });
+
+  const pptxUnicodeCollision = buildM6COoxmlPackage({
+    application: "pptx",
+    additionalEntries: [
+      Object.freeze({
+        name: "ppt/custom/caf\u00e9.xml",
+        data: Buffer.from("<one/>", "utf8"),
+      }),
+      Object.freeze({
+        name: "ppt/custom/cafe\u0301.xml",
+        data: Buffer.from("<two/>", "utf8"),
+      }),
+    ],
+  });
+
+  const docxRemoteTemplateEntity = buildM6COoxmlPackage({
+    application: "docx",
+    mainRelationships: [
+      '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/attachedTempl&#x61;te" Target="https://example.invalid/template.dotx" TargetMode="External"/>',
+    ],
+  });
+
+  const xlsxHyperlinkEntityControl = buildM6COoxmlPackage({
+    application: "xlsx",
+    mainRelationships: [
+      '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="h&#x74;tps://example.com/policy" TargetMode="External"/>',
+    ],
+  });
+
+  const pptxOleRelationshipEntity = buildM6COoxmlPackage({
+    application: "pptx",
+    mainRelationships: [
+      '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObj&#101;ct" Target="components/item.dat" TargetMode="Internal"/>',
+    ],
+    additionalEntries: [
+      Object.freeze({
+        name: "ppt/components/item.dat",
+        data: Buffer.from("HDS-M6C-OLE-RELATIONSHIP-EVIDENCE", "ascii"),
+      }),
+    ],
+    additionalContentTypeOverrides: [
+      '<Override PartName="/ppt/components/item.dat" ContentType="application/octet-stream"/>',
+    ],
+  });
+
+  const docxVbaRelationshipEntity = buildM6COoxmlPackage({
+    application: "docx",
+    mainRelationships: [
+      '<Relationship Id="rId2" Type="http://schemas.microsoft.com/office/2006/relationships/vbaProj&#x65;ct" Target="components/state.dat" TargetMode="Internal"/>',
+    ],
+    additionalEntries: [
+      Object.freeze({
+        name: "word/components/state.dat",
+        data: Buffer.from("HDS-M6C-VBA-RELATIONSHIP-EVIDENCE", "ascii"),
+      }),
+    ],
+    additionalContentTypeOverrides: [
+      '<Override PartName="/word/components/state.dat" ContentType="application/octet-stream"/>',
+    ],
+  });
+
+  const xlsxVbaContentTypeEntity = buildM6COoxmlPackage({
+    application: "xlsx",
+    additionalEntries: [
+      Object.freeze({
+        name: "xl/components/state.dat",
+        data: Buffer.from("HDS-M6C-VBA-CONTENT-TYPE-EVIDENCE", "ascii"),
+      }),
+    ],
+    additionalContentTypeOverrides: [
+      '<Override PartName="/xl/components/state.dat" ContentType="application/vnd.ms-office.vbaProj&#101;ct"/>',
+    ],
+  });
+
+  const pptxMacroContentTypeEntity = buildM6COoxmlPackage({
+    application: "pptx",
+    additionalEntries: [
+      Object.freeze({
+        name: "ppt/components/alternate.xml",
+        data: Buffer.from("<alternate/>", "utf8"),
+      }),
+    ],
+    additionalContentTypeOverrides: [
+      '<Override PartName="/ppt/components/alternate.xml" ContentType="application/vnd.ms-powerpoint.presentation.macro&#69;nabled.main+xml"/>',
+    ],
+  });
+
+  const results = [
+    await inspectDocument({
+      bytes: docxCaseCollision,
+      filename: "m6c-case-collision.docx",
+      extension: "docx",
+      mimeType: M6C_OOXML_PROFILES.docx.mimeType,
+    }),
+    await inspectDocument({
+      bytes: xlsxPathTraversal,
+      filename: "m6c-path-traversal.xlsx",
+      extension: "xlsx",
+      mimeType: M6C_OOXML_PROFILES.xlsx.mimeType,
+    }),
+    await inspectDocument({
+      bytes: pptxUnicodeCollision,
+      filename: "m6c-unicode-collision.pptx",
+      extension: "pptx",
+      mimeType: M6C_OOXML_PROFILES.pptx.mimeType,
+    }),
+    await inspectDocument({
+      bytes: docxRemoteTemplateEntity,
+      filename: "m6c-remote-template-entity.docx",
+      extension: "docx",
+      mimeType: M6C_OOXML_PROFILES.docx.mimeType,
+    }),
+    await inspectDocument({
+      bytes: xlsxHyperlinkEntityControl,
+      filename: "m6c-hyperlink-entity-control.xlsx",
+      extension: "xlsx",
+      mimeType: M6C_OOXML_PROFILES.xlsx.mimeType,
+    }),
+    await inspectDocument({
+      bytes: pptxOleRelationshipEntity,
+      filename: "m6c-ole-relationship-entity.pptx",
+      extension: "pptx",
+      mimeType: M6C_OOXML_PROFILES.pptx.mimeType,
+    }),
+    await inspectDocument({
+      bytes: docxVbaRelationshipEntity,
+      filename: "m6c-vba-relationship-entity.docx",
+      extension: "docx",
+      mimeType: M6C_OOXML_PROFILES.docx.mimeType,
+    }),
+    await inspectDocument({
+      bytes: xlsxVbaContentTypeEntity,
+      filename: "m6c-vba-content-type-entity.xlsx",
+      extension: "xlsx",
+      mimeType: M6C_OOXML_PROFILES.xlsx.mimeType,
+    }),
+    await inspectDocument({
+      bytes: pptxMacroContentTypeEntity,
+      filename: "m6c-macro-content-type-entity.pptx",
+      extension: "pptx",
+      mimeType: M6C_OOXML_PROFILES.pptx.mimeType,
+    }),
+  ] as const;
+
+  M6C_CERTIFICATION_CASES.forEach(
+    (testCase, index) => {
+      assertResultMatchesContract(
+        results[index]!,
+        testCase,
+      );
+    },
+  );
+
+  const hyperlinkControl = results[4]!;
+  assert(
+    hyperlinkControl.archiveInspectionComplete === true &&
+      hyperlinkControl.ooxmlStructuralInspectionComplete === true &&
+      hyperlinkControl.ooxmlStructuralEvidence?.externalHyperlinksObserved === 1 &&
+      hyperlinkControl.rulePackEvaluationComplete === true &&
+      hyperlinkControl.rulePackEvaluation?.outcome === "PASS",
+    "The numeric-reference HTTPS control must remain a fully inspected allowed external hyperlink.",
+  );
+
+  const numericAttribute = ooxmlTagAttributes(
+    '<Relationship Target="h&#x74;tps://example.com"/>',
+  );
+  assert(
+    numericAttribute.get("Target") === "https://example.com",
+    "OOXML attribute decoding must normalize valid hexadecimal XML character references.",
+  );
+
+  const decimalAttribute = ooxmlTagAttributes(
+    '<Override ContentType="application/vnd.ms-office.vbaProj&#101;ct"/>',
+  );
+  assert(
+    decimalAttribute.get("ContentType") ===
+      "application/vnd.ms-office.vbaProject",
+    "OOXML attribute decoding must normalize valid decimal XML character references.",
+  );
+
+  const singlePassAttribute = ooxmlTagAttributes(
+    '<Relationship Target="h&amp;#x74;tps://example.com"/>',
+  );
+  assert(
+    singlePassAttribute.get("Target") ===
+      "h&#x74;tps://example.com",
+    "OOXML entity decoding must remain single-pass and must not recursively reinterpret escaped entity text.",
+  );
+
+  assert(
+    results.every(
+      (result) =>
+        String(result.verdict) !== "CLEAN" &&
+        result.inspectionComplete === false,
+    ),
+    "M6C certification must never grant CLEAN or completed document-trust authority.",
+  );
+
+  return { results } as const;
+}
+
 async function run() {
   validateManifest();
   validateCaseContract();
   validateM6BCertificationCases();
+  validateM6CCertificationCases();
   validateRulePackBoundary();
 
   const sentinelResults = await executeSentinels();
   const m6b = await executeM6BCertification();
+  const m6c = await executeM6CCertification();
 
   const sentinelSummary =
     HARNESS_SENTINEL_CASES.map((testCase, index) =>
@@ -1507,7 +2099,37 @@ async function run() {
       }),
     );
 
-  const certifiedThreatFamilies =
+  const m6cSummary =
+    M6C_CERTIFICATION_CASES.map((testCase, index) =>
+      Object.freeze({
+        caseId: testCase.caseId,
+        threatFamily: testCase.threatFamily,
+        benignControl: testCase.benignControl,
+        certificationCredit: testCase.certificationCredit,
+        expectedVerdict: testCase.expectedVerdict,
+        actualVerdict: m6c.results[index]!.verdict,
+        expectedReasonCode: testCase.expectedReasonCode,
+        reasonMatched:
+          m6c.results[index]!.reasonCodes.includes(
+            testCase.expectedReasonCode,
+          ),
+        expectedRuleId: testCase.expectedRuleId,
+        actualMatchedRuleIds:
+          m6c.results[index]!.rulePackEvaluation?.matchedRules.map(
+            (rule) => rule.ruleId,
+          ) ?? [],
+        expectedDetectedContainer:
+          testCase.expectedDetectedContainer,
+        actualDetectedContainer:
+          m6c.results[index]!.identityEvidence.detectedContainer,
+        expectedSignatureKind:
+          testCase.expectedSignatureKind,
+        actualSignatureKind:
+          m6c.results[index]!.identityEvidence.signatureKind,
+      }),
+    );
+
+  const m6bCertifiedThreatFamilies =
     THREAT_FAMILY_MANIFEST
       .filter(
         (entry) =>
@@ -1515,11 +2137,27 @@ async function run() {
       )
       .map((entry) => entry.threatFamily);
 
+  const m6cCertifiedThreatFamilies =
+    THREAT_FAMILY_MANIFEST
+      .filter(
+        (entry) =>
+          entry.certificationStatus === "CERTIFIED_M6C",
+      )
+      .map((entry) => entry.threatFamily);
+
   assert(
-    certifiedThreatFamilies.length === 2 &&
-      certifiedThreatFamilies.includes("IDENTITY_AMBIGUITY") &&
-      certifiedThreatFamilies.includes("POLYGLOT"),
-    "M6B must certify exactly IDENTITY_AMBIGUITY and POLYGLOT.",
+    m6bCertifiedThreatFamilies.length === 2 &&
+      m6bCertifiedThreatFamilies.includes("IDENTITY_AMBIGUITY") &&
+      m6bCertifiedThreatFamilies.includes("POLYGLOT"),
+    "M6B certification state must remain exactly identity ambiguity plus polyglot.",
+  );
+
+  assert(
+    m6cCertifiedThreatFamilies.length === 3 &&
+      m6cCertifiedThreatFamilies.includes("OOXML_CONTAINER_EVASION") &&
+      m6cCertifiedThreatFamilies.includes("OOXML_RELATIONSHIP_EVASION") &&
+      m6cCertifiedThreatFamilies.includes("OOXML_MACRO_EVASION"),
+    "M6C must certify exactly the three bounded OOXML evasion families.",
   );
 
   assert(
@@ -1532,6 +2170,11 @@ async function run() {
         (result) =>
           String(result.verdict) !== "CLEAN" &&
           result.inspectionComplete === false,
+      ) &&
+      m6c.results.every(
+        (result) =>
+          String(result.verdict) !== "CLEAN" &&
+          result.inspectionComplete === false,
       ),
     "M6 execution must never grant CLEAN or completed document-trust authority.",
   );
@@ -1541,13 +2184,13 @@ async function run() {
       {
         ok: true,
         event:
-          "HDS_M6B_IDENTITY_POLYGLOT_MASQUERADE_CERTIFICATION_PASSED",
+          "HDS_M6C_OOXML_EVASION_CERTIFICATION_PASSED",
         corpusSchemaVersion:
           HDS_M6_ADVERSARIAL_CORPUS_SCHEMA_VERSION,
         harnessVersion:
-          HDS_M6B_HARNESS_VERSION,
+          HDS_M6C_HARNESS_VERSION,
         priorHarnessVersion:
-          HDS_M6A_HARNESS_VERSION,
+          HDS_M6B_HARNESS_VERSION,
         scannerEngine:
           HEHXAGON_DOCUMENT_SECURITY_ENGINE,
         scannerEngineVersion:
@@ -1567,9 +2210,12 @@ async function run() {
                 entry.certificationStatus,
             }),
           ),
-        m6bCertifiedThreatFamilies:
-          certifiedThreatFamilies,
+        m6bCertifiedThreatFamilies,
         m6bCertificationComplete: true,
+        m6cCertifiedThreatFamilies,
+        m6cCertificationComplete: true,
+        ooxmlNormalizationInvariant:
+          "SINGLE_PASS_NAMED_DECIMAL_AND_HEX_XML_ATTRIBUTE_ENTITIES",
         identityPrecedenceInvariant:
           "EXECUTABLE_THEN_LEADING_ZIP_OLE_THEN_BOUNDED_PDF_PREAMBLE",
         truePolyglotProof: {
@@ -1588,7 +2234,6 @@ async function run() {
               "EXTENSION_CONTAINER_MISMATCH",
             ),
         },
-        masqueradeCaseCount: 3,
         corpusProvenance:
           "DETERMINISTIC_GENERATED",
         externalBinaryCorpusFiles: 0,
@@ -1608,6 +2253,20 @@ async function run() {
           ).length,
         m6bResults:
           m6bSummary,
+        m6cCaseCount:
+          M6C_CERTIFICATION_CASES.length,
+        m6cCertificationCredit:
+          M6C_CERTIFICATION_CASES.filter(
+            (testCase) =>
+              testCase.certificationCredit,
+          ).length,
+        m6cBenignControlCount:
+          M6C_CERTIFICATION_CASES.filter(
+            (testCase) =>
+              testCase.benignControl,
+          ).length,
+        m6cResults:
+          m6cSummary,
         adversarialCertificationComplete: false,
         cleanAuthorityGranted: false,
         immutablePromotionAuthorityGranted: false,
@@ -1624,11 +2283,11 @@ run().catch((error) => {
       {
         ok: false,
         event:
-          "HDS_M6B_IDENTITY_POLYGLOT_MASQUERADE_CERTIFICATION_FAILED",
+          "HDS_M6C_OOXML_EVASION_CERTIFICATION_FAILED",
         errorCode:
           error instanceof Error
             ? error.message
-            : "M6B_UNKNOWN_FAILURE",
+            : "M6C_UNKNOWN_FAILURE",
       },
       null,
       2,

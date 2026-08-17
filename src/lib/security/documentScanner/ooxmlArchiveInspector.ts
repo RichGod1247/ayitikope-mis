@@ -717,12 +717,32 @@ export function decodeOoxmlXml(bytes: Buffer) {
 }
 
 function decodeXmlAttribute(value: string) {
-  return value
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&");
+  return value.replace(
+    /&(?:quot|apos|lt|gt|amp|#x[0-9A-Fa-f]+|#[0-9]+);/g,
+    (entity) => {
+      if (entity === "&quot;") return '"';
+      if (entity === "&apos;") return "'";
+      if (entity === "&lt;") return "<";
+      if (entity === "&gt;") return ">";
+      if (entity === "&amp;") return "&";
+
+      const numericBody = entity.slice(2, -1);
+      const isHex = numericBody.startsWith("x");
+      const digits = isHex ? numericBody.slice(1) : numericBody;
+      const codePoint = Number.parseInt(digits, isHex ? 16 : 10);
+
+      if (
+        !Number.isInteger(codePoint) ||
+        codePoint < 0 ||
+        codePoint > 0x10ffff ||
+        (codePoint >= 0xd800 && codePoint <= 0xdfff)
+      ) {
+        return entity;
+      }
+
+      return String.fromCodePoint(codePoint);
+    },
+  );
 }
 
 export function ooxmlTagAttributes(tag: string) {
