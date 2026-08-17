@@ -38,6 +38,9 @@ export const HDS_M6B_HARNESS_VERSION =
 export const HDS_M6C_HARNESS_VERSION =
   "HDS-M6C-HARNESS-V1" as const;
 
+export const HDS_M6D1_HARNESS_VERSION =
+  "HDS-M6D1-HARNESS-V1" as const;
+
 const ONE_MEBIBYTE = 1024 * 1024;
 
 const ARCHIVE_LIMITS: NativeDocumentArchiveLimits = Object.freeze({
@@ -809,6 +812,44 @@ function buildClassicPdf(args?: {
   return Buffer.concat(chunks);
 }
 
+function buildM6DClassicPdf(objectBodies: readonly string[]) {
+  const chunks: Buffer[] = [];
+  let byteLength = 0;
+
+  const header = Buffer.from("%PDF-1.7\n%HDS-M6D1\n", "latin1");
+  chunks.push(header);
+  byteLength += header.length;
+
+  const offsets: number[] = [0];
+
+  objectBodies.forEach((body, index) => {
+    offsets[index + 1] = byteLength;
+    const objectBytes = Buffer.from(
+      `${index + 1} 0 obj\n${body}\nendobj\n`,
+      "latin1",
+    );
+    chunks.push(objectBytes);
+    byteLength += objectBytes.length;
+  });
+
+  const xrefOffset = byteLength;
+  let xref = `xref\n0 ${objectBodies.length + 1}\n`;
+  xref += "0000000000 65535 f \n";
+
+  for (let objectNumber = 1; objectNumber <= objectBodies.length; objectNumber += 1) {
+    xref +=
+      `${String(offsets[objectNumber]).padStart(10, "0")}` +
+      " 00000 n \n";
+  }
+
+  xref +=
+    `trailer\n<< /Size ${objectBodies.length + 1} /Root 1 0 R >>\n` +
+    `startxref\n${xrefOffset}\n%%EOF\n`;
+
+  chunks.push(Buffer.from(xref, "latin1"));
+  return Buffer.concat(chunks);
+}
+
 function crc32(bytes: Buffer) {
   let crc = 0xffffffff;
 
@@ -1542,8 +1583,8 @@ function validateRulePackBoundary() {
 
   assert(
     HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION ===
-      "0.4.2-m6c",
-    "M6C must run the OOXML semantic-normalization repair while preserving the M4 rule pack.",
+      "0.4.3-m6d1",
+    "M6D1 must run the PDF dictionary-ambiguity repair while preserving the M4 rule pack.",
   );
 }
 
@@ -2046,6 +2087,71 @@ async function executeM6CCertification() {
   return { results } as const;
 }
 
+async function executeM6D1ParserAmbiguityRepair() {
+  const baseObjects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>",
+  ] as const;
+
+  const duplicateActionKey = buildM6DClassicPdf([
+    ...baseObjects,
+    "<< /S /JavaScript /S /URI /URI (https://example.com) >>",
+  ]);
+
+  const encodedDuplicateActionKey = buildM6DClassicPdf([
+    ...baseObjects,
+    "<< /S /JavaScript /#53 /URI /URI (https://example.com) >>",
+  ]);
+
+  const benignControl = buildClassicPdf();
+
+  const duplicateResult = await inspectPdf({ bytes: duplicateActionKey });
+  const encodedDuplicateResult = await inspectPdf({ bytes: encodedDuplicateActionKey });
+  const benignResult = await inspectPdf({ bytes: benignControl });
+
+  for (const [caseId, result] of [
+    ["HDS-M6D1-001-DUPLICATE-ACTION-KEY", duplicateResult],
+    ["HDS-M6D1-002-ENCODED-DUPLICATE-ACTION-KEY", encodedDuplicateResult],
+  ] as const) {
+    assert(
+      result.verdict === "FAILED",
+      `${caseId} must fail closed on an ambiguous PDF dictionary.`,
+    );
+    assert(
+      result.reasonCodes.includes("PDF_OBJECT_SYNTAX_INVALID"),
+      `${caseId} must report PDF_OBJECT_SYNTAX_INVALID.`,
+    );
+    assert(
+      result.rulePackEvaluation === null,
+      `${caseId} must fail before rule-pack trust evaluation.`,
+    );
+  }
+
+  assert(
+    benignResult.verdict === "IDENTITY_VERIFIED" &&
+      benignResult.reasonCodes.includes(
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      ),
+    "HDS-M6D1-003-BENIGN-PDF-CONTROL must preserve an ordinary PDF pass.",
+  );
+
+  assert(
+    [duplicateResult, encodedDuplicateResult, benignResult].every(
+      (result) =>
+        String(result.verdict) !== "CLEAN" &&
+        result.inspectionComplete === false,
+    ),
+    "M6D1 must preserve the no-CLEAN authority boundary.",
+  );
+
+  return {
+    duplicateResult,
+    encodedDuplicateResult,
+    benignResult,
+  } as const;
+}
+
 async function run() {
   validateManifest();
   validateCaseContract();
@@ -2056,6 +2162,7 @@ async function run() {
   const sentinelResults = await executeSentinels();
   const m6b = await executeM6BCertification();
   const m6c = await executeM6CCertification();
+  const m6d1 = await executeM6D1ParserAmbiguityRepair();
 
   const sentinelSummary =
     HARNESS_SENTINEL_CASES.map((testCase, index) =>
@@ -2160,6 +2267,18 @@ async function run() {
     "M6C must certify exactly the three bounded OOXML evasion families.",
   );
 
+  const m6dThreatFamilies = THREAT_FAMILY_MANIFEST.filter(
+    (entry) => entry.plannedPhase === "M6D",
+  );
+
+  assert(
+    m6dThreatFamilies.length === 6 &&
+      m6dThreatFamilies.every(
+        (entry) => entry.certificationStatus === "NOT_CERTIFIED",
+      ),
+    "M6D1 repairs one parser ambiguity and must not certify the six M6D threat families.",
+  );
+
   assert(
     sentinelResults.every(
       (result) =>
@@ -2175,6 +2294,15 @@ async function run() {
         (result) =>
           String(result.verdict) !== "CLEAN" &&
           result.inspectionComplete === false,
+      ) &&
+      [
+        m6d1.duplicateResult,
+        m6d1.encodedDuplicateResult,
+        m6d1.benignResult,
+      ].every(
+        (result) =>
+          String(result.verdict) !== "CLEAN" &&
+          result.inspectionComplete === false,
       ),
     "M6 execution must never grant CLEAN or completed document-trust authority.",
   );
@@ -2184,13 +2312,13 @@ async function run() {
       {
         ok: true,
         event:
-          "HDS_M6C_OOXML_EVASION_CERTIFICATION_PASSED",
+          "HDS_M6D1_PDF_DICTIONARY_AMBIGUITY_REPAIR_PASSED",
         corpusSchemaVersion:
           HDS_M6_ADVERSARIAL_CORPUS_SCHEMA_VERSION,
         harnessVersion:
-          HDS_M6C_HARNESS_VERSION,
+          HDS_M6D1_HARNESS_VERSION,
         priorHarnessVersion:
-          HDS_M6B_HARNESS_VERSION,
+          HDS_M6C_HARNESS_VERSION,
         scannerEngine:
           HEHXAGON_DOCUMENT_SECURITY_ENGINE,
         scannerEngineVersion:
@@ -2267,6 +2395,39 @@ async function run() {
           ).length,
         m6cResults:
           m6cSummary,
+        m6d1ParserAmbiguityRepairComplete: true,
+        m6d1RepairCaseCount: 3,
+        m6dCertificationComplete: false,
+        m6d1Results: [
+          {
+            caseId: "HDS-M6D1-001-DUPLICATE-ACTION-KEY",
+            expectedVerdict: "FAILED",
+            actualVerdict: m6d1.duplicateResult.verdict,
+            expectedReasonCode: "PDF_OBJECT_SYNTAX_INVALID",
+            reasonMatched: m6d1.duplicateResult.reasonCodes.includes(
+              "PDF_OBJECT_SYNTAX_INVALID",
+            ),
+          },
+          {
+            caseId: "HDS-M6D1-002-ENCODED-DUPLICATE-ACTION-KEY",
+            expectedVerdict: "FAILED",
+            actualVerdict: m6d1.encodedDuplicateResult.verdict,
+            expectedReasonCode: "PDF_OBJECT_SYNTAX_INVALID",
+            reasonMatched: m6d1.encodedDuplicateResult.reasonCodes.includes(
+              "PDF_OBJECT_SYNTAX_INVALID",
+            ),
+          },
+          {
+            caseId: "HDS-M6D1-003-BENIGN-PDF-CONTROL",
+            expectedVerdict: "IDENTITY_VERIFIED",
+            actualVerdict: m6d1.benignResult.verdict,
+            expectedReasonCode:
+              "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+            reasonMatched: m6d1.benignResult.reasonCodes.includes(
+              "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+            ),
+          },
+        ],
         adversarialCertificationComplete: false,
         cleanAuthorityGranted: false,
         immutablePromotionAuthorityGranted: false,
@@ -2283,11 +2444,11 @@ run().catch((error) => {
       {
         ok: false,
         event:
-          "HDS_M6C_OOXML_EVASION_CERTIFICATION_FAILED",
+          "HDS_M6D1_PDF_DICTIONARY_AMBIGUITY_REPAIR_FAILED",
         errorCode:
           error instanceof Error
             ? error.message
-            : "M6C_UNKNOWN_FAILURE",
+            : "M6D1_UNKNOWN_FAILURE",
       },
       null,
       2,

@@ -495,6 +495,10 @@ class PdfValueParser {
       }
 
       const key = this.parseName();
+      if (values.has(key.value)) {
+        throw new Error("DUPLICATE_DICTIONARY_KEY");
+      }
+
       const value = this.parseValue(depth);
       values.set(key.value, value);
 
@@ -524,6 +528,13 @@ function parserFailure(error: unknown) {
     return failed(
       "PDF_STRING_LIMIT_EXCEEDED",
       "A PDF string exceeded the configured inspection limit.",
+    );
+  }
+
+  if (marker === "DUPLICATE_DICTIONARY_KEY") {
+    return failed(
+      "PDF_OBJECT_SYNTAX_INVALID",
+      "A PDF dictionary contains a duplicate key whose value is ambiguous and cannot be inspected safely.",
     );
   }
 
