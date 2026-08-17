@@ -26,14 +26,14 @@ export const HEHXAGON_DOCUMENT_SECURITY_ENGINE =
   "HEHXAGON_DOCUMENT_SECURITY" as const;
 
 export const HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION =
-  "0.3.1-m3b1";
+  "0.3.2-m3b2";
 
 /**
- * This is the embedded M3B1 structural policy, not the future M4 versioned
+ * This is the embedded M3B2 structural policy, not the future M4 versioned
  * threat-rule pack. It deliberately cannot produce CLEAN.
  */
 export const HEHXAGON_DOCUMENT_SECURITY_RULE_PACK_VERSION =
-  "HDS-M3B1-PDF-CLASSIC-STRUCTURE-V1";
+  "HDS-M3B2-PDF-MODERN-STRUCTURE-V1";
 
 const MAX_SIGNATURE_PREFIX_BYTES = 1024;
 
@@ -493,13 +493,13 @@ async function readBoundedSource(args: {
 }
 
 /**
- * M3B1: bounded byte integrity + broad container identity + bounded OOXML
+ * M3B2: bounded byte integrity + broad container identity + bounded OOXML
  * package/structural security + bounded classic-PDF structural security.
  *
  * ZIP/OOXML inspection parses central-directory metadata and only decompresses
  * the small OPC control parts required to prove Word/Excel/PowerPoint package
- * OOXML is covered through M3A. Classic PDF xref tables and active structures
- * are covered in M3B1. Modern PDF xref/object streams and legacy OLE remain
+ * OOXML is covered through M3A. Classic and modern PDF xref/object streams
+ * plus active structures are covered in M3B2. Legacy OLE remains
  * explicitly outside this milestone and cannot earn CLEAN.
  */
 export async function inspectNativeDocumentIdentity(
@@ -768,7 +768,7 @@ export async function inspectNativeDocumentIdentity(
         finding(
           "PDF_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
           "INFO",
-          "Byte integrity and the bounded M3B1 classic-PDF structural policy are verified; compressed PDF object/xref streams, legacy OLE inspection, and later rule-pack evaluation are still required before full document trust.",
+          "Byte integrity and the bounded M3B2 PDF structural policy are verified across classic and compressed xref/object-stream structures; legacy OLE inspection and later rule-pack evaluation are still required before full document trust.",
         ),
       ],
       bytesScanned: read.bytesScanned,

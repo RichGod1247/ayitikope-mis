@@ -28,11 +28,12 @@ export type NativeDocumentFormat =
   | "UNKNOWN";
 
 /**
- * M3B1 still deliberately has no CLEAN verdict.
+ * M3B2 still deliberately has no CLEAN verdict.
  *
  * IDENTITY_VERIFIED means that byte integrity, broad container identity, and
- * (for OOXML) bounded package identity plus the M3A OOXML and M3B1 classic-PDF structural policies have
- * been established. It is not a sendable or malware-clean state. modern-PDF compressed structures, OLE
+ * (for OOXML) bounded package identity plus M3A OOXML structural policy, and
+ * (for PDF) bounded classic/modern xref and object-stream structural policy have
+ * been established. It is not a sendable or malware-clean state. Legacy OLE
  * structural inspection and the later versioned rule pack are still required
  * before any future milestone may earn CLEAN.
  */
@@ -106,8 +107,19 @@ export type NativeDocumentScannerReasonCode =
   | "PDF_STARTXREF_MISSING"
   | "PDF_STARTXREF_INVALID"
   | "PDF_XREF_TABLE_INVALID"
-  | "PDF_XREF_STREAM_UNSUPPORTED"
-  | "PDF_OBJECT_STREAM_UNSUPPORTED"
+  | "PDF_STREAM_FILTER_UNSUPPORTED"
+  | "PDF_STREAM_DECODE_PARAMETERS_UNSUPPORTED"
+  | "PDF_STREAM_DECOMPRESSION_FAILED"
+  | "PDF_STREAM_DECODE_LIMIT_EXCEEDED"
+  | "PDF_XREF_STREAM_DICTIONARY_INVALID"
+  | "PDF_XREF_STREAM_W_INVALID"
+  | "PDF_XREF_STREAM_INDEX_INVALID"
+  | "PDF_XREF_STREAM_ENTRY_INVALID"
+  | "PDF_OBJECT_STREAM_DICTIONARY_INVALID"
+  | "PDF_OBJECT_STREAM_OBJECT_LIMIT_EXCEEDED"
+  | "PDF_OBJECT_STREAM_HEADER_INVALID"
+  | "PDF_OBJECT_STREAM_INDEX_INVALID"
+  | "PDF_COMPRESSED_OBJECT_REFERENCE_INVALID"
   | "PDF_INCREMENTAL_UPDATE_LIMIT_EXCEEDED"
   | "PDF_OBJECT_COUNT_LIMIT_EXCEEDED"
   | "PDF_OBJECT_OFFSET_INVALID"
@@ -155,6 +167,15 @@ export type NativeDocumentPdfLimits = {
   maxNestingDepth: number;
   maxTokenBytes: number;
   maxStringBytes: number;
+
+  /** Maximum decoded bytes permitted for any single cross-reference stream. */
+  maxDecodedXrefStreamBytes: number;
+
+  /** Maximum decoded bytes permitted for any single object stream. */
+  maxDecodedObjectStreamBytes: number;
+
+  /** Maximum number of contained objects declared by a single object stream. */
+  maxObjectsPerObjectStream: number;
 };
 
 export type NativeDocumentScannerLimits = {
@@ -164,7 +185,7 @@ export type NativeDocumentScannerLimits = {
   /** Required for DOCX/XLSX/PPTX beginning with M2. */
   archive?: NativeDocumentArchiveLimits;
 
-  /** Required for PDF beginning with M3B1. */
+  /** Required for PDF structural inspection beginning with M3B1 and extended in M3B2. */
   pdf?: NativeDocumentPdfLimits;
 };
 
@@ -248,8 +269,11 @@ export type NativeDocumentPdfStructuralEvidence = {
   safeUriActionsObserved: number;
 
   encrypted: false;
-  xrefStreamsDetected: false;
-  objectStreamsDetected: false;
+  xrefStreamsDetected: boolean;
+  objectStreamsDetected: boolean;
+  xrefStreamCount: number;
+  objectStreamCount: number;
+  compressedObjectCount: number;
   catalogVerified: true;
   pageTreeRootVerified: true;
 
@@ -283,14 +307,13 @@ export type NativeDocumentScannerResult = {
   ooxmlStructuralInspectionComplete: boolean;
   ooxmlStructuralEvidence: NativeDocumentOoxmlStructuralEvidence | null;
 
-  /** True only when the M3B1 classic-PDF structural policy ran to completion. */
+  /** True only when the M3B2 bounded PDF structural policy ran to completion. */
   pdfStructuralInspectionComplete: boolean;
   pdfStructuralEvidence: NativeDocumentPdfStructuralEvidence | null;
 
   /**
-   * Always false through M3B1. Modern compressed-PDF structures, legacy OLE
-   * structural inspection, and later rule-pack evaluation still remain before
-   * full document trust exists.
+   * Always false through M3B2. Legacy OLE structural inspection and later
+   * rule-pack evaluation still remain before full document trust exists.
    */
   inspectionComplete: false;
 

@@ -1,5 +1,5 @@
 import { createHash } from "crypto";
-import { deflateRawSync } from "node:zlib";
+import { deflateRawSync, deflateSync } from "node:zlib";
 
 import {
   inspectNativeDocumentIdentity,
@@ -26,6 +26,9 @@ const PDF_LIMITS: NativeDocumentPdfLimits = {
   maxNestingDepth: 24,
   maxTokenBytes: 4096,
   maxStringBytes: 64 * 1024,
+  maxDecodedXrefStreamBytes: 256 * 1024,
+  maxDecodedObjectStreamBytes: 2 * 1024 * 1024,
+  maxObjectsPerObjectStream: 64,
 };
 
 type ZipFixtureEntry = {
@@ -123,11 +126,11 @@ function assertSanitized(result: NativeDocumentScannerResult) {
 
   assert(
     !serialized.includes('"verdict":"CLEAN"'),
-    "M3B1 must never emit CLEAN.",
+    "M3B2 must never emit CLEAN.",
   );
   assert(
     result.inspectionComplete === false,
-    "M3B1 inspectionComplete must always remain false.",
+    "M3B2 inspectionComplete must always remain false.",
   );
 }
 
@@ -367,19 +370,277 @@ function buildClassicPdf(options: ClassicPdfFixtureOptions = {}) {
   return Buffer.concat(chunks);
 }
 
-function buildXrefStreamPdf() {
-  const prefix = Buffer.from(
-    "%PDF-1.7\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n" +
-      "2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\n",
-    "latin1",
+function xrefRow(type: number, field1: number, field2: number) {
+  const row = Buffer.alloc(7);
+  row[0] = type & 0xff;
+  row.writeUInt32BE(field1 >>> 0, 1);
+  row.writeUInt16BE(field2 & 0xffff, 5);
+  return row;
+}
+
+function encodePngNoneRows(bytes: Buffer, columns: number) {
+  if (bytes.length % columns !== 0) {
+    throw new Error("Fixture xref data is not row aligned.");
+  }
+
+  const rows: Buffer[] = [];
+  for (let offset = 0; offset < bytes.length; offset += columns) {
+    rows.push(Buffer.from([0]));
+    rows.push(bytes.subarray(offset, offset + columns));
+  }
+  return Buffer.concat(rows);
+}
+
+type XrefStreamFixtureOptions = {
+  flate?: boolean;
+  predictor?: boolean;
+  filterName?: string;
+  w?: string;
+  index?: string;
+};
+
+function buildXrefStreamPdf(options: XrefStreamFixtureOptions = {}) {
+  const chunks: Buffer[] = [Buffer.from("%PDF-1.7\n%HDS\n", "latin1")];
+  const offsets = new Map<number, number>();
+  let byteLength = chunks[0]!.length;
+
+  const addObject = (objectNumber: number, body: string) => {
+    offsets.set(objectNumber, byteLength);
+    const objectBytes = Buffer.from(
+      `${objectNumber} 0 obj\n${body}\nendobj\n`,
+      "latin1",
+    );
+    chunks.push(objectBytes);
+    byteLength += objectBytes.length;
+  };
+
+  addObject(1, "<< /Type /Catalog /Pages 2 0 R >>");
+  addObject(2, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+  addObject(3, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>");
+
+  const xrefObjectNumber = 4;
+  const xrefOffset = byteLength;
+  const rawXref = Buffer.concat([
+    xrefRow(0, 0, 65535),
+    xrefRow(1, offsets.get(1)!, 0),
+    xrefRow(1, offsets.get(2)!, 0),
+    xrefRow(1, offsets.get(3)!, 0),
+    xrefRow(1, xrefOffset, 0),
+  ]);
+
+  const predictor = options.predictor === true;
+  const flate = options.flate === true || predictor;
+  const preFlate = predictor ? encodePngNoneRows(rawXref, 7) : rawXref;
+  const streamData = flate ? deflateSync(preFlate) : preFlate;
+  const filterName = options.filterName ?? (flate ? "FlateDecode" : "");
+  const filter = filterName ? ` /Filter /${filterName}` : "";
+  const decodeParms = predictor
+    ? " /DecodeParms << /Predictor 12 /Columns 7 /Colors 1 /BitsPerComponent 8 >>"
+    : "";
+  const w = options.w ?? "[1 4 2]";
+  const index = options.index ?? "[0 5]";
+
+  const xrefObject = Buffer.concat([
+    Buffer.from(
+      `${xrefObjectNumber} 0 obj\n` +
+        `<< /Type /XRef /Size 5 /Root 1 0 R /W ${w} /Index ${index}` +
+        ` /Length ${streamData.length}${filter}${decodeParms} >>\nstream\n`,
+      "latin1",
+    ),
+    streamData,
+    Buffer.from(
+      `\nendstream\nendobj\nstartxref\n${xrefOffset}\n%%EOF\n`,
+      "latin1",
+    ),
+  ]);
+
+  chunks.push(xrefObject);
+  return Buffer.concat(chunks);
+}
+
+type ObjectStreamFixtureOptions = {
+  extraCompressedObject?: string;
+  rootObjectStreamIndex?: number;
+  objectFilterName?: string;
+  firstOverride?: number;
+};
+
+function buildObjectStreamPdf(options: ObjectStreamFixtureOptions = {}) {
+  const chunks: Buffer[] = [Buffer.from("%PDF-1.7\n%HDS\n", "latin1")];
+  const offsets = new Map<number, number>();
+  let byteLength = chunks[0]!.length;
+
+  const addObjectBytes = (objectNumber: number, body: Buffer) => {
+    offsets.set(objectNumber, byteLength);
+    const objectBytes = Buffer.concat([
+      Buffer.from(`${objectNumber} 0 obj\n`, "latin1"),
+      body,
+      Buffer.from("\nendobj\n", "latin1"),
+    ]);
+    chunks.push(objectBytes);
+    byteLength += objectBytes.length;
+  };
+
+  addObjectBytes(
+    3,
+    Buffer.from(
+      "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>",
+      "latin1",
+    ),
   );
-  const xrefOffset = prefix.length;
-  const xrefObject = Buffer.from(
-    "3 0 obj\n<< /Type /XRef /Length 0 >>\nstream\n\nendstream\nendobj\n" +
-      `startxref\n${xrefOffset}\n%%EOF\n`,
-    "latin1",
+
+  const containedBodies = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    ...(options.extraCompressedObject ? [options.extraCompressedObject] : []),
+  ];
+  const containedNumbers = [1, 2, ...(options.extraCompressedObject ? [6] : [])];
+
+  const bodyBuffers = containedBodies.map((body) => Buffer.from(body, "latin1"));
+  const relativeOffsets: number[] = [];
+  let bodyOffset = 0;
+  for (const body of bodyBuffers) {
+    relativeOffsets.push(bodyOffset);
+    bodyOffset += body.length + 1;
+  }
+
+  let header = "";
+  containedNumbers.forEach((objectNumber, index) => {
+    header += `${objectNumber} ${relativeOffsets[index]} `;
+  });
+  const headerBytes = Buffer.from(header, "latin1");
+  const first = options.firstOverride ?? headerBytes.length;
+  const decodedObjectStreamParts: Buffer[] = [headerBytes];
+  bodyBuffers.forEach((body, index) => {
+    decodedObjectStreamParts.push(body);
+    if (index + 1 < bodyBuffers.length) {
+      decodedObjectStreamParts.push(Buffer.from(" "));
+    }
+  });
+  const decodedObjectStream = Buffer.concat(decodedObjectStreamParts);
+  const encodedObjectStream = deflateSync(decodedObjectStream);
+  const objectFilterName = options.objectFilterName ?? "FlateDecode";
+
+  addObjectBytes(
+    4,
+    Buffer.concat([
+      Buffer.from(
+        `<< /Type /ObjStm /N ${containedNumbers.length} /First ${first}` +
+          ` /Length ${encodedObjectStream.length} /Filter /${objectFilterName} >>\nstream\n`,
+        "latin1",
+      ),
+      encodedObjectStream,
+      Buffer.from("\nendstream", "latin1"),
+    ]),
   );
-  return Buffer.concat([prefix, xrefObject]);
+
+  const xrefObjectNumber = 5;
+  const xrefOffset = byteLength;
+  const size = options.extraCompressedObject ? 7 : 6;
+  const rows: Buffer[] = [xrefRow(0, 0, 65535)];
+  rows.push(xrefRow(2, 4, options.rootObjectStreamIndex ?? 0));
+  rows.push(xrefRow(2, 4, 1));
+  rows.push(xrefRow(1, offsets.get(3)!, 0));
+  rows.push(xrefRow(1, offsets.get(4)!, 0));
+  rows.push(xrefRow(1, xrefOffset, 0));
+  if (options.extraCompressedObject) rows.push(xrefRow(2, 4, 2));
+
+  const xrefData = deflateSync(Buffer.concat(rows));
+  const xrefObject = Buffer.concat([
+    Buffer.from(
+      `${xrefObjectNumber} 0 obj\n` +
+        `<< /Type /XRef /Size ${size} /Root 1 0 R /W [1 4 2] /Index [0 ${size}]` +
+        ` /Length ${xrefData.length} /Filter /FlateDecode >>\nstream\n`,
+      "latin1",
+    ),
+    xrefData,
+    Buffer.from(
+      `\nendstream\nendobj\nstartxref\n${xrefOffset}\n%%EOF\n`,
+      "latin1",
+    ),
+  ]);
+
+  chunks.push(xrefObject);
+  return Buffer.concat(chunks);
+}
+
+function buildMixedClassicThenXrefStreamPdf() {
+  const base = buildClassicPdf();
+  const baseText = base.toString("latin1");
+  const match = /startxref\s+(\d+)\s+%%EOF\s*$/.exec(baseText);
+  if (!match) throw new Error("Classic fixture startxref missing.");
+  const previousXref = Number(match[1]);
+
+  const xrefOffset = base.length;
+  const row = xrefRow(1, xrefOffset, 0);
+  const encoded = deflateSync(row);
+  const xrefObject = Buffer.concat([
+    Buffer.from(
+      `4 0 obj\n<< /Type /XRef /Size 5 /Root 1 0 R /Prev ${previousXref}` +
+        ` /W [1 4 2] /Index [4 1] /Length ${encoded.length} /Filter /FlateDecode >>\nstream\n`,
+      "latin1",
+    ),
+    encoded,
+    Buffer.from(
+      `\nendstream\nendobj\nstartxref\n${xrefOffset}\n%%EOF\n`,
+      "latin1",
+    ),
+  ]);
+
+  return Buffer.concat([base, xrefObject]);
+}
+
+function buildHybridReferencePdf(hiddenObjectBody: string) {
+  const base = buildClassicPdf();
+  const baseText = base.toString("latin1");
+  const previousMatch = /startxref\s+(\d+)\s+%%EOF\s*$/.exec(baseText);
+  if (!previousMatch) throw new Error("Classic fixture startxref missing.");
+  const previousXref = Number(previousMatch[1]);
+
+  const chunks: Buffer[] = [base];
+  let byteLength = base.length;
+
+  const objectStreamOffset = byteLength;
+  const header = Buffer.from("6 0 ", "latin1");
+  const body = Buffer.from(hiddenObjectBody, "latin1");
+  const decodedObjectStream = Buffer.concat([header, body]);
+  const encodedObjectStream = deflateSync(decodedObjectStream);
+  const objectStream = Buffer.concat([
+    Buffer.from(
+      `4 0 obj\n<< /Type /ObjStm /N 1 /First ${header.length}` +
+        ` /Length ${encodedObjectStream.length} /Filter /FlateDecode >>\nstream\n`,
+      "latin1",
+    ),
+    encodedObjectStream,
+    Buffer.from("\nendstream\nendobj\n", "latin1"),
+  ]);
+  chunks.push(objectStream);
+  byteLength += objectStream.length;
+
+  const xrefStreamOffset = byteLength;
+  const hiddenEntry = deflateSync(xrefRow(2, 4, 0));
+  const xrefStream = Buffer.concat([
+    Buffer.from(
+      `5 0 obj\n<< /Type /XRef /Size 7 /W [1 4 2] /Index [6 1]` +
+        ` /Length ${hiddenEntry.length} /Filter /FlateDecode >>\nstream\n`,
+      "latin1",
+    ),
+    hiddenEntry,
+    Buffer.from("\nendstream\nendobj\n", "latin1"),
+  ]);
+  chunks.push(xrefStream);
+  byteLength += xrefStream.length;
+
+  const updateXrefOffset = byteLength;
+  const updateXref =
+    "xref\n4 2\n" +
+    `${String(objectStreamOffset).padStart(10, "0")} 00000 n \n` +
+    `${String(xrefStreamOffset).padStart(10, "0")} 00000 n \n` +
+    `trailer\n<< /Size 7 /Root 1 0 R /Prev ${previousXref} /XRefStm ${xrefStreamOffset} >>\n` +
+    `startxref\n${updateXrefOffset}\n%%EOF\n`;
+
+  chunks.push(Buffer.from(updateXref, "latin1"));
+  return Buffer.concat(chunks);
 }
 
 async function inspectFixture(args: {
@@ -1577,17 +1838,6 @@ async function run() {
   });
   assertVerdict(pdfEncrypted, "BLOCKED", "PDF_ENCRYPTED_BLOCKED");
 
-  const pdfObjectStream = await inspectFixture({
-    bytes: buildClassicPdf({
-      extraObjects: ["<< /Type /ObjStm /Length 0 >>\nstream\n\nendstream"],
-    }),
-    filename: "object-stream.pdf",
-    extension: "pdf",
-    mimeType: "application/pdf",
-    archiveLimits: null,
-  });
-  assertVerdict(pdfObjectStream, "FAILED", "PDF_OBJECT_STREAM_UNSUPPORTED");
-
   const pdfXrefStream = await inspectFixture({
     bytes: buildXrefStreamPdf(),
     filename: "xref-stream.pdf",
@@ -1595,7 +1845,220 @@ async function run() {
     mimeType: "application/pdf",
     archiveLimits: null,
   });
-  assertVerdict(pdfXrefStream, "FAILED", "PDF_XREF_STREAM_UNSUPPORTED");
+  assertVerdict(
+    pdfXrefStream,
+    "IDENTITY_VERIFIED",
+    "PDF_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+  );
+  assert(
+    pdfXrefStream.pdfStructuralEvidence?.xrefStreamsDetected === true &&
+      pdfXrefStream.pdfStructuralEvidence.xrefStreamCount === 1,
+    "A modern xref-stream PDF should complete bounded xref-stream inspection.",
+  );
+
+  const pdfFlatePredictorXref = await inspectFixture({
+    bytes: buildXrefStreamPdf({ flate: true, predictor: true }),
+    filename: "xref-predictor.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(
+    pdfFlatePredictorXref,
+    "IDENTITY_VERIFIED",
+    "PDF_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+  );
+
+  const pdfObjectStream = await inspectFixture({
+    bytes: buildObjectStreamPdf(),
+    filename: "object-stream.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(
+    pdfObjectStream,
+    "IDENTITY_VERIFIED",
+    "PDF_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+  );
+  assert(
+    pdfObjectStream.pdfStructuralEvidence?.objectStreamsDetected === true &&
+      pdfObjectStream.pdfStructuralEvidence.compressedObjectCount === 2,
+    "Compressed Catalog/Pages objects should be resolved through a bounded object stream.",
+  );
+
+  const pdfCompressedJavascript = await inspectFixture({
+    bytes: buildObjectStreamPdf({
+      extraCompressedObject: "<< /S /JavaScript /JS (app.alert\(1\)) >>",
+    }),
+    filename: "compressed-javascript.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(
+    pdfCompressedJavascript,
+    "BLOCKED",
+    "PDF_JAVASCRIPT_BLOCKED",
+  );
+
+  const pdfMixedXrefChain = await inspectFixture({
+    bytes: buildMixedClassicThenXrefStreamPdf(),
+    filename: "mixed-xref-chain.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(
+    pdfMixedXrefChain,
+    "IDENTITY_VERIFIED",
+    "PDF_STRUCTURAL_POLICY_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+  );
+  assert(
+    pdfMixedXrefChain.pdfStructuralEvidence?.incrementalUpdates === 1 &&
+      pdfMixedXrefChain.pdfStructuralEvidence.xrefStreamsDetected === true,
+    "A modern xref-stream revision should safely chain to a prior classic xref revision.",
+  );
+
+  const pdfHybridHiddenJavascript = await inspectFixture({
+    bytes: buildHybridReferencePdf(
+      "<< /S /JavaScript /JS (app.alert\(hybrid\)) >>",
+    ),
+    filename: "hybrid-hidden-javascript.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(
+    pdfHybridHiddenJavascript,
+    "BLOCKED",
+    "PDF_JAVASCRIPT_BLOCKED",
+  );
+
+  const pdfInvalidXrefIndex = await inspectFixture({
+    bytes: buildXrefStreamPdf({ index: "[0 3 2 2]" }),
+    filename: "invalid-xref-index.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(
+    pdfInvalidXrefIndex,
+    "FAILED",
+    "PDF_XREF_STREAM_INDEX_INVALID",
+  );
+
+  const pdfUnsupportedObjectStreamFilter = await inspectFixture({
+    bytes: buildObjectStreamPdf({ objectFilterName: "ASCIIHexDecode" }),
+    filename: "unsupported-object-stream-filter.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(
+    pdfUnsupportedObjectStreamFilter,
+    "FAILED",
+    "PDF_STREAM_FILTER_UNSUPPORTED",
+  );
+
+  const pdfInvalidXrefW = await inspectFixture({
+    bytes: buildXrefStreamPdf({ w: "[1 7 2]" }),
+    filename: "invalid-xref-w.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(pdfInvalidXrefW, "FAILED", "PDF_XREF_STREAM_W_INVALID");
+
+  const pdfUnsupportedXrefFilter = await inspectFixture({
+    bytes: buildXrefStreamPdf({ filterName: "ASCIIHexDecode" }),
+    filename: "unsupported-xref-filter.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(
+    pdfUnsupportedXrefFilter,
+    "FAILED",
+    "PDF_STREAM_FILTER_UNSUPPORTED",
+  );
+
+  const pdfXrefDecodeLimit = await inspectFixture({
+    bytes: buildXrefStreamPdf({ flate: true }),
+    filename: "xref-decode-limit.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+    pdfLimits: {
+      ...PDF_LIMITS,
+      maxDecodedXrefStreamBytes: 8,
+    },
+  });
+  assertVerdict(
+    pdfXrefDecodeLimit,
+    "FAILED",
+    "PDF_STREAM_DECODE_LIMIT_EXCEEDED",
+  );
+
+  const pdfObjectStreamCountLimit = await inspectFixture({
+    bytes: buildObjectStreamPdf(),
+    filename: "object-stream-count-limit.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+    pdfLimits: {
+      ...PDF_LIMITS,
+      maxObjectsPerObjectStream: 1,
+    },
+  });
+  assertVerdict(
+    pdfObjectStreamCountLimit,
+    "FAILED",
+    "PDF_OBJECT_STREAM_OBJECT_LIMIT_EXCEEDED",
+  );
+
+  const pdfObjectStreamDecodeLimit = await inspectFixture({
+    bytes: buildObjectStreamPdf(),
+    filename: "object-stream-decode-limit.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+    pdfLimits: {
+      ...PDF_LIMITS,
+      maxDecodedObjectStreamBytes: 16,
+    },
+  });
+  assertVerdict(
+    pdfObjectStreamDecodeLimit,
+    "FAILED",
+    "PDF_STREAM_DECODE_LIMIT_EXCEEDED",
+  );
+
+  const pdfCompressedIndexMismatch = await inspectFixture({
+    bytes: buildObjectStreamPdf({ rootObjectStreamIndex: 1 }),
+    filename: "compressed-index-mismatch.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(
+    pdfCompressedIndexMismatch,
+    "FAILED",
+    "PDF_COMPRESSED_OBJECT_REFERENCE_INVALID",
+  );
+
+  const pdfObjectStreamFirstInvalid = await inspectFixture({
+    bytes: buildObjectStreamPdf({ firstOverride: 9999 }),
+    filename: "object-stream-first-invalid.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    archiveLimits: null,
+  });
+  assertVerdict(
+    pdfObjectStreamFirstInvalid,
+    "FAILED",
+    "PDF_OBJECT_STREAM_HEADER_INVALID",
+  );
 
   const pdfMissingPageTree = await inspectFixture({
     bytes: buildClassicPdf({ catalogOverride: "<< /Type /Catalog >>" }),
@@ -1726,6 +2189,19 @@ async function run() {
     pdfEncrypted,
     pdfObjectStream,
     pdfXrefStream,
+    pdfFlatePredictorXref,
+    pdfCompressedJavascript,
+    pdfMixedXrefChain,
+    pdfHybridHiddenJavascript,
+    pdfInvalidXrefIndex,
+    pdfUnsupportedObjectStreamFilter,
+    pdfInvalidXrefW,
+    pdfUnsupportedXrefFilter,
+    pdfXrefDecodeLimit,
+    pdfObjectStreamCountLimit,
+    pdfObjectStreamDecodeLimit,
+    pdfCompressedIndexMismatch,
+    pdfObjectStreamFirstInvalid,
     pdfMissingPageTree,
     pdfObjectCountLimit,
     pdfNestingLimit,
@@ -1736,21 +2212,22 @@ async function run() {
     assertSanitized(result);
   }
 
-  console.log("HDS M3B1 native document scanner self-test: GREEN");
+  console.log("HDS M3B2 native document scanner self-test: GREEN");
   console.log(`Cases: ${allResults.length}`);
   console.log("M1 identity/integrity regression: GREEN");
   console.log("M2 bounded OOXML archive regression: GREEN");
   console.log("M3A OOXML structural security regression: GREEN");
-  console.log("Classic PDF xref/object structural parsing: GREEN");
-  console.log("PDF object/nesting/string resource guards: GREEN");
+  console.log("Classic PDF xref/object structural regression: GREEN");
+  console.log("Modern PDF xref/object-stream structural parsing: GREEN");
+  console.log("PDF object/nesting/string/decompression resource guards: GREEN");
   console.log("PDF JavaScript/action/attachment/rich-media blocks: GREEN");
-  console.log("Encrypted/xref-stream/object-stream fail-closed policy: GREEN");
+  console.log("Encrypted PDF fail-closed policy: GREEN");
   console.log("Ordinary HTTP(S) PDF hyperlink policy: GREEN");
   console.log("OOXML/PDF structural passes remain non-CLEAN: GREEN");
   console.log("Sanitized result boundary: GREEN");
 }
 
 run().catch(() => {
-  console.error("HDS M3B1 native document scanner self-test: FAILED");
+  console.error("HDS M3B2 native document scanner self-test: FAILED");
   process.exitCode = 1;
 });

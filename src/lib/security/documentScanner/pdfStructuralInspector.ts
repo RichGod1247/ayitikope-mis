@@ -1,3 +1,5 @@
+import { inflateSync } from "node:zlib";
+
 import type {
   NativeDocumentPdfLimits,
   NativeDocumentPdfStructuralEvidence,
@@ -19,16 +21,29 @@ type PdfValue =
   | boolean
   | null;
 
-type XrefEntry = {
-  offset: number;
-  generation: number;
-  inUse: boolean;
-};
+type XrefEntry =
+  | { kind: "free"; generation: number }
+  | { kind: "uncompressed"; offset: number; generation: number }
+  | {
+      kind: "compressed";
+      objectStreamObjectNumber: number;
+      objectStreamIndex: number;
+      generation: 0;
+    };
 
 type ParsedIndirectObject = {
   objectNumber: number;
   generation: number;
   value: PdfValue;
+  stream?: {
+    dictionary: PdfDict;
+    encodedData: Buffer;
+  };
+};
+
+type ParsedObjectStream = {
+  objectNumbers: number[];
+  objects: Map<number, ParsedIndirectObject>;
 };
 
 export type PdfStructuralInspectionResult =
@@ -82,7 +97,10 @@ function validateLimits(limits: NativeDocumentPdfLimits) {
     positiveSafeInteger(limits.maxIncrementalUpdates) &&
     positiveSafeInteger(limits.maxNestingDepth) &&
     positiveSafeInteger(limits.maxTokenBytes) &&
-    positiveSafeInteger(limits.maxStringBytes)
+    positiveSafeInteger(limits.maxStringBytes) &&
+    positiveSafeInteger(limits.maxDecodedXrefStreamBytes) &&
+    positiveSafeInteger(limits.maxDecodedObjectStreamBytes) &&
+    positiveSafeInteger(limits.maxObjectsPerObjectStream)
   );
 }
 
@@ -558,12 +576,6 @@ function parseTrailerDictionary(
   return { dictionary: value, endOffset: parser.position() };
 }
 
-function detectXrefStreamAt(bytes: Buffer, offset: number) {
-  const end = Math.min(bytes.length, offset + 512);
-  const text = ascii(bytes, offset, end);
-  return /^\s*\d+\s+\d+\s+obj\b/.test(text) && /\/Type\s*\/XRef\b/.test(text);
-}
-
 function parseClassicXrefSection(args: {
   bytes: Buffer;
   offset: number;
@@ -573,16 +585,6 @@ function parseClassicXrefSection(args: {
   let offset = skipWhitespaceAndComments(bytes, args.offset);
 
   if (!startsWithAscii(bytes, offset, "xref")) {
-    if (detectXrefStreamAt(bytes, offset)) {
-      return {
-        ok: false as const,
-        result: failed(
-          "PDF_XREF_STREAM_UNSUPPORTED",
-          "PDF cross-reference streams are deferred to a later bounded parser milestone.",
-        ),
-      };
-    }
-
     return {
       ok: false as const,
       result: failed(
@@ -674,11 +676,18 @@ function parseClassicXrefSection(args: {
       }
 
       const objectNumber = first.value + index;
-      entries.set(objectNumber, {
-        offset: Number(match[1]),
-        generation: Number(match[2]),
-        inUse: match[3] === "n",
-      });
+      const generation = Number(match[2]);
+
+      entries.set(
+        objectNumber,
+        match[3] === "n"
+          ? {
+              kind: "uncompressed",
+              offset: Number(match[1]),
+              generation,
+            }
+          : { kind: "free", generation },
+      );
 
       offset = lineEnd;
       if (bytes[offset] === 0x0d) offset += 1;
@@ -692,6 +701,7 @@ function parseClassicXrefSection(args: {
 
     return {
       ok: true as const,
+      kind: "classic" as const,
       entries,
       trailer: trailer.dictionary,
     };
@@ -761,6 +771,679 @@ function streamDataStart(bytes: Buffer, streamKeywordEnd: number) {
   }
 
   return null;
+}
+
+function arrayNumbers(value: PdfValue | undefined) {
+  if (!value || typeof value !== "object" || value.kind !== "array") {
+    return null;
+  }
+
+  const numbers: number[] = [];
+  for (const item of value.values) {
+    const number = numberValue(item);
+    if (number === null) return null;
+    numbers.push(number);
+  }
+  return numbers;
+}
+
+function filterNames(value: PdfValue | undefined): string[] | null {
+  if (value === undefined) return [];
+
+  const single = nameValue(value);
+  if (single) return [single];
+
+  if (value && typeof value === "object" && value.kind === "array") {
+    const names: string[] = [];
+    for (const item of value.values) {
+      const name = nameValue(item);
+      if (!name) return null;
+      names.push(name);
+    }
+    return names;
+  }
+
+  return null;
+}
+
+function paethPredictor(left: number, above: number, upperLeft: number) {
+  const estimate = left + above - upperLeft;
+  const leftDistance = Math.abs(estimate - left);
+  const aboveDistance = Math.abs(estimate - above);
+  const upperLeftDistance = Math.abs(estimate - upperLeft);
+
+  if (leftDistance <= aboveDistance && leftDistance <= upperLeftDistance) {
+    return left;
+  }
+  if (aboveDistance <= upperLeftDistance) return above;
+  return upperLeft;
+}
+
+function decodePngPredictor(args: {
+  bytes: Buffer;
+  columns: number;
+  maxOutputBytes: number;
+}) {
+  const { bytes, columns, maxOutputBytes } = args;
+  const encodedRowBytes = columns + 1;
+
+  if (
+    columns <= 0 ||
+    encodedRowBytes <= 1 ||
+    bytes.length % encodedRowBytes !== 0
+  ) {
+    return null;
+  }
+
+  const rowCount = bytes.length / encodedRowBytes;
+  const outputLength = rowCount * columns;
+  if (!Number.isSafeInteger(outputLength) || outputLength > maxOutputBytes) {
+    return "LIMIT" as const;
+  }
+
+  const output = Buffer.alloc(outputLength);
+  let previousRow = Buffer.alloc(columns);
+
+  for (let row = 0; row < rowCount; row += 1) {
+    const encodedStart = row * encodedRowBytes;
+    const filter = bytes[encodedStart];
+    if (filter === undefined || filter > 4) return null;
+
+    const decodedRow = Buffer.alloc(columns);
+
+    for (let column = 0; column < columns; column += 1) {
+      const raw = bytes[encodedStart + 1 + column];
+      if (raw === undefined) return null;
+
+      const left = column > 0 ? decodedRow[column - 1]! : 0;
+      const above = previousRow[column] ?? 0;
+      const upperLeft = column > 0 ? previousRow[column - 1]! : 0;
+
+      const prediction =
+        filter === 0
+          ? 0
+          : filter === 1
+            ? left
+            : filter === 2
+              ? above
+              : filter === 3
+                ? Math.floor((left + above) / 2)
+                : paethPredictor(left, above, upperLeft);
+
+      decodedRow[column] = (raw + prediction) & 0xff;
+    }
+
+    decodedRow.copy(output, row * columns);
+    previousRow = decodedRow;
+  }
+
+  return output;
+}
+
+function decodePdfStream(args: {
+  dictionary: PdfDict;
+  encodedData: Buffer;
+  maxDecodedBytes: number;
+  allowPngPredictor: boolean;
+}):
+  | { ok: true; bytes: Buffer }
+  | { ok: false; result: PdfStructuralInspectionResult } {
+  const { dictionary, encodedData, maxDecodedBytes, allowPngPredictor } = args;
+  const names = filterNames(dictionary.values.get("Filter"));
+
+  if (!names || names.length > 1) {
+    return {
+      ok: false,
+      result: failed(
+        "PDF_STREAM_FILTER_UNSUPPORTED",
+        "The PDF stream uses a filter chain outside the bounded structural policy.",
+      ),
+    };
+  }
+
+  if (names.length === 0) {
+    if (encodedData.length > maxDecodedBytes) {
+      return {
+        ok: false,
+        result: failed(
+          "PDF_STREAM_DECODE_LIMIT_EXCEEDED",
+          "A decoded PDF structural stream exceeds the configured byte limit.",
+        ),
+      };
+    }
+    return { ok: true, bytes: Buffer.from(encodedData) };
+  }
+
+  if (names[0] !== "FlateDecode" && names[0] !== "Fl") {
+    return {
+      ok: false,
+      result: failed(
+        "PDF_STREAM_FILTER_UNSUPPORTED",
+        "Only bounded FlateDecode is supported for modern PDF structural streams.",
+      ),
+    };
+  }
+
+  const rawDecodeParms = dictionary.values.get("DecodeParms");
+  let decodeParms = rawDecodeParms;
+
+  if (
+    rawDecodeParms &&
+    typeof rawDecodeParms === "object" &&
+    rawDecodeParms.kind === "array"
+  ) {
+    if (rawDecodeParms.values.length !== 1) {
+      return {
+        ok: false,
+        result: failed(
+          "PDF_STREAM_DECODE_PARAMETERS_UNSUPPORTED",
+          "The PDF stream decode-parameter array is outside the bounded structural policy.",
+        ),
+      };
+    }
+    decodeParms = rawDecodeParms.values[0] ?? null;
+  }
+
+  let predictor = 1;
+  let columns = 1;
+
+  if (decodeParms !== undefined && decodeParms !== null) {
+    if (
+      !decodeParms ||
+      typeof decodeParms !== "object" ||
+      decodeParms.kind !== "dict"
+    ) {
+      return {
+        ok: false,
+        result: failed(
+          "PDF_STREAM_DECODE_PARAMETERS_UNSUPPORTED",
+          "The PDF stream decode parameters are outside the bounded structural policy.",
+        ),
+      };
+    }
+
+    const predictorValue = decodeParms.values.get("Predictor");
+    const columnsValue = decodeParms.values.get("Columns");
+    const colorsValue = decodeParms.values.get("Colors");
+    const bitsValue = decodeParms.values.get("BitsPerComponent");
+
+    predictor = predictorValue === undefined ? 1 : numberValue(predictorValue) ?? -1;
+    columns = columnsValue === undefined ? 1 : numberValue(columnsValue) ?? -1;
+    const colors = colorsValue === undefined ? 1 : numberValue(colorsValue);
+    const bitsPerComponent = bitsValue === undefined ? 8 : numberValue(bitsValue);
+
+    if (
+      predictor < 1 ||
+      columns <= 0 ||
+      colors !== 1 ||
+      bitsPerComponent !== 8 ||
+      (predictor !== 1 && (!allowPngPredictor || predictor < 10 || predictor > 15))
+    ) {
+      return {
+        ok: false,
+        result: failed(
+          "PDF_STREAM_DECODE_PARAMETERS_UNSUPPORTED",
+          "The PDF Flate predictor parameters are outside the bounded structural policy.",
+        ),
+      };
+    }
+  }
+
+  let inflateLimit = maxDecodedBytes;
+  if (predictor >= 10) {
+    const overhead = Math.ceil(maxDecodedBytes / columns) + 1;
+    inflateLimit = maxDecodedBytes + overhead;
+    if (!Number.isSafeInteger(inflateLimit)) {
+      return {
+        ok: false,
+        result: failed(
+          "PDF_STREAM_DECODE_LIMIT_EXCEEDED",
+          "The configured PDF predictor limit cannot be represented safely.",
+        ),
+      };
+    }
+  }
+
+  let inflated: Buffer;
+  try {
+    inflated = inflateSync(encodedData, { maxOutputLength: inflateLimit });
+  } catch (error) {
+    const code =
+      error && typeof error === "object" && "code" in error
+        ? String((error as { code?: unknown }).code ?? "")
+        : "";
+
+    return {
+      ok: false,
+      result: failed(
+        code === "ERR_BUFFER_TOO_LARGE"
+          ? "PDF_STREAM_DECODE_LIMIT_EXCEEDED"
+          : "PDF_STREAM_DECOMPRESSION_FAILED",
+        code === "ERR_BUFFER_TOO_LARGE"
+          ? "A decoded PDF structural stream exceeds the configured byte limit."
+          : "A PDF structural stream could not be decompressed safely.",
+      ),
+    };
+  }
+
+  if (predictor === 1) {
+    if (inflated.length > maxDecodedBytes) {
+      return {
+        ok: false,
+        result: failed(
+          "PDF_STREAM_DECODE_LIMIT_EXCEEDED",
+          "A decoded PDF structural stream exceeds the configured byte limit.",
+        ),
+      };
+    }
+    return { ok: true, bytes: inflated };
+  }
+
+  const predicted = decodePngPredictor({
+    bytes: inflated,
+    columns,
+    maxOutputBytes: maxDecodedBytes,
+  });
+
+  if (predicted === "LIMIT") {
+    return {
+      ok: false,
+      result: failed(
+        "PDF_STREAM_DECODE_LIMIT_EXCEEDED",
+        "A predictor-decoded PDF structural stream exceeds the configured byte limit.",
+      ),
+    };
+  }
+
+  if (!predicted) {
+    return {
+      ok: false,
+      result: failed(
+        "PDF_STREAM_DECOMPRESSION_FAILED",
+        "A PDF PNG-predictor stream could not be decoded safely.",
+      ),
+    };
+  }
+
+  return { ok: true, bytes: predicted };
+}
+
+function parseDirectStreamObjectAt(args: {
+  bytes: Buffer;
+  offset: number;
+  limits: NativeDocumentPdfLimits;
+}):
+  | {
+      ok: true;
+      header: { objectNumber: number; generation: number };
+      dictionary: PdfDict;
+      encodedData: Buffer;
+    }
+  | { ok: false; result: PdfStructuralInspectionResult } {
+  const { bytes, limits } = args;
+  const header = parseIndirectObjectHeader(bytes, args.offset);
+  if (!header) {
+    return {
+      ok: false,
+      result: failed(
+        "PDF_XREF_STREAM_DICTIONARY_INVALID",
+        "A PDF cross-reference stream does not begin with a valid indirect-object header.",
+      ),
+    };
+  }
+
+  try {
+    const parser = new PdfValueParser(bytes, header.valueOffset, limits);
+    const value = parser.parseValue();
+    if (!value || typeof value !== "object" || value.kind !== "dict") {
+      return {
+        ok: false,
+        result: failed(
+          "PDF_XREF_STREAM_DICTIONARY_INVALID",
+          "A PDF cross-reference stream does not contain a valid dictionary.",
+        ),
+      };
+    }
+
+    parser.skipSpace();
+    if (!parser.consumeKeyword("stream")) {
+      return {
+        ok: false,
+        result: failed(
+          "PDF_XREF_STREAM_DICTIONARY_INVALID",
+          "A PDF cross-reference stream is missing its stream body.",
+        ),
+      };
+    }
+
+    const length = numberValue(value.values.get("Length"));
+    if (length === null || length < 0) {
+      return {
+        ok: false,
+        result: failed(
+          "PDF_XREF_STREAM_DICTIONARY_INVALID",
+          "A PDF cross-reference stream must use a bounded direct integer Length.",
+        ),
+      };
+    }
+
+    const dataStart = streamDataStart(bytes, parser.position());
+    if (dataStart === null) {
+      return {
+        ok: false,
+        result: failed(
+          "PDF_STREAM_BOUNDARY_INVALID",
+          "A PDF cross-reference stream does not begin at a valid line boundary.",
+        ),
+      };
+    }
+
+    const dataEnd = dataStart + length;
+    if (!Number.isSafeInteger(dataEnd) || dataEnd > bytes.length) {
+      return {
+        ok: false,
+        result: failed(
+          "PDF_STREAM_BOUNDARY_INVALID",
+          "A PDF cross-reference stream extends beyond the document boundary.",
+        ),
+      };
+    }
+
+    let endOffset = dataEnd;
+    if (bytes[endOffset] === 0x0d) endOffset += 1;
+    if (bytes[endOffset] === 0x0a) endOffset += 1;
+    endOffset = skipWhitespaceAndComments(bytes, endOffset);
+
+    if (!startsWithAscii(bytes, endOffset, "endstream")) {
+      return {
+        ok: false,
+        result: failed(
+          "PDF_STREAM_BOUNDARY_INVALID",
+          "A PDF cross-reference stream does not terminate at its declared bounded length.",
+        ),
+      };
+    }
+
+    endOffset += "endstream".length;
+    endOffset = skipWhitespaceAndComments(bytes, endOffset);
+    if (!startsWithAscii(bytes, endOffset, "endobj")) {
+      return {
+        ok: false,
+        result: failed(
+          "PDF_OBJECT_SYNTAX_INVALID",
+          "A PDF cross-reference stream is not followed by endobj.",
+        ),
+      };
+    }
+
+    return {
+      ok: true,
+      header: {
+        objectNumber: header.objectNumber,
+        generation: header.generation,
+      },
+      dictionary: value,
+      encodedData: bytes.subarray(dataStart, dataEnd),
+    };
+  } catch (error) {
+    return { ok: false, result: parserFailure(error) };
+  }
+}
+
+function readBigEndianField(bytes: Buffer, start: number, width: number) {
+  if (width === 0) return 0;
+  if (width < 0 || width > 6 || start < 0 || start + width > bytes.length) {
+    return null;
+  }
+
+  let value = 0;
+  for (let index = 0; index < width; index += 1) {
+    const byte = bytes[start + index];
+    if (byte === undefined) return null;
+    value = value * 256 + byte;
+    if (!Number.isSafeInteger(value)) return null;
+  }
+  return value;
+}
+
+function containsPdfString(value: PdfValue): boolean {
+  if (!value || typeof value !== "object") return false;
+  if (value.kind === "string") return true;
+  if (value.kind === "array") {
+    return value.values.some((item) => containsPdfString(item));
+  }
+  if (value.kind === "dict") {
+    for (const item of value.values.values()) {
+      if (containsPdfString(item)) return true;
+    }
+  }
+  return false;
+}
+
+function parseXrefStreamSection(args: {
+  bytes: Buffer;
+  offset: number;
+  limits: NativeDocumentPdfLimits;
+  requireSelfEntry?: boolean;
+}) {
+  const direct = parseDirectStreamObjectAt(args);
+  if (!direct.ok) return direct;
+
+  const { dictionary } = direct;
+  if (nameValue(dictionary.values.get("Type")) !== "XRef") {
+    return {
+      ok: false as const,
+      result: failed(
+        "PDF_XREF_STREAM_DICTIONARY_INVALID",
+        "The PDF startxref object is not a Type XRef stream.",
+      ),
+    };
+  }
+
+  if (containsPdfString(dictionary)) {
+    return {
+      ok: false as const,
+      result: failed(
+        "PDF_XREF_STREAM_DICTIONARY_INVALID",
+        "PDF cross-reference stream dictionaries may not contain string objects.",
+      ),
+    };
+  }
+
+  const size = numberValue(dictionary.values.get("Size"));
+  const widths = arrayNumbers(dictionary.values.get("W"));
+
+  if (size === null || size <= 0) {
+    return {
+      ok: false as const,
+      result: failed(
+        "PDF_XREF_STREAM_DICTIONARY_INVALID",
+        "A PDF cross-reference stream has an invalid Size value.",
+      ),
+    };
+  }
+
+  if (
+    !widths ||
+    widths.length !== 3 ||
+    widths.some((width) => width < 0 || width > 6) ||
+    widths[1] === 0
+  ) {
+    return {
+      ok: false as const,
+      result: failed(
+        "PDF_XREF_STREAM_W_INVALID",
+        "A PDF cross-reference stream has an unsafe W entry-width array.",
+      ),
+    };
+  }
+
+  const rowWidth = widths[0]! + widths[1]! + widths[2]!;
+  if (!Number.isSafeInteger(rowWidth) || rowWidth <= 0) {
+    return {
+      ok: false as const,
+      result: failed(
+        "PDF_XREF_STREAM_W_INVALID",
+        "A PDF cross-reference stream row width is invalid.",
+      ),
+    };
+  }
+
+  const rawIndex = dictionary.values.get("Index");
+  const indexValues = rawIndex === undefined ? [0, size] : arrayNumbers(rawIndex);
+
+  if (!indexValues || indexValues.length === 0 || indexValues.length % 2 !== 0) {
+    return {
+      ok: false as const,
+      result: failed(
+        "PDF_XREF_STREAM_INDEX_INVALID",
+        "A PDF cross-reference stream has an invalid Index array.",
+      ),
+    };
+  }
+
+  let entryCount = 0;
+  let previousRangeEnd = -1;
+  for (let index = 0; index < indexValues.length; index += 2) {
+    const first = indexValues[index]!;
+    const count = indexValues[index + 1]!;
+    if (
+      first < 0 ||
+      count <= 0 ||
+      first + count > size ||
+      first < previousRangeEnd
+    ) {
+      return {
+        ok: false as const,
+        result: failed(
+          "PDF_XREF_STREAM_INDEX_INVALID",
+          "A PDF cross-reference stream Index range is outside Size.",
+        ),
+      };
+    }
+    previousRangeEnd = first + count;
+    entryCount += count;
+    if (!Number.isSafeInteger(entryCount) || entryCount > args.limits.maxObjects) {
+      return {
+        ok: false as const,
+        result: failed(
+          "PDF_OBJECT_COUNT_LIMIT_EXCEEDED",
+          "The PDF cross-reference stream exceeds the configured object-count limit.",
+        ),
+      };
+    }
+  }
+
+  const decoded = decodePdfStream({
+    dictionary,
+    encodedData: direct.encodedData,
+    maxDecodedBytes: args.limits.maxDecodedXrefStreamBytes,
+    allowPngPredictor: true,
+  });
+  if (!decoded.ok) return decoded;
+
+  const expectedBytes = entryCount * rowWidth;
+  if (!Number.isSafeInteger(expectedBytes) || decoded.bytes.length !== expectedBytes) {
+    return {
+      ok: false as const,
+      result: failed(
+        "PDF_XREF_STREAM_ENTRY_INVALID",
+        "The decoded PDF cross-reference stream length does not match its Index and W declarations.",
+      ),
+    };
+  }
+
+  const entries = new Map<number, XrefEntry>();
+  let dataOffset = 0;
+
+  for (let range = 0; range < indexValues.length; range += 2) {
+    const first = indexValues[range]!;
+    const count = indexValues[range + 1]!;
+
+    for (let localIndex = 0; localIndex < count; localIndex += 1) {
+      const field0 = readBigEndianField(decoded.bytes, dataOffset, widths[0]!);
+      dataOffset += widths[0]!;
+      const field1 = readBigEndianField(decoded.bytes, dataOffset, widths[1]!);
+      dataOffset += widths[1]!;
+      const field2 = readBigEndianField(decoded.bytes, dataOffset, widths[2]!);
+      dataOffset += widths[2]!;
+
+      if (field0 === null || field1 === null || field2 === null) {
+        return {
+          ok: false as const,
+          result: failed(
+            "PDF_XREF_STREAM_ENTRY_INVALID",
+            "A PDF cross-reference stream entry cannot be represented safely.",
+          ),
+        };
+      }
+
+      const type = widths[0] === 0 ? 1 : field0;
+      const objectNumber = first + localIndex;
+
+      if (type === 0) {
+        entries.set(objectNumber, { kind: "free", generation: field2 });
+      } else if (type === 1) {
+        entries.set(objectNumber, {
+          kind: "uncompressed",
+          offset: field1,
+          generation: field2,
+        });
+      } else if (type === 2) {
+        entries.set(objectNumber, {
+          kind: "compressed",
+          objectStreamObjectNumber: field1,
+          objectStreamIndex: field2,
+          generation: 0,
+        });
+      } else {
+        return {
+          ok: false as const,
+          result: failed(
+            "PDF_XREF_STREAM_ENTRY_INVALID",
+            "A PDF cross-reference stream contains an unsupported entry type.",
+          ),
+        };
+      }
+    }
+  }
+
+  const ownEntry = entries.get(direct.header.objectNumber);
+  if (
+    (args.requireSelfEntry !== false && !ownEntry) ||
+    (ownEntry !== undefined &&
+      (ownEntry.kind !== "uncompressed" ||
+        ownEntry.offset !== args.offset ||
+        ownEntry.generation !== direct.header.generation))
+  ) {
+    return {
+      ok: false as const,
+      result: failed(
+        "PDF_XREF_STREAM_ENTRY_INVALID",
+        "A PDF cross-reference stream does not have a self-consistent indirect-object entry.",
+      ),
+    };
+  }
+
+  return {
+    ok: true as const,
+    kind: "stream" as const,
+    entries,
+    trailer: dictionary,
+    xrefObjectNumber: direct.header.objectNumber,
+  };
+}
+
+function parseXrefSectionAt(args: {
+  bytes: Buffer;
+  offset: number;
+  limits: NativeDocumentPdfLimits;
+}) {
+  const offset = skipWhitespaceAndComments(args.bytes, args.offset);
+  if (startsWithAscii(args.bytes, offset, "xref")) {
+    return parseClassicXrefSection({ ...args, offset });
+  }
+  return parseXrefStreamSection({ ...args, offset });
 }
 
 function inspectValue(args: {
@@ -936,8 +1619,11 @@ export function inspectPdfStructuralSecurity(args: {
   const seenObjects = new Set<number>();
   const visitedXrefs = new Set<number>();
   let xrefOffset = startXref.offset;
+  let revisionCount = 0;
   let xrefSections = 0;
+  let xrefStreamCount = 0;
   let newestTrailer: PdfDict | null = null;
+  let encryptedDetected = false;
 
   while (true) {
     if (visitedXrefs.has(xrefOffset)) {
@@ -948,35 +1634,94 @@ export function inspectPdfStructuralSecurity(args: {
     }
 
     visitedXrefs.add(xrefOffset);
-    xrefSections += 1;
+    revisionCount += 1;
 
-    if (xrefSections - 1 > limits.maxIncrementalUpdates) {
+    if (revisionCount - 1 > limits.maxIncrementalUpdates) {
       return failed(
         "PDF_INCREMENTAL_UPDATE_LIMIT_EXCEEDED",
         "The PDF contains more incremental revisions than the configured parser limit.",
       );
     }
 
-    const parsed = parseClassicXrefSection({
-      bytes,
-      offset: xrefOffset,
-      limits,
-    });
+    const primary = parseXrefSectionAt({ bytes, offset: xrefOffset, limits });
+    if (!primary.ok) return primary.result;
+    xrefSections += 1;
+    if (primary.kind === "stream") xrefStreamCount += 1;
 
-    if (!parsed.ok) return parsed.result;
-    if (!newestTrailer) newestTrailer = parsed.trailer;
+    if (!newestTrailer) newestTrailer = primary.trailer;
+    if (primary.trailer.values.has("Encrypt")) encryptedDetected = true;
 
-    if (parsed.trailer.values.has("XRefStm")) {
-      return failed(
-        "PDF_XREF_STREAM_UNSUPPORTED",
-        "Hybrid PDF cross-reference streams are deferred to a later bounded parser milestone.",
-      );
+    const revisionEntries = new Map<number, XrefEntry>(primary.entries);
+
+    if (primary.kind === "classic") {
+      const supplementalOffset = numberValue(primary.trailer.values.get("XRefStm"));
+      if (supplementalOffset !== null) {
+        if (
+          supplementalOffset < 0 ||
+          supplementalOffset >= bytes.length ||
+          visitedXrefs.has(supplementalOffset)
+        ) {
+          return failed(
+            "PDF_XREF_STREAM_DICTIONARY_INVALID",
+            "A hybrid PDF XRefStm pointer is invalid or cyclic.",
+          );
+        }
+
+        visitedXrefs.add(supplementalOffset);
+        const supplemental = parseXrefStreamSection({
+          bytes,
+          offset: supplementalOffset,
+          limits,
+          requireSelfEntry: false,
+        });
+        if (!supplemental.ok) return supplemental.result;
+        xrefSections += 1;
+        xrefStreamCount += 1;
+        if (supplemental.trailer.values.has("Encrypt")) encryptedDetected = true;
+
+        const supplementalOwnEntry = supplemental.entries.get(
+          supplemental.xrefObjectNumber,
+        );
+        const primaryOwnEntry = primary.entries.get(
+          supplemental.xrefObjectNumber,
+        );
+        if (
+          !supplementalOwnEntry &&
+          (!primaryOwnEntry ||
+            primaryOwnEntry.kind !== "uncompressed" ||
+            primaryOwnEntry.offset !== supplementalOffset)
+        ) {
+          return failed(
+            "PDF_XREF_STREAM_ENTRY_INVALID",
+            "A hybrid PDF cross-reference stream is not indexed by itself or its companion classic section.",
+          );
+        }
+
+        for (const [objectNumber, entry] of supplemental.entries) {
+          if (!revisionEntries.has(objectNumber)) {
+            revisionEntries.set(objectNumber, entry);
+          }
+        }
+
+        const supplementalPrev = numberValue(supplemental.trailer.values.get("Prev"));
+        const primaryPrev = numberValue(primary.trailer.values.get("Prev"));
+        if (
+          supplementalPrev !== null &&
+          primaryPrev !== null &&
+          supplementalPrev !== primaryPrev
+        ) {
+          return failed(
+            "PDF_XREF_STREAM_DICTIONARY_INVALID",
+            "Hybrid PDF trailer Prev pointers disagree across the same revision.",
+          );
+        }
+      }
     }
 
-    for (const [objectNumber, entry] of parsed.entries) {
+    for (const [objectNumber, entry] of revisionEntries) {
       if (seenObjects.has(objectNumber)) continue;
       seenObjects.add(objectNumber);
-      if (entry.inUse) activeEntries.set(objectNumber, entry);
+      if (entry.kind !== "free") activeEntries.set(objectNumber, entry);
     }
 
     if (activeEntries.size > limits.maxObjects) {
@@ -986,7 +1731,7 @@ export function inspectPdfStructuralSecurity(args: {
       );
     }
 
-    const previous = numberValue(parsed.trailer.values.get("Prev"));
+    const previous = numberValue(primary.trailer.values.get("Prev"));
     if (previous === null) break;
 
     if (previous < 0 || previous >= bytes.length) {
@@ -1006,7 +1751,7 @@ export function inspectPdfStructuralSecurity(args: {
     );
   }
 
-  if (newestTrailer.values.has("Encrypt")) {
+  if (encryptedDetected) {
     return blocked(
       "PDF_ENCRYPTED_BLOCKED",
       "Encrypted PDFs are not accepted because the security engine cannot inspect their complete active structure.",
@@ -1022,7 +1767,11 @@ export function inspectPdfStructuralSecurity(args: {
   }
 
   const objectCache = new Map<number, ParsedIndirectObject>();
+  const objectStreamCache = new Map<number, ParsedObjectStream>();
   const resolving = new Set<number>();
+  const resolvingObjectStreams = new Set<number>();
+  let objectStreamCount = 0;
+  let compressedObjectCount = 0;
 
   const parseObject = (
     objectNumber: number,
@@ -1031,7 +1780,41 @@ export function inspectPdfStructuralSecurity(args: {
     if (cached) return cached;
 
     const entry = activeEntries.get(objectNumber);
-    if (!entry || entry.offset < 0 || entry.offset >= bytes.length) {
+    if (!entry) {
+      return failed(
+        "PDF_OBJECT_OFFSET_INVALID",
+        "A referenced PDF indirect object does not have an active cross-reference entry.",
+      );
+    }
+
+    if (entry.kind === "compressed") {
+      const objectStream = parseObjectStream(entry.objectStreamObjectNumber);
+      if ("ok" in objectStream) return objectStream;
+
+      if (
+        entry.objectStreamIndex < 0 ||
+        entry.objectStreamIndex >= objectStream.objectNumbers.length ||
+        objectStream.objectNumbers[entry.objectStreamIndex] !== objectNumber
+      ) {
+        return failed(
+          "PDF_COMPRESSED_OBJECT_REFERENCE_INVALID",
+          "A compressed-object cross-reference entry does not match its object-stream header index.",
+        );
+      }
+
+      const compressed = objectStream.objects.get(objectNumber);
+      if (!compressed) {
+        return failed(
+          "PDF_COMPRESSED_OBJECT_REFERENCE_INVALID",
+          "A compressed PDF object could not be resolved from its declared object stream.",
+        );
+      }
+
+      objectCache.set(objectNumber, compressed);
+      return compressed;
+    }
+
+    if (entry.kind !== "uncompressed" || entry.offset < 0 || entry.offset >= bytes.length) {
       return failed(
         "PDF_OBJECT_OFFSET_INVALID",
         "A referenced PDF indirect object does not have a valid active cross-reference offset.",
@@ -1063,6 +1846,7 @@ export function inspectPdfStructuralSecurity(args: {
       const parser = new PdfValueParser(bytes, header.valueOffset, limits);
       const value = parser.parseValue();
       parser.skipSpace();
+      let stream: ParsedIndirectObject["stream"];
 
       if (
         value &&
@@ -1070,20 +1854,6 @@ export function inspectPdfStructuralSecurity(args: {
         value.kind === "dict" &&
         parser.consumeKeyword("stream")
       ) {
-        const type = nameValue(value.values.get("Type"));
-        if (type === "ObjStm") {
-          return failed(
-            "PDF_OBJECT_STREAM_UNSUPPORTED",
-            "PDF object streams are deferred to a later bounded parser milestone.",
-          );
-        }
-        if (type === "XRef") {
-          return failed(
-            "PDF_XREF_STREAM_UNSUPPORTED",
-            "PDF cross-reference streams are deferred to a later bounded parser milestone.",
-          );
-        }
-
         const lengthValue = value.values.get("Length");
         let streamLength = numberValue(lengthValue);
 
@@ -1145,6 +1915,11 @@ export function inspectPdfStructuralSecurity(args: {
             "A PDF stream object is not followed by a valid endobj boundary.",
           );
         }
+
+        stream = {
+          dictionary: value,
+          encodedData: bytes.subarray(dataStart, dataEnd),
+        };
       } else {
         parser.skipSpace();
         if (!parser.consumeKeyword("endobj")) {
@@ -1155,10 +1930,11 @@ export function inspectPdfStructuralSecurity(args: {
         }
       }
 
-      const parsedObject = {
+      const parsedObject: ParsedIndirectObject = {
         objectNumber,
         generation: entry.generation,
         value,
+        ...(stream ? { stream } : {}),
       };
       objectCache.set(objectNumber, parsedObject);
       return parsedObject;
@@ -1166,6 +1942,173 @@ export function inspectPdfStructuralSecurity(args: {
       return parserFailure(error);
     } finally {
       resolving.delete(objectNumber);
+    }
+  };
+
+  const parseObjectStream = (
+    objectStreamObjectNumber: number,
+  ): ParsedObjectStream | PdfStructuralInspectionResult => {
+    const cached = objectStreamCache.get(objectStreamObjectNumber);
+    if (cached) return cached;
+
+    if (resolvingObjectStreams.has(objectStreamObjectNumber)) {
+      return failed(
+        "PDF_OBJECT_STREAM_HEADER_INVALID",
+        "The PDF object-stream dependency graph contains a cycle.",
+      );
+    }
+
+    const xrefEntry = activeEntries.get(objectStreamObjectNumber);
+    if (!xrefEntry || xrefEntry.kind !== "uncompressed") {
+      return failed(
+        "PDF_COMPRESSED_OBJECT_REFERENCE_INVALID",
+        "A PDF object stream must itself be an uncompressed active indirect object.",
+      );
+    }
+
+    resolvingObjectStreams.add(objectStreamObjectNumber);
+
+    try {
+      const parsed = parseObject(objectStreamObjectNumber);
+      if ("ok" in parsed) return parsed;
+
+      if (
+        !parsed.value ||
+        typeof parsed.value !== "object" ||
+        parsed.value.kind !== "dict" ||
+        nameValue(parsed.value.values.get("Type")) !== "ObjStm" ||
+        !parsed.stream
+      ) {
+        return failed(
+          "PDF_OBJECT_STREAM_DICTIONARY_INVALID",
+          "A compressed-object reference points to an invalid Type ObjStm stream.",
+        );
+      }
+
+      const count = numberValue(parsed.value.values.get("N"));
+      const first = numberValue(parsed.value.values.get("First"));
+
+      if (count === null || count <= 0 || first === null || first < 0) {
+        return failed(
+          "PDF_OBJECT_STREAM_DICTIONARY_INVALID",
+          "A PDF object stream has invalid N or First values.",
+        );
+      }
+
+      if (count > limits.maxObjectsPerObjectStream) {
+        return failed(
+          "PDF_OBJECT_STREAM_OBJECT_LIMIT_EXCEEDED",
+          "A PDF object stream exceeds the configured contained-object limit.",
+        );
+      }
+
+      const decoded = decodePdfStream({
+        dictionary: parsed.stream.dictionary,
+        encodedData: parsed.stream.encodedData,
+        maxDecodedBytes: limits.maxDecodedObjectStreamBytes,
+        allowPngPredictor: false,
+      });
+      if (!decoded.ok) return decoded.result;
+
+      if (first > decoded.bytes.length) {
+        return failed(
+          "PDF_OBJECT_STREAM_HEADER_INVALID",
+          "A PDF object-stream First offset is beyond the decoded stream boundary.",
+        );
+      }
+
+      const objectNumbers: number[] = [];
+      const objectOffsets: number[] = [];
+      let headerOffset = 0;
+
+      for (let index = 0; index < count; index += 1) {
+        headerOffset = skipWhitespaceAndComments(decoded.bytes, headerOffset);
+        const objectNumber = readUnsignedInteger(decoded.bytes, headerOffset);
+        if (!objectNumber) {
+          return failed(
+            "PDF_OBJECT_STREAM_HEADER_INVALID",
+            "A PDF object-stream header is missing an object number.",
+          );
+        }
+        headerOffset = skipWhitespaceAndComments(decoded.bytes, objectNumber.offset);
+        const relativeOffset = readUnsignedInteger(decoded.bytes, headerOffset);
+        if (!relativeOffset) {
+          return failed(
+            "PDF_OBJECT_STREAM_HEADER_INVALID",
+            "A PDF object-stream header is missing a contained-object offset.",
+          );
+        }
+        headerOffset = relativeOffset.offset;
+        objectNumbers.push(objectNumber.value);
+        objectOffsets.push(relativeOffset.value);
+      }
+
+      headerOffset = skipWhitespaceAndComments(decoded.bytes, headerOffset);
+      if (headerOffset > first) {
+        return failed(
+          "PDF_OBJECT_STREAM_HEADER_INVALID",
+          "A PDF object-stream header extends beyond its declared First offset.",
+        );
+      }
+
+      if (new Set(objectNumbers).size !== objectNumbers.length) {
+        return failed(
+          "PDF_OBJECT_STREAM_HEADER_INVALID",
+          "A PDF object stream declares duplicate contained object numbers.",
+        );
+      }
+
+      const objects = new Map<number, ParsedIndirectObject>();
+
+      for (let index = 0; index < objectNumbers.length; index += 1) {
+        const objectNumber = objectNumbers[index]!;
+        const relativeOffset = objectOffsets[index]!;
+        const nextRelative =
+          index + 1 < objectOffsets.length
+            ? objectOffsets[index + 1]!
+            : decoded.bytes.length - first;
+
+        if (
+          relativeOffset < 0 ||
+          nextRelative < relativeOffset ||
+          first + nextRelative > decoded.bytes.length
+        ) {
+          return failed(
+            "PDF_OBJECT_STREAM_INDEX_INVALID",
+            "A PDF object stream contains invalid contained-object offsets.",
+          );
+        }
+
+        const objectBytes = decoded.bytes.subarray(
+          first + relativeOffset,
+          first + nextRelative,
+        );
+        try {
+          const parser = new PdfValueParser(objectBytes, 0, limits);
+          const value = parser.parseValue();
+          parser.skipSpace();
+          if (parser.position() !== objectBytes.length) {
+            return failed(
+              "PDF_OBJECT_STREAM_INDEX_INVALID",
+              "A PDF compressed object contains trailing structural tokens beyond its indexed boundary.",
+            );
+          }
+          objects.set(objectNumber, {
+            objectNumber,
+            generation: 0,
+            value,
+          });
+        } catch (error) {
+          return parserFailure(error);
+        }
+      }
+
+      const objectStream = { objectNumbers, objects };
+      objectStreamCache.set(objectStreamObjectNumber, objectStream);
+      objectStreamCount += 1;
+      return objectStream;
+    } finally {
+      resolvingObjectStreams.delete(objectStreamObjectNumber);
     }
   };
 
@@ -1209,11 +2152,12 @@ export function inspectPdfStructuralSecurity(args: {
 
   const counters = { safeUriActionsObserved: 0 };
 
-  for (const objectNumber of activeEntries.keys()) {
+  for (const [objectNumber, entry] of activeEntries) {
     if (objectNumber === 0) continue;
 
     const parsed = parseObject(objectNumber);
     if ("ok" in parsed) return parsed;
+    if (entry.kind === "compressed") compressedObjectCount += 1;
 
     const finding = inspectValue({ value: parsed.value, counters });
     if (finding) return finding;
@@ -1225,11 +2169,14 @@ export function inspectPdfStructuralSecurity(args: {
       pdfVersion: headerMatch[1] as NativeDocumentPdfStructuralEvidence["pdfVersion"],
       xrefSections,
       activeObjectCount: activeEntries.size,
-      incrementalUpdates: xrefSections - 1,
+      incrementalUpdates: revisionCount - 1,
       safeUriActionsObserved: counters.safeUriActionsObserved,
       encrypted: false,
-      xrefStreamsDetected: false,
-      objectStreamsDetected: false,
+      xrefStreamsDetected: xrefStreamCount > 0,
+      objectStreamsDetected: objectStreamCount > 0,
+      xrefStreamCount,
+      objectStreamCount,
+      compressedObjectCount,
       catalogVerified: true,
       pageTreeRootVerified: true,
       javascriptDetected: false,
