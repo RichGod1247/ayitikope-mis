@@ -508,7 +508,12 @@ async function main() {
   assertEqual(
     directorState.items[0].participantCount,
     2,
-    "Director sees aggregate participant count",
+    "Director sees aggregate frozen participant count",
+  );
+  assertEqual(
+    directorState.items[0].eligibleParticipantCount,
+    2,
+    "Director sees aggregate eligible participant count",
   );
   assertEqual(
     directorState.items[0].finalizedResponseCount,
@@ -530,11 +535,53 @@ async function main() {
     false,
     "Future Director feedback window cannot be extended early",
   );
+
+  const revokedParticipantCycle = makeCycle({
+    id: "00000000-0000-4000-8000-000000000507",
+    status: "OPEN",
+    requestedAt: new Date("2026-07-27T11:00:00.000Z"),
+    approvedAt: new Date("2026-07-27T11:00:00.000Z"),
+    openedAt: new Date("2026-07-27T11:00:00.000Z"),
+    deadlineAt: new Date("2026-08-03T11:00:00.000Z"),
+    participants: [
+      { status: "FINALIZED" },
+      { status: "FINALIZED" },
+      { status: "REVOKED" },
+    ],
+  });
+  const revokedParticipantItem =
+    readStates.buildDirectorHeadteacherAppraisalReadItem(
+      revokedParticipantCycle,
+      now,
+    );
+  assertEqual(
+    revokedParticipantItem.participantCount,
+    3,
+    "Director preserves the frozen participant population",
+  );
+  assertEqual(
+    revokedParticipantItem.eligibleParticipantCount,
+    2,
+    "Revoked participants are excluded from current completion eligibility",
+  );
+  assertEqual(
+    revokedParticipantItem.finalizedResponseCount,
+    2,
+    "Finalized count remains aggregate and eligibility-aligned",
+  );
+  assertNoConfidentialTeacherIdentity(revokedParticipantItem);
+
   assertNoConfidentialTeacherIdentity(directorState);
   assertEqual(
     directorDb.state.assessmentQueries.length,
-    0,
-    "No CLOSED cycle means no Director direct-release assessment query",
+    1,
+    "OPEN carrier cycle performs one batched Director direct-release assessment query",
+  );
+  const openCarrierWhere = directorDb.state.assessmentQueries[0].where;
+  assertEqual(
+    JSON.stringify(openCarrierWhere.cycleId.in),
+    JSON.stringify([directorCycles[1].id]),
+    "Director direct-release hint query includes only the eligible OPEN carrier cycle",
   );
 
   const directReleaseCycle = makeCycle({
@@ -892,6 +939,8 @@ async function main() {
   console.log("Director individual forms     : Respondent 1…N labels only");
   console.log("Real identity audience        : SUPERADMIN_ONLY");
   console.log("Director pending/open counts  : aggregate only");
+  console.log("Director frozen population    : preserved");
+  console.log("Director eligible population  : excludes REVOKED");
   console.log("Director expired OPEN state   : explicit");
   console.log("Director extension availability: server-derived, one-use V1");
   console.log("Module boundary                : direct imports; no barrel dependency");

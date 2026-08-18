@@ -120,6 +120,7 @@ export type DirectorHeadteacherAppraisalReadItem = {
   releasedAt: string | null;
   cancelledAt: string | null;
   participantCount: number;
+  eligibleParticipantCount: number;
   finalizedResponseCount: number;
   feedbackWindowExpired: boolean;
   feedbackDeadlineExtensionCount: 0 | 1;
@@ -562,6 +563,12 @@ export function buildDirectorHeadteacherAppraisalReadItem(
     cycle.status === "OPEN" &&
     !!cycle.deadlineAt &&
     cycle.deadlineAt.getTime() <= now.getTime();
+  const eligibleParticipantCount = cycle.participants.filter(
+    (participant) => participant.status !== "REVOKED",
+  ).length;
+  const finalizedResponseCount = cycle.participants.filter(
+    (participant) => participant.status === "FINALIZED",
+  ).length;
   const unfinishedParticipantCount = cycle.participants.filter(
     (participant) =>
       participant.status === "NOT_STARTED" ||
@@ -591,9 +598,8 @@ export function buildDirectorHeadteacherAppraisalReadItem(
     releasedAt: iso(cycle.releasedAt),
     cancelledAt: iso(cycle.cancelledAt),
     participantCount: cycle.participants.length,
-    finalizedResponseCount: cycle.participants.filter(
-      (participant) => participant.status === "FINALIZED",
-    ).length,
+    eligibleParticipantCount,
+    finalizedResponseCount,
     feedbackWindowExpired,
     feedbackDeadlineExtensionCount: deadlineExtension ? 1 : 0,
     canExtendFeedbackWindow:

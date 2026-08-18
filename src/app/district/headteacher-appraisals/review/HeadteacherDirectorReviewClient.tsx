@@ -31,6 +31,7 @@ type DirectorQueueItem = {
   closedAt: string | null;
   releasedAt: string | null;
   participantCount: number;
+  eligibleParticipantCount: number;
   finalizedResponseCount: number;
   feedbackWindowExpired: boolean;
   feedbackDeadlineExtensionCount: 0 | 1;
@@ -333,16 +334,16 @@ function deriveQueuePanel(queue: DirectorQueue): QueuePanel {
   const collecting = openItems.some(
     (item) =>
       item.feedbackWindowExpired ||
-      item.participantCount < 1 ||
-      item.finalizedResponseCount !== item.participantCount,
+      item.eligibleParticipantCount < 1 ||
+      item.finalizedResponseCount !== item.eligibleParticipantCount,
   );
   if (collecting) return "OPEN";
 
   const completedOpen = openItems.some(
     (item) =>
       !item.feedbackWindowExpired &&
-      item.participantCount > 0 &&
-      item.finalizedResponseCount === item.participantCount,
+      item.eligibleParticipantCount > 0 &&
+      item.finalizedResponseCount === item.eligibleParticipantCount,
   );
   if (completedOpen) return "COMPLETE";
 
@@ -441,8 +442,12 @@ function QueueRecord(props: {
   const allResponsesFinalized =
     item.cycleStatus === "OPEN" &&
     !feedbackWindowExpired &&
-    item.participantCount > 0 &&
-    item.finalizedResponseCount === item.participantCount;
+    item.eligibleParticipantCount > 0 &&
+    item.finalizedResponseCount === item.eligibleParticipantCount;
+  const frozenPopulationSuffix =
+    item.participantCount === item.eligibleParticipantCount
+      ? ""
+      : ` · ${item.participantCount} originally selected`;
   const hasDirectorOwnGovernanceAssessment = Boolean(
     item.governanceAssessmentId,
   );
@@ -480,10 +485,10 @@ function QueueRecord(props: {
               ? `Requested ${formatDate(item.requestedAt)}`
               : item.cycleStatus === "OPEN"
                 ? feedbackWindowExpired
-                  ? `Deadline reached · ${item.finalizedResponseCount} of ${item.participantCount} responses finalized${item.feedbackDeadlineExtensionCount > 0 ? " · extension already used" : ""}`
+                  ? `Deadline reached · ${item.finalizedResponseCount} of ${item.eligibleParticipantCount} eligible responses finalized${frozenPopulationSuffix}${item.feedbackDeadlineExtensionCount > 0 ? " · extension already used" : ""}`
                   : allResponsesFinalized
-                    ? `All ${item.finalizedResponseCount} responses finalized · deadline ${formatDate(item.deadlineAt)}`
-                    : `${item.finalizedResponseCount} of ${item.participantCount} responses finalized · deadline ${formatDate(item.deadlineAt)}`
+                    ? `All ${item.finalizedResponseCount} eligible responses finalized${frozenPopulationSuffix} · deadline ${formatDate(item.deadlineAt)}`
+                    : `${item.finalizedResponseCount} of ${item.eligibleParticipantCount} eligible responses finalized${frozenPopulationSuffix} · deadline ${formatDate(item.deadlineAt)}`
                 : item.cycleStatus === "CLOSED"
                   ? `Responses closed ${formatDate(item.closedAt)}`
                   : item.cycleStatus === "UNDER_REVIEW"
@@ -2202,8 +2207,8 @@ export default function HeadteacherDirectorReviewClient({
     () =>
       openItems.filter(
         (item) =>
-          item.participantCount > 0 &&
-          item.finalizedResponseCount === item.participantCount,
+          item.eligibleParticipantCount > 0 &&
+          item.finalizedResponseCount === item.eligibleParticipantCount,
       ),
     [openItems],
   );
@@ -2211,8 +2216,8 @@ export default function HeadteacherDirectorReviewClient({
     () =>
       openItems.filter(
         (item) =>
-          item.participantCount < 1 ||
-          item.finalizedResponseCount !== item.participantCount,
+          item.eligibleParticipantCount < 1 ||
+          item.finalizedResponseCount !== item.eligibleParticipantCount,
       ),
     [openItems],
   );
@@ -2944,7 +2949,7 @@ export default function HeadteacherDirectorReviewClient({
             <SummaryCard
               label="All responses received"
               value={completedOpenItems.length}
-              description="Every frozen Teacher respondent has finalized before the deadline."
+              description="Every eligible frozen Teacher respondent has finalized before the deadline."
               active={queuePanel === "COMPLETE"}
               attention
               onClick={() => setQueuePanel("COMPLETE")}

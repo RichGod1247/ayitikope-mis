@@ -388,6 +388,26 @@ function main() {
   );
   contains(
     client,
+    "eligibleParticipantCount",
+    "eligible respondent completion count",
+  );
+  contains(
+    client,
+    "item.finalizedResponseCount === item.eligibleParticipantCount",
+    "revoked respondents excluded from completion equality",
+  );
+  contains(
+    client,
+    "originally selected",
+    "frozen respondent history preserved in queue copy",
+  );
+  contains(
+    client,
+    "Every eligible frozen Teacher respondent has finalized before the deadline.",
+    "eligible completion BBC explanation",
+  );
+  contains(
+    client,
     "Feedback in progress",
     "active feedback collection state",
   );
@@ -769,7 +789,13 @@ function main() {
     "Director own assessment        : inspect native form → direct release",
   );
   console.log(
-    "Early completion               : all responses received attention state",
+    "Early completion               : all eligible responses received attention state",
+  );
+  console.log(
+    "Revoked respondents            : excluded from completion equality",
+  );
+  console.log(
+    "Frozen respondent history      : preserved separately",
   );
   console.log(
     "Director early-close choice    : close and prepare review / wait",
