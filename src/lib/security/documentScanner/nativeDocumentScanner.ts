@@ -35,7 +35,7 @@ export const HEHXAGON_DOCUMENT_SECURITY_ENGINE =
   "HEHXAGON_DOCUMENT_SECURITY" as const;
 
 export const HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION =
-  "0.4.11-m6e3";
+  "0.4.12-m6f1";
 
 const MAX_SIGNATURE_PREFIX_BYTES = 1024;
 
@@ -498,15 +498,15 @@ async function readBoundedSource(args: {
 
       if (rawChunk.byteLength === 0) continue;
 
-      const chunk = Buffer.from(
+      const chunkView = Buffer.from(
         rawChunk.buffer,
         rawChunk.byteOffset,
         rawChunk.byteLength,
       );
 
-      bytesScanned += chunk.length;
+      const nextBytesScanned = bytesScanned + chunkView.length;
 
-      if (bytesScanned > args.maxBytes) {
+      if (!Number.isSafeInteger(nextBytesScanned)) {
         return {
           ok: false,
           verdict: "FAILED",
@@ -515,19 +515,37 @@ async function readBoundedSource(args: {
         };
       }
 
-      if (bytesScanned > args.expectedSizeBytes) {
+      if (nextBytesScanned > args.maxBytes) {
+        return {
+          ok: false,
+          verdict: "FAILED",
+          reasonCode: "RESOURCE_LIMIT_EXCEEDED",
+          bytesScanned: nextBytesScanned,
+        };
+      }
+
+      if (nextBytesScanned > args.expectedSizeBytes) {
         return {
           ok: false,
           verdict: "BLOCKED",
           reasonCode: "SIZE_EXCEEDS_EXPECTED",
-          bytesScanned,
+          bytesScanned: nextBytesScanned,
         };
       }
+
+      /*
+       * Own one immutable-by-construction snapshot before hashing or parsing.
+       * A Uint8Array source may be backed by mutable/shared memory; hashing a
+       * zero-copy view and only copying afterward would permit the integrity
+       * evidence and parsed bytes to diverge.
+       */
+      const chunk = Buffer.from(chunkView);
+      bytesScanned = nextBytesScanned;
 
       hash.update(chunk);
 
       if (args.collectBytes) {
-        collectedChunks.push(Buffer.from(chunk));
+        collectedChunks.push(chunk);
       }
 
       if (prefixLength < MAX_SIGNATURE_PREFIX_BYTES) {

@@ -72,6 +72,9 @@ export const HDS_M6E2B_HARNESS_VERSION =
 export const HDS_M6E3_HARNESS_VERSION =
   "HDS-M6E3-HARNESS-V1" as const;
 
+export const HDS_M6F1_HARNESS_VERSION =
+  "HDS-M6F1-HARNESS-V1" as const;
+
 const ONE_MEBIBYTE = 1024 * 1024;
 
 const ARCHIVE_LIMITS: NativeDocumentArchiveLimits = Object.freeze({
@@ -153,7 +156,8 @@ type ThreatFamilyManifestEntry = Readonly<{
     | "CERTIFIED_M6D5B"
     | "CERTIFIED_M6E1"
     | "CERTIFIED_M6E2B"
-    | "CERTIFIED_M6E3";
+    | "CERTIFIED_M6E3"
+    | "CERTIFIED_M6F1";
   objective: string;
 }>;
 
@@ -314,9 +318,9 @@ const THREAT_FAMILY_MANIFEST: readonly ThreatFamilyManifestEntry[] =
     Object.freeze({
       threatFamily: "HASH_SIZE_IDENTITY_RACE",
       plannedPhase: "M6F",
-      certificationStatus: "NOT_CERTIFIED",
+      certificationStatus: "CERTIFIED_M6F1",
       objective:
-        "Challenge expected size and SHA-256 integrity contracts across fragmented and inconsistent sources.",
+        "Challenge expected size and SHA-256 integrity contracts across fragmented, mutable and inconsistent sources.",
     }),
     Object.freeze({
       threatFamily: "RULE_ORDER_DETERMINISM",
@@ -2307,6 +2311,91 @@ const M6E2B_POWERPOINT_ACTIVE_CONTENT_CASES: readonly CorpusCaseContract[] =
       benignControl: false,
       provenance: "DETERMINISTIC_GENERATED",
       certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+  ]);
+
+const M6F1_IDENTITY_INTEGRITY_CERTIFICATION_CASES: readonly CorpusCaseContract[] =
+  Object.freeze([
+    Object.freeze({
+      caseId: "HDS-M6F1-001-BENIGN-FRAGMENTED-SOURCE",
+      threatFamily: "HASH_SIZE_IDENTITY_RACE",
+      format: "PDF",
+      attackTechnique:
+        "A valid PDF arrives through deterministic fragmented chunks while size and SHA-256 remain bound to the exact reconstructed byte sequence.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F1-002-SHA256-MISMATCH",
+      threatFamily: "HASH_SIZE_IDENTITY_RACE",
+      format: "PDF",
+      attackTechnique:
+        "The source bytes are structurally valid but the caller-supplied SHA-256 belongs to different bytes and must fail before structural authority is granted.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "SHA256_MISMATCH",
+      expectedRuleId: null,
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F1-003-SOURCE-SHORTER-THAN-EXPECTED",
+      threatFamily: "HASH_SIZE_IDENTITY_RACE",
+      format: "PDF",
+      attackTechnique:
+        "The byte source terminates one byte before its immutable expected-size contract and must fail closed before parsing.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "SIZE_MISMATCH",
+      expectedRuleId: null,
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F1-004-SOURCE-LARGER-THAN-EXPECTED",
+      threatFamily: "HASH_SIZE_IDENTITY_RACE",
+      format: "PDF",
+      attackTechnique:
+        "The byte source exceeds its immutable expected-size contract and must stop immediately without accepting the oversized identity.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "SIZE_EXCEEDS_EXPECTED",
+      expectedRuleId: null,
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F1-005-MUTABLE-SHARED-BACKING-SNAPSHOT",
+      threatFamily: "HASH_SIZE_IDENTITY_RACE",
+      format: "PDF",
+      attackTechnique:
+        "A SharedArrayBuffer-backed source is mutated immediately after the hash update hook; the scanner must parse the same owned snapshot that it hashed rather than later mutable backing bytes.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
       certificationCredit: true,
       authorityImplication: "NO_CLEAN_AUTHORITY",
     }),
@@ -4522,7 +4611,9 @@ function validateManifest() {
                         ? "CERTIFIED_M6E2B"
                         : entry.threatFamily === "OLE_DIRECTORY_EVASION"
                           ? "CERTIFIED_M6E3"
-                          : "NOT_CERTIFIED";
+                          : entry.threatFamily === "HASH_SIZE_IDENTITY_RACE"
+                            ? "CERTIFIED_M6F1"
+                            : "NOT_CERTIFIED";
 
     assert(
       entry.certificationStatus === expectedCertification,
@@ -5227,6 +5318,41 @@ function validateM6E3DirectoryCertificationCases() {
   );
 }
 
+function validateM6F1IdentityIntegrityCertificationCases() {
+  assert(
+    M6F1_IDENTITY_INTEGRITY_CERTIFICATION_CASES.length === 5,
+    "M6F1 must execute the exact five-case source identity/integrity matrix.",
+  );
+
+  const ids = new Set<string>();
+  for (const testCase of M6F1_IDENTITY_INTEGRITY_CERTIFICATION_CASES) {
+    assert(Object.isFrozen(testCase), `${testCase.caseId} must be immutable.`);
+    assert(
+      /^HDS-M6F1-\d{3}-[A-Z0-9-]+$/.test(testCase.caseId),
+      `M6F1 case id is invalid: ${testCase.caseId}`,
+    );
+    assert(!ids.has(testCase.caseId), `Duplicate M6F1 case id: ${testCase.caseId}`);
+    assert(
+      testCase.threatFamily === "HASH_SIZE_IDENTITY_RACE" &&
+        testCase.certificationPhase === "M6F" &&
+        testCase.certificationCredit === true,
+      `${testCase.caseId} must earn bounded M6F1 identity-integrity certification credit.`,
+    );
+    ids.add(testCase.caseId);
+  }
+
+  assert(
+    M6F1_IDENTITY_INTEGRITY_CERTIFICATION_CASES.filter(
+      (testCase) => testCase.benignControl,
+    ).length === 1,
+    "M6F1 must retain exactly one ordinary fragmented benign control while separately proving adversarial mutable-backing snapshot safety.",
+  );
+  assert(
+    Object.isFrozen(M6F1_IDENTITY_INTEGRITY_CERTIFICATION_CASES),
+    "M6F1 identity-integrity certification registry must be immutable.",
+  );
+}
+
 function validateRulePackBoundary() {
   assert(
     HEHXAGON_DOCUMENT_SECURITY_RULE_IDS.length === 21,
@@ -5253,8 +5379,8 @@ function validateRulePackBoundary() {
 
   assert(
     HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION ===
-      "0.4.11-m6e3",
-    "M6E3 must harden OLE directory-tree authority while preserving the M4 rule-pack boundary.",
+      "0.4.12-m6f1",
+    "M6F1 must bind SHA-256 and structural parsing to the same owned source snapshot while preserving the M4 rule-pack boundary.",
   );
 }
 
@@ -6837,6 +6963,135 @@ async function executeM6E3DirectoryCertification() {
   return { results } as const;
 }
 
+async function executeM6F1IdentityIntegrityCertification() {
+  const safePdf = buildClassicPdf();
+
+  const fragmented = await inspectPdf({
+    bytes: safePdf,
+  });
+
+  const shaMismatch = await inspectPdf({
+    bytes: safePdf,
+    expectedSha256: "0".repeat(64),
+  });
+
+  const shorterThanExpected = await inspectPdf({
+    bytes: safePdf,
+    expectedSizeBytes: safePdf.length + 1,
+  });
+
+  const largerThanExpected = await inspectPdf({
+    bytes: safePdf,
+    expectedSizeBytes: safePdf.length - 1,
+  });
+
+  const sharedBacking = new SharedArrayBuffer(safePdf.length);
+  const sharedBytes = new Uint8Array(sharedBacking);
+  sharedBytes.set(safePdf);
+
+  const expectedSharedSha256 = sha256(safePdf);
+  const hashPrototype = Object.getPrototypeOf(createHash("sha256")) as object;
+  const originalUpdate = Reflect.get(hashPrototype, "update");
+
+  assert(
+    typeof originalUpdate === "function",
+    "M6F1 requires the Node Hash update function for deterministic mutable-backing snapshot injection.",
+  );
+
+  let mutationInjected = false;
+
+  const patchedUpdate = function (this: object, ...args: unknown[]) {
+    const output = Reflect.apply(originalUpdate, this, args);
+
+    if (!mutationInjected) {
+      mutationInjected = true;
+      sharedBytes[0] = 0x58;
+    }
+
+    return output;
+  };
+
+  assert(
+    Reflect.set(hashPrototype, "update", patchedUpdate),
+    "M6F1 could not install the deterministic hash/update mutation hook.",
+  );
+
+  let mutableBackingSnapshot: NativeDocumentScannerResult;
+
+  try {
+    mutableBackingSnapshot = await inspectNativeDocumentIdentity({
+      source: (async function* () {
+        yield sharedBytes;
+      })(),
+      expectedSizeBytes: safePdf.length,
+      expectedSha256: expectedSharedSha256,
+      declaredFilename: "m6f1-shared-backing.pdf",
+      declaredExtension: "pdf",
+      declaredMimeType: "application/pdf",
+      limits: {
+        maxBytes: ONE_MEBIBYTE,
+        archive: ARCHIVE_LIMITS,
+        pdf: PDF_LIMITS,
+        ole: OLE_LIMITS,
+      },
+    });
+  } finally {
+    assert(
+      Reflect.set(hashPrototype, "update", originalUpdate),
+      "M6F1 could not restore the Node Hash update function.",
+    );
+  }
+
+  assert(
+    mutationInjected,
+    "M6F1 mutable-backing case must inject mutation immediately after the scanner hash update.",
+  );
+
+  const results = [
+    fragmented,
+    shaMismatch,
+    shorterThanExpected,
+    largerThanExpected,
+    mutableBackingSnapshot,
+  ] as const;
+
+  for (let index = 0; index < results.length; index += 1) {
+    assertResultMatchesContract(
+      results[index]!,
+      M6F1_IDENTITY_INTEGRITY_CERTIFICATION_CASES[index]!,
+    );
+  }
+
+  assert(
+    fragmented.bytesScanned === safePdf.length &&
+      fragmented.sha256Hash === expectedSharedSha256 &&
+      fragmented.identityEvidence.sizeMatched === true &&
+      fragmented.identityEvidence.sha256Matched === true,
+    "M6F1 fragmented benign control must preserve exact byte-count and SHA-256 identity evidence.",
+  );
+
+  assert(
+    mutableBackingSnapshot.bytesScanned === safePdf.length &&
+      mutableBackingSnapshot.sha256Hash === expectedSharedSha256 &&
+      mutableBackingSnapshot.identityEvidence.sizeMatched === true &&
+      mutableBackingSnapshot.identityEvidence.sha256Matched === true &&
+      mutableBackingSnapshot.pdfStructuralInspectionComplete === true &&
+      mutableBackingSnapshot.rulePackEvaluation?.outcome === "PASS",
+    "M6F1 must hash and structurally parse the same owned source snapshot even when the original shared backing mutates after hash update.",
+  );
+
+  assert(
+    results.every(
+      (result) =>
+        String(result.verdict) !== "CLEAN" &&
+        result.inspectionComplete === false,
+    ),
+    "M6F1 identity-integrity certification must preserve the no-CLEAN authority boundary.",
+  );
+
+  return { results } as const;
+}
+
 async function run() {
   validateManifest();
   validateCaseContract();
@@ -6851,6 +7106,7 @@ async function run() {
   validateM6E2APowerPointAuthorityCases();
   validateM6E2BPowerPointActiveContentCases();
   validateM6E3DirectoryCertificationCases();
+  validateM6F1IdentityIntegrityCertificationCases();
   validateRulePackBoundary();
 
   const sentinelResults = await executeSentinels();
@@ -6866,6 +7122,7 @@ async function run() {
   const m6e2a = await executeM6E2APowerPointPersistAuthority();
   const m6e2b = await executeM6E2BPowerPointActiveContentCertification();
   const m6e3 = await executeM6E3DirectoryCertification();
+  const m6f1 = await executeM6F1IdentityIntegrityCertification();
 
   const sentinelSummary =
     HARNESS_SENTINEL_CASES.map((testCase, index) =>
@@ -7285,6 +7542,28 @@ async function run() {
     },
   );
 
+  const m6f1Summary = M6F1_IDENTITY_INTEGRITY_CERTIFICATION_CASES.map(
+    (testCase, index) => {
+      const result = m6f1.results[index]!;
+      return Object.freeze({
+        caseId: testCase.caseId,
+        threatFamily: testCase.threatFamily,
+        benignControl: testCase.benignControl,
+        certificationCredit: testCase.certificationCredit,
+        expectedVerdict: testCase.expectedVerdict,
+        actualVerdict: result.verdict,
+        expectedReasonCode: testCase.expectedReasonCode,
+        reasonMatched: result.reasonCodes.includes(testCase.expectedReasonCode),
+        expectedDetectedContainer: testCase.expectedDetectedContainer ?? null,
+        actualDetectedContainer: result.identityEvidence.detectedContainer,
+        expectedSignatureKind: testCase.expectedSignatureKind ?? null,
+        actualSignatureKind: result.identityEvidence.signatureKind,
+        bytesScanned: result.bytesScanned,
+        sha256Hash: result.sha256Hash,
+      });
+    },
+  );
+
   const m6e1CertifiedThreatFamilies = THREAT_FAMILY_MANIFEST.filter(
     (entry) => entry.certificationStatus === "CERTIFIED_M6E1",
   ).map((entry) => entry.threatFamily);
@@ -7295,6 +7574,10 @@ async function run() {
 
   const m6e3CertifiedThreatFamilies = THREAT_FAMILY_MANIFEST.filter(
     (entry) => entry.certificationStatus === "CERTIFIED_M6E3",
+  ).map((entry) => entry.threatFamily);
+
+  const m6f1CertifiedThreatFamilies = THREAT_FAMILY_MANIFEST.filter(
+    (entry) => entry.certificationStatus === "CERTIFIED_M6F1",
   ).map((entry) => entry.threatFamily);
 
   const m6dCertifiedThreatFamilies =
@@ -7376,16 +7659,21 @@ async function run() {
   );
 
   assert(
-    remainingNonPdfThreatFamilies.length === 5 &&
+    m6f1CertifiedThreatFamilies.length === 1 &&
+      m6f1CertifiedThreatFamilies[0] === "HASH_SIZE_IDENTITY_RACE",
+    "M6F1 must certify exactly the source hash/size identity race family.",
+  );
+
+  assert(
+    remainingNonPdfThreatFamilies.length === 4 &&
       remainingNonPdfThreatFamilies.every(
         (family) =>
           family === "RESOURCE_EXHAUSTION" ||
           family === "TRUNCATION" ||
-          family === "HASH_SIZE_IDENTITY_RACE" ||
           family === "RULE_ORDER_DETERMINISM" ||
           family === "FALSE_POSITIVE_CONTROL",
       ),
-    "M6E3 must close all five M6E OLE threat families and leave only M6F/M6G work open.",
+    "M6F1 must close hash/size identity race while leaving the remaining M6F and M6G families open.",
   );
 
   assert(
@@ -7462,6 +7750,11 @@ async function run() {
         (result) =>
           String(result.verdict) !== "CLEAN" &&
           result.inspectionComplete === false,
+      ) &&
+      m6f1.results.every(
+        (result) =>
+          String(result.verdict) !== "CLEAN" &&
+          result.inspectionComplete === false,
       ),
     "M6 execution must never grant CLEAN or completed document-trust authority.",
   );
@@ -7471,13 +7764,13 @@ async function run() {
       {
         ok: true,
         event:
-          "HDS_M6E3_OLE_DIRECTORY_CERTIFICATION_PASSED",
+          "HDS_M6F1_IDENTITY_INTEGRITY_CERTIFICATION_PASSED",
         corpusSchemaVersion:
           HDS_M6_ADVERSARIAL_CORPUS_SCHEMA_VERSION,
         harnessVersion:
-          HDS_M6E3_HARNESS_VERSION,
+          HDS_M6F1_HARNESS_VERSION,
         priorHarnessVersion:
-          HDS_M6E2B_HARNESS_VERSION,
+          HDS_M6E3_HARNESS_VERSION,
         priorOoxmlHarnessVersion:
           HDS_M6C_HARNESS_VERSION,
         scannerEngine:
@@ -7744,6 +8037,24 @@ async function run() {
         oleDirectoryCertificationComplete: true,
         oleVbaCertificationComplete: true,
         oleEmbeddedObjectCertificationComplete: true,
+        m6f1IdentityIntegrityCertificationComplete: true,
+        m6f1CertifiedThreatFamilies,
+        m6f1CaseCount:
+          M6F1_IDENTITY_INTEGRITY_CERTIFICATION_CASES.length,
+        m6f1CertificationCredit:
+          M6F1_IDENTITY_INTEGRITY_CERTIFICATION_CASES.filter(
+            (testCase) => testCase.certificationCredit,
+          ).length,
+        m6f1BenignControlCount:
+          M6F1_IDENTITY_INTEGRITY_CERTIFICATION_CASES.filter(
+            (testCase) => testCase.benignControl,
+          ).length,
+        m6f1OwnedSnapshotBeforeHash: true,
+        m6f1MutableBackingMutationInjected: true,
+        m6f1Results: m6f1Summary,
+        resourceExhaustionCertificationComplete: false,
+        truncationCertificationComplete: false,
+        ruleOrderDeterminismCertificationComplete: false,
         remainingNonPdfThreatFamilies,
         adversarialCertificationComplete: false,
         fullM6CertificationComplete: false,
@@ -7762,11 +8073,11 @@ run().catch((error) => {
       {
         ok: false,
         event:
-          "HDS_M6E3_OLE_DIRECTORY_CERTIFICATION_FAILED",
+          "HDS_M6F1_IDENTITY_INTEGRITY_CERTIFICATION_FAILED",
         errorCode:
           error instanceof Error
             ? error.message
-            : "M6E3_UNKNOWN_FAILURE",
+            : "M6F1_UNKNOWN_FAILURE",
       },
       null,
       2,
