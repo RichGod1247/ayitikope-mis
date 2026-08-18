@@ -36,7 +36,9 @@ export type OleStructuralInspectionResult = OleFailure | OleSuccess;
 type DirectoryEntry = {
   id: number;
   name: string;
+  nameLengthBytes: number;
   objectType: 0 | 1 | 2 | 5;
+  colorFlag: 0 | 1;
   leftSiblingId: number;
   rightSiblingId: number;
   childId: number;
@@ -391,6 +393,57 @@ function parseStreamSize(entryBytes: Buffer) {
   return Number.isSafeInteger(value) ? value : null;
 }
 
+
+function upperCfbDirectoryCodeUnit(codeUnit: number): number | null {
+  if (codeUnit >= 0xd800 && codeUnit <= 0xdfff) {
+    return codeUnit;
+  }
+
+  const upper = String.fromCharCode(codeUnit).toUpperCase();
+  if (upper.length !== 1) {
+    return null;
+  }
+
+  return upper.charCodeAt(0);
+}
+
+function compareCfbDirectoryNames(
+  left: Pick<DirectoryEntry, "name" | "nameLengthBytes">,
+  right: Pick<DirectoryEntry, "name" | "nameLengthBytes">,
+): -1 | 0 | 1 | null {
+  if (left.nameLengthBytes !== right.nameLengthBytes) {
+    return left.nameLengthBytes < right.nameLengthBytes ? -1 : 1;
+  }
+
+  const codeUnitCount = Math.max(0, left.nameLengthBytes / 2 - 1);
+  for (let index = 0; index < codeUnitCount; index += 1) {
+    const leftCodeUnit = left.name.charCodeAt(index);
+    const rightCodeUnit = right.name.charCodeAt(index);
+    const leftUpper = upperCfbDirectoryCodeUnit(leftCodeUnit);
+    const rightUpper = upperCfbDirectoryCodeUnit(rightCodeUnit);
+
+    if (leftUpper === null || rightUpper === null) {
+      return null;
+    }
+    if (leftUpper !== rightUpper) {
+      return leftUpper < rightUpper ? -1 : 1;
+    }
+  }
+
+  return 0;
+}
+
+function unallocatedDirectoryEntryIsCanonical(entryBytes: Buffer) {
+  for (let index = 0; index < entryBytes.length; index += 1) {
+    const inSiblingPointerRange = index >= 68 && index < 80;
+    const expected = inSiblingPointerRange ? 0xff : 0x00;
+    if (entryBytes[index] !== expected) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function parseDirectory(context: OleContext): DirectoryEntry[] | OleFailure {
   const directoryChain = readFatChain({
     context,
@@ -421,25 +474,57 @@ function parseDirectory(context: OleContext): DirectoryEntry[] | OleFailure {
       return failure("OLE_DIRECTORY_INVALID", "A compound-file directory entry has an invalid object type.");
     }
 
-    let name = "";
-    if (objectType !== 0) {
-      const nameLength = entryBytes.readUInt16LE(64);
-      if (nameLength < 2 || nameLength > 64 || nameLength % 2 !== 0) {
-        return failure("OLE_DIRECTORY_INVALID", "A compound-file directory name length is invalid.");
-      }
-      if (entryBytes[nameLength - 2] !== 0 || entryBytes[nameLength - 1] !== 0) {
-        return failure("OLE_DIRECTORY_INVALID", "A compound-file directory name is not null terminated.");
-      }
-      name = entryBytes.subarray(0, nameLength - 2).toString("utf16le");
-      if (!name || /[\u0000]/.test(name)) {
-        return failure("OLE_DIRECTORY_INVALID", "A compound-file directory name is invalid.");
-      }
-      if (/[\/\\:!]/u.test(name)) {
+    if (objectType === 0) {
+      if (!unallocatedDirectoryEntryIsCanonical(entryBytes)) {
         return failure(
           "OLE_DIRECTORY_INVALID",
-          "A compound-file directory name contains a prohibited character.",
+          "An unallocated compound-file directory entry is not canonically zeroed with NOSTREAM pointers.",
         );
       }
+
+      entries.push({
+        id,
+        name: "",
+        nameLengthBytes: 0,
+        objectType,
+        colorFlag: 0,
+        leftSiblingId: NOSTREAM,
+        rightSiblingId: NOSTREAM,
+        childId: NOSTREAM,
+        startSector: 0,
+        streamSize: 0,
+        parentId: null,
+        path: null,
+      });
+      continue;
+    }
+
+    const nameLengthBytes = entryBytes.readUInt16LE(64);
+    if (
+      nameLengthBytes < 2 ||
+      nameLengthBytes > 64 ||
+      nameLengthBytes % 2 !== 0
+    ) {
+      return failure("OLE_DIRECTORY_INVALID", "A compound-file directory name length is invalid.");
+    }
+    if (
+      entryBytes[nameLengthBytes - 2] !== 0 ||
+      entryBytes[nameLengthBytes - 1] !== 0
+    ) {
+      return failure("OLE_DIRECTORY_INVALID", "A compound-file directory name is not null terminated.");
+    }
+
+    const name = entryBytes
+      .subarray(0, nameLengthBytes - 2)
+      .toString("utf16le");
+    if (!name || /[\u0000]/.test(name)) {
+      return failure("OLE_DIRECTORY_INVALID", "A compound-file directory name is invalid.");
+    }
+    if (/[\/\\:!]/u.test(name)) {
+      return failure(
+        "OLE_DIRECTORY_INVALID",
+        "A compound-file directory name contains a prohibited character.",
+      );
     }
 
     const colorFlag = entryBytes[67];
@@ -447,6 +532,28 @@ function parseDirectory(context: OleContext): DirectoryEntry[] | OleFailure {
       return failure(
         "OLE_DIRECTORY_INVALID",
         "A compound-file directory entry has an invalid color flag.",
+      );
+    }
+
+    if (
+      objectType === 2 &&
+      (!entryBytes.subarray(80, 96).equals(Buffer.alloc(16)) ||
+        !entryBytes.subarray(100, 108).equals(Buffer.alloc(8)) ||
+        !entryBytes.subarray(108, 116).equals(Buffer.alloc(8)))
+    ) {
+      return failure(
+        "OLE_DIRECTORY_INVALID",
+        "A compound-file stream directory entry contains forbidden CLSID or timestamp metadata.",
+      );
+    }
+
+    if (
+      objectType === 5 &&
+      !entryBytes.subarray(100, 108).equals(Buffer.alloc(8))
+    ) {
+      return failure(
+        "OLE_DIRECTORY_INVALID",
+        "The root storage creation time must be zero.",
       );
     }
 
@@ -458,7 +565,9 @@ function parseDirectory(context: OleContext): DirectoryEntry[] | OleFailure {
     entries.push({
       id,
       name,
+      nameLengthBytes,
       objectType,
+      colorFlag,
       leftSiblingId: entryBytes.readUInt32LE(68),
       rightSiblingId: entryBytes.readUInt32LE(72),
       childId: entryBytes.readUInt32LE(76),
@@ -509,7 +618,9 @@ function parseDirectory(context: OleContext): DirectoryEntry[] | OleFailure {
     parentId: number,
     depth: number,
     localSeen: Set<number>,
-    siblingNames: Set<string>,
+    lowerBoundId: number | null,
+    upperBoundId: number | null,
+    siblingTreeParentColor: 0 | 1 | null,
   ): OleFailure | null => {
     if (nodeId === NOSTREAM) return null;
     if (depth > context.limits.maxDirectoryDepth) {
@@ -525,12 +636,43 @@ function parseDirectory(context: OleContext): DirectoryEntry[] | OleFailure {
       return failure("OLE_DIRECTORY_TREE_INVALID", "The compound-file directory tree references an invalid entry.");
     }
 
+    if (siblingTreeParentColor === 0 && node.colorFlag === 0) {
+      return failure(
+        "OLE_DIRECTORY_TREE_INVALID",
+        "A compound-file sibling tree contains consecutive red nodes.",
+      );
+    }
+
+    if (lowerBoundId !== null) {
+      const lower = entries[lowerBoundId] as DirectoryEntry;
+      const comparison = compareCfbDirectoryNames(node, lower);
+      if (comparison === null || comparison <= 0) {
+        return failure(
+          "OLE_DIRECTORY_TREE_INVALID",
+          "A compound-file sibling tree violates CFB directory-name ordering.",
+        );
+      }
+    }
+
+    if (upperBoundId !== null) {
+      const upper = entries[upperBoundId] as DirectoryEntry;
+      const comparison = compareCfbDirectoryNames(node, upper);
+      if (comparison === null || comparison >= 0) {
+        return failure(
+          "OLE_DIRECTORY_TREE_INVALID",
+          "A compound-file sibling tree violates CFB directory-name ordering.",
+        );
+      }
+    }
+
     const leftProblem = walkSiblingTree(
       node.leftSiblingId,
       parentId,
       depth,
       localSeen,
-      siblingNames,
+      lowerBoundId,
+      node.id,
+      node.colorFlag,
     );
     if (leftProblem) return leftProblem;
 
@@ -542,12 +684,6 @@ function parseDirectory(context: OleContext): DirectoryEntry[] | OleFailure {
     const parent = entries[parentId] as DirectoryEntry;
     node.path = `${parent.path ?? parent.name}/${node.name}`;
 
-    const normalizedName = node.name.toLocaleLowerCase("en-US");
-    if (siblingNames.has(normalizedName)) {
-      return failure("OLE_DIRECTORY_TREE_INVALID", "A compound-file storage contains duplicate child names.");
-    }
-    siblingNames.add(normalizedName);
-
     if (node.objectType === 2 && node.childId !== NOSTREAM) {
       return failure("OLE_DIRECTORY_TREE_INVALID", "A compound-file stream entry cannot contain children.");
     }
@@ -558,7 +694,9 @@ function parseDirectory(context: OleContext): DirectoryEntry[] | OleFailure {
         node.id,
         depth + 1,
         new Set<number>(),
-        new Set<string>(),
+        null,
+        null,
+        null,
       );
       if (childProblem) return childProblem;
     }
@@ -568,7 +706,9 @@ function parseDirectory(context: OleContext): DirectoryEntry[] | OleFailure {
       parentId,
       depth,
       localSeen,
-      siblingNames,
+      node.id,
+      upperBoundId,
+      node.colorFlag,
     );
     if (rightProblem) return rightProblem;
 
@@ -580,7 +720,9 @@ function parseDirectory(context: OleContext): DirectoryEntry[] | OleFailure {
     0,
     1,
     new Set<number>(),
-    new Set<string>(),
+    null,
+    null,
+    null,
   );
   if (treeProblem) return treeProblem;
 

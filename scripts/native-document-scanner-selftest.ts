@@ -713,6 +713,34 @@ type CfbFixtureNode = {
   child: number;
 };
 
+
+function compareCfbFixtureNames(left: string, right: string) {
+  const leftLength = Buffer.byteLength(`${left}\u0000`, "utf16le");
+  const rightLength = Buffer.byteLength(`${right}\u0000`, "utf16le");
+  if (leftLength !== rightLength) {
+    return leftLength < rightLength ? -1 : 1;
+  }
+
+  for (let index = 0; index < left.length; index += 1) {
+    const leftCodeUnit = left.charCodeAt(index);
+    const rightCodeUnit = right.charCodeAt(index);
+    const leftUpper =
+      leftCodeUnit >= 0xd800 && leftCodeUnit <= 0xdfff
+        ? leftCodeUnit
+        : String.fromCharCode(leftCodeUnit).toUpperCase().charCodeAt(0);
+    const rightUpper =
+      rightCodeUnit >= 0xd800 && rightCodeUnit <= 0xdfff
+        ? rightCodeUnit
+        : String.fromCharCode(rightCodeUnit).toUpperCase().charCodeAt(0);
+
+    if (leftUpper !== rightUpper) {
+      return leftUpper < rightUpper ? -1 : 1;
+    }
+  }
+
+  return 0;
+}
+
 function buildCfb(streams: CfbFixtureStream[], majorVersion: 3 | 4 = 3) {
   const sectorSize = majorVersion === 3 ? 512 : 4096;
   const miniSectorSize = 64;
@@ -786,10 +814,41 @@ function buildCfb(streams: CfbFixtureStream[], majorVersion: 3 | 4 = 3) {
   for (const [parentPath, childIds] of childrenByParent) {
     const parentId = parentPath === "" ? 0 : storageIds.get(parentPath);
     assert(parentId !== undefined, "CFB fixture parent storage must exist.");
-    nodes[parentId]!.child = childIds[0] ?? 0xffffffff;
-    for (let index = 0; index < childIds.length - 1; index += 1) {
-      nodes[childIds[index]!]!.right = childIds[index + 1] as number;
+
+    const sortedChildIds = [...childIds].sort((leftId, rightId) =>
+      compareCfbFixtureNames(
+        nodes[leftId]!.name,
+        nodes[rightId]!.name,
+      ),
+    );
+
+    for (let index = 1; index < sortedChildIds.length; index += 1) {
+      assert(
+        compareCfbFixtureNames(
+          nodes[sortedChildIds[index - 1]!]!.name,
+          nodes[sortedChildIds[index]!]!.name,
+        ) !== 0,
+        "CFB fixture siblings must have unique names under CFB ordering.",
+      );
     }
+
+    const buildSiblingTree = (
+      startIndex: number,
+      endIndex: number,
+    ): number => {
+      if (startIndex >= endIndex) return 0xffffffff;
+
+      const middle = Math.floor((startIndex + endIndex) / 2);
+      const nodeId = sortedChildIds[middle] as number;
+      nodes[nodeId]!.left = buildSiblingTree(startIndex, middle);
+      nodes[nodeId]!.right = buildSiblingTree(middle + 1, endIndex);
+      return nodeId;
+    };
+
+    nodes[parentId]!.child = buildSiblingTree(
+      0,
+      sortedChildIds.length,
+    );
   }
 
   const smallStreams = nodes.filter(
@@ -881,6 +940,20 @@ function buildCfb(streams: CfbFixtureStream[], majorVersion: 3 | 4 = 3) {
     entry.writeUInt32LE(node.startSector >>> 0, 116);
     entry.writeUInt32LE(node.streamSize >>> 0, 120);
     entry.writeUInt32LE(0, 124);
+  }
+
+  for (
+    let entryId = nodes.length;
+    entryId < directoryBytesLength / 128;
+    entryId += 1
+  ) {
+    const entry = directory.subarray(
+      entryId * 128,
+      entryId * 128 + 128,
+    );
+    entry.writeUInt32LE(0xffffffff, 68);
+    entry.writeUInt32LE(0xffffffff, 72);
+    entry.writeUInt32LE(0xffffffff, 76);
   }
 
   const miniFatBytes = Buffer.alloc(miniFatSectorCount * sectorSize, 0xff);

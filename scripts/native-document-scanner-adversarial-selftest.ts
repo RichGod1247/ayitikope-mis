@@ -69,6 +69,9 @@ export const HDS_M6E2A_HARNESS_VERSION =
 export const HDS_M6E2B_HARNESS_VERSION =
   "HDS-M6E2B-HARNESS-V1" as const;
 
+export const HDS_M6E3_HARNESS_VERSION =
+  "HDS-M6E3-HARNESS-V1" as const;
+
 const ONE_MEBIBYTE = 1024 * 1024;
 
 const ARCHIVE_LIMITS: NativeDocumentArchiveLimits = Object.freeze({
@@ -149,7 +152,8 @@ type ThreatFamilyManifestEntry = Readonly<{
     | "CERTIFIED_M6D5"
     | "CERTIFIED_M6D5B"
     | "CERTIFIED_M6E1"
-    | "CERTIFIED_M6E2B";
+    | "CERTIFIED_M6E2B"
+    | "CERTIFIED_M6E3";
   objective: string;
 }>;
 
@@ -275,7 +279,7 @@ const THREAT_FAMILY_MANIFEST: readonly ThreatFamilyManifestEntry[] =
     Object.freeze({
       threatFamily: "OLE_DIRECTORY_EVASION",
       plannedPhase: "M6E",
-      certificationStatus: "NOT_CERTIFIED",
+      certificationStatus: "CERTIFIED_M6E3",
       objective:
         "Challenge directory reachability, sibling trees, duplicate names, parentage and application identity.",
     }),
@@ -2337,6 +2341,267 @@ function sourceFromDeterministicFragments(bytes: Buffer) {
   })();
 }
 
+
+const M6E3_DIRECTORY_CERTIFICATION_CASES: readonly CorpusCaseContract[] =
+  Object.freeze([
+    Object.freeze({
+      caseId: "HDS-M6E3-001-BENIGN-SORTED-DIRECTORY-TREE",
+      threatFamily: "OLE_DIRECTORY_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A deterministic legacy Word compound file uses a bounded, sorted all-black sibling tree with canonical unused directory entries and must remain accepted as a non-CLEAN benign directory control.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E3-002-INVALID-COLOR-FLAG",
+      threatFamily: "OLE_DIRECTORY_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A reachable stream carries a directory Color Flag outside the CFB red-or-black domain and must fail before application stream authority or security rules can be trusted.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_DIRECTORY_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E3-003-PROHIBITED-NAME-CHARACTER",
+      threatFamily: "OLE_DIRECTORY_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A reachable directory name contains a CFB-prohibited slash character and must fail before malformed naming can alter sibling lookup, application identity, or active-content reachability.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_DIRECTORY_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E3-004-LEFT-SUBTREE-ORDER-VIOLATION",
+      threatFamily: "OLE_DIRECTORY_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A directory node physically linked in the left subtree is renamed so it sorts after its ancestor under CFB length-first case-insensitive ordering and must fail structural authority.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_DIRECTORY_TREE_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E3-005-RIGHT-SUBTREE-ORDER-VIOLATION",
+      threatFamily: "OLE_DIRECTORY_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A directory node physically linked in the right subtree is renamed so it sorts before its ancestor and must fail bounded sibling-tree ordering rather than being accepted by traversal order alone.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_DIRECTORY_TREE_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E3-006-CASE-INSENSITIVE-DUPLICATE-NAME",
+      threatFamily: "OLE_DIRECTORY_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "Two immediate children become equal under the CFB case-insensitive comparator while retaining distinct byte spelling, and the duplicate namespace must fail instead of creating ambiguous lookup authority.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_DIRECTORY_TREE_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E3-007-CONSECUTIVE-RED-SIBLING-NODES",
+      threatFamily: "OLE_DIRECTORY_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A parent and its directly linked sibling-tree child are both marked red, violating the CFB red-node adjacency invariant and requiring deterministic directory-tree rejection.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_DIRECTORY_TREE_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E3-008-STREAM-CHILD-POINTER",
+      threatFamily: "OLE_DIRECTORY_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A stream directory entry is given a child pointer to another reachable entry, contradicting the CFB stream-object containment contract and attempting to smuggle a second hierarchy beneath a stream.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_DIRECTORY_TREE_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E3-009-OUT-OF-RANGE-SIBLING-POINTER",
+      threatFamily: "OLE_DIRECTORY_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A reachable stream points to a sibling stream identifier beyond the bounded directory array and must fail before the invalid pointer can influence traversal or object lookup.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_DIRECTORY_TREE_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E3-010-SIBLING-TREE-CYCLE",
+      threatFamily: "OLE_DIRECTORY_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A reachable sibling pointer is redirected to its own directory entry, creating a deterministic cycle that must fail without recursion escape, duplicate-parent acceptance, or ambiguous path construction.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_DIRECTORY_TREE_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E3-011-UNREACHABLE-ALLOCATED-ENTRY",
+      threatFamily: "OLE_DIRECTORY_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A previously unused directory slot is converted into a syntactically allocated stream without linking it into any storage tree, and must fail as unreachable hidden directory content.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_DIRECTORY_TREE_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E3-012-DIRTY-UNALLOCATED-ENTRY",
+      threatFamily: "OLE_DIRECTORY_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "An unallocated directory slot retains Object Type zero but contains noncanonical hidden metadata, and must fail instead of allowing bytes outside the reachable directory namespace to carry ambiguous structure.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_DIRECTORY_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E3-013-STREAM-CLSID-NONZERO",
+      threatFamily: "OLE_DIRECTORY_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A stream directory entry carries a nonzero CLSID even though CFB requires stream CLSID bytes to be zero, and must fail before application activation metadata can be smuggled into a stream entry.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_DIRECTORY_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E3-014-STREAM-TIMESTAMP-NONZERO",
+      threatFamily: "OLE_DIRECTORY_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A stream directory entry carries nonzero creation or modification time bytes where CFB requires zeros, and must fail strict directory conformance before stream authority is accepted.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_DIRECTORY_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E3-015-ROOT-CREATION-TIME-NONZERO",
+      threatFamily: "OLE_DIRECTORY_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "The Root Entry carries a nonzero creation timestamp even though CFB requires root creation time to be zero, and strict directory authority must reject the malformed root metadata.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_DIRECTORY_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+  ]);
+
 type CfbFixtureStream = {
   path: string;
   data: Buffer;
@@ -2354,6 +2619,34 @@ type CfbFixtureNode = {
   right: number;
   child: number;
 };
+
+
+function compareCfbFixtureNames(left: string, right: string) {
+  const leftLength = Buffer.byteLength(`${left}\u0000`, "utf16le");
+  const rightLength = Buffer.byteLength(`${right}\u0000`, "utf16le");
+  if (leftLength !== rightLength) {
+    return leftLength < rightLength ? -1 : 1;
+  }
+
+  for (let index = 0; index < left.length; index += 1) {
+    const leftCodeUnit = left.charCodeAt(index);
+    const rightCodeUnit = right.charCodeAt(index);
+    const leftUpper =
+      leftCodeUnit >= 0xd800 && leftCodeUnit <= 0xdfff
+        ? leftCodeUnit
+        : String.fromCharCode(leftCodeUnit).toUpperCase().charCodeAt(0);
+    const rightUpper =
+      rightCodeUnit >= 0xd800 && rightCodeUnit <= 0xdfff
+        ? rightCodeUnit
+        : String.fromCharCode(rightCodeUnit).toUpperCase().charCodeAt(0);
+
+    if (leftUpper !== rightUpper) {
+      return leftUpper < rightUpper ? -1 : 1;
+    }
+  }
+
+  return 0;
+}
 
 function buildCfb(streams: CfbFixtureStream[], majorVersion: 3 | 4 = 3) {
   const sectorSize = majorVersion === 3 ? 512 : 4096;
@@ -2428,10 +2721,41 @@ function buildCfb(streams: CfbFixtureStream[], majorVersion: 3 | 4 = 3) {
   for (const [parentPath, childIds] of childrenByParent) {
     const parentId = parentPath === "" ? 0 : storageIds.get(parentPath);
     assert(parentId !== undefined, "CFB fixture parent storage must exist.");
-    nodes[parentId]!.child = childIds[0] ?? 0xffffffff;
-    for (let index = 0; index < childIds.length - 1; index += 1) {
-      nodes[childIds[index]!]!.right = childIds[index + 1] as number;
+
+    const sortedChildIds = [...childIds].sort((leftId, rightId) =>
+      compareCfbFixtureNames(
+        nodes[leftId]!.name,
+        nodes[rightId]!.name,
+      ),
+    );
+
+    for (let index = 1; index < sortedChildIds.length; index += 1) {
+      assert(
+        compareCfbFixtureNames(
+          nodes[sortedChildIds[index - 1]!]!.name,
+          nodes[sortedChildIds[index]!]!.name,
+        ) !== 0,
+        "CFB fixture siblings must have unique names under CFB ordering.",
+      );
     }
+
+    const buildSiblingTree = (
+      startIndex: number,
+      endIndex: number,
+    ): number => {
+      if (startIndex >= endIndex) return 0xffffffff;
+
+      const middle = Math.floor((startIndex + endIndex) / 2);
+      const nodeId = sortedChildIds[middle] as number;
+      nodes[nodeId]!.left = buildSiblingTree(startIndex, middle);
+      nodes[nodeId]!.right = buildSiblingTree(middle + 1, endIndex);
+      return nodeId;
+    };
+
+    nodes[parentId]!.child = buildSiblingTree(
+      0,
+      sortedChildIds.length,
+    );
   }
 
   const smallStreams = nodes.filter(
@@ -2523,6 +2847,20 @@ function buildCfb(streams: CfbFixtureStream[], majorVersion: 3 | 4 = 3) {
     entry.writeUInt32LE(node.startSector >>> 0, 116);
     entry.writeUInt32LE(node.streamSize >>> 0, 120);
     entry.writeUInt32LE(0, 124);
+  }
+
+  for (
+    let entryId = nodes.length;
+    entryId < directoryBytesLength / 128;
+    entryId += 1
+  ) {
+    const entry = directory.subarray(
+      entryId * 128,
+      entryId * 128 + 128,
+    );
+    entry.writeUInt32LE(0xffffffff, 68);
+    entry.writeUInt32LE(0xffffffff, 72);
+    entry.writeUInt32LE(0xffffffff, 76);
   }
 
   const miniFatBytes = Buffer.alloc(miniFatSectorCount * sectorSize, 0xff);
@@ -3025,6 +3363,64 @@ function patchCfbDirectoryName(bytes: Buffer, entryId: number, name: string) {
   encoded.copy(copy, offset);
   copy.writeUInt16LE(encoded.length, offset + 64);
   return copy;
+}
+
+
+function patchCfbDirectoryPointer(
+  bytes: Buffer,
+  entryId: number,
+  field: "left" | "right" | "child",
+  targetId: number,
+) {
+  const copy = Buffer.from(bytes);
+  const fieldOffset =
+    field === "left" ? 68 : field === "right" ? 72 : 76;
+  copy.writeUInt32LE(
+    targetId >>> 0,
+    cfbDirectoryEntryOffset(entryId) + fieldOffset,
+  );
+  return copy;
+}
+
+function patchCfbDirectoryBytes(
+  bytes: Buffer,
+  entryId: number,
+  relativeOffset: number,
+  patch: Buffer,
+) {
+  const copy = Buffer.from(bytes);
+  patch.copy(
+    copy,
+    cfbDirectoryEntryOffset(entryId) + relativeOffset,
+  );
+  return copy;
+}
+
+function patchCfbUnallocatedAsStream(
+  bytes: Buffer,
+  entryId: number,
+  name: string,
+) {
+  const copy = patchCfbDirectoryName(bytes, entryId, name);
+  const offset = cfbDirectoryEntryOffset(entryId);
+  copy[offset + 66] = 2;
+  copy[offset + 67] = 1;
+  copy.writeUInt32LE(0xffffffff, offset + 68);
+  copy.writeUInt32LE(0xffffffff, offset + 72);
+  copy.writeUInt32LE(0xffffffff, offset + 76);
+  copy.writeUInt32LE(0xfffffffe, offset + 116);
+  copy.writeUInt32LE(0, offset + 120);
+  copy.writeUInt32LE(0, offset + 124);
+  return copy;
+}
+
+function m6e3DirectoryFixture() {
+  return buildCfb([
+    { path: "WordDocument", data: Buffer.alloc(4096, 0x57) },
+    { path: "Aaaa", data: Buffer.alloc(100, 0x41) },
+    { path: "Bbbb", data: Buffer.alloc(100, 0x42) },
+    { path: "Cccc", data: Buffer.alloc(100, 0x43) },
+  ]);
 }
 
 
@@ -4124,7 +4520,9 @@ function validateManifest() {
                       : entry.threatFamily === "OLE_VBA_EVASION" ||
                           entry.threatFamily === "OLE_EMBEDDED_OBJECT_EVASION"
                         ? "CERTIFIED_M6E2B"
-                        : "NOT_CERTIFIED";
+                        : entry.threatFamily === "OLE_DIRECTORY_EVASION"
+                          ? "CERTIFIED_M6E3"
+                          : "NOT_CERTIFIED";
 
     assert(
       entry.certificationStatus === expectedCertification,
@@ -4794,6 +5192,41 @@ function validateM6E2BPowerPointActiveContentCases() {
   );
 }
 
+function validateM6E3DirectoryCertificationCases() {
+  assert(
+    M6E3_DIRECTORY_CERTIFICATION_CASES.length === 15,
+    "M6E3 must execute the exact 15-case OLE directory adversarial matrix.",
+  );
+
+  const ids = new Set<string>();
+  for (const testCase of M6E3_DIRECTORY_CERTIFICATION_CASES) {
+    assert(Object.isFrozen(testCase), `${testCase.caseId} must be immutable.`);
+    assert(
+      /^HDS-M6E3-\d{3}-[A-Z0-9-]+$/.test(testCase.caseId),
+      `M6E3 case id is invalid: ${testCase.caseId}`,
+    );
+    assert(!ids.has(testCase.caseId), `Duplicate M6E3 case id: ${testCase.caseId}`);
+    assert(
+      testCase.threatFamily === "OLE_DIRECTORY_EVASION" &&
+        testCase.certificationPhase === "M6E" &&
+        testCase.certificationCredit === true,
+      `${testCase.caseId} must earn bounded M6E3 directory certification credit.`,
+    );
+    ids.add(testCase.caseId);
+  }
+
+  assert(
+    M6E3_DIRECTORY_CERTIFICATION_CASES.filter(
+      (testCase) => testCase.benignControl,
+    ).length === 1,
+    "M6E3 must retain exactly one benign sorted-directory control.",
+  );
+  assert(
+    Object.isFrozen(M6E3_DIRECTORY_CERTIFICATION_CASES),
+    "M6E3 directory certification registry must be immutable.",
+  );
+}
+
 function validateRulePackBoundary() {
   assert(
     HEHXAGON_DOCUMENT_SECURITY_RULE_IDS.length === 21,
@@ -4820,8 +5253,8 @@ function validateRulePackBoundary() {
 
   assert(
     HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION ===
-      "0.4.10-m6e2b",
-    "M6E2B must add live PowerPoint VBA/OLE/ActiveX detection on top of M6E2A persist authority while preserving the M4 rule-pack boundary.",
+      "0.4.11-m6e3",
+    "M6E3 must harden OLE directory-tree authority while preserving the M4 rule-pack boundary.",
   );
 }
 
@@ -6325,6 +6758,85 @@ async function executeM6E2BPowerPointActiveContentCertification() {
   return { results } as const;
 }
 
+async function executeM6E3DirectoryCertification() {
+  const baseFixture = m6e3DirectoryFixture();
+  const rootChild = baseFixture.readUInt32LE(
+    cfbDirectoryEntryOffset(0) + 76,
+  );
+  const rootChildLeft = baseFixture.readUInt32LE(
+    cfbDirectoryEntryOffset(rootChild) + 68,
+  );
+  const rootChildRight = baseFixture.readUInt32LE(
+    cfbDirectoryEntryOffset(rootChild) + 72,
+  );
+
+  assert(
+    rootChild !== 0xffffffff &&
+      rootChildLeft !== 0xffffffff &&
+      rootChildRight !== 0xffffffff,
+    "M6E3 deterministic fixture must expose both left and right sibling-tree branches.",
+  );
+
+  const fixtures = [
+    baseFixture,
+    patchCfbDirectoryColorFlag(baseFixture, 1, 2),
+    patchCfbDirectoryName(baseFixture, 2, "Bad/"),
+    patchCfbDirectoryName(baseFixture, rootChildLeft, "Zzzz"),
+    patchCfbDirectoryName(baseFixture, rootChildRight, "A000"),
+    patchCfbDirectoryName(baseFixture, rootChildLeft, "CCCC"),
+    patchCfbDirectoryColorFlag(
+      patchCfbDirectoryColorFlag(baseFixture, rootChild, 0),
+      rootChildLeft,
+      0,
+    ),
+    patchCfbDirectoryPointer(baseFixture, 1, "child", 2),
+    patchCfbDirectoryPointer(baseFixture, 1, "right", 127),
+    patchCfbDirectoryPointer(baseFixture, rootChildLeft, "left", rootChildLeft),
+    patchCfbUnallocatedAsStream(baseFixture, 5, "Ghost"),
+    patchCfbDirectoryBytes(baseFixture, 5, 80, Buffer.from([0x01])),
+    patchCfbDirectoryBytes(baseFixture, 1, 80, Buffer.from([0x01])),
+    patchCfbDirectoryBytes(baseFixture, 1, 100, Buffer.from([0x01])),
+    patchCfbDirectoryBytes(baseFixture, 0, 100, Buffer.from([0x01])),
+  ] as const;
+
+  const results: NativeDocumentScannerResult[] = [];
+  for (let index = 0; index < fixtures.length; index += 1) {
+    const result = await inspectDocument({
+      bytes: fixtures[index]!,
+      filename: "m6e3-directory.doc",
+      extension: "doc",
+      mimeType: "application/msword",
+    });
+    const contract = M6E3_DIRECTORY_CERTIFICATION_CASES[index]!;
+    assertResultMatchesContract(result, contract);
+
+    if (contract.expectedVerdict === "FAILED") {
+      assert(
+        result.rulePackEvaluation === null,
+        `${contract.caseId} must fail during OLE directory authority before rule-pack trust.`,
+      );
+    }
+    results.push(result);
+  }
+
+  assert(
+    results[0]!.verdict === "IDENTITY_VERIFIED" &&
+      results[0]!.rulePackEvaluation?.outcome === "PASS",
+    "M6E3 benign sorted-directory control must remain accepted without CLEAN authority.",
+  );
+
+  assert(
+    results.every(
+      (result) =>
+        String(result.verdict) !== "CLEAN" &&
+        result.inspectionComplete === false,
+    ),
+    "M6E3 directory certification must preserve the no-CLEAN authority boundary.",
+  );
+
+  return { results } as const;
+}
+
 async function run() {
   validateManifest();
   validateCaseContract();
@@ -6338,6 +6850,7 @@ async function run() {
   validateM6E1CertificationCases();
   validateM6E2APowerPointAuthorityCases();
   validateM6E2BPowerPointActiveContentCases();
+  validateM6E3DirectoryCertificationCases();
   validateRulePackBoundary();
 
   const sentinelResults = await executeSentinels();
@@ -6352,6 +6865,7 @@ async function run() {
   const m6e1 = await executeM6E1AllocatorCertification();
   const m6e2a = await executeM6E2APowerPointPersistAuthority();
   const m6e2b = await executeM6E2BPowerPointActiveContentCertification();
+  const m6e3 = await executeM6E3DirectoryCertification();
 
   const sentinelSummary =
     HARNESS_SENTINEL_CASES.map((testCase, index) =>
@@ -6753,12 +7267,34 @@ async function run() {
     },
   );
 
+  const m6e3Summary = M6E3_DIRECTORY_CERTIFICATION_CASES.map(
+    (testCase, index) => {
+      const result = m6e3.results[index]!;
+      return Object.freeze({
+        caseId: testCase.caseId,
+        threatFamily: testCase.threatFamily,
+        benignControl: testCase.benignControl,
+        certificationCredit: testCase.certificationCredit,
+        expectedVerdict: testCase.expectedVerdict,
+        actualVerdict: result.verdict,
+        expectedReasonCode: testCase.expectedReasonCode,
+        reasonMatched: result.reasonCodes.includes(testCase.expectedReasonCode),
+        actualDetectedContainer: result.identityEvidence.detectedContainer,
+        actualSignatureKind: result.identityEvidence.signatureKind,
+      });
+    },
+  );
+
   const m6e1CertifiedThreatFamilies = THREAT_FAMILY_MANIFEST.filter(
     (entry) => entry.certificationStatus === "CERTIFIED_M6E1",
   ).map((entry) => entry.threatFamily);
 
   const m6e2bCertifiedThreatFamilies = THREAT_FAMILY_MANIFEST.filter(
     (entry) => entry.certificationStatus === "CERTIFIED_M6E2B",
+  ).map((entry) => entry.threatFamily);
+
+  const m6e3CertifiedThreatFamilies = THREAT_FAMILY_MANIFEST.filter(
+    (entry) => entry.certificationStatus === "CERTIFIED_M6E3",
   ).map((entry) => entry.threatFamily);
 
   const m6dCertifiedThreatFamilies =
@@ -6834,8 +7370,22 @@ async function run() {
   );
 
   assert(
-    remainingNonPdfThreatFamilies.length === 6,
-    "M6E2B must leave only OLE directory evasion plus the five M6F/M6G families uncertified.",
+    m6e3CertifiedThreatFamilies.length === 1 &&
+      m6e3CertifiedThreatFamilies[0] === "OLE_DIRECTORY_EVASION",
+    "M6E3 must certify the final OLE directory evasion family.",
+  );
+
+  assert(
+    remainingNonPdfThreatFamilies.length === 5 &&
+      remainingNonPdfThreatFamilies.every(
+        (family) =>
+          family === "RESOURCE_EXHAUSTION" ||
+          family === "TRUNCATION" ||
+          family === "HASH_SIZE_IDENTITY_RACE" ||
+          family === "RULE_ORDER_DETERMINISM" ||
+          family === "FALSE_POSITIVE_CONTROL",
+      ),
+    "M6E3 must close all five M6E OLE threat families and leave only M6F/M6G work open.",
   );
 
   assert(
@@ -6907,6 +7457,11 @@ async function run() {
         (result) =>
           String(result.verdict) !== "CLEAN" &&
           result.inspectionComplete === false,
+      ) &&
+      m6e3.results.every(
+        (result) =>
+          String(result.verdict) !== "CLEAN" &&
+          result.inspectionComplete === false,
       ),
     "M6 execution must never grant CLEAN or completed document-trust authority.",
   );
@@ -6916,13 +7471,13 @@ async function run() {
       {
         ok: true,
         event:
-          "HDS_M6E2B_POWERPOINT_ACTIVE_CONTENT_CERTIFICATION_PASSED",
+          "HDS_M6E3_OLE_DIRECTORY_CERTIFICATION_PASSED",
         corpusSchemaVersion:
           HDS_M6_ADVERSARIAL_CORPUS_SCHEMA_VERSION,
         harnessVersion:
-          HDS_M6E2B_HARNESS_VERSION,
+          HDS_M6E3_HARNESS_VERSION,
         priorHarnessVersion:
-          HDS_M6E2A_HARNESS_VERSION,
+          HDS_M6E2B_HARNESS_VERSION,
         priorOoxmlHarnessVersion:
           HDS_M6C_HARNESS_VERSION,
         scannerEngine:
@@ -7166,7 +7721,27 @@ async function run() {
           ).length,
         m6e2bStaleHistoricalBytesIgnored: true,
         m6e2bResults: m6e2bSummary,
-        oleDirectoryCertificationComplete: false,
+        m6e3DirectoryCertificationComplete: true,
+        m6e3CertifiedThreatFamilies,
+        m6e3CaseCount: M6E3_DIRECTORY_CERTIFICATION_CASES.length,
+        m6e3CertificationCredit:
+          M6E3_DIRECTORY_CERTIFICATION_CASES.filter(
+            (testCase) => testCase.certificationCredit,
+          ).length,
+        m6e3BenignControlCount:
+          M6E3_DIRECTORY_CERTIFICATION_CASES.filter(
+            (testCase) => testCase.benignControl,
+          ).length,
+        m6e3ComplexUnicodeComparatorCompatibilityDeferredToM6G: true,
+        m6e3Results: m6e3Summary,
+        m6eCertificationComplete: true,
+        m6eCertifiedThreatFamilies: [
+          ...m6e1CertifiedThreatFamilies,
+          ...m6e2bCertifiedThreatFamilies,
+          ...m6e3CertifiedThreatFamilies,
+        ],
+        remainingM6eThreatFamilies: [],
+        oleDirectoryCertificationComplete: true,
         oleVbaCertificationComplete: true,
         oleEmbeddedObjectCertificationComplete: true,
         remainingNonPdfThreatFamilies,
@@ -7187,11 +7762,11 @@ run().catch((error) => {
       {
         ok: false,
         event:
-          "HDS_M6E2B_POWERPOINT_ACTIVE_CONTENT_CERTIFICATION_FAILED",
+          "HDS_M6E3_OLE_DIRECTORY_CERTIFICATION_FAILED",
         errorCode:
           error instanceof Error
             ? error.message
-            : "M6E2B_UNKNOWN_FAILURE",
+            : "M6E3_UNKNOWN_FAILURE",
       },
       null,
       2,
