@@ -78,6 +78,9 @@ export const HDS_M6F1_HARNESS_VERSION =
 export const HDS_M6F2_HARNESS_VERSION =
   "HDS-M6F2-HARNESS-V1" as const;
 
+export const HDS_M6F3_HARNESS_VERSION =
+  "HDS-M6F3-HARNESS-V1" as const;
+
 const ONE_MEBIBYTE = 1024 * 1024;
 
 const ARCHIVE_LIMITS: NativeDocumentArchiveLimits = Object.freeze({
@@ -161,7 +164,8 @@ type ThreatFamilyManifestEntry = Readonly<{
     | "CERTIFIED_M6E2B"
     | "CERTIFIED_M6E3"
     | "CERTIFIED_M6F1"
-    | "CERTIFIED_M6F2";
+    | "CERTIFIED_M6F2"
+    | "CERTIFIED_M6F3";
   objective: string;
 }>;
 
@@ -315,7 +319,7 @@ const THREAT_FAMILY_MANIFEST: readonly ThreatFamilyManifestEntry[] =
     Object.freeze({
       threatFamily: "TRUNCATION",
       plannedPhase: "M6F",
-      certificationStatus: "NOT_CERTIFIED",
+      certificationStatus: "CERTIFIED_M6F3",
       objective:
         "Truncate documents at structural boundaries and prove fail-closed deterministic outcomes.",
     }),
@@ -2715,6 +2719,219 @@ const M6F2_RESOURCE_EXHAUSTION_CERTIFICATION_CASES: readonly CorpusCaseContract[
     }),
   ]);
 
+
+const M6F3_TRUNCATION_CERTIFICATION_CASES: readonly CorpusCaseContract[] =
+  Object.freeze([
+    Object.freeze({
+      caseId: "HDS-M6F3-001-BENIGN-PDF-CONTROL",
+      threatFamily: "TRUNCATION",
+      format: "PDF",
+      attackTechnique:
+        "A complete deterministic PDF control establishes the non-truncated structural baseline before fail-closed truncation cases are evaluated.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F3-002-BENIGN-PDF-OPTIONAL-TRAILING-WHITESPACE",
+      threatFamily: "TRUNCATION",
+      format: "PDF",
+      attackTechnique:
+        "Only the optional trailing newline after the complete PDF EOF marker is removed; bounded parsing must preserve compatibility with a structurally complete document.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F3-003-PDF-EOF-MARKER-TRUNCATED",
+      threatFamily: "TRUNCATION",
+      format: "PDF",
+      attackTechnique:
+        "The PDF is rehashed and rescanned after truncation removes part of the final EOF marker, proving structural validation fails independently of size and hash agreement.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_STARTXREF_MISSING",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F3-004-PDF-STREAM-BODY-TRUNCATED",
+      threatFamily: "TRUNCATION",
+      format: "PDF",
+      attackTechnique:
+        "A structurally indexed PDF stream declares more body bytes than are present before its endstream boundary and must fail instead of accepting a shortened stream body.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_OBJECT_SYNTAX_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F3-005-PDF-LITERAL-STRING-TRUNCATED",
+      threatFamily: "TRUNCATION",
+      format: "PDF",
+      attackTechnique:
+        "An active catalog dictionary contains a literal string whose closing delimiter is truncated; bounded object parsing must fail closed without treating following syntax as trusted content.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_OBJECT_SYNTAX_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F3-006-BENIGN-OOXML-CONTROL",
+      threatFamily: "TRUNCATION",
+      format: "OOXML",
+      attackTechnique:
+        "A complete deterministic DOCX package establishes the bounded non-truncated ZIP and OOXML structural baseline.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F3-007-OOXML-EOCD-TRUNCATED",
+      threatFamily: "TRUNCATION",
+      format: "OOXML",
+      attackTechnique:
+        "The package is rehashed after one byte is removed from its end-of-central-directory record, so the ZIP identity hash matches while archive authority must still fail closed.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "ZIP_END_OF_CENTRAL_DIRECTORY_MISSING",
+      expectedRuleId: null,
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F3-008-OOXML-DECLARED-PAYLOAD-TRUNCATED",
+      threatFamily: "TRUNCATION",
+      format: "OOXML",
+      attackTechnique:
+        "A central-directory entry claims more compressed payload bytes than remain before the central-directory boundary, and local-entry bounds must reject the structurally truncated payload.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "ZIP_LOCAL_HEADER_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F3-009-BENIGN-OLE-CONTROL",
+      threatFamily: "TRUNCATION",
+      format: "OLE",
+      attackTechnique:
+        "A complete deterministic Word binary compound file establishes the non-truncated FAT, directory, stream and application-authority baseline.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F3-010-OLE-PARTIAL-SECTOR-TRUNCATED",
+      threatFamily: "TRUNCATION",
+      format: "OLE",
+      attackTechnique:
+        "The compound file is rehashed after a single trailing byte is removed, breaking sector geometry while preserving the leading OLE signature and matching integrity metadata.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_SECTOR_GEOMETRY_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F3-011-OLE-WHOLE-SECTOR-TRUNCATED",
+      threatFamily: "TRUNCATION",
+      format: "OLE",
+      attackTechnique:
+        "A complete trailing sector is removed so byte alignment still looks valid, forcing FAT and DIFAT authority checks rather than relying only on simple file-length alignment.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_DIFAT_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F3-012-OLE-DECLARED-STREAM-TRUNCATED",
+      threatFamily: "TRUNCATION",
+      format: "OLE",
+      attackTechnique:
+        "The authoritative WordDocument directory entry declares more stream bytes than its FAT chain can supply, and stream-chain validation must fail closed before application trust.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_STREAM_CHAIN_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+  ]);
+
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
     throw new Error(`M6C_ASSERTION_FAILED: ${message}`);
@@ -2761,6 +2978,28 @@ function patchFirstZipCentralCompressedSize(bytes: Buffer, compressedSize: numbe
 
   assert(offset >= 0, "M6F2 ZIP fixture must contain a central-directory entry.");
   copy.writeUInt32LE(compressedSize >>> 0, offset + 20);
+  return copy;
+}
+
+
+function patchCfbDirectoryStreamSizeByName(
+  bytes: Buffer,
+  name: string,
+  streamSize: number,
+) {
+  const copy = Buffer.from(bytes);
+  const encodedName = Buffer.from(`${name}\u0000`, "utf16le");
+  const nameOffset = copy.indexOf(encodedName);
+  assert(nameOffset >= 0, `M6F3 CFB fixture must contain ${name}.`);
+
+  const entryOffset = nameOffset - (nameOffset % 128);
+  assert(
+    entryOffset >= 0 && entryOffset + 128 <= copy.length,
+    "M6F3 CFB directory-entry bounds must remain valid before mutation.",
+  );
+
+  copy.writeUInt32LE(streamSize >>> 0, entryOffset + 120);
+  copy.writeUInt32LE(0, entryOffset + 124);
   return copy;
 }
 
@@ -4976,7 +5215,9 @@ function validateManifest() {
                             ? "CERTIFIED_M6F1"
                             : entry.threatFamily === "RESOURCE_EXHAUSTION"
                               ? "CERTIFIED_M6F2"
-                              : "NOT_CERTIFIED";
+                              : entry.threatFamily === "TRUNCATION"
+                                ? "CERTIFIED_M6F3"
+                                : "NOT_CERTIFIED";
 
     assert(
       entry.certificationStatus === expectedCertification,
@@ -5749,6 +5990,42 @@ function validateM6F2ResourceExhaustionCertificationCases() {
   assert(
     Object.isFrozen(M6F2_RESOURCE_EXHAUSTION_CERTIFICATION_CASES),
     "M6F2 resource-exhaustion certification registry must be immutable.",
+  );
+}
+
+
+function validateM6F3TruncationCertificationCases() {
+  assert(
+    M6F3_TRUNCATION_CERTIFICATION_CASES.length === 12,
+    "M6F3 must execute the exact twelve-case truncation matrix.",
+  );
+
+  const ids = new Set<string>();
+  for (const testCase of M6F3_TRUNCATION_CERTIFICATION_CASES) {
+    assert(Object.isFrozen(testCase), `${testCase.caseId} must be immutable.`);
+    assert(
+      /^HDS-M6F3-\d{3}-[A-Z0-9-]+$/.test(testCase.caseId),
+      `M6F3 case id is invalid: ${testCase.caseId}`,
+    );
+    assert(!ids.has(testCase.caseId), `Duplicate M6F3 case id: ${testCase.caseId}`);
+    assert(
+      testCase.threatFamily === "TRUNCATION" &&
+        testCase.certificationPhase === "M6F" &&
+        testCase.certificationCredit === true,
+      `${testCase.caseId} must earn bounded M6F3 truncation certification credit.`,
+    );
+    ids.add(testCase.caseId);
+  }
+
+  assert(
+    M6F3_TRUNCATION_CERTIFICATION_CASES.filter(
+      (testCase) => testCase.benignControl,
+    ).length === 4,
+    "M6F3 must retain exactly four benign controls including optional trailing-PDF-whitespace compatibility.",
+  );
+  assert(
+    Object.isFrozen(M6F3_TRUNCATION_CERTIFICATION_CASES),
+    "M6F3 truncation certification registry must be immutable.",
   );
 }
 
@@ -7763,6 +8040,183 @@ async function executeM6F2ResourceExhaustionCertification() {
   return { results } as const;
 }
 
+
+async function executeM6F3TruncationCertification() {
+  const safePdf = buildClassicPdf();
+  const benignPdf = await inspectDocumentWithResourceLimits({
+    bytes: safePdf,
+    filename: "m6f3-control.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+  });
+
+  const optionalTrailingWhitespace = safePdf.subarray(0, safePdf.length - 1);
+  const benignPdfTrailingWhitespace = await inspectDocumentWithResourceLimits({
+    bytes: optionalTrailingWhitespace,
+    filename: "m6f3-trailing-whitespace.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+  });
+
+  const pdfEofTruncatedBytes = safePdf.subarray(0, safePdf.length - 2);
+  const pdfEofTruncated = await inspectDocumentWithResourceLimits({
+    bytes: pdfEofTruncatedBytes,
+    filename: "m6f3-eof-truncated.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+  });
+
+  const pdfStreamTruncatedBytes = buildM6DClassicPdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [] /Count 0 >>",
+    "<< /Length 20 >>\\nstream\\nABC\\nendstream",
+  ]);
+  const pdfStreamTruncated = await inspectDocumentWithResourceLimits({
+    bytes: pdfStreamTruncatedBytes,
+    filename: "m6f3-stream-truncated.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+  });
+
+  const pdfStringTruncatedBytes = buildM6DClassicPdf([
+    "<< /Type /Catalog /Pages 2 0 R /Title (unterminated >>",
+    "<< /Type /Pages /Kids [] /Count 0 >>",
+  ]);
+  const pdfStringTruncated = await inspectDocumentWithResourceLimits({
+    bytes: pdfStringTruncatedBytes,
+    filename: "m6f3-string-truncated.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+  });
+
+  const safeOoxml = buildM6COoxmlPackage({ application: "docx" });
+  const benignOoxml = await inspectDocumentWithResourceLimits({
+    bytes: safeOoxml,
+    filename: "m6f3-control.docx",
+    extension: "docx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
+
+  const ooxmlEocdTruncatedBytes = safeOoxml.subarray(0, safeOoxml.length - 1);
+  const ooxmlEocdTruncated = await inspectDocumentWithResourceLimits({
+    bytes: ooxmlEocdTruncatedBytes,
+    filename: "m6f3-eocd-truncated.docx",
+    extension: "docx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
+
+  const ooxmlPayloadTruncatedBytes = patchFirstZipCentralCompressedSize(
+    safeOoxml,
+    600,
+  );
+  const ooxmlPayloadTruncated = await inspectDocumentWithResourceLimits({
+    bytes: ooxmlPayloadTruncatedBytes,
+    filename: "m6f3-payload-truncated.docx",
+    extension: "docx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
+
+  const safeOle = legacyOfficeFixture("doc");
+  const benignOle = await inspectDocumentWithResourceLimits({
+    bytes: safeOle,
+    filename: "m6f3-control.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+  });
+
+  const olePartialSectorBytes = safeOle.subarray(0, safeOle.length - 1);
+  const olePartialSector = await inspectDocumentWithResourceLimits({
+    bytes: olePartialSectorBytes,
+    filename: "m6f3-partial-sector.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+  });
+
+  const oleWholeSectorBytes = safeOle.subarray(0, safeOle.length - 512);
+  const oleWholeSector = await inspectDocumentWithResourceLimits({
+    bytes: oleWholeSectorBytes,
+    filename: "m6f3-whole-sector.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+  });
+
+  const oleDeclaredStreamTruncatedBytes = patchCfbDirectoryStreamSizeByName(
+    safeOle,
+    "WordDocument",
+    8192,
+  );
+  const oleDeclaredStreamTruncated = await inspectDocumentWithResourceLimits({
+    bytes: oleDeclaredStreamTruncatedBytes,
+    filename: "m6f3-stream-truncated.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+  });
+
+  const results = [
+    benignPdf,
+    benignPdfTrailingWhitespace,
+    pdfEofTruncated,
+    pdfStreamTruncated,
+    pdfStringTruncated,
+    benignOoxml,
+    ooxmlEocdTruncated,
+    ooxmlPayloadTruncated,
+    benignOle,
+    olePartialSector,
+    oleWholeSector,
+    oleDeclaredStreamTruncated,
+  ] as const;
+
+  for (let index = 0; index < results.length; index += 1) {
+    assertResultMatchesContract(
+      results[index]!,
+      M6F3_TRUNCATION_CERTIFICATION_CASES[index]!,
+    );
+  }
+
+  assert(
+    benignPdf.pdfStructuralInspectionComplete === true &&
+      benignPdfTrailingWhitespace.pdfStructuralInspectionComplete === true &&
+      benignOoxml.archiveInspectionComplete === true &&
+      benignOoxml.ooxmlStructuralInspectionComplete === true &&
+      benignOle.oleStructuralInspectionComplete === true,
+    "M6F3 benign controls must retain complete bounded structural inspection.",
+  );
+
+  assert(
+    [
+      pdfEofTruncated,
+      pdfStreamTruncated,
+      pdfStringTruncated,
+      ooxmlEocdTruncated,
+      ooxmlPayloadTruncated,
+      olePartialSector,
+      oleWholeSector,
+      oleDeclaredStreamTruncated,
+    ].every(
+      (result) =>
+        result.sha256Hash !== null &&
+        result.identityEvidence.sizeMatched === true &&
+        result.identityEvidence.sha256Matched === true,
+    ),
+    "M6F3 structural truncation cases must fail closed after the scanner accepts the truncated bytes as the authoritative size-and-hash identity.",
+  );
+
+  assert(
+    results.every(
+      (result) =>
+        String(result.verdict) !== "CLEAN" &&
+        result.inspectionComplete === false,
+    ),
+    "M6F3 truncation certification must preserve the no-CLEAN authority boundary.",
+  );
+
+  return { results } as const;
+}
+
 async function run() {
   validateManifest();
   validateCaseContract();
@@ -7779,6 +8233,7 @@ async function run() {
   validateM6E3DirectoryCertificationCases();
   validateM6F1IdentityIntegrityCertificationCases();
   validateM6F2ResourceExhaustionCertificationCases();
+  validateM6F3TruncationCertificationCases();
   validateRulePackBoundary();
 
   const sentinelResults = await executeSentinels();
@@ -7796,6 +8251,7 @@ async function run() {
   const m6e3 = await executeM6E3DirectoryCertification();
   const m6f1 = await executeM6F1IdentityIntegrityCertification();
   const m6f2 = await executeM6F2ResourceExhaustionCertification();
+  const m6f3 = await executeM6F3TruncationCertification();
 
   const sentinelSummary =
     HARNESS_SENTINEL_CASES.map((testCase, index) =>
@@ -8257,6 +8713,26 @@ async function run() {
     },
   );
 
+
+  const m6f3Summary = M6F3_TRUNCATION_CERTIFICATION_CASES.map(
+    (testCase, index) => {
+      const result = m6f3.results[index]!;
+      return Object.freeze({
+        caseId: testCase.caseId,
+        threatFamily: testCase.threatFamily,
+        benignControl: testCase.benignControl,
+        certificationCredit: testCase.certificationCredit,
+        expectedVerdict: testCase.expectedVerdict,
+        actualVerdict: result.verdict,
+        expectedReasonCode: testCase.expectedReasonCode,
+        reasonMatched: result.reasonCodes.includes(testCase.expectedReasonCode),
+        actualDetectedContainer: result.identityEvidence.detectedContainer,
+        actualSignatureKind: result.identityEvidence.signatureKind,
+        bytesScanned: result.bytesScanned,
+      });
+    },
+  );
+
   const m6e1CertifiedThreatFamilies = THREAT_FAMILY_MANIFEST.filter(
     (entry) => entry.certificationStatus === "CERTIFIED_M6E1",
   ).map((entry) => entry.threatFamily);
@@ -8275,6 +8751,10 @@ async function run() {
 
   const m6f2CertifiedThreatFamilies = THREAT_FAMILY_MANIFEST.filter(
     (entry) => entry.certificationStatus === "CERTIFIED_M6F2",
+  ).map((entry) => entry.threatFamily);
+
+  const m6f3CertifiedThreatFamilies = THREAT_FAMILY_MANIFEST.filter(
+    (entry) => entry.certificationStatus === "CERTIFIED_M6F3",
   ).map((entry) => entry.threatFamily);
 
   const m6dCertifiedThreatFamilies =
@@ -8368,14 +8848,19 @@ async function run() {
   );
 
   assert(
-    remainingNonPdfThreatFamilies.length === 3 &&
+    m6f3CertifiedThreatFamilies.length === 1 &&
+      m6f3CertifiedThreatFamilies[0] === "TRUNCATION",
+    "M6F3 must certify exactly the truncation family.",
+  );
+
+  assert(
+    remainingNonPdfThreatFamilies.length === 2 &&
       remainingNonPdfThreatFamilies.every(
         (family) =>
-          family === "TRUNCATION" ||
           family === "RULE_ORDER_DETERMINISM" ||
           family === "FALSE_POSITIVE_CONTROL",
       ),
-    "M6F2 must close resource exhaustion while leaving truncation, rule-order determinism, and M6G false-positive control open.",
+    "M6F3 must close truncation while leaving rule-order determinism and M6G false-positive control open.",
   );
 
   assert(
@@ -8462,6 +8947,11 @@ async function run() {
         (result) =>
           String(result.verdict) !== "CLEAN" &&
           result.inspectionComplete === false,
+      ) &&
+      m6f3.results.every(
+        (result) =>
+          String(result.verdict) !== "CLEAN" &&
+          result.inspectionComplete === false,
       ),
     "M6 execution must never grant CLEAN or completed document-trust authority.",
   );
@@ -8471,13 +8961,13 @@ async function run() {
       {
         ok: true,
         event:
-          "HDS_M6F2_RESOURCE_EXHAUSTION_CERTIFICATION_PASSED",
+          "HDS_M6F3_TRUNCATION_CERTIFICATION_PASSED",
         corpusSchemaVersion:
           HDS_M6_ADVERSARIAL_CORPUS_SCHEMA_VERSION,
         harnessVersion:
-          HDS_M6F2_HARNESS_VERSION,
+          HDS_M6F3_HARNESS_VERSION,
         priorHarnessVersion:
-          HDS_M6F1_HARNESS_VERSION,
+          HDS_M6F2_HARNESS_VERSION,
         priorOoxmlHarnessVersion:
           HDS_M6C_HARNESS_VERSION,
         scannerEngine:
@@ -8779,8 +9269,22 @@ async function run() {
           "OLE",
         ],
         m6f2Results: m6f2Summary,
+        m6f3TruncationCertificationComplete: true,
+        m6f3CertifiedThreatFamilies,
+        m6f3CaseCount:
+          M6F3_TRUNCATION_CERTIFICATION_CASES.length,
+        m6f3CertificationCredit:
+          M6F3_TRUNCATION_CERTIFICATION_CASES.filter(
+            (testCase) => testCase.certificationCredit,
+          ).length,
+        m6f3BenignControlCount:
+          M6F3_TRUNCATION_CERTIFICATION_CASES.filter(
+            (testCase) => testCase.benignControl,
+          ).length,
+        m6f3TruncatedBytesRehashedAsAuthoritativeInput: true,
+        m6f3Results: m6f3Summary,
         resourceExhaustionCertificationComplete: true,
-        truncationCertificationComplete: false,
+        truncationCertificationComplete: true,
         ruleOrderDeterminismCertificationComplete: false,
         remainingNonPdfThreatFamilies,
         adversarialCertificationComplete: false,
@@ -8800,11 +9304,11 @@ run().catch((error) => {
       {
         ok: false,
         event:
-          "HDS_M6F2_RESOURCE_EXHAUSTION_CERTIFICATION_FAILED",
+          "HDS_M6F3_TRUNCATION_CERTIFICATION_FAILED",
         errorCode:
           error instanceof Error
             ? error.message
-            : "M6F2_UNKNOWN_FAILURE",
+            : "M6F3_UNKNOWN_FAILURE",
       },
       null,
       2,
