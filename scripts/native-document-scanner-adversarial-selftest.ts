@@ -75,6 +75,9 @@ export const HDS_M6E3_HARNESS_VERSION =
 export const HDS_M6F1_HARNESS_VERSION =
   "HDS-M6F1-HARNESS-V1" as const;
 
+export const HDS_M6F2_HARNESS_VERSION =
+  "HDS-M6F2-HARNESS-V1" as const;
+
 const ONE_MEBIBYTE = 1024 * 1024;
 
 const ARCHIVE_LIMITS: NativeDocumentArchiveLimits = Object.freeze({
@@ -157,7 +160,8 @@ type ThreatFamilyManifestEntry = Readonly<{
     | "CERTIFIED_M6E1"
     | "CERTIFIED_M6E2B"
     | "CERTIFIED_M6E3"
-    | "CERTIFIED_M6F1";
+    | "CERTIFIED_M6F1"
+    | "CERTIFIED_M6F2";
   objective: string;
 }>;
 
@@ -304,7 +308,7 @@ const THREAT_FAMILY_MANIFEST: readonly ThreatFamilyManifestEntry[] =
     Object.freeze({
       threatFamily: "RESOURCE_EXHAUSTION",
       plannedPhase: "M6F",
-      certificationStatus: "NOT_CERTIFIED",
+      certificationStatus: "CERTIFIED_M6F2",
       objective:
         "Exercise bounded parser ceilings without unbounded memory, decompression, nesting or chain traversal.",
     }),
@@ -2401,6 +2405,316 @@ const M6F1_IDENTITY_INTEGRITY_CERTIFICATION_CASES: readonly CorpusCaseContract[]
     }),
   ]);
 
+
+const M6F2_RESOURCE_EXHAUSTION_CERTIFICATION_CASES: readonly CorpusCaseContract[] =
+  Object.freeze([
+    Object.freeze({
+      caseId: "HDS-M6F2-001-BENIGN-PDF-RESOURCE-CONTROL",
+      threatFamily: "RESOURCE_EXHAUSTION",
+      format: "PDF",
+      attackTechnique:
+        "A normal bounded PDF remains accepted under the configured source and PDF resource ceilings.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F2-002-SOURCE-MAX-BYTES-PREFLIGHT",
+      threatFamily: "RESOURCE_EXHAUSTION",
+      format: "PDF",
+      attackTechnique:
+        "The immutable expected source size exceeds maxBytes and must fail before source consumption or parser allocation.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "RESOURCE_LIMIT_EXCEEDED",
+      expectedRuleId: null,
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F2-003-EMPTY-SOURCE-CHUNK-FLOOD",
+      threatFamily: "RESOURCE_EXHAUSTION",
+      format: "PDF",
+      attackTechnique:
+        "A byte source emits more than the engine's bounded allowance of zero-length chunks before any useful bytes, preventing an unbounded empty-chunk iteration loop.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "RESOURCE_LIMIT_EXCEEDED",
+      expectedRuleId: null,
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F2-004-BENIGN-OOXML-RESOURCE-CONTROL",
+      threatFamily: "RESOURCE_EXHAUSTION",
+      format: "OOXML",
+      attackTechnique:
+        "A normal bounded DOCX package remains accepted under the configured archive resource ceilings.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F2-005-OOXML-ENTRY-COUNT-LIMIT",
+      threatFamily: "RESOURCE_EXHAUSTION",
+      format: "OOXML",
+      attackTechnique:
+        "An otherwise valid OOXML package declares more central-directory entries than the configured archive ceiling.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "ZIP_ENTRY_COUNT_LIMIT_EXCEEDED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F2-006-OOXML-ENTRY-SIZE-LIMIT",
+      threatFamily: "RESOURCE_EXHAUSTION",
+      format: "OOXML",
+      attackTechnique:
+        "A declared OOXML entry exceeds the configured single-entry expanded-size ceiling before decompression is attempted.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "ZIP_ENTRY_SIZE_LIMIT_EXCEEDED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F2-007-OOXML-TOTAL-EXPANDED-SIZE-LIMIT",
+      threatFamily: "RESOURCE_EXHAUSTION",
+      format: "OOXML",
+      attackTechnique:
+        "Multiple individually bounded OOXML parts collectively exceed the configured total expanded-byte budget.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "ZIP_TOTAL_EXPANDED_SIZE_LIMIT_EXCEEDED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F2-008-OOXML-COMPRESSION-RATIO-LIMIT",
+      threatFamily: "RESOURCE_EXHAUSTION",
+      format: "OOXML",
+      attackTechnique:
+        "Central-directory metadata advertises an expansion ratio beyond policy and must be rejected before control-part inflation.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "ZIP_COMPRESSION_RATIO_LIMIT_EXCEEDED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F2-009-PDF-OBJECT-COUNT-LIMIT",
+      threatFamily: "RESOURCE_EXHAUSTION",
+      format: "PDF",
+      attackTechnique:
+        "The PDF cross-reference section declares more objects than the configured active-object ceiling.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_OBJECT_COUNT_LIMIT_EXCEEDED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F2-010-PDF-NESTING-DEPTH-LIMIT",
+      threatFamily: "RESOURCE_EXHAUSTION",
+      format: "PDF",
+      attackTechnique:
+        "A live catalog contains nested arrays deeper than the configured PDF object-nesting ceiling.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_OBJECT_NESTING_LIMIT_EXCEEDED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F2-011-PDF-STRING-BYTE-LIMIT",
+      threatFamily: "RESOURCE_EXHAUSTION",
+      format: "PDF",
+      attackTechnique:
+        "A live catalog string exceeds the configured PDF string-byte ceiling and must terminate parsing deterministically.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_STRING_LIMIT_EXCEEDED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F2-012-PDF-XREF-DECODE-LIMIT",
+      threatFamily: "RESOURCE_EXHAUSTION",
+      format: "PDF",
+      attackTechnique:
+        "A modern PDF cross-reference stream expands beyond the configured decoded-xref byte ceiling.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "PDF_STREAM_DECODE_LIMIT_EXCEEDED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F2-013-BENIGN-OLE-RESOURCE-CONTROL",
+      threatFamily: "RESOURCE_EXHAUSTION",
+      format: "OLE",
+      attackTechnique:
+        "A normal bounded legacy DOC remains accepted under the configured CFB allocation and stream ceilings.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F2-014-OLE-DIRECTORY-ENTRY-LIMIT",
+      threatFamily: "RESOURCE_EXHAUSTION",
+      format: "OLE",
+      attackTechnique:
+        "The allocated CFB directory contains more slots than the configured directory-entry ceiling.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_DIRECTORY_ENTRY_LIMIT_EXCEEDED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F2-015-OLE-STREAM-COUNT-LIMIT",
+      threatFamily: "RESOURCE_EXHAUSTION",
+      format: "OLE",
+      attackTechnique:
+        "The compound file contains more user streams than the configured stream-count ceiling.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_STREAM_COUNT_LIMIT_EXCEEDED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F2-016-OLE-SECTOR-CHAIN-LIMIT",
+      threatFamily: "RESOURCE_EXHAUSTION",
+      format: "OLE",
+      attackTechnique:
+        "A valid regular WordDocument stream requires more FAT sectors than the configured sector-chain traversal ceiling.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_SECTOR_CHAIN_LIMIT_EXCEEDED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F2-017-OLE-STREAM-SIZE-LIMIT",
+      threatFamily: "RESOURCE_EXHAUSTION",
+      format: "OLE",
+      attackTechnique:
+        "A valid legacy Word stream declares more bytes than the configured per-stream ceiling.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_STREAM_SIZE_LIMIT_EXCEEDED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F2-018-OLE-TOTAL-STREAM-BYTE-LIMIT",
+      threatFamily: "RESOURCE_EXHAUSTION",
+      format: "OLE",
+      attackTechnique:
+        "Individually permitted legacy streams collectively exceed the configured total user-stream byte budget.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_TOTAL_STREAM_SIZE_LIMIT_EXCEEDED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6F",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+  ]);
+
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
     throw new Error(`M6C_ASSERTION_FAILED: ${message}`);
@@ -2428,6 +2742,53 @@ function sourceFromDeterministicFragments(bytes: Buffer) {
       }
     }
   })();
+}
+
+
+function sourceWithEmptyChunkFlood(bytes: Buffer) {
+  return (async function* () {
+    for (let index = 0; index < 65; index += 1) {
+      yield Buffer.alloc(0);
+    }
+    yield bytes;
+  })();
+}
+
+function patchFirstZipCentralCompressedSize(bytes: Buffer, compressedSize: number) {
+  const copy = Buffer.from(bytes);
+  const signature = Buffer.from([0x50, 0x4b, 0x01, 0x02]);
+  const offset = copy.indexOf(signature);
+
+  assert(offset >= 0, "M6F2 ZIP fixture must contain a central-directory entry.");
+  copy.writeUInt32LE(compressedSize >>> 0, offset + 20);
+  return copy;
+}
+
+async function inspectDocumentWithResourceLimits(args: {
+  bytes: Buffer;
+  filename: string;
+  extension: string;
+  mimeType: string;
+  source?: AsyncIterable<Uint8Array> | Iterable<Uint8Array>;
+  maxBytes?: number;
+  archive?: NativeDocumentArchiveLimits;
+  pdf?: NativeDocumentPdfLimits;
+  ole?: NativeDocumentOleLimits;
+}) {
+  return inspectNativeDocumentIdentity({
+    source: args.source ?? sourceFromDeterministicFragments(args.bytes),
+    expectedSizeBytes: args.bytes.length,
+    expectedSha256: sha256(args.bytes),
+    declaredFilename: args.filename,
+    declaredExtension: args.extension,
+    declaredMimeType: args.mimeType,
+    limits: {
+      maxBytes: args.maxBytes ?? ONE_MEBIBYTE,
+      archive: args.archive ?? ARCHIVE_LIMITS,
+      pdf: args.pdf ?? PDF_LIMITS,
+      ole: args.ole ?? OLE_LIMITS,
+    },
+  });
 }
 
 
@@ -4613,7 +4974,9 @@ function validateManifest() {
                           ? "CERTIFIED_M6E3"
                           : entry.threatFamily === "HASH_SIZE_IDENTITY_RACE"
                             ? "CERTIFIED_M6F1"
-                            : "NOT_CERTIFIED";
+                            : entry.threatFamily === "RESOURCE_EXHAUSTION"
+                              ? "CERTIFIED_M6F2"
+                              : "NOT_CERTIFIED";
 
     assert(
       entry.certificationStatus === expectedCertification,
@@ -5353,6 +5716,42 @@ function validateM6F1IdentityIntegrityCertificationCases() {
   );
 }
 
+
+function validateM6F2ResourceExhaustionCertificationCases() {
+  assert(
+    M6F2_RESOURCE_EXHAUSTION_CERTIFICATION_CASES.length === 18,
+    "M6F2 must execute the exact eighteen-case resource-exhaustion matrix.",
+  );
+
+  const ids = new Set<string>();
+  for (const testCase of M6F2_RESOURCE_EXHAUSTION_CERTIFICATION_CASES) {
+    assert(Object.isFrozen(testCase), `${testCase.caseId} must be immutable.`);
+    assert(
+      /^HDS-M6F2-\d{3}-[A-Z0-9-]+$/.test(testCase.caseId),
+      `M6F2 case id is invalid: ${testCase.caseId}`,
+    );
+    assert(!ids.has(testCase.caseId), `Duplicate M6F2 case id: ${testCase.caseId}`);
+    assert(
+      testCase.threatFamily === "RESOURCE_EXHAUSTION" &&
+        testCase.certificationPhase === "M6F" &&
+        testCase.certificationCredit === true,
+      `${testCase.caseId} must earn bounded M6F2 resource-exhaustion certification credit.`,
+    );
+    ids.add(testCase.caseId);
+  }
+
+  assert(
+    M6F2_RESOURCE_EXHAUSTION_CERTIFICATION_CASES.filter(
+      (testCase) => testCase.benignControl,
+    ).length === 3,
+    "M6F2 must retain exactly three benign resource controls spanning PDF, OOXML, and OLE.",
+  );
+  assert(
+    Object.isFrozen(M6F2_RESOURCE_EXHAUSTION_CERTIFICATION_CASES),
+    "M6F2 resource-exhaustion certification registry must be immutable.",
+  );
+}
+
 function validateRulePackBoundary() {
   assert(
     HEHXAGON_DOCUMENT_SECURITY_RULE_IDS.length === 21,
@@ -5379,8 +5778,8 @@ function validateRulePackBoundary() {
 
   assert(
     HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION ===
-      "0.4.12-m6f1",
-    "M6F1 must bind SHA-256 and structural parsing to the same owned source snapshot while preserving the M4 rule-pack boundary.",
+      "0.4.13-m6f2",
+    "M6F2 must preserve M6F1 owned-byte identity while enforcing bounded source iteration and parser resource ceilings.",
   );
 }
 
@@ -7092,6 +7491,278 @@ async function executeM6F1IdentityIntegrityCertification() {
   return { results } as const;
 }
 
+
+async function executeM6F2ResourceExhaustionCertification() {
+  const safePdf = buildClassicPdf();
+  const safeOoxml = buildM6COoxmlPackage({ application: "docx" });
+  const safeOle = legacyOfficeFixture("doc");
+
+  const benignPdf = await inspectDocumentWithResourceLimits({
+    bytes: safePdf,
+    filename: "m6f2-resource-control.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+  });
+
+  const sourceMaxBytes = await inspectDocumentWithResourceLimits({
+    bytes: safePdf,
+    filename: "m6f2-source-max.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    maxBytes: safePdf.length - 1,
+  });
+
+  const emptyChunkFlood = await inspectDocumentWithResourceLimits({
+    bytes: safePdf,
+    filename: "m6f2-empty-chunks.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    source: sourceWithEmptyChunkFlood(safePdf),
+  });
+
+  const benignOoxml = await inspectDocumentWithResourceLimits({
+    bytes: safeOoxml,
+    filename: "m6f2-resource-control.docx",
+    extension: "docx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
+
+  const ooxmlEntryCount = await inspectDocumentWithResourceLimits({
+    bytes: safeOoxml,
+    filename: "m6f2-entry-count.docx",
+    extension: "docx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    archive: Object.freeze({
+      ...ARCHIVE_LIMITS,
+      maxEntries: 2,
+    }),
+  });
+
+  const ooxmlEntrySize = await inspectDocumentWithResourceLimits({
+    bytes: safeOoxml,
+    filename: "m6f2-entry-size.docx",
+    extension: "docx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    archive: Object.freeze({
+      ...ARCHIVE_LIMITS,
+      maxEntryUncompressedBytes: 64,
+      maxTotalUncompressedBytes: 1024,
+      maxControlPartBytes: 64,
+    }),
+  });
+
+  const expandedOoxml = buildM6COoxmlPackage({
+    application: "docx",
+    additionalEntries: [
+      Object.freeze({
+        name: "word/media/m6f2-a.bin",
+        data: Buffer.alloc(400, 0x41),
+      }),
+      Object.freeze({
+        name: "word/media/m6f2-b.bin",
+        data: Buffer.alloc(400, 0x42),
+      }),
+    ],
+  });
+
+  const ooxmlTotalExpanded = await inspectDocumentWithResourceLimits({
+    bytes: expandedOoxml,
+    filename: "m6f2-total-expanded.docx",
+    extension: "docx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    archive: Object.freeze({
+      ...ARCHIVE_LIMITS,
+      maxEntryUncompressedBytes: 512,
+      maxTotalUncompressedBytes: 700,
+      maxControlPartBytes: 256,
+    }),
+  });
+
+  const ratioOoxml = patchFirstZipCentralCompressedSize(safeOoxml, 1);
+  const ooxmlCompressionRatio = await inspectDocumentWithResourceLimits({
+    bytes: ratioOoxml,
+    filename: "m6f2-ratio.docx",
+    extension: "docx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    archive: Object.freeze({
+      ...ARCHIVE_LIMITS,
+      maxCompressionRatio: 2,
+    }),
+  });
+
+  const pdfObjectCount = await inspectDocumentWithResourceLimits({
+    bytes: safePdf,
+    filename: "m6f2-object-count.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    pdf: Object.freeze({
+      ...PDF_LIMITS,
+      maxObjects: 3,
+    }),
+  });
+
+  const nestedPdf = buildM6DClassicPdf([
+    "<< /Type /Catalog /Pages 2 0 R /Deep [[[[0]]]] >>",
+    "<< /Type /Pages /Kids [] /Count 0 >>",
+  ]);
+  const pdfNesting = await inspectDocumentWithResourceLimits({
+    bytes: nestedPdf,
+    filename: "m6f2-nesting.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    pdf: Object.freeze({
+      ...PDF_LIMITS,
+      maxNestingDepth: 2,
+    }),
+  });
+
+  const stringPdf = buildM6DClassicPdf([
+    `<< /Type /Catalog /Pages 2 0 R /Long (${`A`.repeat(32)}) >>`,
+    "<< /Type /Pages /Kids [] /Count 0 >>",
+  ]);
+  const pdfString = await inspectDocumentWithResourceLimits({
+    bytes: stringPdf,
+    filename: "m6f2-string.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    pdf: Object.freeze({
+      ...PDF_LIMITS,
+      maxStringBytes: 8,
+    }),
+  });
+
+  const xrefStreamPdf = buildM6D3ObjectStreamPdf();
+  const pdfXrefDecode = await inspectDocumentWithResourceLimits({
+    bytes: xrefStreamPdf,
+    filename: "m6f2-xref-decode.pdf",
+    extension: "pdf",
+    mimeType: "application/pdf",
+    pdf: Object.freeze({
+      ...PDF_LIMITS,
+      maxDecodedXrefStreamBytes: 8,
+    }),
+  });
+
+  const benignOle = await inspectDocumentWithResourceLimits({
+    bytes: safeOle,
+    filename: "m6f2-resource-control.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+  });
+
+  const oleDirectoryEntries = await inspectDocumentWithResourceLimits({
+    bytes: safeOle,
+    filename: "m6f2-directory-entries.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    ole: Object.freeze({
+      ...OLE_LIMITS,
+      maxDirectoryEntries: 3,
+    }),
+  });
+
+  const oleStreamCount = await inspectDocumentWithResourceLimits({
+    bytes: safeOle,
+    filename: "m6f2-stream-count.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    ole: Object.freeze({
+      ...OLE_LIMITS,
+      maxStreams: 1,
+    }),
+  });
+
+  const oleSectorChain = await inspectDocumentWithResourceLimits({
+    bytes: safeOle,
+    filename: "m6f2-sector-chain.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    ole: Object.freeze({
+      ...OLE_LIMITS,
+      maxSectorChainLength: 4,
+    }),
+  });
+
+  const oleStreamSize = await inspectDocumentWithResourceLimits({
+    bytes: safeOle,
+    filename: "m6f2-stream-size.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    ole: Object.freeze({
+      ...OLE_LIMITS,
+      maxStreamBytes: 1024,
+    }),
+  });
+
+  const oleTotalStreamBytes = await inspectDocumentWithResourceLimits({
+    bytes: safeOle,
+    filename: "m6f2-total-stream-bytes.doc",
+    extension: "doc",
+    mimeType: "application/msword",
+    ole: Object.freeze({
+      ...OLE_LIMITS,
+      maxTotalStreamBytes: 4000,
+    }),
+  });
+
+  const results = [
+    benignPdf,
+    sourceMaxBytes,
+    emptyChunkFlood,
+    benignOoxml,
+    ooxmlEntryCount,
+    ooxmlEntrySize,
+    ooxmlTotalExpanded,
+    ooxmlCompressionRatio,
+    pdfObjectCount,
+    pdfNesting,
+    pdfString,
+    pdfXrefDecode,
+    benignOle,
+    oleDirectoryEntries,
+    oleStreamCount,
+    oleSectorChain,
+    oleStreamSize,
+    oleTotalStreamBytes,
+  ] as const;
+
+  for (let index = 0; index < results.length; index += 1) {
+    assertResultMatchesContract(
+      results[index]!,
+      M6F2_RESOURCE_EXHAUSTION_CERTIFICATION_CASES[index]!,
+    );
+  }
+
+  assert(
+    emptyChunkFlood.bytesScanned === 0,
+    "M6F2 empty-chunk flooding must stop without consuming attacker-controlled document bytes.",
+  );
+
+  assert(
+    benignPdf.pdfStructuralInspectionComplete === true &&
+      benignOoxml.archiveInspectionComplete === true &&
+      benignOoxml.ooxmlStructuralInspectionComplete === true &&
+      benignOle.oleStructuralInspectionComplete === true,
+    "M6F2 benign controls must traverse complete bounded PDF, OOXML, and OLE structural inspection.",
+  );
+
+  assert(
+    results.every(
+      (result) =>
+        String(result.verdict) !== "CLEAN" &&
+        result.inspectionComplete === false,
+    ),
+    "M6F2 resource-exhaustion certification must preserve the no-CLEAN authority boundary.",
+  );
+
+  return { results } as const;
+}
+
 async function run() {
   validateManifest();
   validateCaseContract();
@@ -7107,6 +7778,7 @@ async function run() {
   validateM6E2BPowerPointActiveContentCases();
   validateM6E3DirectoryCertificationCases();
   validateM6F1IdentityIntegrityCertificationCases();
+  validateM6F2ResourceExhaustionCertificationCases();
   validateRulePackBoundary();
 
   const sentinelResults = await executeSentinels();
@@ -7123,6 +7795,7 @@ async function run() {
   const m6e2b = await executeM6E2BPowerPointActiveContentCertification();
   const m6e3 = await executeM6E3DirectoryCertification();
   const m6f1 = await executeM6F1IdentityIntegrityCertification();
+  const m6f2 = await executeM6F2ResourceExhaustionCertification();
 
   const sentinelSummary =
     HARNESS_SENTINEL_CASES.map((testCase, index) =>
@@ -7564,6 +8237,26 @@ async function run() {
     },
   );
 
+
+  const m6f2Summary = M6F2_RESOURCE_EXHAUSTION_CERTIFICATION_CASES.map(
+    (testCase, index) => {
+      const result = m6f2.results[index]!;
+      return Object.freeze({
+        caseId: testCase.caseId,
+        threatFamily: testCase.threatFamily,
+        benignControl: testCase.benignControl,
+        certificationCredit: testCase.certificationCredit,
+        expectedVerdict: testCase.expectedVerdict,
+        actualVerdict: result.verdict,
+        expectedReasonCode: testCase.expectedReasonCode,
+        reasonMatched: result.reasonCodes.includes(testCase.expectedReasonCode),
+        actualDetectedContainer: result.identityEvidence.detectedContainer,
+        actualSignatureKind: result.identityEvidence.signatureKind,
+        bytesScanned: result.bytesScanned,
+      });
+    },
+  );
+
   const m6e1CertifiedThreatFamilies = THREAT_FAMILY_MANIFEST.filter(
     (entry) => entry.certificationStatus === "CERTIFIED_M6E1",
   ).map((entry) => entry.threatFamily);
@@ -7578,6 +8271,10 @@ async function run() {
 
   const m6f1CertifiedThreatFamilies = THREAT_FAMILY_MANIFEST.filter(
     (entry) => entry.certificationStatus === "CERTIFIED_M6F1",
+  ).map((entry) => entry.threatFamily);
+
+  const m6f2CertifiedThreatFamilies = THREAT_FAMILY_MANIFEST.filter(
+    (entry) => entry.certificationStatus === "CERTIFIED_M6F2",
   ).map((entry) => entry.threatFamily);
 
   const m6dCertifiedThreatFamilies =
@@ -7665,15 +8362,20 @@ async function run() {
   );
 
   assert(
-    remainingNonPdfThreatFamilies.length === 4 &&
+    m6f2CertifiedThreatFamilies.length === 1 &&
+      m6f2CertifiedThreatFamilies[0] === "RESOURCE_EXHAUSTION",
+    "M6F2 must certify exactly the resource-exhaustion family.",
+  );
+
+  assert(
+    remainingNonPdfThreatFamilies.length === 3 &&
       remainingNonPdfThreatFamilies.every(
         (family) =>
-          family === "RESOURCE_EXHAUSTION" ||
           family === "TRUNCATION" ||
           family === "RULE_ORDER_DETERMINISM" ||
           family === "FALSE_POSITIVE_CONTROL",
       ),
-    "M6F1 must close hash/size identity race while leaving the remaining M6F and M6G families open.",
+    "M6F2 must close resource exhaustion while leaving truncation, rule-order determinism, and M6G false-positive control open.",
   );
 
   assert(
@@ -7755,6 +8457,11 @@ async function run() {
         (result) =>
           String(result.verdict) !== "CLEAN" &&
           result.inspectionComplete === false,
+      ) &&
+      m6f2.results.every(
+        (result) =>
+          String(result.verdict) !== "CLEAN" &&
+          result.inspectionComplete === false,
       ),
     "M6 execution must never grant CLEAN or completed document-trust authority.",
   );
@@ -7764,13 +8471,13 @@ async function run() {
       {
         ok: true,
         event:
-          "HDS_M6F1_IDENTITY_INTEGRITY_CERTIFICATION_PASSED",
+          "HDS_M6F2_RESOURCE_EXHAUSTION_CERTIFICATION_PASSED",
         corpusSchemaVersion:
           HDS_M6_ADVERSARIAL_CORPUS_SCHEMA_VERSION,
         harnessVersion:
-          HDS_M6F1_HARNESS_VERSION,
+          HDS_M6F2_HARNESS_VERSION,
         priorHarnessVersion:
-          HDS_M6E3_HARNESS_VERSION,
+          HDS_M6F1_HARNESS_VERSION,
         priorOoxmlHarnessVersion:
           HDS_M6C_HARNESS_VERSION,
         scannerEngine:
@@ -8052,7 +8759,27 @@ async function run() {
         m6f1OwnedSnapshotBeforeHash: true,
         m6f1MutableBackingMutationInjected: true,
         m6f1Results: m6f1Summary,
-        resourceExhaustionCertificationComplete: false,
+        m6f2ResourceExhaustionCertificationComplete: true,
+        m6f2CertifiedThreatFamilies,
+        m6f2CaseCount:
+          M6F2_RESOURCE_EXHAUSTION_CERTIFICATION_CASES.length,
+        m6f2CertificationCredit:
+          M6F2_RESOURCE_EXHAUSTION_CERTIFICATION_CASES.filter(
+            (testCase) => testCase.certificationCredit,
+          ).length,
+        m6f2BenignControlCount:
+          M6F2_RESOURCE_EXHAUSTION_CERTIFICATION_CASES.filter(
+            (testCase) => testCase.benignControl,
+          ).length,
+        m6f2SourceEmptyChunkBudgetEnforced: true,
+        m6f2ResourceFamiliesExercised: [
+          "SOURCE",
+          "OOXML",
+          "PDF",
+          "OLE",
+        ],
+        m6f2Results: m6f2Summary,
+        resourceExhaustionCertificationComplete: true,
         truncationCertificationComplete: false,
         ruleOrderDeterminismCertificationComplete: false,
         remainingNonPdfThreatFamilies,
@@ -8073,11 +8800,11 @@ run().catch((error) => {
       {
         ok: false,
         event:
-          "HDS_M6F1_IDENTITY_INTEGRITY_CERTIFICATION_FAILED",
+          "HDS_M6F2_RESOURCE_EXHAUSTION_CERTIFICATION_FAILED",
         errorCode:
           error instanceof Error
             ? error.message
-            : "M6F1_UNKNOWN_FAILURE",
+            : "M6F2_UNKNOWN_FAILURE",
       },
       null,
       2,

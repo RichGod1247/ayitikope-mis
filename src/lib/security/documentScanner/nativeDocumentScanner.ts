@@ -35,9 +35,10 @@ export const HEHXAGON_DOCUMENT_SECURITY_ENGINE =
   "HEHXAGON_DOCUMENT_SECURITY" as const;
 
 export const HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION =
-  "0.4.12-m6f1";
+  "0.4.13-m6f2";
 
 const MAX_SIGNATURE_PREFIX_BYTES = 1024;
+const MAX_IGNORABLE_EMPTY_SOURCE_CHUNKS = 64;
 
 const ALLOWED_MIME_TYPES: Record<
   NativeDocumentExtension,
@@ -483,6 +484,7 @@ async function readBoundedSource(args: {
   const prefix = Buffer.alloc(MAX_SIGNATURE_PREFIX_BYTES);
   let prefixLength = 0;
   let bytesScanned = 0;
+  let emptySourceChunks = 0;
   const collectedChunks: Buffer[] = [];
 
   try {
@@ -496,7 +498,20 @@ async function readBoundedSource(args: {
         };
       }
 
-      if (rawChunk.byteLength === 0) continue;
+      if (rawChunk.byteLength === 0) {
+        emptySourceChunks += 1;
+
+        if (emptySourceChunks > MAX_IGNORABLE_EMPTY_SOURCE_CHUNKS) {
+          return {
+            ok: false,
+            verdict: "FAILED",
+            reasonCode: "RESOURCE_LIMIT_EXCEEDED",
+            bytesScanned,
+          };
+        }
+
+        continue;
+      }
 
       const chunkView = Buffer.from(
         rawChunk.buffer,
