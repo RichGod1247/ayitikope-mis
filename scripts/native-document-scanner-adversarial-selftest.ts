@@ -66,6 +66,9 @@ export const HDS_M6E1_HARNESS_VERSION =
 export const HDS_M6E2A_HARNESS_VERSION =
   "HDS-M6E2A-HARNESS-V1" as const;
 
+export const HDS_M6E2B_HARNESS_VERSION =
+  "HDS-M6E2B-HARNESS-V1" as const;
+
 const ONE_MEBIBYTE = 1024 * 1024;
 
 const ARCHIVE_LIMITS: NativeDocumentArchiveLimits = Object.freeze({
@@ -145,7 +148,8 @@ type ThreatFamilyManifestEntry = Readonly<{
     | "CERTIFIED_M6D4"
     | "CERTIFIED_M6D5"
     | "CERTIFIED_M6D5B"
-    | "CERTIFIED_M6E1";
+    | "CERTIFIED_M6E1"
+    | "CERTIFIED_M6E2B";
   objective: string;
 }>;
 
@@ -278,14 +282,14 @@ const THREAT_FAMILY_MANIFEST: readonly ThreatFamilyManifestEntry[] =
     Object.freeze({
       threatFamily: "OLE_VBA_EVASION",
       plannedPhase: "M6E",
-      certificationStatus: "NOT_CERTIFIED",
+      certificationStatus: "CERTIFIED_M6E2B",
       objective:
         "Hide VBA capability through alternate storage names, paths and stream arrangements.",
     }),
     Object.freeze({
       threatFamily: "OLE_EMBEDDED_OBJECT_EVASION",
       plannedPhase: "M6E",
-      certificationStatus: "NOT_CERTIFIED",
+      certificationStatus: "CERTIFIED_M6E2B",
       objective:
         "Hide package and OLE-native embedded-object capability through alternate directory layouts.",
     }),
@@ -2094,6 +2098,216 @@ const M6E2A_POWERPOINT_AUTHORITY_CASES: readonly M6E2APowerPointAuthorityCase[] 
     }),
   ]);
 
+const M6E2B_POWERPOINT_ACTIVE_CONTENT_CASES: readonly CorpusCaseContract[] =
+  Object.freeze([
+    Object.freeze({
+      caseId: "HDS-M6E2B-001-BENIGN-LIVE-DOCUMENT-CONTROL",
+      threatFamily: "OLE_VBA_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "An authoritative binary PowerPoint DocumentContainer contains no live VBA information or external-object references and must remain accepted without gaining CLEAN authority.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2B-002-STALE-UNREFERENCED-STORAGE-CONTROL",
+      threatFamily: "OLE_EMBEDDED_OBJECT_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A physically present ExternalOleObjectStg record is absent from the authoritative persist directory and from every live DocumentContainer reference, proving stale historical storage bytes are ignored rather than falsely blocked.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2B-003-LIVE-VBA-PROJECT-STORAGE",
+      threatFamily: "OLE_VBA_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A live DocInfoListContainer carries VBAInfoAtom persist authority to an ExternalOleObjectStg record, so the existing HDS OLE VBA policy must block the presentation.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "OLE_VBA_PROJECT_BLOCKED",
+      expectedRuleId: "HDS-OLE-001-VBA",
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2B-004-VBA-PERSIST-REFERENCE-MISSING",
+      threatFamily: "OLE_VBA_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A live VBAInfoAtom declares a nonzero VBA project persist identifier that is absent from the assembled authoritative persist directory and must fail closed before rule evaluation.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_STREAM_CHAIN_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2B-005-VBA-INFO-STATE-INVALID",
+      threatFamily: "OLE_VBA_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A live VBAInfoAtom uses an invalid fHasMacros value even though its persisted storage is otherwise reachable, so malformed macro-state metadata must fail closed.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_STREAM_CHAIN_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2B-006-LIVE-EMBEDDED-OLE-STORAGE",
+      threatFamily: "OLE_EMBEDDED_OBJECT_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A live ExOleEmbedContainer resolves its ExOleObjAtom persist identifier to ExternalOleObjectStg storage and must reach the existing embedded-object blocking rule.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "OLE_EMBEDDED_OBJECT_BLOCKED",
+      expectedRuleId: "HDS-OLE-002-EMBEDDED-OBJECT",
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2B-007-LIVE-ACTIVEX-STORAGE",
+      threatFamily: "OLE_EMBEDDED_OBJECT_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A live ExControlContainer resolves its ExOleObjAtom persist identifier to ExternalOleObjectStg storage, representing ActiveX control storage that must be blocked as embedded active content.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "OLE_EMBEDDED_OBJECT_BLOCKED",
+      expectedRuleId: "HDS-OLE-002-EMBEDDED-OBJECT",
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2B-008-LIVE-LINKED-OLE-STORAGE",
+      threatFamily: "OLE_EMBEDDED_OBJECT_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A live ExOleLinkContainer resolves to persisted ExternalOleObjectStg bytes, preserving a serialized OLE capability that the bounded ingress policy treats as blocked external-object content.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "OLE_EMBEDDED_OBJECT_BLOCKED",
+      expectedRuleId: "HDS-OLE-002-EMBEDDED-OBJECT",
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2B-009-EXTERNAL-PERSIST-REFERENCE-MISSING",
+      threatFamily: "OLE_EMBEDDED_OBJECT_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A live external-object container identifies persisted storage that does not exist in the authoritative persist directory and must fail before stale or attacker-selected bytes can become content authority.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_STREAM_CHAIN_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2B-010-EXTERNAL-TARGET-WRONG-RECORD-TYPE",
+      threatFamily: "OLE_EMBEDDED_OBJECT_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A live external-object persist identifier resolves to a record whose type is not ExternalOleObjectStg, so the contradictory target must fail rather than be trusted as serialized OLE storage.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_STREAM_CHAIN_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2B-011-COMPRESSED-STORAGE-ZERO-SIZE",
+      threatFamily: "OLE_EMBEDDED_OBJECT_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A live external-object reference reaches the compressed ExternalOleObjectStg form but its declared decompressed size is zero, so malformed compressed storage must fail closed without decompression.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_STREAM_CHAIN_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2B-012-VBA-TARGET-WRONG-RECORD-TYPE",
+      threatFamily: "OLE_VBA_EVASION",
+      format: "OLE",
+      attackTechnique:
+        "A live VBAInfoAtom resolves through the authoritative persist map to a record that is not ExternalOleObjectStg, requiring deterministic failure instead of silently accepting an invalid VBA storage target.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_STREAM_CHAIN_INVALID",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: false,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6E",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+  ]);
+
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
     throw new Error(`M6C_ASSERTION_FAILED: ${message}`);
@@ -2540,6 +2754,136 @@ function powerPointTwoEditPersistFixture(args: {
     {
       path: "Current User",
       data: powerPointCurrentUserAtom({ currentEditOffset: 704 }),
+    },
+  ]);
+}
+
+function powerPointRecord(
+  recVer: number,
+  recType: number,
+  payload: Buffer,
+  recInstance = 0,
+) {
+  return Buffer.concat([
+    powerPointRecordHeader(recVer, recType, payload.length, recInstance),
+    payload,
+  ]);
+}
+
+function powerPointVbaInfoContainer(args: {
+  persistIdRef: number;
+  fHasMacros?: number;
+  version?: number;
+}) {
+  const payload = Buffer.alloc(12);
+  payload.writeUInt32LE(args.persistIdRef >>> 0, 0);
+  payload.writeUInt32LE((args.fHasMacros ?? 1) >>> 0, 4);
+  payload.writeUInt32LE((args.version ?? 2) >>> 0, 8);
+  const atom = powerPointRecord(2, 0x0400, payload);
+  return powerPointRecord(0x0f, 0x03ff, atom, 1);
+}
+
+function powerPointDocInfoList(children: readonly Buffer[]) {
+  return powerPointRecord(0x0f, 0x07d0, Buffer.concat(children));
+}
+
+function powerPointExOleObjAtom(persistIdRef: number) {
+  const payload = Buffer.alloc(0x18);
+  payload.writeUInt32LE(persistIdRef >>> 0, 16);
+  return powerPointRecord(1, 0x0fc3, payload);
+}
+
+function powerPointExternalObjectContainer(
+  recType: 0x0fcc | 0x0fce | 0x0fee,
+  persistIdRef: number,
+) {
+  const boundedCompanionAtom =
+    recType === 0x0fcc
+      ? powerPointRecord(0, 0x0fcd, Buffer.alloc(8))
+      : recType === 0x0fee
+        ? powerPointRecord(0, 0x0ffb, Buffer.alloc(4))
+        : powerPointRecord(0, 0x0fd1, Buffer.alloc(4));
+  return powerPointRecord(
+    0x0f,
+    recType,
+    Buffer.concat([boundedCompanionAtom, powerPointExOleObjAtom(persistIdRef)]),
+  );
+}
+
+function powerPointExternalObjectList(children: readonly Buffer[]) {
+  const listAtom = powerPointRecord(0, 0x040a, Buffer.alloc(4));
+  return powerPointRecord(
+    0x0f,
+    0x0409,
+    Buffer.concat([listAtom, ...children]),
+  );
+}
+
+function powerPointExternalStorage(args?: {
+  recType?: number;
+  recInstance?: 0 | 1;
+  decompressedSize?: number;
+}) {
+  const recInstance = args?.recInstance ?? 1;
+  const payload =
+    recInstance === 1
+      ? (() => {
+          const bytes = Buffer.alloc(5);
+          bytes.writeUInt32LE((args?.decompressedSize ?? 32) >>> 0, 0);
+          bytes[4] = 0x78;
+          return bytes;
+        })()
+      : Buffer.from([0x01]);
+  return powerPointRecord(
+    0,
+    args?.recType ?? 0x1011,
+    payload,
+    recInstance,
+  );
+}
+
+function powerPointM6E2BFixture(args?: {
+  documentChildren?: readonly Buffer[];
+  mappedStorage?: Buffer | null;
+  mappedStoragePersistId?: number;
+  staleStorage?: Buffer | null;
+  persistIdSeed?: number;
+}) {
+  const powerPointDocument = Buffer.alloc(4096);
+  const document = powerPointRecord(
+    0x0f,
+    0x03e8,
+    Buffer.concat(args?.documentChildren ?? []),
+  );
+  document.copy(powerPointDocument, 64);
+
+  const mappings: Array<{ persistId: number; offsets: readonly number[] }> = [
+    { persistId: 1, offsets: [64] },
+  ];
+
+  const mappedStoragePersistId = args?.mappedStoragePersistId ?? 2;
+  if (args?.mappedStorage) {
+    args.mappedStorage.copy(powerPointDocument, 1024);
+    mappings.push({ persistId: mappedStoragePersistId, offsets: [1024] });
+  }
+  if (args?.staleStorage) {
+    args.staleStorage.copy(powerPointDocument, 1280);
+  }
+
+  powerPointPersistDirectoryAtom(mappings).copy(powerPointDocument, 2048);
+  powerPointUserEditAtom({
+    offsetLastEdit: 0,
+    offsetPersistDirectory: 2048,
+    docPersistIdRef: 1,
+    persistIdSeed:
+      args?.persistIdSeed ?? Math.max(1, mappedStoragePersistId),
+  }).copy(powerPointDocument, 2304);
+
+  return buildCfb([
+    { path: "PowerPoint Document", data: powerPointDocument },
+    {
+      path: "Current User",
+      data: powerPointCurrentUserAtom({ currentEditOffset: 2304 }),
     },
   ]);
 }
@@ -3777,7 +4121,10 @@ function validateManifest() {
                     : entry.threatFamily === "OLE_FAT_DIFAT_EVASION" ||
                         entry.threatFamily === "OLE_MINIFAT_EVASION"
                       ? "CERTIFIED_M6E1"
-                      : "NOT_CERTIFIED";
+                      : entry.threatFamily === "OLE_VBA_EVASION" ||
+                          entry.threatFamily === "OLE_EMBEDDED_OBJECT_EVASION"
+                        ? "CERTIFIED_M6E2B"
+                        : "NOT_CERTIFIED";
 
     assert(
       entry.certificationStatus === expectedCertification,
@@ -4413,6 +4760,40 @@ function validateM6E2APowerPointAuthorityCases() {
   );
 }
 
+function validateM6E2BPowerPointActiveContentCases() {
+  assert(
+    M6E2B_POWERPOINT_ACTIVE_CONTENT_CASES.length === 12,
+    "M6E2B must execute the exact 12-case live PowerPoint VBA/OLE/ActiveX matrix.",
+  );
+  const ids = new Set<string>();
+  for (const testCase of M6E2B_POWERPOINT_ACTIVE_CONTENT_CASES) {
+    assert(Object.isFrozen(testCase), `${testCase.caseId} must be immutable.`);
+    assert(
+      /^HDS-M6E2B-\d{3}-[A-Z0-9-]+$/.test(testCase.caseId),
+      `M6E2B case id is invalid: ${testCase.caseId}`,
+    );
+    assert(!ids.has(testCase.caseId), `Duplicate M6E2B case id: ${testCase.caseId}`);
+    assert(
+      testCase.certificationPhase === "M6E" &&
+        testCase.certificationCredit === true &&
+        (testCase.threatFamily === "OLE_VBA_EVASION" ||
+          testCase.threatFamily === "OLE_EMBEDDED_OBJECT_EVASION"),
+      `${testCase.caseId} must earn bounded M6E2B credit only for live VBA or external-object evasion.`,
+    );
+    ids.add(testCase.caseId);
+  }
+  assert(
+    M6E2B_POWERPOINT_ACTIVE_CONTENT_CASES.filter(
+      (testCase) => testCase.benignControl,
+    ).length === 2,
+    "M6E2B must retain exactly two benign controls, including stale unreferenced storage.",
+  );
+  assert(
+    Object.isFrozen(M6E2B_POWERPOINT_ACTIVE_CONTENT_CASES),
+    "M6E2B active-content registry must be immutable.",
+  );
+}
+
 function validateRulePackBoundary() {
   assert(
     HEHXAGON_DOCUMENT_SECURITY_RULE_IDS.length === 21,
@@ -4439,8 +4820,8 @@ function validateRulePackBoundary() {
 
   assert(
     HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION ===
-      "0.4.9-m6e2a",
-    "M6E2A must add bounded PowerPoint live-persist authority while preserving the certified M6E1 allocator and M4 rule-pack boundaries.",
+      "0.4.10-m6e2b",
+    "M6E2B must add live PowerPoint VBA/OLE/ActiveX detection on top of M6E2A persist authority while preserving the M4 rule-pack boundary.",
   );
 }
 
@@ -5781,6 +6162,169 @@ async function executeM6E2APowerPointPersistAuthority() {
   return { results } as const;
 }
 
+async function executeM6E2BPowerPointActiveContentCertification() {
+  const fixtures = [
+    powerPointM6E2BFixture(),
+    powerPointM6E2BFixture({
+      staleStorage: powerPointExternalStorage(),
+    }),
+    powerPointM6E2BFixture({
+      documentChildren: [
+        powerPointDocInfoList([
+          powerPointVbaInfoContainer({ persistIdRef: 2 }),
+        ]),
+      ],
+      mappedStorage: powerPointExternalStorage(),
+    }),
+    powerPointM6E2BFixture({
+      documentChildren: [
+        powerPointDocInfoList([
+          powerPointVbaInfoContainer({ persistIdRef: 2 }),
+        ]),
+      ],
+      mappedStoragePersistId: 3,
+      mappedStorage: powerPointExternalStorage(),
+      persistIdSeed: 3,
+    }),
+    powerPointM6E2BFixture({
+      documentChildren: [
+        powerPointDocInfoList([
+          powerPointVbaInfoContainer({
+            persistIdRef: 2,
+            fHasMacros: 2,
+          }),
+        ]),
+      ],
+      mappedStorage: powerPointExternalStorage(),
+    }),
+    powerPointM6E2BFixture({
+      documentChildren: [
+        powerPointExternalObjectList([
+          powerPointExternalObjectContainer(0x0fcc, 2),
+        ]),
+      ],
+      mappedStorage: powerPointExternalStorage(),
+    }),
+    powerPointM6E2BFixture({
+      documentChildren: [
+        powerPointExternalObjectList([
+          powerPointExternalObjectContainer(0x0fee, 2),
+        ]),
+      ],
+      mappedStorage: powerPointExternalStorage(),
+    }),
+    powerPointM6E2BFixture({
+      documentChildren: [
+        powerPointExternalObjectList([
+          powerPointExternalObjectContainer(0x0fce, 2),
+        ]),
+      ],
+      mappedStorage: powerPointExternalStorage(),
+    }),
+    powerPointM6E2BFixture({
+      documentChildren: [
+        powerPointExternalObjectList([
+          powerPointExternalObjectContainer(0x0fcc, 2),
+        ]),
+      ],
+      mappedStoragePersistId: 3,
+      mappedStorage: powerPointExternalStorage(),
+      persistIdSeed: 3,
+    }),
+    powerPointM6E2BFixture({
+      documentChildren: [
+        powerPointExternalObjectList([
+          powerPointExternalObjectContainer(0x0fcc, 2),
+        ]),
+      ],
+      mappedStorage: powerPointExternalStorage({ recType: 0x2222 }),
+    }),
+    powerPointM6E2BFixture({
+      documentChildren: [
+        powerPointExternalObjectList([
+          powerPointExternalObjectContainer(0x0fcc, 2),
+        ]),
+      ],
+      mappedStorage: powerPointExternalStorage({
+        recInstance: 1,
+        decompressedSize: 0,
+      }),
+    }),
+    powerPointM6E2BFixture({
+      documentChildren: [
+        powerPointDocInfoList([
+          powerPointVbaInfoContainer({ persistIdRef: 2 }),
+        ]),
+      ],
+      mappedStorage: powerPointExternalStorage({ recType: 0x2222 }),
+    }),
+  ] as const;
+
+  const results: NativeDocumentScannerResult[] = [];
+  for (let index = 0; index < fixtures.length; index += 1) {
+    const result = await inspectDocument({
+      bytes: fixtures[index]!,
+      filename: "m6e2b-live-active-content.ppt",
+      extension: "ppt",
+      mimeType: "application/vnd.ms-powerpoint",
+    });
+    const contract = M6E2B_POWERPOINT_ACTIVE_CONTENT_CASES[index]!;
+    assertResultMatchesContract(result, contract);
+
+    if (contract.expectedVerdict === "FAILED") {
+      assert(
+        result.rulePackEvaluation === null,
+        `${contract.caseId} must fail during live PowerPoint semantic resolution before rule-pack trust.`,
+      );
+    }
+    results.push(result);
+  }
+
+  for (const index of [2] as const) {
+    const result = results[index]!;
+    assert(
+      result.oleStructuralEvidence?.vbaProjectDetected === true &&
+        result.rulePackEvaluation?.matchedRules.some(
+          (rule) => rule.ruleId === "HDS-OLE-001-VBA",
+        ) === true,
+      `${M6E2B_POWERPOINT_ACTIVE_CONTENT_CASES[index]!.caseId} must reach the existing VBA rule from live persist authority.`,
+    );
+  }
+
+  for (const index of [5, 6, 7] as const) {
+    const result = results[index]!;
+    assert(
+      result.oleStructuralEvidence?.embeddedObjectDetected === true &&
+        result.rulePackEvaluation?.matchedRules.some(
+          (rule) => rule.ruleId === "HDS-OLE-002-EMBEDDED-OBJECT",
+        ) === true,
+      `${M6E2B_POWERPOINT_ACTIVE_CONTENT_CASES[index]!.caseId} must reach the existing embedded-object rule from live persist authority.`,
+    );
+  }
+
+  for (const index of [0, 1] as const) {
+    const result = results[index]!;
+    assert(
+      result.verdict === "IDENTITY_VERIFIED" &&
+        result.rulePackEvaluation?.outcome === "PASS" &&
+        result.oleStructuralEvidence?.vbaProjectDetected === false &&
+        result.oleStructuralEvidence.embeddedObjectDetected === false,
+      `${M6E2B_POWERPOINT_ACTIVE_CONTENT_CASES[index]!.caseId} must preserve benign live/stale controls without CLEAN authority.`,
+    );
+  }
+
+  assert(
+    results.every(
+      (result) =>
+        String(result.verdict) !== "CLEAN" &&
+        result.inspectionComplete === false,
+    ),
+    "M6E2B must preserve the no-CLEAN authority boundary.",
+  );
+
+  return { results } as const;
+}
+
 async function run() {
   validateManifest();
   validateCaseContract();
@@ -5793,6 +6337,7 @@ async function run() {
   validateM6D5BCertificationCases();
   validateM6E1CertificationCases();
   validateM6E2APowerPointAuthorityCases();
+  validateM6E2BPowerPointActiveContentCases();
   validateRulePackBoundary();
 
   const sentinelResults = await executeSentinels();
@@ -5806,6 +6351,7 @@ async function run() {
   const m6d5b = await executeM6D5BEmbeddedContentEvasionCertification();
   const m6e1 = await executeM6E1AllocatorCertification();
   const m6e2a = await executeM6E2APowerPointPersistAuthority();
+  const m6e2b = await executeM6E2BPowerPointActiveContentCertification();
 
   const sentinelSummary =
     HARNESS_SENTINEL_CASES.map((testCase, index) =>
@@ -6186,8 +6732,33 @@ async function run() {
     },
   );
 
+  const m6e2bSummary = M6E2B_POWERPOINT_ACTIVE_CONTENT_CASES.map(
+    (testCase, index) => {
+      const result = m6e2b.results[index]!;
+      return Object.freeze({
+        caseId: testCase.caseId,
+        threatFamily: testCase.threatFamily,
+        benignControl: testCase.benignControl,
+        certificationCredit: testCase.certificationCredit,
+        expectedVerdict: testCase.expectedVerdict,
+        actualVerdict: result.verdict,
+        expectedReasonCode: testCase.expectedReasonCode,
+        reasonMatched: result.reasonCodes.includes(testCase.expectedReasonCode),
+        expectedRuleId: testCase.expectedRuleId,
+        actualMatchedRuleIds:
+          result.rulePackEvaluation?.matchedRules.map((rule) => rule.ruleId) ?? [],
+        actualDetectedContainer: result.identityEvidence.detectedContainer,
+        actualSignatureKind: result.identityEvidence.signatureKind,
+      });
+    },
+  );
+
   const m6e1CertifiedThreatFamilies = THREAT_FAMILY_MANIFEST.filter(
     (entry) => entry.certificationStatus === "CERTIFIED_M6E1",
+  ).map((entry) => entry.threatFamily);
+
+  const m6e2bCertifiedThreatFamilies = THREAT_FAMILY_MANIFEST.filter(
+    (entry) => entry.certificationStatus === "CERTIFIED_M6E2B",
   ).map((entry) => entry.threatFamily);
 
   const m6dCertifiedThreatFamilies =
@@ -6256,8 +6827,15 @@ async function run() {
   );
 
   assert(
-    remainingNonPdfThreatFamilies.length === 8,
-    "M6E1 must leave exactly the three later OLE families plus M6F and M6G families uncertified.",
+    m6e2bCertifiedThreatFamilies.length === 2 &&
+      m6e2bCertifiedThreatFamilies.includes("OLE_VBA_EVASION") &&
+      m6e2bCertifiedThreatFamilies.includes("OLE_EMBEDDED_OBJECT_EVASION"),
+    "M6E2B must certify exactly live PowerPoint VBA and embedded/external-object evasion.",
+  );
+
+  assert(
+    remainingNonPdfThreatFamilies.length === 6,
+    "M6E2B must leave only OLE directory evasion plus the five M6F/M6G families uncertified.",
   );
 
   assert(
@@ -6324,6 +6902,11 @@ async function run() {
         (result) =>
           String(result.verdict) !== "CLEAN" &&
           result.inspectionComplete === false,
+      ) &&
+      m6e2b.results.every(
+        (result) =>
+          String(result.verdict) !== "CLEAN" &&
+          result.inspectionComplete === false,
       ),
     "M6 execution must never grant CLEAN or completed document-trust authority.",
   );
@@ -6333,13 +6916,13 @@ async function run() {
       {
         ok: true,
         event:
-          "HDS_M6E2A_POWERPOINT_PERSIST_AUTHORITY_REPAIR_PASSED",
+          "HDS_M6E2B_POWERPOINT_ACTIVE_CONTENT_CERTIFICATION_PASSED",
         corpusSchemaVersion:
           HDS_M6_ADVERSARIAL_CORPUS_SCHEMA_VERSION,
         harnessVersion:
-          HDS_M6E2A_HARNESS_VERSION,
+          HDS_M6E2B_HARNESS_VERSION,
         priorHarnessVersion:
-          HDS_M6E1_HARNESS_VERSION,
+          HDS_M6E2A_HARNESS_VERSION,
         priorOoxmlHarnessVersion:
           HDS_M6C_HARNESS_VERSION,
         scannerEngine:
@@ -6570,9 +7153,22 @@ async function run() {
         m6e2aCurrentUserAuthorityRequired: true,
         m6e2aThreatFamilyCertificationGranted: false,
         m6e2aResults: m6e2aSummary,
+        m6e2bLiveActiveContentCertificationComplete: true,
+        m6e2bCertifiedThreatFamilies,
+        m6e2bCaseCount: M6E2B_POWERPOINT_ACTIVE_CONTENT_CASES.length,
+        m6e2bCertificationCredit:
+          M6E2B_POWERPOINT_ACTIVE_CONTENT_CASES.filter(
+            (testCase) => testCase.certificationCredit,
+          ).length,
+        m6e2bBenignControlCount:
+          M6E2B_POWERPOINT_ACTIVE_CONTENT_CASES.filter(
+            (testCase) => testCase.benignControl,
+          ).length,
+        m6e2bStaleHistoricalBytesIgnored: true,
+        m6e2bResults: m6e2bSummary,
         oleDirectoryCertificationComplete: false,
-        oleVbaCertificationComplete: false,
-        oleEmbeddedObjectCertificationComplete: false,
+        oleVbaCertificationComplete: true,
+        oleEmbeddedObjectCertificationComplete: true,
         remainingNonPdfThreatFamilies,
         adversarialCertificationComplete: false,
         fullM6CertificationComplete: false,
@@ -6591,11 +7187,11 @@ run().catch((error) => {
       {
         ok: false,
         event:
-          "HDS_M6E2A_POWERPOINT_PERSIST_AUTHORITY_REPAIR_FAILED",
+          "HDS_M6E2B_POWERPOINT_ACTIVE_CONTENT_CERTIFICATION_FAILED",
         errorCode:
           error instanceof Error
             ? error.message
-            : "M6E2A_UNKNOWN_FAILURE",
+            : "M6E2B_UNKNOWN_FAILURE",
       },
       null,
       2,

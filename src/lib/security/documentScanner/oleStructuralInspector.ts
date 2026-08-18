@@ -754,8 +754,17 @@ function applicationFormat(args: {
 }
 
 const PPT_RT_DOCUMENT = 0x03e8;
+const PPT_RT_VBA_INFO = 0x03ff;
+const PPT_RT_VBA_INFO_ATOM = 0x0400;
+const PPT_RT_EXTERNAL_OBJECT_LIST = 0x0409;
+const PPT_RT_LIST = 0x07d0;
 const PPT_RT_USER_EDIT_ATOM = 0x0ff5;
 const PPT_RT_CURRENT_USER_ATOM = 0x0ff6;
+const PPT_RT_EXTERNAL_OLE_OBJECT_ATOM = 0x0fc3;
+const PPT_RT_EXTERNAL_OLE_EMBED = 0x0fcc;
+const PPT_RT_EXTERNAL_OLE_LINK = 0x0fce;
+const PPT_RT_EXTERNAL_OLE_CONTROL = 0x0fee;
+const PPT_RT_EXTERNAL_OLE_OBJECT_STG = 0x1011;
 const PPT_RT_PERSIST_DIRECTORY_ATOM = 0x1772;
 const PPT_RT_CRYPT_SESSION_10_CONTAINER = 0x2f14;
 const PPT_CURRENT_USER_UNENCRYPTED_TOKEN = 0xe391c05f;
@@ -785,6 +794,13 @@ type PowerPointPersistDirectory = {
 type PowerPointAuthoritySuccess = {
   ok: true;
   encrypted: boolean;
+  persistDirectory: ReadonlyMap<number, number>;
+  documentOffset: number;
+};
+
+type PowerPointActiveContentSignals = {
+  vbaProjectDetected: boolean;
+  embeddedObjectDetected: boolean;
 };
 
 function readPowerPointRecordHeader(
@@ -1193,7 +1209,12 @@ function inspectPowerPointPersistAuthority(args: {
       );
     }
 
-    return { ok: true, encrypted: true };
+    return {
+      ok: true,
+      encrypted: true,
+      persistDirectory,
+      documentOffset,
+    };
   }
 
   const documentHeader = readPowerPointRecordHeader(
@@ -1213,7 +1234,328 @@ function inspectPowerPointPersistAuthority(args: {
     );
   }
 
-  return { ok: true, encrypted: false };
+  return {
+    ok: true,
+    encrypted: false,
+    persistDirectory,
+    documentOffset,
+  };
+}
+
+function powerPointContainerChildren(args: {
+  bytes: Buffer;
+  offset: number;
+  expectedRecType: number;
+  expectedRecInstance?: number;
+}): Array<{ offset: number; header: PowerPointRecordHeader }> | OleFailure {
+  const header = readPowerPointRecordHeader(args.bytes, args.offset);
+  if ("ok" in header) return header;
+
+  if (
+    header.recVer !== 0x0f ||
+    header.recType !== args.expectedRecType ||
+    (args.expectedRecInstance !== undefined &&
+      header.recInstance !== args.expectedRecInstance)
+  ) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "A live PowerPoint container record violates its bounded record-header contract.",
+    );
+  }
+
+  const children: Array<{ offset: number; header: PowerPointRecordHeader }> = [];
+  let cursor = args.offset + 8;
+
+  while (cursor < header.endOffset) {
+    const child = readPowerPointRecordHeader(args.bytes, cursor);
+    if ("ok" in child) return child;
+    if (child.endOffset <= cursor) {
+      return failure(
+        "OLE_STREAM_CHAIN_INVALID",
+        "A live PowerPoint child record does not advance within its parent container.",
+      );
+    }
+    children.push({ offset: cursor, header: child });
+    cursor = child.endOffset;
+  }
+
+  if (cursor !== header.endOffset) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "A live PowerPoint container cannot be consumed exactly.",
+    );
+  }
+
+  return children;
+}
+
+function validatePowerPointExternalStorage(args: {
+  bytes: Buffer;
+  persistDirectory: ReadonlyMap<number, number>;
+  persistIdRef: number;
+}): true | OleFailure {
+  if (args.persistIdRef === 0) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "A live PowerPoint external object does not identify persisted storage.",
+    );
+  }
+
+  const storageOffset = args.persistDirectory.get(args.persistIdRef);
+  if (storageOffset === undefined) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "A live PowerPoint external-object persist reference is absent from the authoritative persist directory.",
+    );
+  }
+
+  const storageHeader = readPowerPointRecordHeader(args.bytes, storageOffset);
+  if ("ok" in storageHeader) return storageHeader;
+
+  if (
+    storageHeader.recVer !== 0 ||
+    storageHeader.recType !== PPT_RT_EXTERNAL_OLE_OBJECT_STG ||
+    (storageHeader.recInstance !== 0 && storageHeader.recInstance !== 1) ||
+    storageHeader.recLen === 0 ||
+    (storageHeader.recInstance === 1 && storageHeader.recLen < 4)
+  ) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "A live PowerPoint external-object persist reference does not resolve to a valid bounded external storage record.",
+    );
+  }
+
+  if (storageHeader.recInstance === 1) {
+    const decompressedSize = args.bytes.readUInt32LE(storageOffset + 8);
+    if (decompressedSize === 0) {
+      return failure(
+        "OLE_STREAM_CHAIN_INVALID",
+        "A compressed live PowerPoint external storage record declares an invalid decompressed size.",
+      );
+    }
+  }
+
+  return true;
+}
+
+function parsePowerPointExOleObjPersistRef(args: {
+  bytes: Buffer;
+  containerOffset: number;
+  containerType: number;
+}): number | OleFailure {
+  const children = powerPointContainerChildren({
+    bytes: args.bytes,
+    offset: args.containerOffset,
+    expectedRecType: args.containerType,
+    expectedRecInstance: 0,
+  });
+  if (!Array.isArray(children)) return children;
+
+  const objectAtoms = children.filter(
+    (child) => child.header.recType === PPT_RT_EXTERNAL_OLE_OBJECT_ATOM,
+  );
+  if (objectAtoms.length !== 1) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "A live PowerPoint external-object container must contain exactly one ExOleObjAtom reference.",
+    );
+  }
+
+  const atom = objectAtoms[0]!;
+  if (
+    atom.header.recVer !== 1 ||
+    atom.header.recInstance !== 0 ||
+    atom.header.recLen !== 0x18
+  ) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "A live PowerPoint ExOleObjAtom violates its fixed record contract.",
+    );
+  }
+
+  return args.bytes.readUInt32LE(atom.offset + 24);
+}
+
+function inspectPowerPointVbaInfo(args: {
+  bytes: Buffer;
+  containerOffset: number;
+  persistDirectory: ReadonlyMap<number, number>;
+}): boolean | OleFailure {
+  const container = readPowerPointRecordHeader(args.bytes, args.containerOffset);
+  if ("ok" in container) return container;
+
+  if (
+    container.recVer !== 0x0f ||
+    container.recInstance !== 1 ||
+    container.recType !== PPT_RT_VBA_INFO ||
+    container.recLen !== 0x14
+  ) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "A live PowerPoint VBAInfoContainer violates its fixed record contract.",
+    );
+  }
+
+  const atomOffset = args.containerOffset + 8;
+  const atom = readPowerPointRecordHeader(args.bytes, atomOffset);
+  if ("ok" in atom) return atom;
+
+  if (
+    atom.recVer !== 2 ||
+    atom.recInstance !== 0 ||
+    atom.recType !== PPT_RT_VBA_INFO_ATOM ||
+    atom.recLen !== 0x0c ||
+    atom.endOffset !== container.endOffset
+  ) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "A live PowerPoint VBAInfoAtom violates its fixed record contract.",
+    );
+  }
+
+  const persistIdRef = args.bytes.readUInt32LE(atomOffset + 8);
+  const fHasMacros = args.bytes.readUInt32LE(atomOffset + 12);
+  const version = args.bytes.readUInt32LE(atomOffset + 16);
+
+  if ((fHasMacros !== 0 && fHasMacros !== 1) || version !== 2) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "A live PowerPoint VBAInfoAtom contains invalid macro-state or version fields.",
+    );
+  }
+
+  if (persistIdRef === 0) {
+    if (fHasMacros === 1) {
+      return failure(
+        "OLE_STREAM_CHAIN_INVALID",
+        "A PowerPoint VBAInfoAtom declares macros without persisted VBA project storage.",
+      );
+    }
+    return false;
+  }
+
+  const storage = validatePowerPointExternalStorage({
+    bytes: args.bytes,
+    persistDirectory: args.persistDirectory,
+    persistIdRef,
+  });
+  if (storage !== true) return storage;
+
+  return true;
+}
+
+function inspectPowerPointLiveActiveContent(args: {
+  bytes: Buffer;
+  authority: PowerPointAuthoritySuccess;
+}): PowerPointActiveContentSignals | OleFailure {
+  if (args.authority.encrypted) {
+    return {
+      vbaProjectDetected: false,
+      embeddedObjectDetected: false,
+    };
+  }
+
+  const documentChildren = powerPointContainerChildren({
+    bytes: args.bytes,
+    offset: args.authority.documentOffset,
+    expectedRecType: PPT_RT_DOCUMENT,
+    expectedRecInstance: 0,
+  });
+  if (!Array.isArray(documentChildren)) return documentChildren;
+
+  let vbaProjectDetected = false;
+  let embeddedObjectDetected = false;
+  let externalObjectListSeen = false;
+  let docInfoListSeen = false;
+
+  for (const child of documentChildren) {
+    if (child.header.recType === PPT_RT_EXTERNAL_OBJECT_LIST) {
+      if (externalObjectListSeen) {
+        return failure(
+          "OLE_STREAM_CHAIN_INVALID",
+          "A live PowerPoint DocumentContainer contains duplicate external-object lists.",
+        );
+      }
+      externalObjectListSeen = true;
+
+      const externalChildren = powerPointContainerChildren({
+        bytes: args.bytes,
+        offset: child.offset,
+        expectedRecType: PPT_RT_EXTERNAL_OBJECT_LIST,
+        expectedRecInstance: 0,
+      });
+      if (!Array.isArray(externalChildren)) return externalChildren;
+
+      for (const externalChild of externalChildren) {
+        if (
+          externalChild.header.recType !== PPT_RT_EXTERNAL_OLE_EMBED &&
+          externalChild.header.recType !== PPT_RT_EXTERNAL_OLE_LINK &&
+          externalChild.header.recType !== PPT_RT_EXTERNAL_OLE_CONTROL
+        ) {
+          continue;
+        }
+
+        const persistIdRef = parsePowerPointExOleObjPersistRef({
+          bytes: args.bytes,
+          containerOffset: externalChild.offset,
+          containerType: externalChild.header.recType,
+        });
+        if (typeof persistIdRef !== "number") return persistIdRef;
+
+        const storage = validatePowerPointExternalStorage({
+          bytes: args.bytes,
+          persistDirectory: args.authority.persistDirectory,
+          persistIdRef,
+        });
+        if (storage !== true) return storage;
+
+        embeddedObjectDetected = true;
+      }
+    }
+
+    if (child.header.recType === PPT_RT_LIST) {
+      if (docInfoListSeen) {
+        return failure(
+          "OLE_STREAM_CHAIN_INVALID",
+          "A live PowerPoint DocumentContainer contains duplicate document-information lists.",
+        );
+      }
+      docInfoListSeen = true;
+
+      const infoChildren = powerPointContainerChildren({
+        bytes: args.bytes,
+        offset: child.offset,
+        expectedRecType: PPT_RT_LIST,
+        expectedRecInstance: 0,
+      });
+      if (!Array.isArray(infoChildren)) return infoChildren;
+
+      const vbaContainers = infoChildren.filter(
+        (infoChild) => infoChild.header.recType === PPT_RT_VBA_INFO,
+      );
+      if (vbaContainers.length > 1) {
+        return failure(
+          "OLE_STREAM_CHAIN_INVALID",
+          "A live PowerPoint DocInfoListContainer contains duplicate VBA information containers.",
+        );
+      }
+
+      if (vbaContainers.length === 1) {
+        const vba = inspectPowerPointVbaInfo({
+          bytes: args.bytes,
+          containerOffset: vbaContainers[0]!.offset,
+          persistDirectory: args.authority.persistDirectory,
+        });
+        if (typeof vba !== "boolean") return vba;
+        vbaProjectDetected ||= vba;
+      }
+    }
+  }
+
+  return {
+    vbaProjectDetected,
+    embeddedObjectDetected,
+  };
 }
 
 function suspiciousExecutableName(name: string) {
@@ -1396,6 +1738,14 @@ export function inspectOleStructuralSecurity(args: {
     if (!powerPointAuthority.ok) return powerPointAuthority;
     if (powerPointAuthority.encrypted) {
       encryptedPackageDetected = true;
+    } else {
+      const activeContent = inspectPowerPointLiveActiveContent({
+        bytes: powerPointDocumentData,
+        authority: powerPointAuthority,
+      });
+      if ("ok" in activeContent) return activeContent;
+      vbaProjectDetected ||= activeContent.vbaProjectDetected;
+      embeddedObjectDetected ||= activeContent.embeddedObjectDetected;
     }
   }
 
