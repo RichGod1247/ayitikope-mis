@@ -90,6 +90,9 @@ export const HDS_M6F3_HARNESS_VERSION =
 export const HDS_M6F4_HARNESS_VERSION =
   "HDS-M6F4-HARNESS-V1" as const;
 
+export const HDS_M6G1_HARNESS_VERSION =
+  "HDS-M6G1-HARNESS-V1" as const;
+
 const ONE_MEBIBYTE = 1024 * 1024;
 
 const ARCHIVE_LIMITS: NativeDocumentArchiveLimits = Object.freeze({
@@ -175,7 +178,8 @@ type ThreatFamilyManifestEntry = Readonly<{
     | "CERTIFIED_M6F1"
     | "CERTIFIED_M6F2"
     | "CERTIFIED_M6F3"
-    | "CERTIFIED_M6F4";
+    | "CERTIFIED_M6F4"
+    | "CERTIFIED_M6G1";
   objective: string;
 }>;
 
@@ -358,7 +362,7 @@ const THREAT_FAMILY_MANIFEST: readonly ThreatFamilyManifestEntry[] =
     Object.freeze({
       threatFamily: "FALSE_POSITIVE_CONTROL",
       plannedPhase: "M6G",
-      certificationStatus: "NOT_CERTIFIED",
+      certificationStatus: "CERTIFIED_M6G1",
       objective:
         "Protect legitimate documents and ordinary allowed hyperlinks from adversarial over-blocking.",
     }),
@@ -3055,6 +3059,299 @@ const M6F4_RULE_ORDER_DETERMINISM_CERTIFICATION_CASES:
     }),
   ]);
 
+const M6G1_FALSE_POSITIVE_CERTIFICATION_CASES:
+  readonly CorpusCaseContract[] =
+  Object.freeze([
+    Object.freeze({
+      caseId: "HDS-M6G1-001-BENIGN-CLASSIC-PDF",
+      threatFamily: "FALSE_POSITIVE_CONTROL",
+      format: "PDF",
+      attackTechnique:
+        "A bounded ordinary classic PDF with no active capability remains accepted.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6G",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6G1-002-BENIGN-DIRECT-MAILTO-PDF",
+      threatFamily: "FALSE_POSITIVE_CONTROL",
+      format: "PDF",
+      attackTechnique:
+        "An ordinary direct mailto PDF URI action remains inside the existing bounded hyperlink allowlist.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6G",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6G1-003-BENIGN-INDIRECT-HTTPS-PDF",
+      threatFamily: "FALSE_POSITIVE_CONTROL",
+      format: "PDF",
+      attackTechnique:
+        "A standard URI action stores its ordinary HTTPS URI string in an indirect object and must retain the same benign semantics as a direct string.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6G",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6G1-004-BENIGN-INDIRECT-MAILTO-PDF",
+      threatFamily: "FALSE_POSITIVE_CONTROL",
+      format: "PDF",
+      attackTechnique:
+        "A standard URI action stores an ordinary mailto URI string indirectly and must not be over-blocked merely because the string is referenced.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "PDF",
+      expectedSignatureKind: "PDF_HEADER",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6G",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6G1-005-BENIGN-DOCX",
+      threatFamily: "FALSE_POSITIVE_CONTROL",
+      format: "OOXML",
+      attackTechnique:
+        "A normal macro-free DOCX package with a human-readable Unicode filename remains accepted.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6G",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6G1-006-BENIGN-DOCX-HTTPS-HYPERLINK",
+      threatFamily: "FALSE_POSITIVE_CONTROL",
+      format: "OOXML",
+      attackTechnique:
+        "A DOCX package carries one ordinary external HTTPS hyperlink and no prohibited relationship capability.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6G",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6G1-007-BENIGN-XLSX",
+      threatFamily: "FALSE_POSITIVE_CONTROL",
+      format: "OOXML",
+      attackTechnique:
+        "A normal macro-free XLSX package remains accepted through bounded archive, structural and rule-pack inspection.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6G",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6G1-008-BENIGN-XLSX-MAILTO-HYPERLINK",
+      threatFamily: "FALSE_POSITIVE_CONTROL",
+      format: "OOXML",
+      attackTechnique:
+        "An XLSX package carries one ordinary external mailto hyperlink and remains accepted.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6G",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6G1-009-BENIGN-PPTX",
+      threatFamily: "FALSE_POSITIVE_CONTROL",
+      format: "OOXML",
+      attackTechnique:
+        "A normal macro-free PPTX package remains accepted through bounded archive, structural and rule-pack inspection.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6G",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6G1-010-BENIGN-PPTX-HTTP-HYPERLINK",
+      threatFamily: "FALSE_POSITIVE_CONTROL",
+      format: "OOXML",
+      attackTechnique:
+        "A PPTX package carries one ordinary external HTTP hyperlink and remains accepted under the explicit hyperlink policy.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "ZIP",
+      expectedSignatureKind: "ZIP_SIGNATURE",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6G",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6G1-011-BENIGN-DOC",
+      threatFamily: "FALSE_POSITIVE_CONTROL",
+      format: "OLE",
+      attackTechnique:
+        "A normal bounded legacy Word CFB document remains accepted.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6G",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6G1-012-BENIGN-XLS",
+      threatFamily: "FALSE_POSITIVE_CONTROL",
+      format: "OLE",
+      attackTechnique:
+        "A normal bounded legacy Excel CFB document remains accepted.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6G",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6G1-013-BENIGN-PPT",
+      threatFamily: "FALSE_POSITIVE_CONTROL",
+      format: "OLE",
+      attackTechnique:
+        "A normal bounded legacy PowerPoint CFB document remains accepted.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6G",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6G1-014-BENIGN-OLE-SIMPLE-UPPERCASE-IDENTITY",
+      threatFamily: "FALSE_POSITIVE_CONTROL",
+      format: "OLE",
+      attackTechnique:
+        "A valid CFB sibling name contains a character whose full Unicode uppercase expands but whose simple uppercase mapping is identity; directory ordering must use the CFB simple conversion rather than reject the name.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6G",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6G1-015-BENIGN-OLE-SIMPLE-UPPERCASE-MAPPING",
+      threatFamily: "FALSE_POSITIVE_CONTROL",
+      format: "OLE",
+      attackTechnique:
+        "A valid CFB sibling name contains a Greek code unit whose Unicode full uppercase expands while its CFB-required simple uppercase mapping remains one code unit.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6G",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+    Object.freeze({
+      caseId: "HDS-M6G1-016-BENIGN-OLE-V3-UNINITIALIZED-SIZE-HIGH-DWORD",
+      threatFamily: "FALSE_POSITIVE_CONTROL",
+      format: "OLE",
+      attackTechnique:
+        "A valid version-3 CFB Word stream carries a historically uninitialized high DWORD in Stream Size while the authoritative low DWORD remains correct; the parser must tolerate that legacy producer behavior.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      expectedRuleId: null,
+      expectedDetectedContainer: "OLE",
+      expectedSignatureKind: "OLE_COMPOUND_FILE_SIGNATURE",
+      benignControl: true,
+      provenance: "DETERMINISTIC_GENERATED",
+      certificationPhase: "M6G",
+      certificationCredit: true,
+      authorityImplication: "NO_CLEAN_AUTHORITY",
+    }),
+  ]);
+
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
     throw new Error(`M6C_ASSERTION_FAILED: ${message}`);
@@ -3758,6 +4055,33 @@ function powerPointRecordHeader(
   bytes.writeUInt16LE(((recInstance << 4) | recVer) >>> 0, 0);
   bytes.writeUInt16LE(recType, 2);
   bytes.writeUInt32LE(recLen >>> 0, 4);
+  return bytes;
+}
+
+function withCfbV3UninitializedStreamSizeHighDword(args: {
+  bytes: Buffer;
+  streamName: string;
+  highDword: number;
+}) {
+  const bytes = Buffer.from(args.bytes);
+  assert(
+    bytes.readUInt16LE(26) === 3,
+    "M6G v3 Stream Size compatibility fixture requires a version-3 CFB file.",
+  );
+
+  const sectorSize = 512;
+  const firstDirectorySector = bytes.readUInt32LE(48);
+  const directoryOffset = (firstDirectorySector + 1) * sectorSize;
+  const encodedName = Buffer.from(`${args.streamName}\u0000`, "utf16le");
+  const nameOffset = bytes.indexOf(encodedName, directoryOffset);
+
+  assert(
+    nameOffset >= directoryOffset &&
+      (nameOffset - directoryOffset) % 128 === 0,
+    "M6G v3 Stream Size fixture could not locate the exact directory entry.",
+  );
+
+  bytes.writeUInt32LE(args.highDword >>> 0, nameOffset + 124);
   return bytes;
 }
 
@@ -5342,7 +5666,9 @@ function validateManifest() {
                                 ? "CERTIFIED_M6F3"
                                 : entry.threatFamily === "RULE_ORDER_DETERMINISM"
                                   ? "CERTIFIED_M6F4"
-                                  : "NOT_CERTIFIED";
+                                  : entry.threatFamily === "FALSE_POSITIVE_CONTROL"
+                                    ? "CERTIFIED_M6G1"
+                                    : "NOT_CERTIFIED";
 
     assert(
       entry.certificationStatus === expectedCertification,
@@ -6193,6 +6519,49 @@ function validateM6F4RuleOrderDeterminismCertificationCases() {
   );
 }
 
+function validateM6G1FalsePositiveCertificationCases() {
+  assert(
+    M6G1_FALSE_POSITIVE_CERTIFICATION_CASES.length === 16,
+    "M6G1 must execute the exact sixteen-case false-positive certification matrix.",
+  );
+
+  assert(
+    Object.isFrozen(M6G1_FALSE_POSITIVE_CERTIFICATION_CASES) &&
+      M6G1_FALSE_POSITIVE_CERTIFICATION_CASES.every(
+        (testCase) =>
+          Object.isFrozen(testCase) &&
+          testCase.threatFamily === "FALSE_POSITIVE_CONTROL" &&
+          testCase.certificationPhase === "M6G" &&
+          testCase.certificationCredit === true &&
+          testCase.benignControl === true &&
+          testCase.expectedVerdict === "IDENTITY_VERIFIED" &&
+          testCase.expectedReasonCode ===
+            "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED" &&
+          testCase.expectedRuleId === null &&
+          testCase.provenance === "DETERMINISTIC_GENERATED" &&
+          testCase.authorityImplication === "NO_CLEAN_AUTHORITY",
+      ),
+    "Every M6G1 certification case must be a deterministic benign control with no CLEAN implication.",
+  );
+
+  assert(
+    new Set(
+      M6G1_FALSE_POSITIVE_CERTIFICATION_CASES.map(
+        (testCase) => testCase.caseId,
+      ),
+    ).size === M6G1_FALSE_POSITIVE_CERTIFICATION_CASES.length,
+    "M6G1 case IDs must be unique.",
+  );
+
+  const manifest = THREAT_FAMILY_MANIFEST.find(
+    (entry) => entry.threatFamily === "FALSE_POSITIVE_CONTROL",
+  );
+  assert(
+    manifest?.certificationStatus === "CERTIFIED_M6G1",
+    "M6G1 must certify only the FALSE_POSITIVE_CONTROL manifest family.",
+  );
+}
+
 function validateRulePackBoundary() {
   assert(
     HEHXAGON_DOCUMENT_SECURITY_RULE_IDS.length === 21,
@@ -6219,8 +6588,8 @@ function validateRulePackBoundary() {
 
   assert(
     HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION ===
-      "0.4.13-m6f2",
-    "M6F2 must preserve M6F1 owned-byte identity while enforcing bounded source iteration and parser resource ceilings.",
+      "0.4.14-m6g1",
+    "M6G1 must preserve M6F integrity/resource hardening while repairing proven benign-format compatibility defects.",
   );
 }
 
@@ -8676,6 +9045,214 @@ function executeM6F4RuleOrderDeterminismCertification() {
   });
 }
 
+async function executeM6G1FalsePositiveCertification() {
+  const pdfBaseObjects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>",
+  ] as const;
+
+  const docxBaseline = buildM6COoxmlPackage({ application: "docx" });
+  const docxHttps = buildM6COoxmlPackage({
+    application: "docx",
+    mainRelationships: [
+      '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.com/governance-policy" TargetMode="External"/>',
+    ],
+  });
+  const xlsxBaseline = buildM6COoxmlPackage({ application: "xlsx" });
+  const xlsxMailto = buildM6COoxmlPackage({
+    application: "xlsx",
+    mainRelationships: [
+      '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="mailto:records@example.com" TargetMode="External"/>',
+    ],
+  });
+  const pptxBaseline = buildM6COoxmlPackage({ application: "pptx" });
+  const pptxHttp = buildM6COoxmlPackage({
+    application: "pptx",
+    mainRelationships: [
+      '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="http://example.com/training" TargetMode="External"/>',
+    ],
+  });
+
+  const docUnicodeIdentity = legacyOfficeFixture("doc", [
+    { path: "ax", data: Buffer.alloc(100, 0x41) },
+    { path: "ßx", data: Buffer.alloc(100, 0x42) },
+  ]);
+  const docUnicodeSimpleMapping = legacyOfficeFixture("doc", [
+    { path: "ax", data: Buffer.alloc(100, 0x41) },
+    { path: "\u1f80x", data: Buffer.alloc(100, 0x42) },
+  ]);
+  const docV3UninitializedHighDword =
+    withCfbV3UninitializedStreamSizeHighDword({
+      bytes: legacyOfficeFixture("doc"),
+      streamName: "WordDocument",
+      highDword: 0xa5a5a5a5,
+    });
+
+  const executions = [
+    () => inspectPdf({ bytes: buildM6DClassicPdf([...pdfBaseObjects]) }),
+    () => inspectPdf({
+      bytes: buildM6DClassicPdf([
+        ...pdfBaseObjects,
+        "<< /Type /Action /S /URI /URI (mailto:records@example.com) >>",
+      ]),
+    }),
+    () => inspectPdf({
+      bytes: buildM6DClassicPdf([
+        ...pdfBaseObjects,
+        "<< /Type /Action /S /URI /URI 5 0 R >>",
+        "(https://example.com/policy)",
+      ]),
+    }),
+    () => inspectPdf({
+      bytes: buildM6DClassicPdf([
+        ...pdfBaseObjects,
+        "<< /Type /Action /S /URI /URI 5 0 R >>",
+        "(mailto:records@example.com)",
+      ]),
+    }),
+    () => inspectDocument({
+      bytes: docxBaseline,
+      filename: "M6G School Policy – Résumé.docx",
+      extension: "docx",
+      mimeType: `${M6C_OOXML_PROFILES.docx.mimeType}; charset=binary`,
+    }),
+    () => inspectDocument({
+      bytes: docxHttps,
+      filename: "m6g-hyperlink.docx",
+      extension: "docx",
+      mimeType: M6C_OOXML_PROFILES.docx.mimeType,
+    }),
+    () => inspectDocument({
+      bytes: xlsxBaseline,
+      filename: "m6g-register.xlsx",
+      extension: "xlsx",
+      mimeType: M6C_OOXML_PROFILES.xlsx.mimeType,
+    }),
+    () => inspectDocument({
+      bytes: xlsxMailto,
+      filename: "m6g-register-mailto.xlsx",
+      extension: "xlsx",
+      mimeType: M6C_OOXML_PROFILES.xlsx.mimeType,
+    }),
+    () => inspectDocument({
+      bytes: pptxBaseline,
+      filename: "m6g-training.pptx",
+      extension: "pptx",
+      mimeType: M6C_OOXML_PROFILES.pptx.mimeType,
+    }),
+    () => inspectDocument({
+      bytes: pptxHttp,
+      filename: "m6g-training-http.pptx",
+      extension: "pptx",
+      mimeType: M6C_OOXML_PROFILES.pptx.mimeType,
+    }),
+    () => inspectDocument({
+      bytes: legacyOfficeFixture("doc"),
+      filename: "m6g-legacy.doc",
+      extension: "doc",
+      mimeType: "application/msword",
+    }),
+    () => inspectDocument({
+      bytes: legacyOfficeFixture("xls"),
+      filename: "m6g-legacy.xls",
+      extension: "xls",
+      mimeType: "application/vnd.ms-excel",
+    }),
+    () => inspectDocument({
+      bytes: powerPointPersistFixture(),
+      filename: "m6g-legacy.ppt",
+      extension: "ppt",
+      mimeType: "application/vnd.ms-powerpoint",
+    }),
+    () => inspectDocument({
+      bytes: docUnicodeIdentity,
+      filename: "m6g-unicode-identity.doc",
+      extension: "doc",
+      mimeType: "application/msword",
+    }),
+    () => inspectDocument({
+      bytes: docUnicodeSimpleMapping,
+      filename: "m6g-unicode-simple-map.doc",
+      extension: "doc",
+      mimeType: "application/msword",
+    }),
+    () => inspectDocument({
+      bytes: docV3UninitializedHighDword,
+      filename: "m6g-v3-high-dword.doc",
+      extension: "doc",
+      mimeType: "application/msword",
+    }),
+  ] as const;
+
+  const results: NativeDocumentScannerResult[] = [];
+  for (let index = 0; index < executions.length; index += 1) {
+    const result = await executions[index]!();
+    assertResultMatchesContract(
+      result,
+      M6G1_FALSE_POSITIVE_CERTIFICATION_CASES[index]!,
+    );
+    results.push(result);
+  }
+
+  for (const index of [1, 2, 3] as const) {
+    const result = results[index]!;
+    assert(
+      result.pdfStructuralInspectionComplete === true &&
+        result.pdfStructuralEvidence?.safeUriActionsObserved === 1 &&
+        result.pdfStructuralEvidence.unsafeUriActionDetected === false &&
+        result.rulePackEvaluation?.outcome === "PASS",
+      `${M6G1_FALSE_POSITIVE_CERTIFICATION_CASES[index]!.caseId} must remain an explicitly allowed URI control.`,
+    );
+  }
+
+  for (const index of [5, 7, 9] as const) {
+    const result = results[index]!;
+    assert(
+      result.archiveInspectionComplete === true &&
+        result.ooxmlStructuralInspectionComplete === true &&
+        result.ooxmlStructuralEvidence?.externalHyperlinksObserved === 1 &&
+        result.rulePackEvaluation?.outcome === "PASS",
+      `${M6G1_FALSE_POSITIVE_CERTIFICATION_CASES[index]!.caseId} must preserve one ordinary external hyperlink.`,
+    );
+  }
+
+  for (const index of [10, 11, 12, 13, 14, 15] as const) {
+    const result = results[index]!;
+    assert(
+      result.oleStructuralInspectionComplete === true &&
+        result.oleStructuralEvidence?.vbaProjectDetected === false &&
+        result.oleStructuralEvidence.embeddedObjectDetected === false &&
+        result.oleStructuralEvidence.encryptedPackageDetected === false &&
+        result.oleStructuralEvidence.executableStreamDetected === false &&
+        result.rulePackEvaluation?.outcome === "PASS",
+      `${M6G1_FALSE_POSITIVE_CERTIFICATION_CASES[index]!.caseId} must remain a benign legacy-Office control.`,
+    );
+  }
+
+  assert(
+    results.every(
+      (result) =>
+        String(result.verdict) !== "CLEAN" &&
+        result.inspectionComplete === false,
+    ),
+    "M6G1 false-positive certification must preserve the no-CLEAN authority boundary.",
+  );
+
+  return {
+    results,
+    supportedExtensions: Object.freeze([
+      "pdf",
+      "docx",
+      "xlsx",
+      "pptx",
+      "doc",
+      "xls",
+      "ppt",
+    ] as const),
+  } as const;
+}
+
 async function run() {
   validateManifest();
   validateCaseContract();
@@ -8694,6 +9271,7 @@ async function run() {
   validateM6F2ResourceExhaustionCertificationCases();
   validateM6F3TruncationCertificationCases();
   validateM6F4RuleOrderDeterminismCertificationCases();
+  validateM6G1FalsePositiveCertificationCases();
   validateRulePackBoundary();
 
   const sentinelResults = await executeSentinels();
@@ -8713,6 +9291,7 @@ async function run() {
   const m6f2 = await executeM6F2ResourceExhaustionCertification();
   const m6f3 = await executeM6F3TruncationCertification();
   const m6f4 = executeM6F4RuleOrderDeterminismCertification();
+  const m6g1 = await executeM6G1FalsePositiveCertification();
 
   const sentinelSummary =
     HARNESS_SENTINEL_CASES.map((testCase, index) =>
@@ -9194,6 +9773,23 @@ async function run() {
     },
   );
 
+  const m6g1Summary =
+    M6G1_FALSE_POSITIVE_CERTIFICATION_CASES.map((testCase, index) => {
+      const result = m6g1.results[index]!;
+      return Object.freeze({
+        caseId: testCase.caseId,
+        threatFamily: testCase.threatFamily,
+        benignControl: testCase.benignControl,
+        certificationCredit: testCase.certificationCredit,
+        expectedVerdict: testCase.expectedVerdict,
+        actualVerdict: result.verdict,
+        expectedReasonCode: testCase.expectedReasonCode,
+        reasonMatched: result.reasonCodes.includes(testCase.expectedReasonCode),
+        actualDetectedContainer: result.identityEvidence.detectedContainer,
+        actualSignatureKind: result.identityEvidence.signatureKind,
+      });
+    });
+
   const m6e1CertifiedThreatFamilies = THREAT_FAMILY_MANIFEST.filter(
     (entry) => entry.certificationStatus === "CERTIFIED_M6E1",
   ).map((entry) => entry.threatFamily);
@@ -9220,6 +9816,10 @@ async function run() {
 
   const m6f4CertifiedThreatFamilies = THREAT_FAMILY_MANIFEST.filter(
     (entry) => entry.certificationStatus === "CERTIFIED_M6F4",
+  ).map((entry) => entry.threatFamily);
+
+  const m6g1CertifiedThreatFamilies = THREAT_FAMILY_MANIFEST.filter(
+    (entry) => entry.certificationStatus === "CERTIFIED_M6G1",
   ).map((entry) => entry.threatFamily);
 
   const m6fCertifiedThreatFamilies = THREAT_FAMILY_MANIFEST.filter(
@@ -9249,6 +9849,16 @@ async function run() {
       .filter(
         (entry) => entry.certificationStatus === "NOT_CERTIFIED",
       )
+      .map((entry) => entry.threatFamily);
+
+  const allM6CertifiedThreatFamilies =
+    THREAT_FAMILY_MANIFEST
+      .filter((entry) => entry.certificationStatus !== "NOT_CERTIFIED")
+      .map((entry) => entry.threatFamily);
+
+  const remainingM6ThreatFamilies =
+    THREAT_FAMILY_MANIFEST
+      .filter((entry) => entry.certificationStatus === "NOT_CERTIFIED")
       .map((entry) => entry.threatFamily);
 
   const m6dCertificationCaseCount =
@@ -9340,9 +9950,16 @@ async function run() {
   );
 
   assert(
-    remainingNonPdfThreatFamilies.length === 1 &&
-      remainingNonPdfThreatFamilies[0] === "FALSE_POSITIVE_CONTROL",
-    "M6F4 must close M6F while leaving only M6G false-positive control open.",
+    m6g1CertifiedThreatFamilies.length === 1 &&
+      m6g1CertifiedThreatFamilies[0] === "FALSE_POSITIVE_CONTROL",
+    "M6G1 must certify exactly false-positive control.",
+  );
+
+  assert(
+    remainingNonPdfThreatFamilies.length === 0 &&
+      remainingM6ThreatFamilies.length === 0 &&
+      allM6CertifiedThreatFamilies.length === THREAT_FAMILY_MANIFEST.length,
+    "M6G1 must leave no M6 threat family uncertified while preserving the separate M6H authority decision.",
   );
 
   assert(
@@ -9434,6 +10051,11 @@ async function run() {
         (result) =>
           String(result.verdict) !== "CLEAN" &&
           result.inspectionComplete === false,
+      ) &&
+      m6g1.results.every(
+        (result) =>
+          String(result.verdict) !== "CLEAN" &&
+          result.inspectionComplete === false,
       ),
     "M6 execution must never grant CLEAN or completed document-trust authority.",
   );
@@ -9443,13 +10065,13 @@ async function run() {
       {
         ok: true,
         event:
-          "HDS_M6F4_RULE_ORDER_DETERMINISM_CERTIFICATION_PASSED",
+          "HDS_M6G1_FALSE_POSITIVE_CONTROL_CERTIFICATION_PASSED",
         corpusSchemaVersion:
           HDS_M6_ADVERSARIAL_CORPUS_SCHEMA_VERSION,
         harnessVersion:
-          HDS_M6F4_HARNESS_VERSION,
+          HDS_M6G1_HARNESS_VERSION,
         priorHarnessVersion:
-          HDS_M6F3_HARNESS_VERSION,
+          HDS_M6F4_HARNESS_VERSION,
         priorOoxmlHarnessVersion:
           HDS_M6C_HARNESS_VERSION,
         scannerEngine:
@@ -9798,7 +10420,30 @@ async function run() {
         resourceExhaustionCertificationComplete: true,
         truncationCertificationComplete: true,
         ruleOrderDeterminismCertificationComplete: true,
+        m6g1FalsePositiveControlCertificationComplete: true,
+        m6g1CertifiedThreatFamilies,
+        m6g1CaseCount:
+          M6G1_FALSE_POSITIVE_CERTIFICATION_CASES.length,
+        m6g1CertificationCredit:
+          M6G1_FALSE_POSITIVE_CERTIFICATION_CASES.filter(
+            (testCase) => testCase.certificationCredit,
+          ).length,
+        m6g1BenignControlCount:
+          M6G1_FALSE_POSITIVE_CERTIFICATION_CASES.filter(
+            (testCase) => testCase.benignControl,
+          ).length,
+        m6g1SupportedExtensions: m6g1.supportedExtensions,
+        m6g1PdfIndirectUriCompatibilityRepaired: true,
+        m6g1OleSimpleUppercaseCompatibilityRepaired: true,
+        m6g1OleV3HighDwordCompatibilityRepaired: true,
+        m6g1RealWorldCorpusIncluded: false,
+        m6g1RealWorldCorpusDeferredToAuthorityReview: true,
+        m6g1Results: m6g1Summary,
         remainingNonPdfThreatFamilies,
+        allM6CertifiedThreatFamilies,
+        remainingM6ThreatFamilies,
+        m6FamilyEvidenceComplete: true,
+        m6hAuthorityReviewRequired: true,
         adversarialCertificationComplete: false,
         fullM6CertificationComplete: false,
         cleanAuthorityGranted: false,
@@ -9816,11 +10461,11 @@ run().catch((error) => {
       {
         ok: false,
         event:
-          "HDS_M6F4_RULE_ORDER_DETERMINISM_CERTIFICATION_FAILED",
+          "HDS_M6G1_FALSE_POSITIVE_CONTROL_CERTIFICATION_FAILED",
         errorCode:
           error instanceof Error
             ? error.message
-            : "M6F4_UNKNOWN_FAILURE",
+            : "M6G1_UNKNOWN_FAILURE",
       },
       null,
       2,

@@ -386,25 +386,49 @@ function chainBytes(context: OleContext, chain: number[]) {
   return Buffer.concat(chunks);
 }
 
-function parseStreamSize(entryBytes: Buffer) {
+function parseStreamSize(
+  entryBytes: Buffer,
+  majorVersion: 3 | 4,
+) {
   const low = entryBytes.readUInt32LE(120);
+
+  /*
+   * MS-CFB requires version-3 parsers to tolerate the historically
+   * uninitialized high DWORD of Stream Size. Version 3 uses 512-byte sectors
+   * and its usable stream size is therefore authoritative in the low DWORD.
+   */
+  if (majorVersion === 3) return low;
+
   const high = entryBytes.readUInt32LE(124);
   const value = high * 0x100000000 + low;
   return Number.isSafeInteger(value) ? value : null;
 }
 
-
-function upperCfbDirectoryCodeUnit(codeUnit: number): number | null {
+function upperCfbDirectoryCodeUnit(codeUnit: number): number {
   if (codeUnit >= 0xd800 && codeUnit <= 0xdfff) {
     return codeUnit;
   }
 
   const upper = String.fromCharCode(codeUnit).toUpperCase();
-  if (upper.length !== 1) {
-    return null;
+  if (upper.length === 1) {
+    return upper.charCodeAt(0);
   }
 
-  return upper.charCodeAt(0);
+  /*
+   * MS-CFB directory ordering uses Unicode simple uppercase conversion, not
+   * JavaScript's full uppercase conversion. The ranges below are the BMP
+   * code points whose simple uppercase mapping is one code unit even though
+   * full uppercase expands to multiple code points. Expansion-only characters
+   * with no simple uppercase mapping remain unchanged.
+   */
+  if (codeUnit >= 0x1f80 && codeUnit <= 0x1f87) return codeUnit + 0x08;
+  if (codeUnit >= 0x1f90 && codeUnit <= 0x1f97) return codeUnit + 0x08;
+  if (codeUnit >= 0x1fa0 && codeUnit <= 0x1fa7) return codeUnit + 0x08;
+  if (codeUnit === 0x1fb3) return 0x1fbc;
+  if (codeUnit === 0x1fc3) return 0x1fcc;
+  if (codeUnit === 0x1ff3) return 0x1ffc;
+
+  return codeUnit;
 }
 
 function compareCfbDirectoryNames(
@@ -557,7 +581,10 @@ function parseDirectory(context: OleContext): DirectoryEntry[] | OleFailure {
       );
     }
 
-    const streamSize = parseStreamSize(entryBytes);
+    const streamSize = parseStreamSize(
+      entryBytes,
+      context.header.majorVersion,
+    );
     if (streamSize === null) {
       return failure("OLE_STREAM_SIZE_LIMIT_EXCEEDED", "A compound-file stream size cannot be represented safely.");
     }

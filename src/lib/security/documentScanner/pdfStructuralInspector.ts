@@ -1689,7 +1689,17 @@ function inspectValue(args: {
   }
 
   if (action === "URI") {
-    const uri = stringValue(values.get("URI"));
+    const rawUri = values.get("URI");
+    const uriReference = refValue(rawUri);
+    let uriValue = rawUri;
+
+    if (uriReference) {
+      const resolved = resolveReference(uriReference);
+      if (isStructuralResult(resolved)) return resolved;
+      uriValue = resolved;
+    }
+
+    const uri = stringValue(uriValue);
     if (!uri) {
       counters.unsafeUriActionDetected = true;
     } else {
