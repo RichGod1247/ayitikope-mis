@@ -14,13 +14,19 @@ import { inspectPdfStructuralSecurity } from "../src/lib/security/documentScanne
 import {
   HEHXAGON_DOCUMENT_SECURITY_RULE_IDS,
   HEHXAGON_DOCUMENT_SECURITY_RULE_PACK_VERSION,
+  evaluateOleSecurityRules,
+  evaluateOoxmlSecurityRules,
+  evaluatePdfSecurityRules,
 } from "../src/lib/security/documentScanner/securityRulePack";
 import type {
   NativeDocumentArchiveLimits,
   NativeDocumentContainer,
   NativeDocumentIdentityEvidence,
   NativeDocumentOleLimits,
+  NativeDocumentOleStructuralEvidence,
+  NativeDocumentOoxmlStructuralEvidence,
   NativeDocumentPdfLimits,
+  NativeDocumentPdfStructuralEvidence,
   NativeDocumentScannerReasonCode,
   NativeDocumentScannerResult,
   NativeDocumentScannerVerdict,
@@ -80,6 +86,9 @@ export const HDS_M6F2_HARNESS_VERSION =
 
 export const HDS_M6F3_HARNESS_VERSION =
   "HDS-M6F3-HARNESS-V1" as const;
+
+export const HDS_M6F4_HARNESS_VERSION =
+  "HDS-M6F4-HARNESS-V1" as const;
 
 const ONE_MEBIBYTE = 1024 * 1024;
 
@@ -165,7 +174,8 @@ type ThreatFamilyManifestEntry = Readonly<{
     | "CERTIFIED_M6E3"
     | "CERTIFIED_M6F1"
     | "CERTIFIED_M6F2"
-    | "CERTIFIED_M6F3";
+    | "CERTIFIED_M6F3"
+    | "CERTIFIED_M6F4";
   objective: string;
 }>;
 
@@ -193,6 +203,14 @@ type M6E2APowerPointAuthorityCase = Readonly<{
   expectedReasonCode: NativeDocumentScannerReasonCode;
   benignControl: boolean;
   authorityCredit: boolean;
+}>;
+
+type M6F4RuleOrderCase = Readonly<{
+  caseId: string;
+  attackTechnique: string;
+  evidenceFamily: "OOXML" | "PDF" | "OLE" | "GLOBAL";
+  benignControl: boolean;
+  certificationCredit: true;
 }>;
 
 const THREAT_FAMILY_MANIFEST: readonly ThreatFamilyManifestEntry[] =
@@ -333,7 +351,7 @@ const THREAT_FAMILY_MANIFEST: readonly ThreatFamilyManifestEntry[] =
     Object.freeze({
       threatFamily: "RULE_ORDER_DETERMINISM",
       plannedPhase: "M6F",
-      certificationStatus: "NOT_CERTIFIED",
+      certificationStatus: "CERTIFIED_M6F4",
       objective:
         "Prove identical structural evidence yields immutable, stable rule ordering and policy outcomes.",
     }),
@@ -2932,6 +2950,111 @@ const M6F3_TRUNCATION_CERTIFICATION_CASES: readonly CorpusCaseContract[] =
     }),
   ]);
 
+
+const M6F4_REPEAT_EVALUATIONS_PER_FAMILY = 64;
+
+const M6F4_EXPECTED_OOXML_RULE_ORDER =
+  Object.freeze([
+    "HDS-OOXML-001-VBA",
+    "HDS-OOXML-002-MACRO-CONTENT-TYPE",
+    "HDS-OOXML-003-ACTIVEX",
+    "HDS-OOXML-004-EMBEDDED-OBJECT",
+    "HDS-OOXML-005-EXTERNAL-RELATIONSHIP",
+    "HDS-OOXML-006-REMOTE-TEMPLATE",
+    "HDS-OOXML-007-EXECUTABLE-PART",
+  ] satisfies readonly NativeDocumentSecurityRuleId[]);
+
+const M6F4_EXPECTED_PDF_RULE_ORDER =
+  Object.freeze([
+    "HDS-PDF-001-ENCRYPTED",
+    "HDS-PDF-002-JAVASCRIPT",
+    "HDS-PDF-003-OPEN-ACTION",
+    "HDS-PDF-004-ADDITIONAL-ACTION",
+    "HDS-PDF-005-LAUNCH-ACTION",
+    "HDS-PDF-006-EMBEDDED-FILE",
+    "HDS-PDF-007-RICH-MEDIA",
+    "HDS-PDF-008-XFA",
+    "HDS-PDF-009-EXTERNAL-ACTION",
+    "HDS-PDF-010-UNSAFE-URI",
+  ] satisfies readonly NativeDocumentSecurityRuleId[]);
+
+const M6F4_EXPECTED_OLE_RULE_ORDER =
+  Object.freeze([
+    "HDS-OLE-001-VBA",
+    "HDS-OLE-002-EMBEDDED-OBJECT",
+    "HDS-OLE-003-ENCRYPTED-PACKAGE",
+    "HDS-OLE-004-EXECUTABLE-STREAM",
+  ] satisfies readonly NativeDocumentSecurityRuleId[]);
+
+const M6F4_RULE_ORDER_DETERMINISM_CERTIFICATION_CASES:
+  readonly M6F4RuleOrderCase[] =
+  Object.freeze([
+    Object.freeze({
+      caseId: "HDS-M6F4-001-OOXML-CANONICAL-RULE-ORDER",
+      attackTechnique:
+        "All seven OOXML policy-evidence flags are simultaneously true so the rule pack must emit every matching OOXML rule exactly once in immutable canonical pack order.",
+      evidenceFamily: "OOXML",
+      benignControl: false,
+      certificationCredit: true,
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F4-002-OOXML-REPEATED-PROPERTY-PERMUTATION",
+      attackTechnique:
+        "Semantically identical OOXML evidence is rebuilt with reversed property insertion order and evaluated repeatedly to prove output order depends only on rule-pack authority.",
+      evidenceFamily: "OOXML",
+      benignControl: false,
+      certificationCredit: true,
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F4-003-PDF-CANONICAL-RULE-ORDER",
+      attackTechnique:
+        "All ten PDF policy-evidence flags are simultaneously true so the rule pack must emit every matching PDF rule exactly once in immutable canonical pack order.",
+      evidenceFamily: "PDF",
+      benignControl: false,
+      certificationCredit: true,
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F4-004-PDF-REPEATED-PROPERTY-PERMUTATION",
+      attackTechnique:
+        "Semantically identical PDF evidence is rebuilt with reversed property insertion order and evaluated repeatedly to reject input-object ordering as policy authority.",
+      evidenceFamily: "PDF",
+      benignControl: false,
+      certificationCredit: true,
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F4-005-OLE-CANONICAL-RULE-ORDER",
+      attackTechnique:
+        "All four OLE policy-evidence flags are simultaneously true so every matching legacy-Office rule must remain uniquely ordered by the immutable M4 rule pack.",
+      evidenceFamily: "OLE",
+      benignControl: false,
+      certificationCredit: true,
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F4-006-OLE-REPEATED-PROPERTY-PERMUTATION",
+      attackTechnique:
+        "Semantically identical OLE evidence is rebuilt with reversed property insertion order and evaluated repeatedly to prove deterministic policy output.",
+      evidenceFamily: "OLE",
+      benignControl: false,
+      certificationCredit: true,
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F4-007-PASS-OUTCOME-DETERMINISM-CONTROL",
+      attackTechnique:
+        "Equivalent no-threat OOXML, PDF and OLE evidence is repeatedly evaluated and must always produce frozen PASS results with zero matched rules.",
+      evidenceFamily: "GLOBAL",
+      benignControl: true,
+      certificationCredit: true,
+    }),
+    Object.freeze({
+      caseId: "HDS-M6F4-008-GLOBAL-RULE-REGISTRY-ORDER",
+      attackTechnique:
+        "The exported twenty-one-rule registry must remain frozen, unique, and exactly equal to the concatenated OOXML, PDF and OLE canonical rule orders.",
+      evidenceFamily: "GLOBAL",
+      benignControl: false,
+      certificationCredit: true,
+    }),
+  ]);
+
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
     throw new Error(`M6C_ASSERTION_FAILED: ${message}`);
@@ -5217,7 +5340,9 @@ function validateManifest() {
                               ? "CERTIFIED_M6F2"
                               : entry.threatFamily === "TRUNCATION"
                                 ? "CERTIFIED_M6F3"
-                                : "NOT_CERTIFIED";
+                                : entry.threatFamily === "RULE_ORDER_DETERMINISM"
+                                  ? "CERTIFIED_M6F4"
+                                  : "NOT_CERTIFIED";
 
     assert(
       entry.certificationStatus === expectedCertification,
@@ -6026,6 +6151,45 @@ function validateM6F3TruncationCertificationCases() {
   assert(
     Object.isFrozen(M6F3_TRUNCATION_CERTIFICATION_CASES),
     "M6F3 truncation certification registry must be immutable.",
+  );
+}
+
+
+function validateM6F4RuleOrderDeterminismCertificationCases() {
+  assert(
+    M6F4_RULE_ORDER_DETERMINISM_CERTIFICATION_CASES.length === 8,
+    "M6F4 must execute the exact eight-case rule-order determinism matrix.",
+  );
+
+  const ids = new Set<string>();
+  for (const testCase of M6F4_RULE_ORDER_DETERMINISM_CERTIFICATION_CASES) {
+    assert(Object.isFrozen(testCase), `${testCase.caseId} must be immutable.`);
+    assert(
+      /^HDS-M6F4-\d{3}-[A-Z0-9-]+$/.test(testCase.caseId),
+      `M6F4 case id is invalid: ${testCase.caseId}`,
+    );
+    assert(!ids.has(testCase.caseId), `Duplicate M6F4 case id: ${testCase.caseId}`);
+    assert(
+      testCase.certificationCredit === true &&
+        testCase.attackTechnique.trim().length >= 80,
+      `${testCase.caseId} must retain explicit bounded M6F4 certification evidence.`,
+    );
+    ids.add(testCase.caseId);
+  }
+
+  assert(
+    M6F4_RULE_ORDER_DETERMINISM_CERTIFICATION_CASES.filter(
+      (testCase) => testCase.benignControl,
+    ).length === 1,
+    "M6F4 must retain exactly one explicit all-family PASS determinism control.",
+  );
+
+  assert(
+    Object.isFrozen(M6F4_RULE_ORDER_DETERMINISM_CERTIFICATION_CASES) &&
+      Object.isFrozen(M6F4_EXPECTED_OOXML_RULE_ORDER) &&
+      Object.isFrozen(M6F4_EXPECTED_PDF_RULE_ORDER) &&
+      Object.isFrozen(M6F4_EXPECTED_OLE_RULE_ORDER),
+    "M6F4 certification registries and canonical rule-order expectations must be immutable.",
   );
 }
 
@@ -8217,6 +8381,301 @@ async function executeM6F3TruncationCertification() {
   return { results } as const;
 }
 
+
+function reversePropertyInsertionOrder<T extends object>(value: T): T {
+  return Object.fromEntries(
+    Object.entries(value).reverse(),
+  ) as T;
+}
+
+function assertM6F4EvaluationFrozen(
+  evaluation: ReturnType<typeof evaluateOoxmlSecurityRules>,
+  caseId: string,
+) {
+  assert(
+    Object.isFrozen(evaluation) &&
+      Object.isFrozen(evaluation.matchedRules) &&
+      evaluation.matchedRules.every((match) => Object.isFrozen(match)),
+    `${caseId} must return a deeply immutable rule-pack evaluation boundary.`,
+  );
+}
+
+function assertRuleIdsEqual(
+  actual: readonly NativeDocumentSecurityRuleId[],
+  expected: readonly NativeDocumentSecurityRuleId[],
+  caseId: string,
+) {
+  assert(
+    actual.length === expected.length &&
+      actual.every((ruleId, index) => ruleId === expected[index]),
+    `${caseId} must preserve exact canonical rule order.`,
+  );
+}
+
+function allThreatOoxmlEvidence(): NativeDocumentOoxmlStructuralEvidence {
+  return Object.freeze({
+    relationshipPartsInspected: 3,
+    relationshipsInspected: 7,
+    externalHyperlinksObserved: 0,
+    contentTypePolicyVerified: true,
+    relationshipPolicyVerified: true,
+    packagePartPolicyVerified: true,
+    vbaProjectDetected: true,
+    macroEnabledContentTypeDetected: true,
+    activeXDetected: true,
+    embeddedObjectDetected: true,
+    blockedExternalRelationshipDetected: true,
+    remoteTemplateDetected: true,
+    executablePackagePartDetected: true,
+  });
+}
+
+function allThreatPdfEvidence(): NativeDocumentPdfStructuralEvidence {
+  return Object.freeze({
+    pdfVersion: "1.7",
+    xrefSections: 1,
+    activeObjectCount: 10,
+    incrementalUpdates: 0,
+    safeUriActionsObserved: 0,
+    encrypted: true,
+    xrefStreamsDetected: false,
+    objectStreamsDetected: false,
+    xrefStreamCount: 0,
+    objectStreamCount: 0,
+    compressedObjectCount: 0,
+    catalogVerified: true,
+    pageTreeRootVerified: true,
+    javascriptDetected: true,
+    openActionDetected: true,
+    additionalActionDetected: true,
+    launchActionDetected: true,
+    embeddedFileDetected: true,
+    richMediaDetected: true,
+    xfaDetected: true,
+    blockedExternalActionDetected: true,
+    unsafeUriActionDetected: true,
+  });
+}
+
+function allThreatOleEvidence(): NativeDocumentOleStructuralEvidence {
+  return Object.freeze({
+    majorVersion: 3,
+    sectorSize: 512,
+    miniSectorSize: 64,
+    fatSectorCount: 1,
+    difatSectorCount: 0,
+    miniFatSectorCount: 1,
+    directoryEntryCount: 8,
+    streamCount: 4,
+    totalDeclaredStreamBytes: 16 * 1024,
+    applicationFormat: "WORD_BINARY",
+    applicationStreamVerified: true,
+    vbaProjectDetected: true,
+    embeddedObjectDetected: true,
+    encryptedPackageDetected: true,
+    executableStreamDetected: true,
+    sectorOwnershipVerified: true,
+    directoryTreeVerified: true,
+  });
+}
+
+function noThreatOoxmlEvidence(): NativeDocumentOoxmlStructuralEvidence {
+  return Object.freeze({
+    ...allThreatOoxmlEvidence(),
+    vbaProjectDetected: false,
+    macroEnabledContentTypeDetected: false,
+    activeXDetected: false,
+    embeddedObjectDetected: false,
+    blockedExternalRelationshipDetected: false,
+    remoteTemplateDetected: false,
+    executablePackagePartDetected: false,
+  });
+}
+
+function noThreatPdfEvidence(): NativeDocumentPdfStructuralEvidence {
+  return Object.freeze({
+    ...allThreatPdfEvidence(),
+    encrypted: false,
+    javascriptDetected: false,
+    openActionDetected: false,
+    additionalActionDetected: false,
+    launchActionDetected: false,
+    embeddedFileDetected: false,
+    richMediaDetected: false,
+    xfaDetected: false,
+    blockedExternalActionDetected: false,
+    unsafeUriActionDetected: false,
+  });
+}
+
+function noThreatOleEvidence(): NativeDocumentOleStructuralEvidence {
+  return Object.freeze({
+    ...allThreatOleEvidence(),
+    vbaProjectDetected: false,
+    embeddedObjectDetected: false,
+    encryptedPackageDetected: false,
+    executableStreamDetected: false,
+  });
+}
+
+function executeM6F4RuleOrderDeterminismCertification() {
+  const ooxmlEvidence = allThreatOoxmlEvidence();
+  const pdfEvidence = allThreatPdfEvidence();
+  const oleEvidence = allThreatOleEvidence();
+
+  const ooxmlBaseline = evaluateOoxmlSecurityRules(ooxmlEvidence);
+  const pdfBaseline = evaluatePdfSecurityRules(pdfEvidence);
+  const oleBaseline = evaluateOleSecurityRules(oleEvidence);
+
+  assertM6F4EvaluationFrozen(
+    ooxmlBaseline,
+    M6F4_RULE_ORDER_DETERMINISM_CERTIFICATION_CASES[0]!.caseId,
+  );
+  assertM6F4EvaluationFrozen(
+    pdfBaseline,
+    M6F4_RULE_ORDER_DETERMINISM_CERTIFICATION_CASES[2]!.caseId,
+  );
+  assertM6F4EvaluationFrozen(
+    oleBaseline,
+    M6F4_RULE_ORDER_DETERMINISM_CERTIFICATION_CASES[4]!.caseId,
+  );
+
+  assert(
+    ooxmlBaseline.outcome === "BLOCK" &&
+      ooxmlBaseline.evidenceFamily === "OOXML",
+    "HDS-M6F4-001 must produce the canonical OOXML BLOCK evaluation.",
+  );
+  assert(
+    pdfBaseline.outcome === "BLOCK" &&
+      pdfBaseline.evidenceFamily === "PDF",
+    "HDS-M6F4-003 must produce the canonical PDF BLOCK evaluation.",
+  );
+  assert(
+    oleBaseline.outcome === "BLOCK" &&
+      oleBaseline.evidenceFamily === "OLE",
+    "HDS-M6F4-005 must produce the canonical OLE BLOCK evaluation.",
+  );
+
+  assertRuleIdsEqual(
+    ooxmlBaseline.matchedRules.map((match) => match.ruleId),
+    M6F4_EXPECTED_OOXML_RULE_ORDER,
+    M6F4_RULE_ORDER_DETERMINISM_CERTIFICATION_CASES[0]!.caseId,
+  );
+  assertRuleIdsEqual(
+    pdfBaseline.matchedRules.map((match) => match.ruleId),
+    M6F4_EXPECTED_PDF_RULE_ORDER,
+    M6F4_RULE_ORDER_DETERMINISM_CERTIFICATION_CASES[2]!.caseId,
+  );
+  assertRuleIdsEqual(
+    oleBaseline.matchedRules.map((match) => match.ruleId),
+    M6F4_EXPECTED_OLE_RULE_ORDER,
+    M6F4_RULE_ORDER_DETERMINISM_CERTIFICATION_CASES[4]!.caseId,
+  );
+
+  const baselineSerializations = {
+    OOXML: JSON.stringify(ooxmlBaseline),
+    PDF: JSON.stringify(pdfBaseline),
+    OLE: JSON.stringify(oleBaseline),
+  } as const;
+
+  for (
+    let iteration = 0;
+    iteration < M6F4_REPEAT_EVALUATIONS_PER_FAMILY;
+    iteration += 1
+  ) {
+    const ooxmlRepeated = evaluateOoxmlSecurityRules(
+      reversePropertyInsertionOrder({ ...ooxmlEvidence }),
+    );
+    const pdfRepeated = evaluatePdfSecurityRules(
+      reversePropertyInsertionOrder({ ...pdfEvidence }),
+    );
+    const oleRepeated = evaluateOleSecurityRules(
+      reversePropertyInsertionOrder({ ...oleEvidence }),
+    );
+
+    assert(
+      JSON.stringify(ooxmlRepeated) === baselineSerializations.OOXML,
+      `HDS-M6F4-002 diverged on OOXML repeat ${iteration}.`,
+    );
+    assert(
+      JSON.stringify(pdfRepeated) === baselineSerializations.PDF,
+      `HDS-M6F4-004 diverged on PDF repeat ${iteration}.`,
+    );
+    assert(
+      JSON.stringify(oleRepeated) === baselineSerializations.OLE,
+      `HDS-M6F4-006 diverged on OLE repeat ${iteration}.`,
+    );
+
+    assertM6F4EvaluationFrozen(ooxmlRepeated, "HDS-M6F4-002");
+    assertM6F4EvaluationFrozen(pdfRepeated, "HDS-M6F4-004");
+    assertM6F4EvaluationFrozen(oleRepeated, "HDS-M6F4-006");
+  }
+
+  const passEvaluations = [
+    evaluateOoxmlSecurityRules(
+      reversePropertyInsertionOrder({ ...noThreatOoxmlEvidence() }),
+    ),
+    evaluatePdfSecurityRules(
+      reversePropertyInsertionOrder({ ...noThreatPdfEvidence() }),
+    ),
+    evaluateOleSecurityRules(
+      reversePropertyInsertionOrder({ ...noThreatOleEvidence() }),
+    ),
+  ] as const;
+
+  assert(
+    passEvaluations.every(
+      (evaluation) =>
+        evaluation.outcome === "PASS" &&
+        evaluation.matchedRules.length === 0 &&
+        Object.isFrozen(evaluation) &&
+        Object.isFrozen(evaluation.matchedRules),
+    ),
+    "HDS-M6F4-007 must preserve deterministic frozen PASS evaluations across all evidence families.",
+  );
+
+  const expectedGlobalOrder = Object.freeze([
+    ...M6F4_EXPECTED_OOXML_RULE_ORDER,
+    ...M6F4_EXPECTED_PDF_RULE_ORDER,
+    ...M6F4_EXPECTED_OLE_RULE_ORDER,
+  ]);
+
+  assert(
+    Object.isFrozen(HEHXAGON_DOCUMENT_SECURITY_RULE_IDS) &&
+      new Set(HEHXAGON_DOCUMENT_SECURITY_RULE_IDS).size === 21,
+    "HDS-M6F4-008 requires the exported twenty-one-rule registry to remain frozen and unique.",
+  );
+  assertRuleIdsEqual(
+    HEHXAGON_DOCUMENT_SECURITY_RULE_IDS,
+    expectedGlobalOrder,
+    M6F4_RULE_ORDER_DETERMINISM_CERTIFICATION_CASES[7]!.caseId,
+  );
+
+  return Object.freeze({
+    repeatedEvaluationCountPerFamily:
+      M6F4_REPEAT_EVALUATIONS_PER_FAMILY,
+    propertyOrderPermutationExercised: true,
+    immutableEvaluationObjects: true,
+    ruleRegistryFrozen: true,
+    ooxmlRuleOrder:
+      Object.freeze(
+        ooxmlBaseline.matchedRules.map((match) => match.ruleId),
+      ),
+    pdfRuleOrder:
+      Object.freeze(
+        pdfBaseline.matchedRules.map((match) => match.ruleId),
+      ),
+    oleRuleOrder:
+      Object.freeze(
+        oleBaseline.matchedRules.map((match) => match.ruleId),
+      ),
+    passEvidenceFamilies:
+      Object.freeze(
+        passEvaluations.map((evaluation) => evaluation.evidenceFamily),
+      ),
+  });
+}
+
 async function run() {
   validateManifest();
   validateCaseContract();
@@ -8234,6 +8693,7 @@ async function run() {
   validateM6F1IdentityIntegrityCertificationCases();
   validateM6F2ResourceExhaustionCertificationCases();
   validateM6F3TruncationCertificationCases();
+  validateM6F4RuleOrderDeterminismCertificationCases();
   validateRulePackBoundary();
 
   const sentinelResults = await executeSentinels();
@@ -8252,6 +8712,7 @@ async function run() {
   const m6f1 = await executeM6F1IdentityIntegrityCertification();
   const m6f2 = await executeM6F2ResourceExhaustionCertification();
   const m6f3 = await executeM6F3TruncationCertification();
+  const m6f4 = executeM6F4RuleOrderDeterminismCertification();
 
   const sentinelSummary =
     HARNESS_SENTINEL_CASES.map((testCase, index) =>
@@ -8757,6 +9218,16 @@ async function run() {
     (entry) => entry.certificationStatus === "CERTIFIED_M6F3",
   ).map((entry) => entry.threatFamily);
 
+  const m6f4CertifiedThreatFamilies = THREAT_FAMILY_MANIFEST.filter(
+    (entry) => entry.certificationStatus === "CERTIFIED_M6F4",
+  ).map((entry) => entry.threatFamily);
+
+  const m6fCertifiedThreatFamilies = THREAT_FAMILY_MANIFEST.filter(
+    (entry) =>
+      entry.plannedPhase === "M6F" &&
+      entry.certificationStatus !== "NOT_CERTIFIED",
+  ).map((entry) => entry.threatFamily);
+
   const m6dCertifiedThreatFamilies =
     m6dThreatFamilies.map((entry) => entry.threatFamily);
 
@@ -8854,13 +9325,24 @@ async function run() {
   );
 
   assert(
-    remainingNonPdfThreatFamilies.length === 2 &&
-      remainingNonPdfThreatFamilies.every(
-        (family) =>
-          family === "RULE_ORDER_DETERMINISM" ||
-          family === "FALSE_POSITIVE_CONTROL",
-      ),
-    "M6F3 must close truncation while leaving rule-order determinism and M6G false-positive control open.",
+    m6f4CertifiedThreatFamilies.length === 1 &&
+      m6f4CertifiedThreatFamilies[0] === "RULE_ORDER_DETERMINISM",
+    "M6F4 must certify exactly rule-order determinism.",
+  );
+
+  assert(
+    m6fCertifiedThreatFamilies.length === 4 &&
+      m6fCertifiedThreatFamilies.includes("HASH_SIZE_IDENTITY_RACE") &&
+      m6fCertifiedThreatFamilies.includes("RESOURCE_EXHAUSTION") &&
+      m6fCertifiedThreatFamilies.includes("TRUNCATION") &&
+      m6fCertifiedThreatFamilies.includes("RULE_ORDER_DETERMINISM"),
+    "M6F closeout requires all four integrity/resource/determinism threat families to be certified.",
+  );
+
+  assert(
+    remainingNonPdfThreatFamilies.length === 1 &&
+      remainingNonPdfThreatFamilies[0] === "FALSE_POSITIVE_CONTROL",
+    "M6F4 must close M6F while leaving only M6G false-positive control open.",
   );
 
   assert(
@@ -8961,13 +9443,13 @@ async function run() {
       {
         ok: true,
         event:
-          "HDS_M6F3_TRUNCATION_CERTIFICATION_PASSED",
+          "HDS_M6F4_RULE_ORDER_DETERMINISM_CERTIFICATION_PASSED",
         corpusSchemaVersion:
           HDS_M6_ADVERSARIAL_CORPUS_SCHEMA_VERSION,
         harnessVersion:
-          HDS_M6F3_HARNESS_VERSION,
+          HDS_M6F4_HARNESS_VERSION,
         priorHarnessVersion:
-          HDS_M6F2_HARNESS_VERSION,
+          HDS_M6F3_HARNESS_VERSION,
         priorOoxmlHarnessVersion:
           HDS_M6C_HARNESS_VERSION,
         scannerEngine:
@@ -9283,9 +9765,39 @@ async function run() {
           ).length,
         m6f3TruncatedBytesRehashedAsAuthoritativeInput: true,
         m6f3Results: m6f3Summary,
+        m6f4RuleOrderDeterminismCertificationComplete: true,
+        m6f4CertifiedThreatFamilies,
+        m6f4CaseCount:
+          M6F4_RULE_ORDER_DETERMINISM_CERTIFICATION_CASES.length,
+        m6f4CertificationCredit:
+          M6F4_RULE_ORDER_DETERMINISM_CERTIFICATION_CASES.filter(
+            (testCase) => testCase.certificationCredit,
+          ).length,
+        m6f4BenignControlCount:
+          M6F4_RULE_ORDER_DETERMINISM_CERTIFICATION_CASES.filter(
+            (testCase) => testCase.benignControl,
+          ).length,
+        m6f4RepeatedEvaluationCountPerFamily:
+          m6f4.repeatedEvaluationCountPerFamily,
+        m6f4PropertyOrderPermutationExercised:
+          m6f4.propertyOrderPermutationExercised,
+        m6f4ImmutableEvaluationObjects:
+          m6f4.immutableEvaluationObjects,
+        m6f4RuleRegistryFrozen:
+          m6f4.ruleRegistryFrozen,
+        m6f4OoxmlRuleOrder:
+          m6f4.ooxmlRuleOrder,
+        m6f4PdfRuleOrder:
+          m6f4.pdfRuleOrder,
+        m6f4OleRuleOrder:
+          m6f4.oleRuleOrder,
+        m6f4PassEvidenceFamilies:
+          m6f4.passEvidenceFamilies,
+        m6fCertificationComplete: true,
+        m6fCertifiedThreatFamilies,
         resourceExhaustionCertificationComplete: true,
         truncationCertificationComplete: true,
-        ruleOrderDeterminismCertificationComplete: false,
+        ruleOrderDeterminismCertificationComplete: true,
         remainingNonPdfThreatFamilies,
         adversarialCertificationComplete: false,
         fullM6CertificationComplete: false,
@@ -9304,11 +9816,11 @@ run().catch((error) => {
       {
         ok: false,
         event:
-          "HDS_M6F3_TRUNCATION_CERTIFICATION_FAILED",
+          "HDS_M6F4_RULE_ORDER_DETERMINISM_CERTIFICATION_FAILED",
         errorCode:
           error instanceof Error
             ? error.message
-            : "M6F3_UNKNOWN_FAILURE",
+            : "M6F4_UNKNOWN_FAILURE",
       },
       null,
       2,
