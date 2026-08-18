@@ -753,6 +753,469 @@ function applicationFormat(args: {
       : "POWERPOINT_BINARY";
 }
 
+const PPT_RT_DOCUMENT = 0x03e8;
+const PPT_RT_USER_EDIT_ATOM = 0x0ff5;
+const PPT_RT_CURRENT_USER_ATOM = 0x0ff6;
+const PPT_RT_PERSIST_DIRECTORY_ATOM = 0x1772;
+const PPT_RT_CRYPT_SESSION_10_CONTAINER = 0x2f14;
+const PPT_CURRENT_USER_UNENCRYPTED_TOKEN = 0xe391c05f;
+const PPT_CURRENT_USER_ENCRYPTED_TOKEN = 0xf3d1c4df;
+
+type PowerPointRecordHeader = {
+  recVer: number;
+  recInstance: number;
+  recType: number;
+  recLen: number;
+  endOffset: number;
+};
+
+type PowerPointUserEdit = {
+  offset: number;
+  offsetLastEdit: number;
+  offsetPersistDirectory: number;
+  docPersistIdRef: number;
+  persistIdSeed: number;
+  encryptSessionPersistIdRef: number | null;
+};
+
+type PowerPointPersistDirectory = {
+  entries: Array<{ persistId: number; offset: number }>;
+};
+
+type PowerPointAuthoritySuccess = {
+  ok: true;
+  encrypted: boolean;
+};
+
+function readPowerPointRecordHeader(
+  bytes: Buffer,
+  offset: number,
+): PowerPointRecordHeader | OleFailure {
+  if (
+    !Number.isSafeInteger(offset) ||
+    offset < 0 ||
+    offset + 8 > bytes.length
+  ) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "A PowerPoint record header falls outside the bounded PowerPoint Document stream.",
+    );
+  }
+
+  const versionAndInstance = bytes.readUInt16LE(offset);
+  const recLen = bytes.readUInt32LE(offset + 4);
+  const endOffset = offset + 8 + recLen;
+
+  if (
+    !Number.isSafeInteger(endOffset) ||
+    endOffset < offset + 8 ||
+    endOffset > bytes.length
+  ) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "A PowerPoint record length extends beyond the bounded PowerPoint Document stream.",
+    );
+  }
+
+  return {
+    recVer: versionAndInstance & 0x000f,
+    recInstance: versionAndInstance >>> 4,
+    recType: bytes.readUInt16LE(offset + 2),
+    recLen,
+    endOffset,
+  };
+}
+
+function parsePowerPointCurrentUser(
+  bytes: Buffer,
+): { offsetToCurrentEdit: number; encryptedToken: boolean } | OleFailure {
+  const header = readPowerPointRecordHeader(bytes, 0);
+  if ("ok" in header) return header;
+
+  if (
+    header.recVer !== 0 ||
+    header.recInstance !== 0 ||
+    header.recType !== PPT_RT_CURRENT_USER_ATOM
+  ) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "The Current User stream does not begin with the required CurrentUserAtom record.",
+    );
+  }
+
+  if (header.endOffset !== bytes.length || header.recLen < 24) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "The Current User stream contains an invalid CurrentUserAtom length.",
+    );
+  }
+
+  const size = bytes.readUInt32LE(8);
+  const headerToken = bytes.readUInt32LE(12);
+  const offsetToCurrentEdit = bytes.readUInt32LE(16);
+  const lenUserName = bytes.readUInt16LE(20);
+  const docFileVersion = bytes.readUInt16LE(22);
+  const majorVersion = bytes[24];
+  const minorVersion = bytes[25];
+
+  if (
+    size !== 0x14 ||
+    lenUserName > 255 ||
+    docFileVersion !== 0x03f4 ||
+    majorVersion !== 0x03 ||
+    minorVersion !== 0x00
+  ) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "The CurrentUserAtom fixed fields violate the PowerPoint binary format contract.",
+    );
+  }
+
+  if (
+    headerToken !== PPT_CURRENT_USER_UNENCRYPTED_TOKEN &&
+    headerToken !== PPT_CURRENT_USER_ENCRYPTED_TOKEN
+  ) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "The CurrentUserAtom encryption token is not recognized.",
+    );
+  }
+
+  const relVersionOffset = 28 + lenUserName;
+  if (relVersionOffset + 4 > header.endOffset) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "The CurrentUserAtom user-name fields are truncated.",
+    );
+  }
+
+  const relVersion = bytes.readUInt32LE(relVersionOffset);
+  if (relVersion !== 0x08 && relVersion !== 0x09) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "The CurrentUserAtom release version is unsupported.",
+    );
+  }
+
+  const withoutUnicode = relVersionOffset + 4;
+  const withUnicode = withoutUnicode + lenUserName * 2;
+  if (
+    header.endOffset !== withoutUnicode &&
+    header.endOffset !== withUnicode
+  ) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "The CurrentUserAtom optional Unicode user-name field has an invalid length.",
+    );
+  }
+
+  return {
+    offsetToCurrentEdit,
+    encryptedToken: headerToken === PPT_CURRENT_USER_ENCRYPTED_TOKEN,
+  };
+}
+
+function parsePowerPointUserEdit(
+  bytes: Buffer,
+  offset: number,
+): PowerPointUserEdit | OleFailure {
+  const header = readPowerPointRecordHeader(bytes, offset);
+  if ("ok" in header) return header;
+
+  if (
+    header.recVer !== 0 ||
+    header.recInstance !== 0 ||
+    header.recType !== PPT_RT_USER_EDIT_ATOM ||
+    (header.recLen !== 0x1c && header.recLen !== 0x20)
+  ) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "A PowerPoint user-edit record violates the UserEditAtom header contract.",
+    );
+  }
+
+  const minorVersion = bytes[offset + 14];
+  const majorVersion = bytes[offset + 15];
+  const offsetLastEdit = bytes.readUInt32LE(offset + 16);
+  const offsetPersistDirectory = bytes.readUInt32LE(offset + 20);
+  const docPersistIdRef = bytes.readUInt32LE(offset + 24);
+  const persistIdSeed = bytes.readUInt32LE(offset + 28);
+  const encryptSessionPersistIdRef =
+    header.recLen === 0x20
+      ? bytes.readUInt32LE(offset + 36)
+      : null;
+
+  if (minorVersion !== 0 || majorVersion !== 3 || docPersistIdRef !== 1) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "A PowerPoint UserEditAtom fixed field violates the live-persist authority contract.",
+    );
+  }
+
+  if (
+    (offsetLastEdit !== 0 && offsetLastEdit >= offset) ||
+    offsetPersistDirectory <= offsetLastEdit ||
+    offsetPersistDirectory >= offset
+  ) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "A PowerPoint UserEditAtom contains impossible revision or persist-directory offsets.",
+    );
+  }
+
+  return {
+    offset,
+    offsetLastEdit,
+    offsetPersistDirectory,
+    docPersistIdRef,
+    persistIdSeed,
+    encryptSessionPersistIdRef,
+  };
+}
+
+function parsePowerPointPersistDirectory(args: {
+  bytes: Buffer;
+  offset: number;
+  offsetLastEdit: number;
+}): PowerPointPersistDirectory | OleFailure {
+  const header = readPowerPointRecordHeader(args.bytes, args.offset);
+  if ("ok" in header) return header;
+
+  if (
+    header.recVer !== 0 ||
+    header.recInstance !== 0 ||
+    header.recType !== PPT_RT_PERSIST_DIRECTORY_ATOM ||
+    (header.recLen !== 0 && header.recLen < 8) ||
+    header.recLen % 4 !== 0
+  ) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "A PowerPoint PersistDirectoryAtom header is invalid.",
+    );
+  }
+
+  const entries: Array<{ persistId: number; offset: number }> = [];
+  const localPersistIds = new Set<number>();
+  let cursor = args.offset + 8;
+
+  while (cursor < header.endOffset) {
+    if (cursor + 4 > header.endOffset) {
+      return failure(
+        "OLE_STREAM_CHAIN_INVALID",
+        "A PowerPoint persist-directory entry header is truncated.",
+      );
+    }
+
+    const packed = args.bytes.readUInt32LE(cursor);
+    cursor += 4;
+
+    const persistId = packed & 0x000fffff;
+    const cPersist = packed >>> 20;
+
+    if (
+      persistId > 0x000ffffe ||
+      cPersist < 1 ||
+      persistId + cPersist - 1 > 0x000ffffe ||
+      cursor + cPersist * 4 > header.endOffset
+    ) {
+      return failure(
+        "OLE_STREAM_CHAIN_INVALID",
+        "A PowerPoint persist-directory entry violates identifier or length bounds.",
+      );
+    }
+
+    for (let index = 0; index < cPersist; index += 1) {
+      const currentPersistId = persistId + index;
+      if (localPersistIds.has(currentPersistId)) {
+        return failure(
+          "OLE_STREAM_CHAIN_INVALID",
+          "A PowerPoint PersistDirectoryAtom contains a duplicate persist identifier.",
+        );
+      }
+      localPersistIds.add(currentPersistId);
+
+      const persistOffset = args.bytes.readUInt32LE(cursor);
+      cursor += 4;
+
+      if (
+        persistOffset < args.offsetLastEdit ||
+        persistOffset >= args.offset
+      ) {
+        return failure(
+          "OLE_STREAM_CHAIN_INVALID",
+          "A PowerPoint persist object offset falls outside its corresponding edit interval.",
+        );
+      }
+
+      entries.push({
+        persistId: currentPersistId,
+        offset: persistOffset,
+      });
+    }
+  }
+
+  if (cursor !== header.endOffset) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "The PowerPoint persist-directory payload cannot be consumed exactly.",
+    );
+  }
+
+  return { entries };
+}
+
+function inspectPowerPointPersistAuthority(args: {
+  powerPointDocument: Buffer;
+  currentUser: Buffer;
+}): PowerPointAuthoritySuccess | OleFailure {
+  const currentUser = parsePowerPointCurrentUser(args.currentUser);
+  if ("ok" in currentUser) return currentUser;
+
+  if (
+    currentUser.offsetToCurrentEdit === 0 ||
+    currentUser.offsetToCurrentEdit >= args.powerPointDocument.length
+  ) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "The CurrentUserAtom does not point to a valid current PowerPoint user edit.",
+    );
+  }
+
+  const editsNewestFirst: Array<{
+    edit: PowerPointUserEdit;
+    directory: PowerPointPersistDirectory;
+  }> = [];
+  const seenEditOffsets = new Set<number>();
+  let editOffset = currentUser.offsetToCurrentEdit;
+
+  while (editOffset !== 0) {
+    if (seenEditOffsets.has(editOffset)) {
+      return failure(
+        "OLE_STREAM_CHAIN_INVALID",
+        "The PowerPoint user-edit chain contains a cycle.",
+      );
+    }
+    seenEditOffsets.add(editOffset);
+
+    const edit = parsePowerPointUserEdit(
+      args.powerPointDocument,
+      editOffset,
+    );
+    if ("ok" in edit) return edit;
+
+    const directory = parsePowerPointPersistDirectory({
+      bytes: args.powerPointDocument,
+      offset: edit.offsetPersistDirectory,
+      offsetLastEdit: edit.offsetLastEdit,
+    });
+    if ("ok" in directory) return directory;
+
+    editsNewestFirst.push({ edit, directory });
+    editOffset = edit.offsetLastEdit;
+  }
+
+  const persistDirectory = new Map<number, number>();
+  for (let index = editsNewestFirst.length - 1; index >= 0; index -= 1) {
+    for (const entry of editsNewestFirst[index]!.directory.entries) {
+      persistDirectory.set(entry.persistId, entry.offset);
+    }
+  }
+
+  const latestEdit = editsNewestFirst[0]?.edit;
+  if (!latestEdit) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "The PowerPoint file does not expose a current user edit.",
+    );
+  }
+
+  let highestPersistId = 0;
+  for (const persistId of persistDirectory.keys()) {
+    highestPersistId = Math.max(highestPersistId, persistId);
+  }
+  if (latestEdit.persistIdSeed < highestPersistId) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "The latest PowerPoint persist identifier seed is lower than the authoritative persist directory.",
+    );
+  }
+
+  const documentOffset = persistDirectory.get(latestEdit.docPersistIdRef);
+  if (documentOffset === undefined) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "The authoritative PowerPoint persist directory does not contain the document persist object.",
+    );
+  }
+
+  const encrypted =
+    currentUser.encryptedToken ||
+    latestEdit.encryptSessionPersistIdRef !== null;
+
+  if (encrypted && editsNewestFirst.length !== 1) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "An encrypted PowerPoint Document stream must contain exactly one authoritative UserEditAtom.",
+    );
+  }
+
+  if (encrypted) {
+    const encryptionPersistId = latestEdit.encryptSessionPersistIdRef;
+    if (encryptionPersistId === null) {
+      return failure(
+        "OLE_STREAM_CHAIN_INVALID",
+        "An encrypted PowerPoint file is missing the encryption-session persist reference.",
+      );
+    }
+
+    const encryptionOffset = persistDirectory.get(encryptionPersistId);
+    if (encryptionOffset === undefined) {
+      return failure(
+        "OLE_STREAM_CHAIN_INVALID",
+        "The PowerPoint encryption-session persist reference is absent from the authoritative persist directory.",
+      );
+    }
+
+    const encryptionHeader = readPowerPointRecordHeader(
+      args.powerPointDocument,
+      encryptionOffset,
+    );
+    if ("ok" in encryptionHeader) return encryptionHeader;
+
+    if (
+      encryptionHeader.recVer !== 0x0f ||
+      encryptionHeader.recInstance !== 0 ||
+      encryptionHeader.recType !== PPT_RT_CRYPT_SESSION_10_CONTAINER
+    ) {
+      return failure(
+        "OLE_STREAM_CHAIN_INVALID",
+        "The PowerPoint encryption-session persist object has an invalid record header.",
+      );
+    }
+
+    return { ok: true, encrypted: true };
+  }
+
+  const documentHeader = readPowerPointRecordHeader(
+    args.powerPointDocument,
+    documentOffset,
+  );
+  if ("ok" in documentHeader) return documentHeader;
+
+  if (
+    documentHeader.recVer !== 0x0f ||
+    documentHeader.recInstance !== 0 ||
+    documentHeader.recType !== PPT_RT_DOCUMENT
+  ) {
+    return failure(
+      "OLE_STREAM_CHAIN_INVALID",
+      "The authoritative PowerPoint document persist object is not a DocumentContainer record.",
+    );
+  }
+
+  return { ok: true, encrypted: false };
+}
+
 function suspiciousExecutableName(name: string) {
   const lower = normalizedName(name);
   return [
@@ -855,6 +1318,8 @@ export function inspectOleStructuralSecurity(args: {
   let embeddedObjectDetected = false;
   let encryptedPackageDetected = false;
   let executableStreamDetected = false;
+  let powerPointDocumentData: Buffer | null = null;
+  let currentUserData: Buffer | null = null;
 
   for (const entry of entries) {
     if (entry.objectType === 1) {
@@ -882,6 +1347,13 @@ export function inspectOleStructuralSecurity(args: {
     const lower = normalizedName(entry.name);
     const path = normalizedName(entry.path ?? entry.name);
 
+    if (entry.parentId === 0 && lower === "powerpoint document") {
+      powerPointDocumentData = data;
+    }
+    if (entry.parentId === 0 && lower === "current user") {
+      currentUserData = data;
+    }
+
     if (
       lower === "_vba_project" ||
       path.includes("/vba/") ||
@@ -906,6 +1378,24 @@ export function inspectOleStructuralSecurity(args: {
 
     if (suspiciousExecutableName(entry.name) || executableSignature(data)) {
       executableStreamDetected = true;
+    }
+  }
+
+  if (format === "POWERPOINT_BINARY") {
+    if (powerPointDocumentData === null || currentUserData === null) {
+      return failure(
+        "OLE_APPLICATION_STREAM_MISSING",
+        "A binary PowerPoint file must contain both the PowerPoint Document and Current User root streams required to establish live persist authority.",
+      );
+    }
+
+    const powerPointAuthority = inspectPowerPointPersistAuthority({
+      powerPointDocument: powerPointDocumentData,
+      currentUser: currentUserData,
+    });
+    if (!powerPointAuthority.ok) return powerPointAuthority;
+    if (powerPointAuthority.encrypted) {
+      encryptedPackageDetected = true;
     }
   }
 

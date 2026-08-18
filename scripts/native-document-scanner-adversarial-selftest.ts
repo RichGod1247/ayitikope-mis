@@ -63,6 +63,9 @@ export const HDS_M6D6_HARNESS_VERSION =
 export const HDS_M6E1_HARNESS_VERSION =
   "HDS-M6E1-HARNESS-V1" as const;
 
+export const HDS_M6E2A_HARNESS_VERSION =
+  "HDS-M6E2A-HARNESS-V1" as const;
+
 const ONE_MEBIBYTE = 1024 * 1024;
 
 const ARCHIVE_LIMITS: NativeDocumentArchiveLimits = Object.freeze({
@@ -161,6 +164,15 @@ type CorpusCaseContract = Readonly<{
   certificationPhase: "M6A" | CertificationPhase;
   certificationCredit: boolean;
   authorityImplication: "NO_CLEAN_AUTHORITY";
+}>;
+
+type M6E2APowerPointAuthorityCase = Readonly<{
+  caseId: string;
+  attackTechnique: string;
+  expectedVerdict: NativeDocumentScannerVerdict;
+  expectedReasonCode: NativeDocumentScannerReasonCode;
+  benignControl: boolean;
+  authorityCredit: boolean;
 }>;
 
 const THREAT_FAMILY_MANIFEST: readonly ThreatFamilyManifestEntry[] =
@@ -1941,6 +1953,147 @@ const M6E1_DIRECTORY_REPAIR_CASES: readonly CorpusCaseContract[] =
     }),
   ]);
 
+const M6E2A_POWERPOINT_AUTHORITY_CASES: readonly M6E2APowerPointAuthorityCase[] =
+  Object.freeze([
+    Object.freeze({
+      caseId: "HDS-M6E2A-AUTH-001-BENIGN-SINGLE-EDIT",
+      attackTechnique:
+        "A deterministic binary PowerPoint file exposes one CurrentUserAtom, one UserEditAtom, one PersistDirectoryAtom and an authoritative DocumentContainer mapping that must remain accepted without granting active-content certification.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      benignControl: true,
+      authorityCredit: true,
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2A-AUTH-002-NEWEST-PERSIST-MAPPING-WINS",
+      attackTechnique:
+        "An older edit maps document persist id 1 to a deliberately invalid stale record while the newest edit remaps id 1 to a valid DocumentContainer, proving live authority follows newest persist-directory precedence rather than physical byte presence.",
+      expectedVerdict: "IDENTITY_VERIFIED",
+      expectedReasonCode:
+        "SECURITY_RULE_PACK_PASSED_ADDITIONAL_INSPECTION_REQUIRED",
+      benignControl: true,
+      authorityCredit: true,
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2A-AUTH-003-NEWEST-INVALID-OVERRIDES-OLD",
+      attackTechnique:
+        "A valid historical DocumentContainer remains in the stream but the newest persist directory remaps document persist id 1 to an invalid record, which must fail instead of falling back to the stale valid object.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_STREAM_CHAIN_INVALID",
+      benignControl: false,
+      authorityCredit: true,
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2A-AUTH-004-CURRENT-USER-WRONG-RECORD-TYPE",
+      attackTechnique:
+        "The Current User stream begins with a record type other than RT_CurrentUserAtom and must fail before its offset can become revision authority for the PowerPoint Document stream.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_STREAM_CHAIN_INVALID",
+      benignControl: false,
+      authorityCredit: true,
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2A-AUTH-005-CURRENT-EDIT-OFFSET-OUTSIDE-STREAM",
+      attackTechnique:
+        "CurrentUserAtom points offsetToCurrentEdit at the end of the bounded PowerPoint Document stream, so no complete UserEditAtom can exist there and authority establishment must fail closed.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_STREAM_CHAIN_INVALID",
+      benignControl: false,
+      authorityCredit: true,
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2A-AUTH-006-USER-EDIT-CHAIN-NONDECREASING",
+      attackTechnique:
+        "The newest UserEditAtom points offsetLastEdit back to itself instead of an earlier edit, violating monotonic revision ancestry and forcing fail-closed cycle or ordering rejection.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_STREAM_CHAIN_INVALID",
+      benignControl: false,
+      authorityCredit: true,
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2A-AUTH-007-PERSIST-DIRECTORY-WRONG-RECORD-TYPE",
+      attackTechnique:
+        "UserEditAtom points to a record whose type is not RT_PersistDirectoryAtom, so the claimed persist-object authority cannot be trusted and the file must fail closed.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_STREAM_CHAIN_INVALID",
+      benignControl: false,
+      authorityCredit: true,
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2A-AUTH-008-PERSIST-OFFSET-OUTSIDE-EDIT-INTERVAL",
+      attackTechnique:
+        "A PersistDirectoryEntry points a persist object at or beyond its own persist-directory record instead of inside the corresponding edit interval, which must be rejected as impossible authority metadata.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_STREAM_CHAIN_INVALID",
+      benignControl: false,
+      authorityCredit: true,
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2A-AUTH-009-DOCUMENT-PERSIST-ID-NOT-ONE",
+      attackTechnique:
+        "The current UserEditAtom declares docPersistIdRef other than the mandated persist id 1 and must fail rather than selecting an attacker-controlled alternative document root.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_STREAM_CHAIN_INVALID",
+      benignControl: false,
+      authorityCredit: true,
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2A-AUTH-010-PERSIST-ID-SEED-BELOW-AUTHORITY",
+      attackTechnique:
+        "The latest edit advertises a persistIdSeed smaller than an identifier present in the assembled authoritative persist directory, contradicting persist-id allocation authority and requiring rejection.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_STREAM_CHAIN_INVALID",
+      benignControl: false,
+      authorityCredit: true,
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2A-AUTH-011-ENCRYPTED-TOKEN-WITHOUT-SESSION-REFERENCE",
+      attackTechnique:
+        "CurrentUserAtom marks the presentation encrypted but the latest UserEditAtom omits the required encryption-session persist reference, so HDS must fail closed rather than inspect encrypted presentation content as plaintext.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_STREAM_CHAIN_INVALID",
+      benignControl: false,
+      authorityCredit: true,
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2A-AUTH-012-MISSING-CURRENT-USER-REJECTED",
+      attackTechnique:
+        "A binary PowerPoint compound file contains the application stream but omits the required Current User stream, so HDS must reject the file instead of accepting content whose live persist authority cannot be established.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_APPLICATION_STREAM_MISSING",
+      benignControl: false,
+      authorityCredit: true,
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2A-AUTH-013-DUPLICATE-PERSIST-ID-IN-ATOM",
+      attackTechnique:
+        "One PersistDirectoryAtom repeats persist identifier 1 in separate entries with different offsets, violating the per-directory uniqueness rule and forcing rejection before either mapping can become live authority.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_STREAM_CHAIN_INVALID",
+      benignControl: false,
+      authorityCredit: true,
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2A-AUTH-014-VALID-ENCRYPTED-SINGLE-EDIT-BLOCKED",
+      attackTechnique:
+        "A structurally valid encrypted binary PowerPoint file exposes exactly one UserEditAtom and a live CryptSession10Container persist object; authority establishment must succeed only far enough for the existing encrypted-document policy to block it.",
+      expectedVerdict: "BLOCKED",
+      expectedReasonCode: "OLE_ENCRYPTED_PACKAGE_BLOCKED",
+      benignControl: false,
+      authorityCredit: true,
+    }),
+    Object.freeze({
+      caseId: "HDS-M6E2A-AUTH-015-ENCRYPTED-MULTIPLE-USER-EDITS",
+      attackTechnique:
+        "An encrypted binary PowerPoint stream contains more than the single UserEditAtom permitted for encrypted presentations, so HDS must fail closed before encrypted persist objects can be trusted.",
+      expectedVerdict: "FAILED",
+      expectedReasonCode: "OLE_STREAM_CHAIN_INVALID",
+      benignControl: false,
+      authorityCredit: true,
+    }),
+  ]);
+
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
     throw new Error(`M6C_ASSERTION_FAILED: ${message}`);
@@ -2230,6 +2383,238 @@ function legacyOfficeFixture(
   ], majorVersion);
 }
 
+
+function powerPointRecordHeader(
+  recVer: number,
+  recType: number,
+  recLen: number,
+  recInstance = 0,
+) {
+  const bytes = Buffer.alloc(8);
+  bytes.writeUInt16LE(((recInstance << 4) | recVer) >>> 0, 0);
+  bytes.writeUInt16LE(recType, 2);
+  bytes.writeUInt32LE(recLen >>> 0, 4);
+  return bytes;
+}
+
+function powerPointCurrentUserAtom(args: {
+  currentEditOffset: number;
+  headerToken?: number;
+  recType?: number;
+}) {
+  const bytes = Buffer.alloc(32);
+  powerPointRecordHeader(
+    0,
+    args.recType ?? 0x0ff6,
+    24,
+  ).copy(bytes, 0);
+  bytes.writeUInt32LE(0x14, 8);
+  bytes.writeUInt32LE(
+    args.headerToken ?? 0xe391c05f,
+    12,
+  );
+  bytes.writeUInt32LE(args.currentEditOffset >>> 0, 16);
+  bytes.writeUInt16LE(0, 20);
+  bytes.writeUInt16LE(0x03f4, 22);
+  bytes[24] = 3;
+  bytes[25] = 0;
+  bytes.writeUInt32LE(8, 28);
+  return bytes;
+}
+
+function powerPointUserEditAtom(args: {
+  offsetLastEdit: number;
+  offsetPersistDirectory: number;
+  docPersistIdRef?: number;
+  persistIdSeed?: number;
+  encryptSessionPersistIdRef?: number | null;
+}) {
+  const encryptedRef = args.encryptSessionPersistIdRef ?? null;
+  const recLen = encryptedRef === null ? 0x1c : 0x20;
+  const bytes = Buffer.alloc(8 + recLen);
+  powerPointRecordHeader(0, 0x0ff5, recLen).copy(bytes, 0);
+  bytes[14] = 0;
+  bytes[15] = 3;
+  bytes.writeUInt32LE(args.offsetLastEdit >>> 0, 16);
+  bytes.writeUInt32LE(args.offsetPersistDirectory >>> 0, 20);
+  bytes.writeUInt32LE((args.docPersistIdRef ?? 1) >>> 0, 24);
+  bytes.writeUInt32LE((args.persistIdSeed ?? 1) >>> 0, 28);
+  if (encryptedRef !== null) {
+    bytes.writeUInt32LE(encryptedRef >>> 0, 36);
+  }
+  return bytes;
+}
+
+function powerPointPersistDirectoryAtom(
+  entries: readonly Readonly<{
+    persistId: number;
+    offsets: readonly number[];
+  }>[],
+  recType = 0x1772,
+) {
+  const payloadParts: Buffer[] = [];
+  for (const entry of entries) {
+    const header = Buffer.alloc(4);
+    header.writeUInt32LE(
+      ((entry.offsets.length << 20) | entry.persistId) >>> 0,
+      0,
+    );
+    const offsets = Buffer.alloc(entry.offsets.length * 4);
+    entry.offsets.forEach((offset, index) => {
+      offsets.writeUInt32LE(offset >>> 0, index * 4);
+    });
+    payloadParts.push(header, offsets);
+  }
+  const payload = Buffer.concat(payloadParts);
+  return Buffer.concat([
+    powerPointRecordHeader(0, recType, payload.length),
+    payload,
+  ]);
+}
+
+function powerPointDocumentContainer(recType = 0x03e8) {
+  return powerPointRecordHeader(0x0f, recType, 0);
+}
+
+function powerPointPersistFixture(args?: {
+  mutate?: (powerPointDocument: Buffer, currentUser: Buffer) => void;
+}) {
+  const powerPointDocument = Buffer.alloc(4096);
+  powerPointDocumentContainer().copy(powerPointDocument, 64);
+  powerPointPersistDirectoryAtom([
+    { persistId: 1, offsets: [64] },
+  ]).copy(powerPointDocument, 256);
+  powerPointUserEditAtom({
+    offsetLastEdit: 0,
+    offsetPersistDirectory: 256,
+    docPersistIdRef: 1,
+    persistIdSeed: 1,
+  }).copy(powerPointDocument, 320);
+
+  const currentUser = powerPointCurrentUserAtom({
+    currentEditOffset: 320,
+  });
+  args?.mutate?.(powerPointDocument, currentUser);
+
+  return buildCfb([
+    { path: "PowerPoint Document", data: powerPointDocument },
+    { path: "Current User", data: currentUser },
+    { path: "\u0005SummaryInformation", data: Buffer.alloc(100, 0x53) },
+  ]);
+}
+
+function powerPointTwoEditPersistFixture(args: {
+  oldDocumentRecordType: number;
+  newestDocumentRecordType: number;
+}) {
+  const powerPointDocument = Buffer.alloc(4096);
+
+  powerPointDocumentContainer(args.oldDocumentRecordType).copy(
+    powerPointDocument,
+    64,
+  );
+  powerPointPersistDirectoryAtom([
+    { persistId: 1, offsets: [64] },
+  ]).copy(powerPointDocument, 128);
+  powerPointUserEditAtom({
+    offsetLastEdit: 0,
+    offsetPersistDirectory: 128,
+    persistIdSeed: 1,
+  }).copy(powerPointDocument, 192);
+
+  powerPointDocumentContainer(args.newestDocumentRecordType).copy(
+    powerPointDocument,
+    512,
+  );
+  powerPointPersistDirectoryAtom([
+    { persistId: 1, offsets: [512] },
+  ]).copy(powerPointDocument, 640);
+  powerPointUserEditAtom({
+    offsetLastEdit: 192,
+    offsetPersistDirectory: 640,
+    persistIdSeed: 1,
+  }).copy(powerPointDocument, 704);
+
+  return buildCfb([
+    { path: "PowerPoint Document", data: powerPointDocument },
+    {
+      path: "Current User",
+      data: powerPointCurrentUserAtom({ currentEditOffset: 704 }),
+    },
+  ]);
+}
+
+function powerPointEncryptedSingleEditPersistFixture() {
+  const powerPointDocument = Buffer.alloc(4096);
+  Buffer.alloc(8, 0xa5).copy(powerPointDocument, 64);
+  powerPointRecordHeader(0x0f, 0x2f14, 0).copy(
+    powerPointDocument,
+    96,
+  );
+  powerPointPersistDirectoryAtom([
+    { persistId: 1, offsets: [64, 96] },
+  ]).copy(powerPointDocument, 256);
+  powerPointUserEditAtom({
+    offsetLastEdit: 0,
+    offsetPersistDirectory: 256,
+    docPersistIdRef: 1,
+    persistIdSeed: 2,
+    encryptSessionPersistIdRef: 2,
+  }).copy(powerPointDocument, 320);
+
+  return buildCfb([
+    { path: "PowerPoint Document", data: powerPointDocument },
+    {
+      path: "Current User",
+      data: powerPointCurrentUserAtom({
+        currentEditOffset: 320,
+        headerToken: 0xf3d1c4df,
+      }),
+    },
+  ]);
+}
+
+function powerPointEncryptedMultipleEditPersistFixture() {
+  const powerPointDocument = Buffer.alloc(4096);
+
+  Buffer.alloc(8, 0x4f).copy(powerPointDocument, 64);
+  powerPointPersistDirectoryAtom([
+    { persistId: 1, offsets: [64] },
+  ]).copy(powerPointDocument, 128);
+  powerPointUserEditAtom({
+    offsetLastEdit: 0,
+    offsetPersistDirectory: 128,
+    persistIdSeed: 1,
+  }).copy(powerPointDocument, 192);
+
+  Buffer.alloc(8, 0x4e).copy(powerPointDocument, 512);
+  powerPointRecordHeader(0x0f, 0x2f14, 0).copy(
+    powerPointDocument,
+    544,
+  );
+  powerPointPersistDirectoryAtom([
+    { persistId: 1, offsets: [512] },
+    { persistId: 3, offsets: [544] },
+  ]).copy(powerPointDocument, 640);
+  powerPointUserEditAtom({
+    offsetLastEdit: 192,
+    offsetPersistDirectory: 640,
+    docPersistIdRef: 1,
+    persistIdSeed: 3,
+    encryptSessionPersistIdRef: 3,
+  }).copy(powerPointDocument, 704);
+
+  return buildCfb([
+    { path: "PowerPoint Document", data: powerPointDocument },
+    {
+      path: "Current User",
+      data: powerPointCurrentUserAtom({
+        currentEditOffset: 704,
+        headerToken: 0xf3d1c4df,
+      }),
+    },
+  ]);
+}
 
 function cfbDirectoryEntryOffset(entryId: number) {
   return 512 + entryId * 128;
@@ -3990,6 +4375,44 @@ function validateM6E1CertificationCases() {
   );
 }
 
+function validateM6E2APowerPointAuthorityCases() {
+  assert(
+    M6E2A_POWERPOINT_AUTHORITY_CASES.length === 15,
+    "M6E2A must execute the exact 15-case PowerPoint live-persist authority matrix.",
+  );
+
+  const ids = new Set<string>();
+  for (const testCase of M6E2A_POWERPOINT_AUTHORITY_CASES) {
+    assert(Object.isFrozen(testCase), `${testCase.caseId} must be immutable.`);
+    assert(
+      /^HDS-M6E2A-AUTH-\d{3}-[A-Z0-9-]+$/.test(testCase.caseId),
+      `M6E2A authority case id is invalid: ${testCase.caseId}`,
+    );
+    assert(!ids.has(testCase.caseId), `Duplicate M6E2A case id: ${testCase.caseId}`);
+    assert(
+      testCase.attackTechnique.trim().length >= 100,
+      `${testCase.caseId} must describe the live-persist authority challenge precisely.`,
+    );
+    ids.add(testCase.caseId);
+  }
+
+  assert(
+    M6E2A_POWERPOINT_AUTHORITY_CASES.filter(
+      (testCase) => testCase.authorityCredit,
+    ).length === 15,
+    "M6E2A must earn bounded authority credit for all 15 live-persist authority cases, including fail-closed rejection when Current User is missing.",
+  );
+  assert(
+    M6E2A_POWERPOINT_AUTHORITY_CASES[11]!.expectedReasonCode ===
+      "OLE_APPLICATION_STREAM_MISSING",
+    "M6E2A must make the required Current User stream a fail-closed authority prerequisite.",
+  );
+  assert(
+    Object.isFrozen(M6E2A_POWERPOINT_AUTHORITY_CASES),
+    "M6E2A authority registry must be immutable.",
+  );
+}
+
 function validateRulePackBoundary() {
   assert(
     HEHXAGON_DOCUMENT_SECURITY_RULE_IDS.length === 21,
@@ -4016,8 +4439,8 @@ function validateRulePackBoundary() {
 
   assert(
     HEHXAGON_DOCUMENT_SECURITY_ENGINE_VERSION ===
-      "0.4.8-m6e1",
-    "M6E1 must run the bounded OLE allocator and directory-conformance repair while preserving the M4 rule pack.",
+      "0.4.9-m6e2a",
+    "M6E2A must add bounded PowerPoint live-persist authority while preserving the certified M6E1 allocator and M4 rule-pack boundaries.",
   );
 }
 
@@ -5253,6 +5676,111 @@ async function executeM6E1AllocatorCertification() {
   return { results, directoryRepairResults } as const;
 }
 
+async function executeM6E2APowerPointPersistAuthority() {
+  const fixtures = [
+    powerPointPersistFixture(),
+    powerPointTwoEditPersistFixture({
+      oldDocumentRecordType: 0x1111,
+      newestDocumentRecordType: 0x03e8,
+    }),
+    powerPointTwoEditPersistFixture({
+      oldDocumentRecordType: 0x03e8,
+      newestDocumentRecordType: 0x1111,
+    }),
+    powerPointPersistFixture({
+      mutate: (_powerPointDocument, currentUser) => {
+        currentUser.writeUInt16LE(0x1111, 2);
+      },
+    }),
+    powerPointPersistFixture({
+      mutate: (powerPointDocument, currentUser) => {
+        currentUser.writeUInt32LE(powerPointDocument.length, 16);
+      },
+    }),
+    powerPointPersistFixture({
+      mutate: (powerPointDocument) => {
+        powerPointDocument.writeUInt32LE(320, 320 + 16);
+      },
+    }),
+    powerPointPersistFixture({
+      mutate: (powerPointDocument) => {
+        powerPointDocument.writeUInt16LE(0x1111, 256 + 2);
+      },
+    }),
+    powerPointPersistFixture({
+      mutate: (powerPointDocument) => {
+        powerPointDocument.writeUInt32LE(300, 256 + 12);
+      },
+    }),
+    powerPointPersistFixture({
+      mutate: (powerPointDocument) => {
+        powerPointDocument.writeUInt32LE(2, 320 + 24);
+      },
+    }),
+    powerPointPersistFixture({
+      mutate: (powerPointDocument) => {
+        powerPointDocumentContainer().copy(powerPointDocument, 96);
+        powerPointPersistDirectoryAtom([
+          { persistId: 1, offsets: [64, 96] },
+        ]).copy(powerPointDocument, 256);
+      },
+    }),
+    powerPointPersistFixture({
+      mutate: (_powerPointDocument, currentUser) => {
+        currentUser.writeUInt32LE(0xf3d1c4df, 12);
+      },
+    }),
+    legacyOfficeFixture("ppt"),
+    powerPointPersistFixture({
+      mutate: (powerPointDocument) => {
+        powerPointDocumentContainer().copy(powerPointDocument, 96);
+        powerPointPersistDirectoryAtom([
+          { persistId: 1, offsets: [64] },
+          { persistId: 1, offsets: [96] },
+        ]).copy(powerPointDocument, 256);
+      },
+    }),
+    powerPointEncryptedSingleEditPersistFixture(),
+    powerPointEncryptedMultipleEditPersistFixture(),
+  ] as const;
+
+  const results: NativeDocumentScannerResult[] = [];
+  for (let index = 0; index < fixtures.length; index += 1) {
+    const result = await inspectDocument({
+      bytes: fixtures[index]!,
+      filename: "m6e2a-persist-authority.ppt",
+      extension: "ppt",
+      mimeType: "application/vnd.ms-powerpoint",
+    });
+    const contract = M6E2A_POWERPOINT_AUTHORITY_CASES[index]!;
+    assert(
+      result.verdict === contract.expectedVerdict,
+      `${contract.caseId} expected verdict ${contract.expectedVerdict}, received ${result.verdict}.`,
+    );
+    assert(
+      result.reasonCodes.includes(contract.expectedReasonCode),
+      `${contract.caseId} must expose reason ${contract.expectedReasonCode}.`,
+    );
+    assert(
+      result.identityEvidence.detectedContainer === "OLE" &&
+        result.identityEvidence.signatureKind === "OLE_COMPOUND_FILE_SIGNATURE",
+      `${contract.caseId} must preserve exact OLE identity evidence.`,
+    );
+    results.push(result);
+  }
+
+  assert(
+    results.every(
+      (result) =>
+        String(result.verdict) !== "CLEAN" &&
+        result.inspectionComplete === false,
+    ),
+    "M6E2A PowerPoint persist authority must preserve the no-CLEAN boundary.",
+  );
+
+  return { results } as const;
+}
+
 async function run() {
   validateManifest();
   validateCaseContract();
@@ -5264,6 +5792,7 @@ async function run() {
   validateM6D5CertificationCases();
   validateM6D5BCertificationCases();
   validateM6E1CertificationCases();
+  validateM6E2APowerPointAuthorityCases();
   validateRulePackBoundary();
 
   const sentinelResults = await executeSentinels();
@@ -5276,6 +5805,7 @@ async function run() {
   const m6d5 = await executeM6D5UriEvasionCertification();
   const m6d5b = await executeM6D5BEmbeddedContentEvasionCertification();
   const m6e1 = await executeM6E1AllocatorCertification();
+  const m6e2a = await executeM6E2APowerPointPersistAuthority();
 
   const sentinelSummary =
     HARNESS_SENTINEL_CASES.map((testCase, index) =>
@@ -5639,6 +6169,23 @@ async function run() {
     },
   );
 
+  const m6e2aSummary = M6E2A_POWERPOINT_AUTHORITY_CASES.map(
+    (testCase, index) => {
+      const result = m6e2a.results[index]!;
+      return Object.freeze({
+        caseId: testCase.caseId,
+        benignControl: testCase.benignControl,
+        authorityCredit: testCase.authorityCredit,
+        expectedVerdict: testCase.expectedVerdict,
+        actualVerdict: result.verdict,
+        expectedReasonCode: testCase.expectedReasonCode,
+        reasonMatched: result.reasonCodes.includes(testCase.expectedReasonCode),
+        actualDetectedContainer: result.identityEvidence.detectedContainer,
+        actualSignatureKind: result.identityEvidence.signatureKind,
+      });
+    },
+  );
+
   const m6e1CertifiedThreatFamilies = THREAT_FAMILY_MANIFEST.filter(
     (entry) => entry.certificationStatus === "CERTIFIED_M6E1",
   ).map((entry) => entry.threatFamily);
@@ -5772,6 +6319,11 @@ async function run() {
         (result) =>
           String(result.verdict) !== "CLEAN" &&
           result.inspectionComplete === false,
+      ) &&
+      m6e2a.results.every(
+        (result) =>
+          String(result.verdict) !== "CLEAN" &&
+          result.inspectionComplete === false,
       ),
     "M6 execution must never grant CLEAN or completed document-trust authority.",
   );
@@ -5781,13 +6333,13 @@ async function run() {
       {
         ok: true,
         event:
-          "HDS_M6E1_OLE_ALLOCATOR_CERTIFICATION_PASSED",
+          "HDS_M6E2A_POWERPOINT_PERSIST_AUTHORITY_REPAIR_PASSED",
         corpusSchemaVersion:
           HDS_M6_ADVERSARIAL_CORPUS_SCHEMA_VERSION,
         harnessVersion:
-          HDS_M6E1_HARNESS_VERSION,
+          HDS_M6E2A_HARNESS_VERSION,
         priorHarnessVersion:
-          HDS_M6D6_HARNESS_VERSION,
+          HDS_M6E1_HARNESS_VERSION,
         priorOoxmlHarnessVersion:
           HDS_M6C_HARNESS_VERSION,
         scannerEngine:
@@ -6004,6 +6556,20 @@ async function run() {
         m6e1DirectoryRepairCertificationCredit: 0,
         m6e1DirectoryRepairResults:
           m6e1DirectoryRepairSummary,
+        m6e2aPowerPointPersistAuthorityRepairComplete: true,
+        m6e2aAuthorityCaseCount:
+          M6E2A_POWERPOINT_AUTHORITY_CASES.length,
+        m6e2aAuthorityCredit:
+          M6E2A_POWERPOINT_AUTHORITY_CASES.filter(
+            (testCase) => testCase.authorityCredit,
+          ).length,
+        m6e2aBenignControlCount:
+          M6E2A_POWERPOINT_AUTHORITY_CASES.filter(
+            (testCase) => testCase.benignControl,
+          ).length,
+        m6e2aCurrentUserAuthorityRequired: true,
+        m6e2aThreatFamilyCertificationGranted: false,
+        m6e2aResults: m6e2aSummary,
         oleDirectoryCertificationComplete: false,
         oleVbaCertificationComplete: false,
         oleEmbeddedObjectCertificationComplete: false,
@@ -6025,11 +6591,11 @@ run().catch((error) => {
       {
         ok: false,
         event:
-          "HDS_M6E1_OLE_ALLOCATOR_CERTIFICATION_FAILED",
+          "HDS_M6E2A_POWERPOINT_PERSIST_AUTHORITY_REPAIR_FAILED",
         errorCode:
           error instanceof Error
             ? error.message
-            : "M6D6_UNKNOWN_FAILURE",
+            : "M6E2A_UNKNOWN_FAILURE",
       },
       null,
       2,

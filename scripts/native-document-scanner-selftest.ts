@@ -934,21 +934,85 @@ function buildCfb(streams: CfbFixtureStream[], majorVersion: 3 | 4 = 3) {
   ]);
 }
 
+function minimalPowerPointRecordHeader(
+  recVer: number,
+  recType: number,
+  recLen: number,
+) {
+  const bytes = Buffer.alloc(8);
+  bytes.writeUInt16LE(recVer, 0);
+  bytes.writeUInt16LE(recType, 2);
+  bytes.writeUInt32LE(recLen >>> 0, 4);
+  return bytes;
+}
+
+function minimalPowerPointPersistStreams() {
+  const powerPointDocument = Buffer.alloc(4096);
+
+  minimalPowerPointRecordHeader(0x0f, 0x03e8, 0).copy(
+    powerPointDocument,
+    64,
+  );
+
+  const persistDirectory = Buffer.alloc(16);
+  minimalPowerPointRecordHeader(0, 0x1772, 8).copy(
+    persistDirectory,
+    0,
+  );
+  persistDirectory.writeUInt32LE((1 << 20) | 1, 8);
+  persistDirectory.writeUInt32LE(64, 12);
+  persistDirectory.copy(powerPointDocument, 256);
+
+  const userEdit = Buffer.alloc(36);
+  minimalPowerPointRecordHeader(0, 0x0ff5, 0x1c).copy(
+    userEdit,
+    0,
+  );
+  userEdit[14] = 0;
+  userEdit[15] = 3;
+  userEdit.writeUInt32LE(0, 16);
+  userEdit.writeUInt32LE(256, 20);
+  userEdit.writeUInt32LE(1, 24);
+  userEdit.writeUInt32LE(1, 28);
+  userEdit.copy(powerPointDocument, 320);
+
+  const currentUser = Buffer.alloc(32);
+  minimalPowerPointRecordHeader(0, 0x0ff6, 24).copy(
+    currentUser,
+    0,
+  );
+  currentUser.writeUInt32LE(0x14, 8);
+  currentUser.writeUInt32LE(0xe391c05f, 12);
+  currentUser.writeUInt32LE(320, 16);
+  currentUser.writeUInt16LE(0, 20);
+  currentUser.writeUInt16LE(0x03f4, 22);
+  currentUser[24] = 3;
+  currentUser[25] = 0;
+  currentUser.writeUInt32LE(8, 28);
+
+  return { powerPointDocument, currentUser } as const;
+}
+
 function legacyOfficeFixture(
   extension: "doc" | "xls" | "ppt",
   extras: CfbFixtureStream[] = [],
   majorVersion: 3 | 4 = 3,
 ) {
-  const applicationName =
-    extension === "doc"
-      ? "WordDocument"
-      : extension === "xls"
-        ? "Workbook"
-        : "PowerPoint Document";
+  if (extension === "ppt") {
+    const persist = minimalPowerPointPersistStreams();
+    return buildCfb([
+      { path: "PowerPoint Document", data: persist.powerPointDocument },
+      { path: "Current User", data: persist.currentUser },
+      { path: "\u0005SummaryInformation", data: Buffer.alloc(100, 0x53) },
+      ...extras,
+    ], majorVersion);
+  }
+
+  const applicationName = extension === "doc" ? "WordDocument" : "Workbook";
   return buildCfb([
     {
       path: applicationName,
-      data: Buffer.alloc(4096, extension === "doc" ? 0x57 : extension === "xls" ? 0x58 : 0x50),
+      data: Buffer.alloc(4096, extension === "doc" ? 0x57 : 0x58),
     },
     { path: "\u0005SummaryInformation", data: Buffer.alloc(100, 0x53) },
     ...extras,
