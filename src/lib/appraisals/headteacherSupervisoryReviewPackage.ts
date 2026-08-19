@@ -1371,6 +1371,8 @@ export async function readHeadteacherSupervisoryReviewPackage(
   const current = await database.appraisalAssessment.findMany({
     where: {
       cycleId: record.cycleId,
+      assessorUserId: record.assessorUserId,
+      assessorAssignmentId: record.assessorAssignmentId,
       status: { in: ["DRAFT", "FINALIZED", "RETURNED"] },
     },
     select: {

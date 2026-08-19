@@ -731,6 +731,13 @@ assert(
   "READY_TO_RELEASE must expose direct release only after the native final-inspection package is open",
 );
 
+assert(
+  source.client.includes('`${Math.round(Number(value))}%`') &&
+    !source.client.includes("function round2(value: number)") &&
+    !source.client.includes('`${round2(Number(value))}%`'),
+  "Teacher review percentages must display as whole numbers while stored precision remains untouched",
+);
+
 for (const finalInspectionHierarchyMarker of [
   "buildDirectReleaseDayGroups",
   "selectedReleaseDay",
@@ -829,6 +836,7 @@ console.log("Director direct release          : confirm-only + no self-review");
 console.log("Direct-release browser body      : confirm=true only");
 console.log("Direct-release retry             : RELEASED / EXISTING_RELEASED");
 console.log("Direct-release review row        : none");
+console.log("Percentage presentation          : whole-number display only");
 console.log("Score / General Comment editing  : absent from review/final inspection");
 console.log("Authority/proof browser fields   : absent");
 console.log("Background polling               : absent");

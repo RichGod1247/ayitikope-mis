@@ -60,6 +60,18 @@ const files = {
   hub: "src/components/governance/GovernanceAppraisalHubClient.tsx",
   hosPage: "src/app/district/hos/dashboard/page.tsx",
   bscPage: "src/app/district/bsc/dashboard/page.tsx",
+  headteacherReviewPage:
+    "src/app/governance/appraisals/headteacher-supervisory/review/page.tsx",
+  headteacherReviewClient:
+    "src/app/governance/appraisals/headteacher-supervisory/review/HeadteacherSupervisoryReviewClient.tsx",
+  headteacherReviewQueueRoute:
+    "src/app/api/governance/appraisals/headteacher-supervisory/review-queue/route.ts",
+  headteacherReviewPackageRoute:
+    "src/app/api/governance/appraisals/headteacher-supervisory/review-queue/[assessmentId]/package/route.ts",
+  headteacherReviewStartRoute:
+    "src/app/api/governance/appraisals/headteacher-supervisory/review-queue/[assessmentId]/start/route.ts",
+  headteacherReviewDecisionRoute:
+    "src/app/api/governance/appraisals/headteacher-supervisory/review-queue/[assessmentId]/decision/route.ts",
 };
 
 requireMarkers(files.appEntry, [
@@ -139,9 +151,11 @@ const hubSource = requireMarkers(files.hub, [
   "Review finalized SISSO and Basic School Coordinator Teacher",
   'href="/governance/appraisals/headteacher-supervisory"',
   "Assess Headteacher",
+  'href="/governance/appraisals/headteacher-supervisory/review"',
+  "Review Headteacher",
+  "Review finalized SISSO and Basic School Coordinator",
+  "Headteacher reports assigned to the Head of Supervision.",
   "Assessment active",
-  "Headteacher report review stays locked until its exact",
-  "Not yet active",
   "District Director remains the ultimate district review and release authority.",
   "no background polling",
   "no persistent browser storage",
@@ -162,6 +176,114 @@ assert(
     !hubSource.includes("BSC Review Teacher"),
   "N6_F1C6A_BSC_TEACHER_REVIEW_ENTRY_MUST_REMAIN_ABSENT",
 );
+
+assert(
+  hubSource.includes(
+    'href="/governance/appraisals/headteacher-supervisory/review"',
+  ) && hubSource.includes("Review Headteacher"),
+  "N7_HOS_HEADTEACHER_REVIEW_ENTRY_MISSING",
+);
+
+assert(
+  !hubSource.includes("BSC Review Headteacher"),
+  "N7_BSC_HEADTEACHER_REVIEW_ENTRY_MUST_REMAIN_ABSENT",
+);
+
+forbidMarkers(files.hub, [
+  "Headteacher report review stays locked until its exact",
+  "Review reports · next phase",
+]);
+
+requireMarkers(files.headteacherReviewPage, [
+  "requireGovernancePageContext",
+  'const HEADTEACHER_SUPERVISORY_REVIEW_ROLES = ["HEAD_OF_SUPERVISION"] as const;',
+  "allowedZoneLevels: [2]",
+  'redirectTo: "/governance/appraisals/headteacher-supervisory/review"',
+  "HeadteacherSupervisoryReviewClient",
+  'runtime = "nodejs"',
+  'dynamic = "force-dynamic"',
+  "initialAssessmentId",
+]);
+
+const headteacherReviewClientSource = requireMarkers(
+  files.headteacherReviewClient,
+  [
+    '"use client"',
+    "Review Headteacher Reports",
+    '"READY_TO_START"',
+    '"READY_TO_REVIEW"',
+    '"START_REVIEW"',
+    '"CONTINUE_REVIEW"',
+    "Open report",
+    "Start review",
+    "Return for correction",
+    "Forward to Director",
+    "/review-queue",
+    "/package",
+    "/start",
+    "/decision",
+    'JSON.stringify({ confirm: true })',
+    'action: "RETURN"',
+    'action: "FORWARD"',
+    "Monitoring and Inspection Sheet (Headteachers)",
+    "Head of Supervision review copy · read-only",
+    "assessment.sections",
+    "section.items.map",
+    "no background polling",
+    "no persistent browser storage",
+  ],
+);
+
+for (const forbiddenClientMarker of [
+  "localStorage",
+  "sessionStorage",
+  "indexedDB",
+  "setInterval(",
+  'method: "PUT"',
+  'method: "PATCH"',
+  'method: "DELETE"',
+  "/direct-release",
+  'action: "HOLD"',
+  'action: "RELEASE"',
+]) {
+  assert(
+    !headteacherReviewClientSource.includes(forbiddenClientMarker),
+    "N7_HOS_HEADTEACHER_REVIEW_CLIENT_FORBIDDEN_MARKER",
+    forbiddenClientMarker,
+  );
+}
+
+requireMarkers(files.headteacherReviewQueueRoute, [
+  "HEADTEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY",
+  "readHeadteacherSupervisoryReviewQueue",
+  "requireSupervisoryGovernanceApiContext",
+  "jsonNoStore",
+  "HEADTEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY.reviewerRole",
+]);
+
+requireMarkers(files.headteacherReviewPackageRoute, [
+  "HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY",
+  "readHeadteacherSupervisoryReviewPackage",
+  "requireSupervisoryGovernanceApiContext",
+  "jsonNoStore",
+  "HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.audience",
+]);
+
+requireMarkers(files.headteacherReviewStartRoute, [
+  "startHeadteacherSupervisoryHosReview",
+  'normalizedRole(auth.ctx.roleName) !== "HEAD_OF_SUPERVISION"',
+  "bodyHasOnlyConfirm",
+  "body.confirm !== true",
+  "governanceScope: auth.scope",
+]);
+
+requireMarkers(files.headteacherReviewDecisionRoute, [
+  "executeHeadteacherSupervisoryHosDecision",
+  'normalizedRole(auth.ctx.roleName) !== "HEAD_OF_SUPERVISION"',
+  'const ALLOWED_BODY_FIELDS = new Set(["action", "reason", "confirm"]);',
+  "browserDecisionResult",
+  "governanceScope: auth.scope",
+]);
 
 forbidMarkers(files.hub, [
   "Assess Teachers and review authorized finalized reports when the governance assessor and staged-review transactions are completed.",
@@ -409,7 +531,7 @@ try {
 }
 
 console.log("");
-console.log("=== N6-F1C6A HOS/BSC TEACHER APPRAISAL DASHBOARD INTEGRATION ===");
+console.log("=== N7 HOS HEADTEACHER REVIEW DASHBOARD + WORKSPACE INTEGRATION ===");
 console.log("");
 console.log("HOS default destination       : /district/hos/dashboard");
 console.log("BSC default destination       : /district/bsc/dashboard");
@@ -422,7 +544,9 @@ console.log("HOS Teacher review            : active shared review workspace");
 console.log("HOS Teacher review route      : /governance/appraisals/teacher-supervisory/review");
 console.log("BSC Teacher review            : absent");
 console.log("Headteacher assessment        : existing supervisory workspace");
-console.log("Headteacher review            : still locked pending exact queue grounding");
+console.log("HOS Headteacher review        : active shared review workspace");
+console.log("HOS Headteacher review route  : /governance/appraisals/headteacher-supervisory/review");
+console.log("BSC Headteacher review        : absent");
 console.log("Governance My Appraisal       : visible, truthfully locked");
 console.log("Director review/release       : Director-only");
 console.log("Anonymous Teacher forms       : absent from HOS/BSC hub");
@@ -430,4 +554,4 @@ console.log("Background polling/storage    : absent");
 console.log("Schema/database mutation      : absent");
 console.log("Database accessed             : false");
 console.log("");
-console.log("RESULT: N6-F1C6A HOS/BSC TEACHER APPRAISAL DASHBOARD INTEGRATION GREEN");
+console.log("RESULT: N7 HOS HEADTEACHER REVIEW DASHBOARD + WORKSPACE INTEGRATION GREEN");

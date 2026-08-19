@@ -214,11 +214,11 @@ function fmtDateTime(v: string | null) {
 }
 
 function pct(v: number | null | undefined) {
-  return typeof v === "number" && Number.isFinite(v) ? `${v.toFixed(1)}%` : "—";
+  return typeof v === "number" && Number.isFinite(v) ? `${Math.round(v)}%` : "—";
 }
 
 function governancePct(v: number | null | undefined) {
-  return typeof v === "number" && Number.isFinite(v) ? `${v.toFixed(2)}%` : "—";
+  return typeof v === "number" && Number.isFinite(v) ? `${Math.round(v)}%` : "—";
 }
 
 

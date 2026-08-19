@@ -177,9 +177,93 @@ assert(
   "Assessment-change stale workspace reset missing",
 );
 assert(
+  source.client.includes('data-hos-own-headteacher-appraisal-ui="bbc-v2"'),
+  "HOS BBC own-assessment landing version missing",
+);
+assert(
+  source.client.includes("usesCompactOwnHeadteacherLanding") &&
+    source.client.includes('actorRole === "BASIC_SCHOOL_COORDINATOR"') &&
+    source.client.includes('data-bsc-own-headteacher-appraisal-ui={'),
+  "BSC BBC own-assessment landing must reuse the compact HOS task pattern",
+);
+assert(
+  source.client.includes('"Basic School Coordinator"') &&
+    source.client.includes("if (usesCompactOwnHeadteacherLanding)"),
+  "BSC compact Headteacher appraisal role label or branch missing",
+);
+assert(
+  source.client.includes('useState<"RETURNED" | "NEW" | null>(null)'),
+  "HOS mutually exclusive task-panel state missing",
+);
+assert(
+  source.client.includes("↩ Returned for correction") &&
+    source.client.includes("＋ New Headteacher appraisal"),
+  "HOS compact two-task cards missing",
+);
+assert(
+  source.client.includes(
+    'aria-label={`${hosReturnedItems.length} returned appraisals need correction`}',
+  ),
+  "Returned correction notification-count badge missing",
+);
+assert(
+  source.client.includes('hosLandingPanel === "RETURNED"') &&
+    source.client.includes('hosLandingPanel === "NEW"'),
+  "HOS task-card expansion contract missing",
+);
+assert(
+  source.client.includes("async function startReturnedCorrection(item: SupervisoryQueueItem)"),
+  "Returned-queue correction action missing",
+);
+assert(
+  source.client.includes("Reason returned: ${returnReason}") &&
+    source.client.includes("The returned version stays locked as history."),
+  "Returned correction confirmation must explain reason and immutable history",
+);
+assert(
+  source.client.includes('body: JSON.stringify({ confirmRevision: true })'),
+  "Returned correction must use explicit revision confirmation",
+);
+assert(
+  source.client.includes("Start correction"),
+  "BBC Start correction action missing",
+);
+assert(
+  source.client.includes(
+    "This returned version is locked to preserve history. Start correction below to create an editable revision.",
+  ),
+  "Returned immutable-version explanation missing",
+);
+assert(
+  !source.client.includes("Create correction copy"),
+  "Old technical correction-copy wording must be absent",
+);
+assert(
   source.client.includes("workspaceRef.current?.assessment.assessmentId !== id"),
   "Workspace identity switch guard missing",
 );
+const returnedCorrectionStart = source.client.indexOf(
+  "async function startReturnedCorrection(item: SupervisoryQueueItem)",
+);
+const returnedCorrectionEnd = source.client.indexOf(
+  "async function createRevision()",
+  returnedCorrectionStart,
+);
+const returnedCorrectionSource = source.client.slice(
+  returnedCorrectionStart,
+  returnedCorrectionEnd,
+);
+assert(
+  returnedCorrectionStart >= 0 &&
+    returnedCorrectionSource.includes(
+      '/headteacher-supervisory/${encodeURIComponent(returnedAssessmentId)}/revision',
+    ) &&
+    returnedCorrectionSource.indexOf("clearWorkspaceForAssessmentChange();") >= 0 &&
+    returnedCorrectionSource.indexOf("clearWorkspaceForAssessmentChange();") <
+      returnedCorrectionSource.indexOf("setAssessmentId(nextId);"),
+  "Returned queue correction must create revision and clear stale workspace before switching IDs",
+);
+
 const createRevisionStart = source.client.indexOf("async function createRevision()");
 const createRevisionEnd = source.client.indexOf("if (!assessmentId && !cycleId)", createRevisionStart);
 const createRevisionSource = source.client.slice(createRevisionStart, createRevisionEnd);
@@ -375,6 +459,10 @@ console.log("Finalization                   : explicit confirmation + F3");
 console.log("Correction continuation        : post-finalization return-provenance dispatcher");
 console.log("Continuation retry             : finalization-committed and retry-safe");
 console.log("Returned revision              : explicit confirmation + F4");
+console.log("HOS/BSC returned-work badge    : compact notification count");
+console.log("HOS/BSC task panels            : Returned / New, one open at a time");
+console.log("Returned entry                 : Start correction → editable revision");
+console.log("Returned original              : immutable + reason preserved");
 console.log("Revision workspace switch      : stale prior revision cleared");
 console.log("Official form                  : 4 sections / 34 items");
 console.log("Section navigation             : exact anchored section targets");

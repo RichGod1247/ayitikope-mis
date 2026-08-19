@@ -106,6 +106,7 @@ model User {
   appraisalAssessmentsConducted AppraisalAssessment[] @relation("AppraisalAssessmentAssessor")
   appraisalAssessmentsFinalized AppraisalAssessment[] @relation("AppraisalAssessmentFinalizedBy")
   appraisalReviewsAuthored      AppraisalReview[]     @relation("AppraisalReviewReviewer")
+  appraisalStaffFeedbackReviewsAuthored AppraisalStaffFeedbackReview[] @relation("AppraisalStaffFeedbackReviewReviewer")
 
   appraisalAggregatesGenerated AppraisalAggregateSnapshot[] @relation("AppraisalAggregateGeneratedBy")
   appraisalIdentityAccesses    AppraisalIdentityAccess[]    @relation("AppraisalIdentityAccessActor")
@@ -2990,6 +2991,7 @@ model GovernanceOfficerAssignment {
   appraisalCyclesAsTarget   AppraisalCycle[]          @relation("AppraisalCycleTargetAssignment")
   appraisalAssessments      AppraisalAssessment[]     @relation("AppraisalAssessmentAssessorAssignment")
   appraisalReviews          AppraisalReview[]         @relation("AppraisalReviewReviewerAssignment")
+  appraisalStaffFeedbackReviews AppraisalStaffFeedbackReview[] @relation("AppraisalStaffFeedbackReviewReviewerAssignment")
   appraisalIdentityAccesses AppraisalIdentityAccess[] @relation("AppraisalIdentityAccessActorAssignment")
 
   @@index([userId])
@@ -3652,8 +3654,9 @@ model AppraisalCycle {
   participants     AppraisalParticipant[]
   responses        AppraisalResponse[]
   assessments      AppraisalAssessment[]
-  reviews          AppraisalReview[]
-  aggregates       AppraisalAggregateSnapshot[]
+  reviews              AppraisalReview[]
+  staffFeedbackReviews AppraisalStaffFeedbackReview[]
+  aggregates           AppraisalAggregateSnapshot[]
   identityAccesses AppraisalIdentityAccess[]
   notifications    AppraisalNotification[]
 
@@ -3893,6 +3896,39 @@ model AppraisalReview {
   @@map("appraisal_review")
 }
 
+model AppraisalStaffFeedbackReview {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  cycleId    String @db.Uuid
+  snapshotId String @db.Uuid
+
+  reviewerUserId       String
+  reviewerAssignmentId String?
+
+  stage     Int                     @default(1)
+  decision  AppraisalReviewDecision @default(PENDING)
+  note      String?                 @db.Text
+  decidedAt DateTime?               @db.Timestamptz(6)
+
+  metadata Json @default("{}")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  cycle              AppraisalCycle               @relation(fields: [cycleId], references: [id], onDelete: Cascade, map: "AppraisalStaffFeedbackReview_cycle_fkey")
+  snapshot           AppraisalAggregateSnapshot   @relation(fields: [snapshotId], references: [id], onDelete: Restrict, map: "AppraisalStaffFeedbackReview_snapshot_fkey")
+  reviewer           User                         @relation("AppraisalStaffFeedbackReviewReviewer", fields: [reviewerUserId], references: [id], onDelete: Restrict, map: "AppraisalStaffFeedbackReview_reviewer_fkey")
+  reviewerAssignment GovernanceOfficerAssignment? @relation("AppraisalStaffFeedbackReviewReviewerAssignment", fields: [reviewerAssignmentId], references: [id], onDelete: SetNull, map: "AppraisalStaffFeedbackReview_assignment_fkey")
+
+  @@unique([cycleId, stage], map: "AppraisalStaffFeedbackReview_cycle_stage_unique")
+  @@index([cycleId, decision], map: "AppraisalStaffFeedbackReview_cycle_decision_idx")
+  @@index([snapshotId], map: "AppraisalStaffFeedbackReview_snapshot_idx")
+  @@index([reviewerUserId, decision], map: "AppraisalStaffFeedbackReview_reviewer_decision_idx")
+  @@index([reviewerAssignmentId], map: "AppraisalStaffFeedbackReview_assignment_idx")
+  @@index([decidedAt], map: "AppraisalStaffFeedbackReview_decidedAt_idx")
+  @@map("appraisal_staff_feedback_review")
+}
+
 model AppraisalAggregateSnapshot {
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
@@ -3918,6 +3954,7 @@ model AppraisalAggregateSnapshot {
 
   cycle       AppraisalCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade, map: "AppraisalAggregate_cycle_fkey")
   generatedBy User?          @relation("AppraisalAggregateGeneratedBy", fields: [generatedByUserId], references: [id], onDelete: SetNull, map: "AppraisalAggregate_generatedBy_fkey")
+  staffFeedbackReviews AppraisalStaffFeedbackReview[]
 
   @@unique([cycleId, version], map: "AppraisalAggregate_cycle_version_unique")
   @@unique([cycleId, sourceHash], map: "AppraisalAggregate_cycle_hash_unique")

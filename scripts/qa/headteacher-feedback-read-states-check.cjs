@@ -88,6 +88,7 @@ function makeCycle(overrides = {}) {
       requestKey: "2026-TERM-ONE-HEADTEACHER-REQUEST",
     },
     participants: [],
+    staffFeedbackReviews: [],
     ...overrides,
   };
 }
@@ -317,6 +318,52 @@ async function main() {
     assert(!("finalizedResponseCount" in state), "Headteacher must not receive completion count");
     assertNoConfidentialTeacherIdentity(state);
   }
+
+  const independentlyReleasedStaffCycle = makeCycle({
+    status: "CLOSED",
+    closedAt: new Date("2026-07-29T09:00:00.000Z"),
+    staffFeedbackReviews: [
+      {
+        id: "00000000-0000-4000-8000-000000000811",
+        stage: 1,
+        decision: "ACCEPTED",
+        decidedAt: new Date("2026-07-30T09:00:00.000Z"),
+        metadata: {
+          staffFeedbackRelease: {
+            releaseMode: "INDEPENDENT_STAFF_FEEDBACK_RELEASE",
+            releasedAt: "2026-07-30T09:00:00.000Z",
+            releaseProofHash: "a".repeat(64),
+            carrierCycleStatusMutationPerformed: false,
+            governanceAssessmentRequired: false,
+            governanceAssessmentAccessed: false,
+          },
+        },
+      },
+    ],
+  });
+  const independentlyReleasedHeadteacherState =
+    readStates.buildHeadteacherOwnAppraisalReadState(independentlyReleasedStaffCycle);
+  assertEqual(
+    independentlyReleasedHeadteacherState.state,
+    "VIEW_RELEASED_STAFF_FEEDBACK",
+    "Independent Staff Feedback release is visible without carrier RELEASED",
+  );
+  assertEqual(
+    independentlyReleasedHeadteacherState.canViewReleasedStaffFeedback,
+    true,
+    "Headteacher can load independently released Staff Feedback",
+  );
+  assertEqual(
+    independentlyReleasedHeadteacherState.canViewReleasedAppraisal,
+    false,
+    "Legacy combined released result remains separate",
+  );
+  assertEqual(
+    independentlyReleasedHeadteacherState.staffFeedbackReleasedAt,
+    "2026-07-30T09:00:00.000Z",
+    "Independent Staff Feedback release timestamp exposed",
+  );
+  assertNoConfidentialTeacherIdentity(independentlyReleasedHeadteacherState);
 
   const openCycle = makeCycle({
     status: "OPEN",
@@ -570,6 +617,55 @@ async function main() {
     "Finalized count remains aggregate and eligibility-aligned",
   );
   assertNoConfidentialTeacherIdentity(revokedParticipantItem);
+
+  const staffReviewReadyCycle = makeCycle({
+    id: "00000000-0000-4000-8000-000000000508",
+    status: "CLOSED",
+    closedAt: new Date("2026-07-29T10:00:00.000Z"),
+    participants: [{ status: "FINALIZED" }],
+  });
+  const staffReviewReadyItem = readStates.buildDirectorHeadteacherAppraisalReadItem(
+    staffReviewReadyCycle,
+    now,
+  );
+  assertEqual(
+    staffReviewReadyItem.canStartStaffFeedbackReview,
+    true,
+    "Closed Staff Feedback can start independently without governance assessment",
+  );
+  assertEqual(
+    staffReviewReadyItem.canDecideStaffFeedbackReview,
+    false,
+    "Decision waits for Staff Feedback review start",
+  );
+
+  const staffReviewPendingCycle = makeCycle({
+    ...staffReviewReadyCycle,
+    id: "00000000-0000-4000-8000-000000000509",
+    staffFeedbackReviews: [
+      {
+        id: "00000000-0000-4000-8000-000000000812",
+        stage: 1,
+        decision: "PENDING",
+        decidedAt: null,
+        metadata: {},
+      },
+    ],
+  });
+  const staffReviewPendingItem = readStates.buildDirectorHeadteacherAppraisalReadItem(
+    staffReviewPendingCycle,
+    now,
+  );
+  assertEqual(
+    staffReviewPendingItem.canDecideStaffFeedbackReview,
+    true,
+    "Pending Staff Feedback review exposes independent decision authority",
+  );
+  assertEqual(
+    staffReviewPendingItem.staffFeedbackReviewId,
+    "00000000-0000-4000-8000-000000000812",
+    "Pending Staff Feedback review ID exposed to Director only",
+  );
 
   assertNoConfidentialTeacherIdentity(directorState);
   assertEqual(
@@ -941,6 +1037,8 @@ async function main() {
   console.log("Director pending/open counts  : aggregate only");
   console.log("Director frozen population    : preserved");
   console.log("Director eligible population  : excludes REVOKED");
+  console.log("Staff review independence      : CLOSED carrier + no governance required");
+  console.log("Staff released Headteacher view: independent of carrier RELEASED");
   console.log("Director expired OPEN state   : explicit");
   console.log("Director extension availability: server-derived, one-use V1");
   console.log("Module boundary                : direct imports; no barrel dependency");

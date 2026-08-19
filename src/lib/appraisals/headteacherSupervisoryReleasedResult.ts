@@ -18,6 +18,13 @@ import {
   computeHeadteacherSupervisoryDirectorDirectReleaseRequestHash,
   type HeadteacherSupervisoryDirectorDirectReleaseHashEvidence,
 } from "@/lib/appraisals/headteacherSupervisoryDirectorDirectRelease";
+import {
+  HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY,
+  computeHeadteacherDirectorGovernanceReleaseProofHashFromMetadata,
+  isHeadteacherDirectorGovernanceReviewedReleaseMetadata,
+  type HeadteacherDirectorGovernanceAssessorOffice,
+  type HeadteacherDirectorGovernanceAssessorRole,
+} from "@/lib/appraisals/headteacherDirectorGovernanceReview";
 import { effectiveRole } from "@/lib/roleRouting";
 
 export const HEADTEACHER_SUPERVISORY_RELEASED_RESULT_POLICY = {
@@ -25,8 +32,11 @@ export const HEADTEACHER_SUPERVISORY_RELEASED_RESULT_POLICY = {
   audience: "RELEASED_HEADTEACHER_GOVERNANCE",
   requiredRole: "HEADTEACHER",
   requiredAssessmentStatus: "FINALIZED",
-  requiredAssessmentRevision: 1,
-  requiredReleaseMode: "DIRECTOR_AUTHORED_DIRECT_RELEASE",
+  minimumAssessmentRevision: 1,
+  acceptedReleaseModes: [
+    "DIRECTOR_AUTHORED_DIRECT_RELEASE",
+    "DIRECTOR_REVIEWED_GOVERNANCE_RELEASE",
+  ] as const,
   carrierCycleReleasedStatusRequired: false,
   independentReleaseProofRequired: true,
   releaseProofReverificationRequired: true,
@@ -80,10 +90,10 @@ export type HeadteacherSupervisoryReleasedResult = {
   };
   assessment: {
     assessmentId: string;
-    revision: 1;
+    revision: number;
     dateObserved: string;
     finalizedAt: string;
-    assessorOffice: "District Director";
+    assessorOffice: HeadteacherDirectorGovernanceAssessorOffice;
     instrumentCode: string;
     instrumentVersion: 1;
     overallPercentage: number | null;
@@ -198,6 +208,20 @@ type InstrumentSectionRecord = {
   items: InstrumentItemRecord[];
 };
 
+type ReviewRecord = {
+  id: string;
+  cycleId: string;
+  assessmentId: string;
+  reviewerUserId: string;
+  reviewerAssignmentId: string | null;
+  stage: number;
+  decision: string;
+  note: string | null;
+  decidedAt: Date | null;
+  metadata: unknown;
+  createdAt: Date;
+};
+
 type AssessmentRecord = {
   id: string;
   cycleId: string;
@@ -217,7 +241,7 @@ type AssessmentRecord = {
   finalizedAt: Date | null;
   metadata: unknown;
   scores: ScoreRecord[];
-  reviews: Array<{ id: string }>;
+  reviews: ReviewRecord[];
   cycle: {
     id: string;
     scopeZoneId: string;
@@ -345,7 +369,20 @@ const ASSESSMENT_SELECT = {
     orderBy: [{ sectionOrder: "asc" }, { itemOrder: "asc" }],
   },
   reviews: {
-    select: { id: true },
+    select: {
+      id: true,
+      cycleId: true,
+      assessmentId: true,
+      reviewerUserId: true,
+      reviewerAssignmentId: true,
+      stage: true,
+      decision: true,
+      note: true,
+      decidedAt: true,
+      metadata: true,
+      createdAt: true,
+    },
+    orderBy: [{ stage: "asc" }, { createdAt: "asc" }],
   },
   cycle: {
     select: {
@@ -648,9 +685,24 @@ type VerifiedVisitContext = {
   schoolName: string;
   circuitName: string;
   districtName: string;
-  assessorRole: "DISTRICT_DIRECTOR";
+  assessorRole: HeadteacherDirectorGovernanceAssessorRole;
   visitContextHash: string;
 };
+
+function assessorOffice(
+  role: HeadteacherDirectorGovernanceAssessorRole,
+): HeadteacherDirectorGovernanceAssessorOffice {
+  switch (role) {
+    case "SISSO":
+      return "SISSO";
+    case "BASIC_SCHOOL_COORDINATOR":
+      return "Basic School Coordinator";
+    case "HEAD_OF_SUPERVISION":
+      return "Head of Supervision";
+    case "DISTRICT_DIRECTOR":
+      return "District Director";
+  }
+}
 
 function verifyVisitContext(input: {
   record: AssessmentRecord;
@@ -672,6 +724,12 @@ function verifyVisitContext(input: {
   const assessorRole = canonicalHeadteacherSupervisoryAssessorRole(
     clean(assessor.role) || clean(assessor.assignmentRole),
   );
+  const supportedAssessorRole = [
+    "SISSO",
+    "BASIC_SCHOOL_COORDINATOR",
+    "HEAD_OF_SUPERVISION",
+    "DISTRICT_DIRECTOR",
+  ].includes(assessorRole);
 
   if (
     (schemaVersion !== 1 &&
@@ -686,7 +744,7 @@ function verifyVisitContext(input: {
     normalized(target.role) !== "HEADTEACHER" ||
     clean(assessor.userId) !== record.assessorUserId ||
     clean(assessor.assignmentId) !== clean(record.assessorAssignmentId) ||
-    assessorRole !== "DISTRICT_DIRECTOR" ||
+    !supportedAssessorRole ||
     clean(jurisdiction.circuitZoneId) !== clean(record.cycle.targetZoneId) ||
     clean(jurisdiction.districtZoneId) !== record.cycle.scopeZoneId ||
     !zone ||
@@ -724,7 +782,7 @@ function verifyVisitContext(input: {
     schoolName: clean(target.schoolName) || membership.tenant.name,
     circuitName: clean(jurisdiction.circuitName) || zone.name,
     districtName: clean(jurisdiction.districtName) || district.name,
-    assessorRole: "DISTRICT_DIRECTOR",
+    assessorRole: assessorRole as HeadteacherDirectorGovernanceAssessorRole,
     visitContextHash,
   };
 }
@@ -791,8 +849,8 @@ function verifyFinalizedAssessment(input: {
 
   if (
     normalized(record.status) !== "FINALIZED" ||
-    record.revision !== 1 ||
-    record.priorAssessmentId !== null ||
+    !Number.isInteger(record.revision) ||
+    record.revision < HEADTEACHER_SUPERVISORY_RELEASED_RESULT_POLICY.minimumAssessmentRevision ||
     !record.assessorAssignmentId ||
     !record.finalizedAt ||
     record.finalizedByUserId !== record.assessorUserId ||
@@ -856,17 +914,29 @@ function releaseEntry(cycleMetadata: unknown, assessmentId: string) {
   return raw as Record<string, unknown>;
 }
 
-function verifyIndependentRelease(input: {
+function reviewMetadata(review: ReviewRecord) {
+  return objectValue(review.metadata);
+}
+
+function isDirectorGovernanceReview(review: ReviewRecord) {
+  const metadata = reviewMetadata(review);
+  return (
+    clean(metadata.reviewType) === "DIRECTOR_GOVERNANCE_REVIEW" &&
+    normalized(metadata.reviewerRole) === "DISTRICT_DIRECTOR" &&
+    metadata.staffFeedbackIncluded === false &&
+    metadata.respondentIdentitiesIncluded === false &&
+    metadata.reviewerMayRewriteScores === false &&
+    metadata.scoreMutationAllowed === false &&
+    metadata.providerCalled === false
+  );
+}
+
+function verifyDirectRelease(input: {
   record: AssessmentRecord;
-  visitContextHash: string;
+  visitContext: VerifiedVisitContext;
+  release: Record<string, unknown>;
 }) {
-  const { record, visitContextHash } = input;
-  const release = releaseEntry(record.cycle.metadata, record.id);
-
-  if (!Object.keys(release).length) {
-    fail("HEADTEACHER_SUPERVISORY_RELEASED_RESULT_NOT_RELEASED", 409);
-  }
-
+  const { record, visitContext, release } = input;
   const releasedAt = clean(release.releasedAt);
   const releasedDate = new Date(releasedAt);
   const releaserAssignmentId = requireIdentifier(
@@ -888,7 +958,7 @@ function verifyIndependentRelease(input: {
     assessmentId: record.id,
     assessmentRevision: 1,
     assessmentHash,
-    visitContextHash,
+    visitContextHash: visitContext.visitContextHash,
     assessorUserId: record.assessorUserId,
     assessorAssignmentId,
   };
@@ -910,6 +980,9 @@ function verifyIndependentRelease(input: {
     computeHeadteacherSupervisoryDirectorDirectReleaseProofHashFromMetadata(release);
 
   if (
+    record.revision !== 1 ||
+    record.priorAssessmentId !== null ||
+    visitContext.assessorRole !== "DISTRICT_DIRECTOR" ||
     Number(release.proofSchemaVersion) !==
       HEADTEACHER_SUPERVISORY_DIRECTOR_DIRECT_RELEASE_POLICY.proofSchemaVersion ||
     clean(release.releaseMode) !==
@@ -921,7 +994,7 @@ function verifyIndependentRelease(input: {
     Number(release.assessmentRevision) !== 1 ||
     normalized(release.assessmentStatus) !== "FINALIZED" ||
     clean(release.assessmentHash).toLowerCase() !== assessmentHash ||
-    clean(release.visitContextHash).toLowerCase() !== visitContextHash ||
+    clean(release.visitContextHash).toLowerCase() !== visitContext.visitContextHash ||
     clean(release.assessorUserId) !== record.assessorUserId ||
     clean(release.assessorAssignmentId) !== assessorAssignmentId ||
     normalized(release.assessorRole) !== "DISTRICT_DIRECTOR" ||
@@ -957,7 +1030,311 @@ function verifyIndependentRelease(input: {
     fail("HEADTEACHER_SUPERVISORY_RELEASED_RESULT_RELEASE_PROOF_DRIFT", 409);
   }
 
-  return releasedDate.toISOString();
+  return {
+    releasedAt: releasedDate.toISOString(),
+    assessorOffice: "District Director" as const,
+  };
+}
+
+function reviewedReviewEvidenceHash(input: {
+  review: ReviewRecord;
+  record: AssessmentRecord;
+  visitContext: VerifiedVisitContext;
+}) {
+  const metadata = reviewMetadata(input.review);
+  const sourceReviewId = clean(metadata.admittedFromReviewId) || null;
+  const sourceReviewStageRaw = Number(metadata.admittedFromReviewStage);
+  const sourceReviewStage = Number.isInteger(sourceReviewStageRaw)
+    ? sourceReviewStageRaw
+    : null;
+  const sourceReviewEvidenceHash =
+    clean(metadata.admittedFromReviewEvidenceHash).toLowerCase() || null;
+  const sourceDecisionRequestHash =
+    clean(metadata.admittedFromDecisionRequestHash).toLowerCase() || null;
+  const sourceDecisionEvidenceHash =
+    clean(metadata.admittedFromDecisionEvidenceHash).toLowerCase() || null;
+
+  return hashJson({
+    schemaVersion: HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY.schemaVersion,
+    workflow: HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY.workflow,
+    evidenceStream: HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY.evidenceStream,
+    assessment: {
+      id: input.record.id,
+      cycleId: input.record.cycleId,
+      revision: input.record.revision,
+      assessmentHash: clean(input.record.assessmentHash).toLowerCase(),
+      visitContextHash: input.visitContext.visitContextHash,
+      assessorRole: input.visitContext.assessorRole,
+      assessorAssignmentId: input.record.assessorAssignmentId,
+    },
+    review: {
+      stage: input.review.stage,
+      reviewerUserId: input.review.reviewerUserId,
+      reviewerAssignmentId: input.review.reviewerAssignmentId,
+      reviewerRole: "DISTRICT_DIRECTOR",
+    },
+    admission: {
+      type: clean(metadata.admissionType),
+      sourceReviewId,
+      sourceReviewStage,
+      sourceReviewEvidenceHash,
+      sourceDecisionRequestHash,
+      sourceDecisionEvidenceHash,
+    },
+    jurisdiction: {
+      districtZoneId: input.record.cycle.scopeZoneId,
+      targetTenantId: input.record.cycle.targetTenantId,
+    },
+    staffFeedbackIncluded: false,
+    respondentIdentitiesIncluded: false,
+    reviewerMayRewriteScores: false,
+    scoreMutationAllowed: false,
+    combinedWeightingDefined: false,
+  });
+}
+
+function reviewedDecisionContractHash(input: {
+  review: ReviewRecord;
+  record: AssessmentRecord;
+}) {
+  return hashJson({
+    schemaVersion: 1,
+    workflow: HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY.workflow,
+    evidenceStream: HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY.evidenceStream,
+    reviewId: input.review.id,
+    reviewStage: input.review.stage,
+    assessmentId: input.record.id,
+    assessmentRevision: input.record.revision,
+    action: "RELEASE",
+    reviewerMayRewriteScores: false,
+    scoreMutationAllowed: false,
+    staffFeedbackIncluded: false,
+    combinedWeightingDefined: false,
+  });
+}
+
+function reviewedReleaseRequestHash(input: {
+  review: ReviewRecord;
+  record: AssessmentRecord;
+  decisionContractHash: string;
+}) {
+  const note = clean(input.review.note);
+  return hashJson({
+    schemaVersion: 1,
+    workflow: HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY.workflow,
+    reviewId: input.review.id,
+    reviewStage: input.review.stage,
+    assessmentId: input.record.id,
+    assessmentRevision: input.record.revision,
+    assessmentHash: clean(input.record.assessmentHash).toLowerCase(),
+    reviewEvidenceHash: clean(reviewMetadata(input.review).reviewEvidenceHash).toLowerCase(),
+    decisionContractHash: input.decisionContractHash,
+    action: "RELEASE",
+    note: note || null,
+    reviewerMayRewriteScores: false,
+    scoreMutationAllowed: false,
+    staffFeedbackIncluded: false,
+  });
+}
+
+function reviewedReleaseEvidenceHash(input: {
+  review: ReviewRecord;
+  record: AssessmentRecord;
+  visitContextHash: string;
+  releaseRequestHash: string;
+}) {
+  return hashJson({
+    schemaVersion: 1,
+    assessmentId: input.record.id,
+    assessmentRevision: input.record.revision,
+    assessmentHash: clean(input.record.assessmentHash).toLowerCase(),
+    visitContextHash: input.visitContextHash,
+    reviewId: input.review.id,
+    reviewStage: input.review.stage,
+    reviewEvidenceHash: clean(reviewMetadata(input.review).reviewEvidenceHash).toLowerCase(),
+    releaseRequestHash: input.releaseRequestHash,
+    staffFeedbackIncluded: false,
+  });
+}
+
+function verifyReviewedGovernanceRelease(input: {
+  record: AssessmentRecord;
+  visitContext: VerifiedVisitContext;
+  release: Record<string, unknown>;
+}) {
+  const { record, visitContext, release } = input;
+  const releasedAt = clean(release.releasedAt);
+  const releasedDate = new Date(releasedAt);
+  if (!releasedAt || Number.isNaN(releasedDate.getTime())) {
+    fail("HEADTEACHER_SUPERVISORY_RELEASED_RESULT_RELEASE_TIMESTAMP_INVALID", 409);
+  }
+
+  if (
+    !["SISSO", "BASIC_SCHOOL_COORDINATOR", "HEAD_OF_SUPERVISION"].includes(
+      visitContext.assessorRole,
+    ) ||
+    !isHeadteacherDirectorGovernanceReviewedReleaseMetadata(release)
+  ) {
+    fail("HEADTEACHER_SUPERVISORY_RELEASED_RESULT_REVIEWED_RELEASE_ORIGIN_DRIFT", 409);
+  }
+
+  const releaseReviewId = requireIdentifier(release.reviewId, "releaseReviewId");
+  const releaseReviewerAssignmentId = requireIdentifier(
+    release.releaserAssignmentId,
+    "releaserAssignmentId",
+  );
+  const assessorAssignmentId = requireIdentifier(
+    record.assessorAssignmentId,
+    "assessorAssignmentId",
+  );
+  const reviewMatches = record.reviews.filter((review) => review.id === releaseReviewId);
+  if (reviewMatches.length !== 1) {
+    fail("HEADTEACHER_SUPERVISORY_RELEASED_RESULT_REVIEWED_RELEASE_REVIEW_DRIFT", 409);
+  }
+  const review = reviewMatches[0];
+  const metadata = reviewMetadata(review);
+  const assessmentHash = clean(record.assessmentHash).toLowerCase();
+  const reviewEvidenceHash = clean(metadata.reviewEvidenceHash).toLowerCase();
+  const expectedReviewEvidenceHash = reviewedReviewEvidenceHash({
+    review,
+    record,
+    visitContext,
+  });
+  const note = clean(review.note);
+
+  const decisionContractHash = reviewedDecisionContractHash({ review, record });
+  const releaseRequestHash = reviewedReleaseRequestHash({
+    review,
+    record,
+    decisionContractHash,
+  });
+  const releaseEvidenceHash = reviewedReleaseEvidenceHash({
+    review,
+    record,
+    visitContextHash: visitContext.visitContextHash,
+    releaseRequestHash,
+  });
+  const expectedProofHash =
+    computeHeadteacherDirectorGovernanceReleaseProofHashFromMetadata(release);
+  const pendingDirectorReview = record.reviews.some(
+    (candidate) =>
+      isDirectorGovernanceReview(candidate) &&
+      normalized(candidate.decision) === "PENDING",
+  );
+
+  if (
+    review.cycleId !== record.cycleId ||
+    review.assessmentId !== record.id ||
+    normalized(review.decision) !== "ACCEPTED" ||
+    !review.decidedAt ||
+    review.decidedAt.toISOString() !== releasedDate.toISOString() ||
+    !isDirectorGovernanceReview(review) ||
+    review.reviewerAssignmentId !== releaseReviewerAssignmentId ||
+    clean(release.releaserUserId) !== review.reviewerUserId ||
+    normalized(release.releaserRole) !== "DISTRICT_DIRECTOR" ||
+    review.reviewerUserId === record.assessorUserId ||
+    Number(metadata.reviewStage) !== review.stage ||
+    clean(metadata.assessmentId) !== record.id ||
+    Number(metadata.assessmentRevision) !== record.revision ||
+    clean(metadata.assessmentHash).toLowerCase() !== assessmentHash ||
+    clean(metadata.visitContextHash).toLowerCase() !== visitContext.visitContextHash ||
+    normalized(metadata.assessorRole) !== visitContext.assessorRole ||
+    clean(metadata.reviewEvidenceHash).toLowerCase() !== reviewEvidenceHash ||
+    reviewEvidenceHash !== expectedReviewEvidenceHash ||
+    clean(metadata.decisionAction) !== "RELEASE" ||
+    clean(metadata.decisionContractHash).toLowerCase() !== decisionContractHash ||
+    clean(metadata.decisionRequestHash).toLowerCase() !== releaseRequestHash ||
+    clean(metadata.decidedByRole) !== "DISTRICT_DIRECTOR" ||
+    clean(metadata.decidedAt) !== releasedDate.toISOString() ||
+    metadata.revisionRequired !== false ||
+    metadata.releasePerformed !== true ||
+    metadata.immutableEvidenceReverified !== true ||
+    metadata.staffFeedbackIncluded !== false ||
+    metadata.respondentIdentitiesIncluded !== false ||
+    metadata.reviewerMayRewriteScores !== false ||
+    metadata.reviewerMayRewriteVisitEvidence !== false ||
+    metadata.scoreMutationAllowed !== false ||
+    metadata.assessmentMutationAllowed !== false ||
+    metadata.combinedWeightingDefined !== false ||
+    metadata.providerCalled !== false ||
+    pendingDirectorReview ||
+    Number(release.proofSchemaVersion) !==
+      HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY.proofSchemaVersion ||
+    clean(release.releaseMode) !== HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY.releaseMode ||
+    clean(release.workflow) !== HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY.workflow ||
+    clean(release.evidenceStream) !== HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY.evidenceStream ||
+    clean(release.cycleId) !== record.cycleId ||
+    clean(release.assessmentId) !== record.id ||
+    Number(release.assessmentRevision) !== record.revision ||
+    normalized(release.assessmentStatus) !== "FINALIZED" ||
+    clean(release.assessmentHash).toLowerCase() !== assessmentHash ||
+    clean(release.visitContextHash).toLowerCase() !== visitContext.visitContextHash ||
+    normalized(release.assessorRole) !== visitContext.assessorRole ||
+    clean(release.assessorAssignmentId) !== assessorAssignmentId ||
+    release.reviewRowsRequired !== true ||
+    release.reviewRowsPresent !== true ||
+    Number(release.reviewStage) !== review.stage ||
+    normalized(release.reviewDecision) !== "ACCEPTED" ||
+    clean(release.reviewEvidenceHash).toLowerCase() !== reviewEvidenceHash ||
+    clean(release.decisionContractHash).toLowerCase() !== decisionContractHash ||
+    clean(release.releaseRequestHash).toLowerCase() !== releaseRequestHash ||
+    clean(release.releaseEvidenceHash).toLowerCase() !== releaseEvidenceHash ||
+    release.releaseNoteIncluded !== Boolean(note) ||
+    (note
+      ? clean(release.releaseNoteHash).toLowerCase() !== hashJson({ note })
+      : release.releaseNoteHash !== null) ||
+    release.selfReviewPerformed !== false ||
+    release.assessmentStatusMutationPerformed !== false ||
+    release.scoreMutationPerformed !== false ||
+    release.visitContextMutationPerformed !== false ||
+    release.staffFeedbackRequired !== false ||
+    release.staffFeedbackAccessed !== false ||
+    release.respondentIdentitiesAccessed !== false ||
+    release.individualStaffResponsesAccessed !== false ||
+    release.carrierCycleStatusMutationPerformed !== false ||
+    release.carrierCycleTimestampMutationPerformed !== false ||
+    release.participantMutationPerformed !== false ||
+    release.reviewerMayRewriteScores !== false ||
+    release.separateEvidenceStreams !== true ||
+    release.combinedWeightingDefined !== false ||
+    release.notificationsSeeded !== false ||
+    release.providerCalled !== false ||
+    !isSha256(release.releaseProofHash) ||
+    clean(release.releaseProofHash).toLowerCase() !== expectedProofHash
+  ) {
+    fail("HEADTEACHER_SUPERVISORY_RELEASED_RESULT_REVIEWED_RELEASE_PROOF_DRIFT", 409);
+  }
+
+  return {
+    releasedAt: releasedDate.toISOString(),
+    assessorOffice: assessorOffice(visitContext.assessorRole),
+  };
+}
+
+function verifyIndependentRelease(input: {
+  record: AssessmentRecord;
+  visitContext: VerifiedVisitContext;
+}) {
+  const release = releaseEntry(input.record.cycle.metadata, input.record.id);
+  if (!Object.keys(release).length) {
+    fail("HEADTEACHER_SUPERVISORY_RELEASED_RESULT_NOT_RELEASED", 409);
+  }
+
+  const releaseMode = clean(release.releaseMode);
+  if (
+    releaseMode === HEADTEACHER_SUPERVISORY_DIRECTOR_DIRECT_RELEASE_POLICY.releaseMode
+  ) {
+    return verifyDirectRelease({ ...input, release });
+  }
+  if (
+    releaseMode === HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY.releaseMode
+  ) {
+    return verifyReviewedGovernanceRelease({ ...input, release });
+  }
+
+  fail("HEADTEACHER_SUPERVISORY_RELEASED_RESULT_RELEASE_MODE_FORBIDDEN", 409, {
+    releaseMode,
+  });
 }
 
 function buildSections(input: {
@@ -1077,9 +1454,9 @@ export async function readHeadteacherSupervisoryReleasedResult(
     scores,
     visitContextHash: visitContext.visitContextHash,
   });
-  const releasedAt = verifyIndependentRelease({
+  const releaseVerification = verifyIndependentRelease({
     record,
-    visitContextHash: visitContext.visitContextHash,
+    visitContext,
   });
   const visitDetails = visitDetailsFromEvidenceSnapshot(record.evidenceSnapshotJson);
 
@@ -1094,15 +1471,15 @@ export async function readHeadteacherSupervisoryReleasedResult(
       districtName: visitContext.districtName,
     },
     release: {
-      releasedAt,
+      releasedAt: releaseVerification.releasedAt,
       integrityVerified: true,
     },
     assessment: {
       assessmentId: record.id,
-      revision: 1,
+      revision: record.revision,
       dateObserved: record.dateObserved?.toISOString().slice(0, 10) ?? "",
       finalizedAt: record.finalizedAt?.toISOString() ?? "",
-      assessorOffice: "District Director",
+      assessorOffice: releaseVerification.assessorOffice,
       instrumentCode: record.instrumentVersion.instrument.code,
       instrumentVersion: 1,
       overallPercentage: calculated.overallPercentage,

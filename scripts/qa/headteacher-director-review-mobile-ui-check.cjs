@@ -73,12 +73,21 @@ function main() {
     "src/app/api/district/headteacher-appraisals/_shared.ts";
   const extensionRoutePath =
     "src/app/api/district/headteacher-appraisals/[cycleId]/extend-feedback/route.ts";
+  const teacherReviewRoutePath =
+    "src/app/api/governance/appraisals/teacher-supervisory/review-queue/route.ts";
+  const teacherReviewQueuePath =
+    "src/lib/appraisals/teacherSupervisoryReviewQueue.ts";
+  const teacherReviewPagePath =
+    "src/app/governance/appraisals/teacher-supervisory/review/page.tsx";
 
   const page = read(pagePath);
   const client = read(clientPath);
   const queueRoute = read(queueRoutePath);
   const sharedRoute = read(sharedRoutePath);
   const extensionRoute = read(extensionRoutePath);
+  const teacherReviewRoute = read(teacherReviewRoutePath);
+  const teacherReviewQueue = read(teacherReviewQueuePath);
+  const teacherReviewPage = read(teacherReviewPagePath);
 
   contains(page, 'export const dynamic = "force-dynamic"', "dynamic page");
   contains(page, "initialCycleId={cycleId}", "controlled cycle reference");
@@ -165,7 +174,7 @@ function main() {
     "direct release mutation restricted to inspection flow",
   );
   contains(client, "Staff Feedback Appraisals", "Staff Feedback channel heading");
-  contains(client, "Governance Appraisals", "Governance channel heading");
+  contains(client, ">Governance<", "compact Governance channel heading");
   contains(
     client,
     "Confidential Teacher feedback about Headteachers",
@@ -173,13 +182,213 @@ function main() {
   );
   contains(
     client,
-    "Official governance assessments of Headteachers",
-    "BBC-friendly Governance Appraisal explanation",
+    "bbcGovernanceQueueVersion: 3",
+    "BBC Governance queue version",
   );
   contains(
     client,
-    "the two outcomes meet later only for analytics",
-    "analytics does not create release dependency",
+    "governanceReturnedCorrectionTracking: true",
+    "returned Governance correction tracking",
+  );
+  contains(
+    client,
+    "governanceCorrectionReceivedNotification: true",
+    "correction-received notification indicator",
+  );
+  contains(
+    client,
+    "governanceStageNumberPrimaryStatus: false",
+    "review stage is secondary rather than primary status",
+  );
+  contains(
+    client,
+    "governanceReleasedHistoryCollapsedByDefault: true",
+    "released Governance history collapsed by default",
+  );
+  contains(
+    client,
+    "governanceStateSpecificActions: true",
+    "state-specific Governance actions",
+  );
+  contains(
+    client,
+    "governanceCompactCards: true",
+    "compact Governance cards",
+  );
+  contains(
+    client,
+    "bbcGovernanceFocusVersion: 1",
+    "BBC Governance focus-filter version",
+  );
+  contains(
+    client,
+    '"TEACHER_APPRAISALS"',
+    "Teacher Appraisals focus policy",
+  );
+  contains(
+    client,
+    '"HEADTEACHER_APPRAISALS"',
+    "Headteacher Appraisals focus policy",
+  );
+  contains(
+    client,
+    '"MY_ASSESSMENTS"',
+    "My Assessments focus policy",
+  );
+  contains(
+    client,
+    "teacherReviewQueueIntegrated: true",
+    "Teacher review queue integrated into Director hub",
+  );
+  contains(
+    client,
+    "teacherReviewWorkspaceReused: true",
+    "existing Teacher review workspace reused",
+  );
+  contains(
+    client,
+    "teacherReviewBackendModified: false",
+    "Teacher review backend remains unchanged",
+  );
+  contains(
+    client,
+    "onlySelectedGovernanceGroupExpanded: true",
+    "only selected Governance focus group expands",
+  );
+  contains(
+    client,
+    'aria-label="Governance appraisal filters"',
+    "Governance focus filter group",
+  );
+  contains(client, "Teacher Appraisals", "Teacher Appraisals filter");
+  contains(client, "Headteacher Appraisals", "Headteacher Appraisals filter");
+  contains(client, "My Assessments", "My Assessments filter");
+  excludes(client, "Self Appraisals", "misleading Director self-appraisal label");
+  contains(
+    client,
+    'className="mt-3 grid gap-2 sm:grid-cols-3"',
+    "compact mobile-first focus filter layout",
+  );
+  contains(
+    client,
+    'setGovernanceFocus("TEACHER")',
+    "Teacher focus selection",
+  );
+  contains(
+    client,
+    'setGovernanceFocus("HEADTEACHER")',
+    "Headteacher focus selection",
+  );
+  contains(
+    client,
+    'setGovernanceFocus("MINE")',
+    "Director-authored focus selection",
+  );
+  contains(
+    client,
+    "teacherAppraisalItems.length",
+    "Teacher focus independent count",
+  );
+  contains(
+    client,
+    "headteacherReadyItems.length",
+    "Headteacher focus independent count",
+  );
+  contains(
+    client,
+    "myAssessmentActionCount",
+    "My Assessments independent count",
+  );
+  contains(
+    client,
+    "directorGovernanceActionCount",
+    "combined attention count without combined scoring",
+  );
+  contains(
+    client,
+    "Open only the assessment you need to act on.",
+    "BBC Governance instruction",
+  );
+  contains(
+    client,
+    "Staff Feedback stays separate.",
+    "governance does not create staff release dependency",
+  );
+
+  contains(
+    client,
+    "TEACHER_REVIEW_QUEUE_API",
+    "Teacher review queue API constant",
+  );
+  contains(
+    client,
+    '"/api/governance/appraisals/teacher-supervisory/review-queue"',
+    "existing Teacher review queue endpoint",
+  );
+  contains(
+    client,
+    "TEACHER_REVIEW_WORKSPACE",
+    "Teacher review workspace constant",
+  );
+  contains(
+    client,
+    '"/governance/appraisals/teacher-supervisory/review"',
+    "existing Teacher review workspace route",
+  );
+  contains(
+    client,
+    "function teacherReviewQueueContractSafe",
+    "fail-closed Teacher queue browser contract",
+  );
+  contains(
+    client,
+    "payload.reviewQueue",
+    "Teacher queue API projection consumed",
+  );
+  contains(
+    client,
+    "function TeacherQueueRecord",
+    "compact Teacher review card",
+  );
+  contains(
+    client,
+    "openTeacherReviewWorkspace",
+    "Teacher review workspace navigation",
+  );
+  contains(
+    client,
+    "window.location.assign",
+    "explicit Teacher workspace navigation",
+  );
+  contains(
+    client,
+    "?assessmentId=${encodeURIComponent(assessmentId)}",
+    "assessment-keyed Teacher workspace link",
+  );
+  contains(
+    client,
+    "loadTeacherReviewQueue",
+    "Teacher queue explicit loader",
+  );
+  contains(
+    client,
+    "void loadTeacherReviewQueue();",
+    "Teacher queue initial/refresh load",
+  );
+  contains(
+    client,
+    "No Teacher appraisal currently needs your action.",
+    "Teacher focus empty state",
+  );
+  contains(
+    client,
+    "No Headteacher appraisal currently needs your action.",
+    "Headteacher focus empty state",
+  );
+  contains(
+    client,
+    "None of your own finalized assessments currently needs release.",
+    "My Assessments focus empty state",
   );
 
   contains(
@@ -233,27 +442,94 @@ function main() {
     "separate Superadmin identity path",
   );
 
-  contains(client, "/review-package", "review-package API");
-  contains(client, "/review-start", "review-start API");
+  excludes(client, "/review-package", "legacy combined Governance review-package API");
+  excludes(client, '"return-hold"', "legacy combined Governance return-hold API");
+  excludes(client, 'stream="COMBINED"', "legacy combined decision stream");
+  contains(client, '${API_BASE}/governance-review', "assessment-keyed Governance review API");
+  contains(client, 'action: "START"', "independent Governance review start action");
+  contains(client, 'stream="GOVERNANCE"', "independent Governance decision stream");
   contains(
     client,
     "/anonymous-responses",
     "anonymous-response API",
   );
-  contains(client, '"return-hold"', "return-hold API");
-  contains(client, '"release"', "release API");
   contains(client, 'cache: "no-store"', "no-store fetches");
   contains(client, "window.confirm", "explicit confirmation");
-  contains(client, "Load review package", "explicit package load");
-  contains(
+  excludes(client, "Load review package", "obsolete Staff queue package-load action");
+  excludes(
     client,
     "Start full decision review",
-    "explicit full decision review start",
+    "obsolete Staff queue combined-review action",
   );
   contains(
     client,
-    "Review governance assessment",
-    "Director-authored governance inspection action",
+    "Inspect & release",
+    "Director-authored Governance action is explicit",
+  );
+  contains(
+    client,
+    "Open & start review",
+    "governance-officer assessment start action is explicit",
+  );
+  contains(
+    client,
+    "Continue review",
+    "ordinary pending Governance review continuation action is explicit",
+  );
+  contains(
+    client,
+    "Correction received",
+    "returned correction received status",
+  );
+  contains(
+    client,
+    "Review corrected report",
+    "returned correction next action",
+  );
+  contains(
+    client,
+    "has corrected and resubmitted this appraisal.",
+    "plain correction-complete explanation",
+  );
+  contains(
+    client,
+    "Ready for your final decision",
+    "plain Director next-step guidance",
+  );
+  contains(
+    client,
+    "Waiting for {item.assessorOffice} to correct and resubmit this appraisal.",
+    "plain waiting-for-correction guidance",
+  );
+  contains(
+    client,
+    'aria-label="1 corrected Governance appraisal needs your action"',
+    "per-record correction notification indicator",
+  );
+  contains(
+    client,
+    "governanceCorrectionReceivedItems.length",
+    "Governance correction count indicator",
+  );
+  contains(
+    client,
+    "Correction received from ${props.reviewPackage.assessment.assessorOffice}",
+    "opened corrected-report heading",
+  );
+  contains(
+    client,
+    "Correction received · ready for your final review",
+    "opened corrected-report instruction",
+  );
+  contains(
+    client,
+    "Review stage ${props.reviewPackage.review?.stage ?? 1} is preserved.",
+    "stage retained as secondary evidence",
+  );
+  excludes(
+    client,
+    "Review in progress · stage",
+    "technical stage-first Governance queue status",
   );
   contains(
     client,
@@ -262,13 +538,13 @@ function main() {
   );
   contains(
     client,
-    "item.canDirectReleaseOwnAssessment &&",
+    "item.canDirectRelease",
     "server-derived direct-release presentation gate",
   );
   contains(
     client,
-    "item.directReleaseAssessmentId",
-    "exact own assessment identifier",
+    "item.assessmentId",
+    "assessment-keyed Governance identifier",
   );
   contains(
     client,
@@ -284,6 +560,52 @@ function main() {
     client,
     "function GovernanceQueueRecord",
     "separate Governance Appraisal record renderer",
+  );
+  contains(
+    client,
+    "function GovernanceReviewNativeForm",
+    "Governance-only native Director review renderer",
+  );
+  contains(
+    client,
+    'governanceReviewedDecisionPath: "ASSESSMENT_KEYED_RETURN_HOLD_RELEASE"',
+    "assessment-keyed reviewed Governance path",
+  );
+  contains(
+    client,
+    "governanceStaffFeedbackPrerequisite: false",
+    "Governance review does not require Staff Feedback",
+  );
+  contains(
+    client,
+    "appraisal report for ${props.reviewPackage.cycle.targetName}",
+    "plain-language Governance review instruction",
+  );
+  excludes(
+    client,
+    "The Governance assessment remains its own evidence stream and has no combined weighting.",
+    "technical Governance evidence-stream copy",
+  );
+  contains(
+    client,
+    "Start Governance review",
+    "explicit Governance review start below native form",
+  );
+  contains(
+    client,
+    "There is no Start Governance review step and no self-review.",
+    "Director-authored path explains why Start Governance review is absent",
+  );
+  contains(
+    client,
+    "scroll to the bottom and click Start Governance review.",
+    "governance-officer path explains where Start Governance review appears",
+  );
+
+  contains(
+    client,
+    "Independent Governance decision",
+    "Return/Hold/Release beneath Governance form",
   );
   contains(
     client,
@@ -307,18 +629,18 @@ function main() {
   );
   contains(
     client,
-    "Review the official assessment before release",
+    "Your assessment — inspect before release",
     "BBC-friendly final inspection heading",
   );
   contains(
     client,
-    "same native 4-section, 34-indicator Monitoring and Inspection Sheet",
-    "native assessor-form continuity",
+    "This is the assessment you authored as District Director.",
+    "Director-authored assessment ownership guidance",
   );
   contains(
     client,
-    "This screen is read-only. Nothing on the official form can be changed here.",
-    "read-only final inspection boundary",
+    "Read the locked 4-section, 34-indicator form",
+    "native assessor-form continuity",
   );
   contains(
     client,
@@ -347,7 +669,7 @@ function main() {
   );
   precedes(
     client,
-    "Review governance assessment",
+    "Inspect & release",
     "Release governance assessment",
     "inspection action before release action",
   );
@@ -490,30 +812,70 @@ function main() {
     "The separate governance assessment was not changed.",
     "independent governance-stream guidance",
   );
-  contains(
+  excludes(
     client,
     "Staff evidence review only",
-    "staff-only review boundary",
+    "obsolete noisy Staff evidence review only card",
   );
-  contains(
-    client,
-    "The separate governance assessment is not required for this inspection.",
-    "independent staff-review notice",
-  );
-  contains(
+  excludes(
     client,
     "Return, Hold and Release remain unavailable until the separate",
-    "decision controls remain full-review-only",
+    "obsolete governance-dependent staff decision guidance",
   );
   contains(
     client,
-    "HEADTEACHER_DIRECTOR_REVIEW_SUPERVISORY_ASSESSMENT_REQUIRED",
-    "friendly supervisory-readiness mapping",
+    '/staff-review/start',
+    "independent Staff Feedback review start endpoint",
   );
   contains(
     client,
-    "The staff feedback is ready, but the separate governance assessment",
-    "BBC-friendly governance-pending guidance",
+    '/staff-review/decision',
+    "independent Staff Feedback decision endpoint",
+  );
+  contains(
+    client,
+    'aria-label="Staff Feedback decision controls"',
+    "Staff Feedback decisions appear with the opened native respondent form",
+  );
+  contains(
+    client,
+    "showDecisionButtons={",
+    "Staff Feedback decisions stay hidden until a respondent form is previewed",
+  );
+  excludes(
+    client,
+    "No Governance Appraisal is required.",
+    "obsolete standalone Staff Feedback review explanation card",
+  );
+  excludes(
+    client,
+    "Staff Feedback review · stage {props.reviewState.latestStage",
+    "obsolete standalone Staff Feedback review stage card",
+  );
+  contains(
+    client,
+    'id="staff-evidence-review"',
+    "anonymous staff evidence scroll target",
+  );
+  contains(
+    client,
+    '.getElementById("staff-evidence-review")',
+    "Review staff feedback auto-scroll",
+  );
+  contains(
+    client,
+    "Show released (",
+    "released Governance history reveal control",
+  );
+  contains(
+    client,
+    "Hide released",
+    "released Governance history collapse control",
+  );
+  contains(
+    client,
+    "governanceIsCurrentFocus",
+    "actionable governance auto-show rule",
   );
   contains(
     client,
@@ -613,8 +975,8 @@ function main() {
   );
   contains(
     client,
-    "Official governance assessment of the Headteacher",
-    "Governance record identity",
+    "`${item.assessorOffice} assessment`",
+    "Governance record identifies assessor office plainly",
   );
   contains(
     client,
@@ -656,20 +1018,12 @@ function main() {
     "Overall percentage — average of the four official section",
     "four-section overall formula",
   );
-  contains(client, "34 indicators", "34-indicator supervisory evidence");
   contains(
     client,
-    "four-section Monitoring and Inspection Sheet",
-    "four-section supervisory evidence",
+    "Read the locked 4-section, 34-indicator form",
+    "native 4-section / 34-indicator Governance evidence",
   );
   contains(client, "Back to respondents", "anonymous-form navigation");
-  contains(client, "Previous", "previous comparison control");
-  contains(client, "Next", "next comparison control");
-  contains(
-    client,
-    "currentItemIndex",
-    "one-comparison-at-a-time state",
-  );
   contains(
     client,
     "overflow-x-auto",
@@ -679,11 +1033,6 @@ function main() {
     client,
     "min-w-[1040px]",
     "official paper-form width preservation",
-  );
-  contains(
-    client,
-    "md:hidden",
-    "mobile Director decision controls",
   );
 
   contains(client, "Return for correction", "return decision");
@@ -706,23 +1055,13 @@ function main() {
   );
   contains(
     client,
-    "Do not repeat the decision blindly",
-    "idempotency safety guidance",
+    "Do not repeat the Governance decision blindly",
+    "Governance decision retry safety guidance",
   );
-  contains(
+  excludes(
     client,
     "HEADTEACHER_RELEASE_NOTIFICATION_SEEDING_RETRY_REQUIRED",
-    "truthful partial-success retry state",
-  );
-  contains(
-    client,
-    "Repeating release will not duplicate the official result.",
-    "safe notification retry guidance",
-  );
-  contains(
-    client,
-    "The Headteacher notification was queued safely.",
-    "successful notification queue confirmation",
+    "legacy combined release notification coupling",
   );
 
   excludes(client, "localStorage", "local storage");
@@ -750,11 +1089,83 @@ function main() {
     "obsolete Director identity-access caveat",
   );
 
+  for (const marker of [
+    "readTeacherSupervisoryReviewQueue",
+    "TEACHER_SUPERVISORY_REVIEW_POLICY",
+    "requireTeacherSupervisoryGovernanceApiContext",
+    "reviewerRoleAllowed",
+    "jsonNoStore",
+    "reviewQueue",
+  ]) {
+    contains(
+      teacherReviewRoute,
+      marker,
+      `protected Teacher review route marker: ${marker}`,
+    );
+  }
+
+  for (const forbidden of [
+    "appraisalReview.create",
+    "appraisalReview.update",
+    "appraisalCycle.update",
+    "appraisalAssessment.update",
+    "sendSms",
+    "sendEmail",
+  ]) {
+    excludes(
+      teacherReviewRoute,
+      forbidden,
+      `Teacher review discovery route mutation/provider marker: ${forbidden}`,
+    );
+  }
+
+  for (const marker of [
+    'case "DISTRICT_DIRECTOR"',
+    '"READY_TO_REVIEW"',
+    '"CONTINUE_REVIEW"',
+    '"READY_TO_RELEASE"',
+    '"DIRECT_RELEASE"',
+    "currentReviewerRole",
+    "currentReviewerAssignmentId",
+    "assessorUserIdIncluded: false",
+    "targetUserIdIncluded: false",
+    "reviewIdIncluded: false",
+    "assignmentIdsIncluded: false",
+    "proofHashesIncluded: false",
+    "databaseWritesAllowed: false",
+    "providerCallsAllowed: false",
+  ]) {
+    contains(
+      teacherReviewQueue,
+      marker,
+      `protected Teacher review queue marker: ${marker}`,
+    );
+  }
+
+  contains(
+    teacherReviewPage,
+    "TEACHER_SUPERVISORY_REVIEW_POLICY.reviewerRoles",
+    "Teacher review page remains policy-driven for HOS/Director",
+  );
+  contains(
+    teacherReviewPage,
+    "initialAssessmentId",
+    "Teacher review page accepts assessment-keyed opening",
+  );
+  contains(
+    teacherReviewPage,
+    "TeacherSupervisoryReviewClient",
+    "existing Teacher review client remains the action workspace",
+  );
+
   transpile(page, pagePath);
   transpile(client, clientPath);
   transpile(queueRoute, queueRoutePath);
   transpile(sharedRoute, sharedRoutePath);
   transpile(extensionRoute, extensionRoutePath);
+  transpile(teacherReviewRoute, teacherReviewRoutePath);
+  transpile(teacherReviewQueue, teacherReviewQueuePath);
+  transpile(teacherReviewPage, teacherReviewPagePath);
 
   console.log("");
   console.log(
@@ -831,10 +1242,13 @@ function main() {
     "Mobile form access             : horizontal paper-form scrolling",
   );
   console.log(
-    "Analytics interaction          : one comparison item at a time",
+    "Governance Director review      : native form + Return / Hold / Release",
   );
   console.log(
-    "Navigation                     : Previous / Next controls",
+    "Governance decision wording     : assessor + Headteacher named plainly",
+  );
+  console.log(
+    "Legacy combined analytics       : absent",
   );
   console.log(
     "Combined appraisal score       : absent",
@@ -843,13 +1257,49 @@ function main() {
     "Closed-cycle staff review       : independent, anonymous, read-only",
   );
   console.log(
-    "Governance assessment dependency: absent from staff inspection",
+    "Governance assessment dependency: absent from staff inspection + decisions",
   );
   console.log(
-    "Decision controls               : full review only",
+    "Staff decision controls         : independent Return / Hold / Release",
   );
   console.log(
-    "Review start                   : explicit confirmation",
+    "Staff review entry              : Review staff feedback → auto-scroll",
+  );
+  console.log(
+    "Director Governance filters     : Teacher / Headteacher / My Assessments",
+  );
+  console.log(
+    "Selected Governance group       : only selected group expands",
+  );
+  console.log(
+    "Teacher Director discovery      : existing protected review queue reused",
+  );
+  console.log(
+    "Teacher Director workspace      : existing assessment-keyed review page reused",
+  );
+  console.log(
+    "Teacher backend/schema change   : absent",
+  );
+  console.log(
+    "Governance queue                : compact BBC cards + state-specific actions",
+  );
+  console.log(
+    "Returned correction tracking    : waiting → correction received → Director action",
+  );
+  console.log(
+    "Correction notification         : count badge + per-record indicator",
+  );
+  console.log(
+    "Corrected report action         : Review corrected report",
+  );
+  console.log(
+    "Review stage presentation       : secondary evidence only",
+  );
+  console.log(
+    "Released Governance history     : collapsed by default",
+  );
+  console.log(
+    "Direct vs reviewed action       : Inspect & release / Open & start review",
   );
   console.log(
     "Return / Hold / Release        : controlled and confirmed",
@@ -873,6 +1323,9 @@ function main() {
     "Database accessed              : false",
   );
   console.log("");
+  console.log(
+    "RESULT: N7 DIRECTOR APPRAISAL FOCUS HUB GREEN",
+  );
   console.log(
     "RESULT: DIRECTOR NATIVE EVIDENCE UI GREEN",
   );

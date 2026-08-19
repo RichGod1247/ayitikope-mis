@@ -513,6 +513,8 @@ export default function HeadteacherSupervisoryAssessmentClient({
   const [selectedCircuitId, setSelectedCircuitId] = useState("");
   const [selectedSchoolId, setSelectedSchoolId] = useState("");
   const [showSavedRecords, setShowSavedRecords] = useState(false);
+  const [hosLandingPanel, setHosLandingPanel] =
+    useState<"RETURNED" | "NEW" | null>(null);
   const [autosaveState, setAutosaveState] =
     useState<AutosaveState>("idle");
   const [reviewMode, setReviewMode] = useState(false);
@@ -1332,12 +1334,91 @@ export default function HeadteacherSupervisoryAssessmentClient({
     }
   }
 
+  async function startReturnedCorrection(item: SupervisoryQueueItem) {
+    const returnedAssessmentId = item.supervisory.assessmentId;
+    if (
+      item.supervisory.state !== "RETURNED" ||
+      !returnedAssessmentId
+    ) {
+      return;
+    }
+
+    setBusy(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const inspectResponse = await fetch(
+        `/api/governance/appraisals/headteacher-supervisory/${encodeURIComponent(returnedAssessmentId)}`,
+        { cache: "no-store" },
+      );
+      const inspectBody = (await readApiBody(inspectResponse)) as
+        | { ok: true; workspace: Workspace }
+        | ApiFailure;
+
+      if (!inspectResponse.ok || inspectBody.ok !== true) {
+        throw new Error(
+          messageFromFailure(inspectBody, inspectResponse.status),
+        );
+      }
+
+      if (inspectBody.workspace.lifecycle.canCreateRevision !== true) {
+        throw new Error(
+          "This returned assessment is not ready for a correction revision.",
+        );
+      }
+
+      const returnReason =
+        inspectBody.workspace.lifecycle.returnReason?.trim() ||
+        "The reviewer requested a correction.";
+
+      const confirmed = window.confirm(
+        `Start correction for ${item.targetName || "this Headteacher"}?\n\nReason returned: ${returnReason}\n\nA new editable revision will be created. The returned version stays locked as history.`,
+      );
+      if (!confirmed) return;
+
+      const response = await fetch(
+        `/api/governance/appraisals/headteacher-supervisory/${encodeURIComponent(returnedAssessmentId)}/revision`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ confirmRevision: true }),
+        },
+      );
+      const body = (await readApiBody(response)) as
+        | { ok: true; result: { revision: { id: string } } }
+        | ApiFailure;
+
+      if (!response.ok || body.ok !== true) {
+        throw new Error(messageFromFailure(body, response.status));
+      }
+
+      const nextId = body.result.revision.id;
+      clearWorkspaceForAssessmentChange();
+      setAssessmentId(nextId);
+      router.replace(
+        `/governance/appraisals/headteacher-supervisory?assessmentId=${encodeURIComponent(nextId)}`,
+      );
+      setNotice(
+        "Correction opened. Change only what was returned, then review and resubmit.",
+      );
+    } catch (revisionError) {
+      setError(
+        revisionError instanceof Error
+          ? revisionError.message
+          : "The correction could not be started.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function createRevision() {
     if (!workspace || !assessmentId || !workspace.lifecycle.canCreateRevision) {
       return;
     }
     const confirmed = window.confirm(
-      "Create a correction copy? The returned version will remain preserved as history.",
+      "Start correction? A new editable revision will be created. The returned version will remain preserved as history.",
     );
     if (!confirmed) return;
 
@@ -1365,7 +1446,7 @@ export default function HeadteacherSupervisoryAssessmentClient({
       router.replace(
         `/governance/appraisals/headteacher-supervisory?assessmentId=${encodeURIComponent(nextId)}`,
       );
-      setNotice("Correction copy created. Review and resubmit it.");
+      setNotice("Correction opened. Change only what was returned, then review and resubmit.");
     } catch (revisionError) {
       setError(
         revisionError instanceof Error
@@ -1379,12 +1460,403 @@ export default function HeadteacherSupervisoryAssessmentClient({
 
   if (!assessmentId && !cycleId) {
     const actorRole = queue?.actorRole;
+    const usesCompactOwnHeadteacherLanding =
+      actorRole === "HEAD_OF_SUPERVISION" ||
+      actorRole === "BASIC_SCHOOL_COORDINATOR";
+    const compactOfficerLabel =
+      actorRole === "BASIC_SCHOOL_COORDINATOR"
+        ? "Basic School Coordinator"
+        : "Head of Supervision";
     const selectedCircuit = selectableCircuits.find(
       (circuit) => circuit.circuitId === selectedCircuitId,
     );
     const savedItems = queue?.items.filter(
       (item) => item.supervisory.assessmentId != null,
     ) ?? [];
+
+    const hosReturnedItems =
+      usesCompactOwnHeadteacherLanding
+        ? (queue?.items.filter(
+            (item) =>
+              item.supervisory.state === "RETURNED" &&
+              item.supervisory.assessmentId != null,
+          ) ?? [])
+        : [];
+
+    const hosNewOrActiveItems =
+      usesCompactOwnHeadteacherLanding
+        ? (queue?.items.filter(
+            (item) =>
+              item.supervisory.state === "NOT_STARTED" ||
+              item.supervisory.state === "IN_PROGRESS",
+          ) ?? [])
+        : [];
+
+    const hosNewCircuitIds = new Set(
+      hosNewOrActiveItems.map((item) => item.circuitId),
+    );
+    const hosNewCircuits = selectableCircuits.filter((circuit) =>
+      hosNewCircuitIds.has(circuit.circuitId),
+    );
+    const hosNewSchoolIds = new Set(
+      hosNewOrActiveItems
+        .filter(
+          (item) =>
+            !selectedCircuitId || item.circuitId === selectedCircuitId,
+        )
+        .map((item) => item.schoolId),
+    );
+    const hosNewSchools = queueSchools.filter((school) =>
+      hosNewSchoolIds.has(school.schoolId),
+    );
+    const hosSelectedNewItems = hosNewOrActiveItems.filter(
+      (item) =>
+        (!selectedCircuitId || item.circuitId === selectedCircuitId) &&
+        (!selectedSchoolId || item.schoolId === selectedSchoolId),
+    );
+
+    if (usesCompactOwnHeadteacherLanding) {
+      return (
+        <div
+          data-hos-own-headteacher-appraisal-ui="bbc-v2"
+          data-bsc-own-headteacher-appraisal-ui={
+            actorRole === "BASIC_SCHOOL_COORDINATOR" ? "bbc-v1" : undefined
+          }
+          data-compact-headteacher-appraisal-role={actorRole}
+          className="min-h-screen bg-[#070B12] px-4 py-5 text-[#F7F4ED] sm:px-6"
+        >
+          <div className="mx-auto max-w-5xl space-y-4">
+            <section className="rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(7,11,18,0.97),rgba(28,19,48,0.92))] p-4 shadow-xl sm:p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#E8C96A]">
+                    {compactOfficerLabel}
+                  </p>
+                  <h1 className="mt-1 text-xl font-black text-white sm:text-2xl">
+                    Headteacher Appraisal
+                  </h1>
+                  <p className="mt-1 text-sm leading-5 text-slate-300">
+                    Choose what you want to do. Only that task will open.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Link
+                    href={dashboardHref(actorRole)}
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm font-bold text-white hover:bg-white/[0.08]"
+                  >
+                    ← Dashboard
+                  </Link>
+                  <button
+                    type="button"
+                    disabled={queueLoading}
+                    onClick={() => void loadQueue()}
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-fuchsia-300/25 bg-fuchsia-400/15 px-4 text-sm font-bold text-fuchsia-50 disabled:opacity-50"
+                  >
+                    {queueLoading ? "Refreshing…" : "Refresh"}
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            {error ? (
+              <div
+                role="alert"
+                className="rounded-2xl border border-rose-300/25 bg-rose-500/10 p-3 text-sm text-rose-100"
+              >
+                {error}
+              </div>
+            ) : null}
+
+            {notice ? (
+              <div
+                role="status"
+                className="rounded-2xl border border-emerald-300/25 bg-emerald-500/10 p-3 text-sm text-emerald-100"
+              >
+                {notice}
+              </div>
+            ) : null}
+
+            <section
+              aria-label="Headteacher appraisal tasks"
+              className="grid gap-3 sm:grid-cols-2"
+            >
+              <button
+                type="button"
+                aria-expanded={hosLandingPanel === "RETURNED"}
+                aria-controls="hos-returned-correction-panel"
+                onClick={() =>
+                  setHosLandingPanel((current) =>
+                    current === "RETURNED" ? null : "RETURNED",
+                  )
+                }
+                className={cx(
+                  "min-h-28 rounded-2xl border p-4 text-left transition",
+                  hosLandingPanel === "RETURNED"
+                    ? "border-amber-300/45 bg-amber-400/15"
+                    : "border-amber-300/20 bg-amber-400/[0.07] hover:bg-amber-400/10",
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-base font-black text-white">
+                      ↩ Returned for correction
+                    </p>
+                    <p className="mt-1 text-sm leading-5 text-amber-50/80">
+                      {hosReturnedItems.length === 0
+                        ? "No appraisal is waiting for correction."
+                        : hosReturnedItems.length === 1
+                          ? "1 appraisal needs your correction."
+                          : `${hosReturnedItems.length} appraisals need your correction.`}
+                    </p>
+                  </div>
+                  <span
+                    aria-label={`${hosReturnedItems.length} returned appraisals need correction`}
+                    className="inline-flex min-h-8 min-w-8 shrink-0 items-center justify-center rounded-full border border-amber-200/40 bg-amber-300 px-2 text-sm font-black text-slate-950"
+                  >
+                    {hosReturnedItems.length}
+                  </span>
+                </div>
+                <p className="mt-3 text-xs font-bold text-amber-100">
+                  {hosLandingPanel === "RETURNED" ? "Close" : "Open"} →
+                </p>
+              </button>
+
+              <button
+                type="button"
+                aria-expanded={hosLandingPanel === "NEW"}
+                aria-controls="hos-new-headteacher-appraisal-panel"
+                onClick={() =>
+                  setHosLandingPanel((current) =>
+                    current === "NEW" ? null : "NEW",
+                  )
+                }
+                className={cx(
+                  "min-h-28 rounded-2xl border p-4 text-left transition",
+                  hosLandingPanel === "NEW"
+                    ? "border-fuchsia-300/45 bg-fuchsia-400/15"
+                    : "border-fuchsia-300/20 bg-fuchsia-400/[0.07] hover:bg-fuchsia-400/10",
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-base font-black text-white">
+                      ＋ New Headteacher appraisal
+                    </p>
+                    <p className="mt-1 text-sm leading-5 text-fuchsia-50/80">
+                      Start a new assessment or continue a draft.
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-fuchsia-200/25 bg-fuchsia-300/10 px-2.5 py-1 text-[11px] font-black text-fuchsia-100">
+                    {hosNewOrActiveItems.length} available
+                  </span>
+                </div>
+                <p className="mt-3 text-xs font-bold text-fuchsia-100">
+                  {hosLandingPanel === "NEW" ? "Close" : "Open"} →
+                </p>
+              </button>
+            </section>
+
+            {hosLandingPanel === "RETURNED" ? (
+              <section
+                id="hos-returned-correction-panel"
+                className="rounded-[24px] border border-amber-300/25 bg-amber-400/[0.06] p-3 sm:p-4"
+              >
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-amber-200">
+                    Returned work
+                  </p>
+                  <h2 className="mt-1 text-lg font-black text-white">
+                    Correct and resubmit
+                  </h2>
+                  <p className="mt-1 text-sm leading-5 text-slate-300">
+                    Start correction creates a new editable revision. The returned version stays locked as history.
+                  </p>
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  {hosReturnedItems.length === 0 ? (
+                    <p className="rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-slate-300">
+                      Nothing has been returned to you.
+                    </p>
+                  ) : (
+                    hosReturnedItems.map((item) => (
+                      <article
+                        key={`returned:${item.cycleId}:${item.supervisory.assessmentId}`}
+                        className="rounded-xl border border-white/10 bg-black/25 p-3"
+                      >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0">
+                            <p className="font-black text-white">
+                              {item.targetName || "Headteacher"}
+                            </p>
+                            <p className="mt-1 text-sm text-slate-300">
+                              {item.schoolName} · {item.circuitName}
+                            </p>
+                            <p className="mt-1 text-xs font-semibold text-amber-200">
+                              {item.supervisory.label}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => void startReturnedCorrection(item)}
+                            className="min-h-11 w-full rounded-xl bg-amber-300 px-4 text-sm font-black text-slate-950 disabled:cursor-wait disabled:opacity-50 sm:w-auto"
+                          >
+                            {busy ? "Opening…" : "Start correction"}
+                          </button>
+                        </div>
+                      </article>
+                    ))
+                  )}
+                </div>
+              </section>
+            ) : null}
+
+            {hosLandingPanel === "NEW" ? (
+              <section
+                id="hos-new-headteacher-appraisal-panel"
+                className="rounded-[24px] border border-fuchsia-300/25 bg-fuchsia-400/[0.06] p-3 sm:p-4"
+              >
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-fuchsia-200">
+                    New or unfinished work
+                  </p>
+                  <h2 className="mt-1 text-lg font-black text-white">
+                    Choose Headteacher
+                  </h2>
+                  <p className="mt-1 text-sm leading-5 text-slate-300">
+                    Choose the circuit, then the school. Returned corrections are kept in the other card.
+                  </p>
+                </div>
+
+                {hosNewOrActiveItems.length === 0 ? (
+                  <p className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-slate-300">
+                    No new or unfinished Headteacher appraisal is available.
+                  </p>
+                ) : (
+                  <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                    <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                      <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+                        1. Circuit
+                      </p>
+                      <div className="mt-2 space-y-2">
+                        {hosNewCircuits.map((circuit) => (
+                          <button
+                            key={`hos-new-circuit:${circuit.circuitId}`}
+                            type="button"
+                            onClick={() => {
+                              setSelectedCircuitId(circuit.circuitId);
+                              setSelectedSchoolId("");
+                            }}
+                            className={cx(
+                              "w-full rounded-xl border p-3 text-left text-sm font-bold",
+                              circuit.circuitId === selectedCircuitId
+                                ? "border-fuchsia-300/40 bg-fuchsia-400/15 text-white"
+                                : "border-white/10 bg-white/[0.03] text-slate-200",
+                            )}
+                          >
+                            {circuit.circuitName}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                      <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+                        2. School
+                      </p>
+                      {!selectedCircuitId ? (
+                        <p className="mt-2 text-sm text-slate-300">
+                          Choose a circuit first.
+                        </p>
+                      ) : hosNewSchools.length === 0 ? (
+                        <p className="mt-2 text-sm text-slate-300">
+                          No new or unfinished appraisal is available in this circuit.
+                        </p>
+                      ) : (
+                        <div className="mt-2 space-y-2">
+                          {hosNewSchools.map((school) => (
+                            <button
+                              key={`hos-new-school:${school.schoolId}`}
+                              type="button"
+                              onClick={() => setSelectedSchoolId(school.schoolId)}
+                              className={cx(
+                                "w-full rounded-xl border p-3 text-left",
+                                school.schoolId === selectedSchoolId
+                                  ? "border-emerald-300/40 bg-emerald-400/10"
+                                  : "border-white/10 bg-white/[0.03]",
+                              )}
+                            >
+                              <p className="text-sm font-black text-white">
+                                {school.schoolName}
+                              </p>
+                              <p className="mt-1 text-xs text-slate-300">
+                                {school.headteacherName}
+                              </p>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {selectedSchoolId ? (
+                  <div className="mt-3 space-y-2">
+                    {hosSelectedNewItems.length === 0 ? (
+                      <p className="rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-slate-300">
+                        Choose a school with new or unfinished work.
+                      </p>
+                    ) : (
+                      hosSelectedNewItems.map((item) => (
+                        <article
+                          key={`hos-new-item:${item.cycleId}:${item.supervisory.assessmentId ?? "none"}`}
+                          className="rounded-xl border border-white/10 bg-black/25 p-3"
+                        >
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                              <p className="font-black text-white">
+                                {item.targetName || "Headteacher"}
+                              </p>
+                              <p className="mt-1 text-sm text-slate-300">
+                                {item.schoolName}
+                              </p>
+                              <p className="mt-1 text-xs font-semibold text-fuchsia-200">
+                                {item.supervisory.state === "IN_PROGRESS"
+                                  ? `Draft ${item.supervisory.completionPercentage}% complete`
+                                  : "Ready to start"}
+                              </p>
+                            </div>
+                            {item.action.enabled && item.action.url ? (
+                              <a
+                                href={item.action.url}
+                                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-fuchsia-300 px-4 text-sm font-black text-slate-950 sm:w-auto"
+                              >
+                                {item.supervisory.state === "IN_PROGRESS"
+                                  ? "Continue assessment"
+                                  : "Start assessment"}
+                              </a>
+                            ) : (
+                              <span className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-bold text-slate-400">
+                                {item.action.label}
+                              </span>
+                            )}
+                          </div>
+                        </article>
+                      ))
+                    )}
+                  </div>
+                ) : null}
+              </section>
+            ) : null}
+
+            <p className="text-center text-xs leading-5 text-slate-500">
+              Explicit actions only · no background polling · no persistent browser storage
+            </p>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="min-h-screen bg-[#070B12] px-4 py-6 text-[#F7F4ED] md:px-8">
@@ -2142,7 +2614,11 @@ export default function HeadteacherSupervisoryAssessmentClient({
               <p className="text-xs uppercase tracking-[0.18em] text-[#E8C96A]">Monitoring and Inspection Sheet · Headteachers</p>
               <h1 className="mt-2 text-2xl font-semibold text-white md:text-3xl">{workspace.visit.targetName || "Headteacher"}</h1>
               <p className="mt-1 text-sm text-slate-300">{workspace.visit.schoolName} · {workspace.visit.circuitName}</p>
-              <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-300">Complete the official 4-section, 34-indicator form. Answers autosave securely as you score.</p>
+              <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-300">
+                {workspace.lifecycle.canCreateRevision
+                  ? "This returned version is locked to preserve history. Start correction below to create an editable revision."
+                  : "Complete the official 4-section, 34-indicator form. Answers autosave securely as you score."}
+              </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Link href="/governance/appraisals/headteacher-supervisory" className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-white hover:bg-white/[0.08]">← Work list</Link>
@@ -2157,6 +2633,16 @@ export default function HeadteacherSupervisoryAssessmentClient({
           <div className="rounded-3xl border border-amber-300/25 bg-amber-400/10 p-4 text-sm text-amber-100">
             <p className="font-bold text-white">Reason returned</p>
             <p className="mt-1 leading-6">{workspace.lifecycle.returnReason}</p>
+            {workspace.lifecycle.canCreateRevision ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void createRevision()}
+                className="mt-4 min-h-12 w-full rounded-xl bg-amber-300 px-4 text-sm font-black text-slate-950 disabled:cursor-wait disabled:opacity-50 sm:w-auto"
+              >
+                {busy ? "Opening correction…" : "Start correction"}
+              </button>
+            ) : null}
           </div>
         ) : null}
 
@@ -2357,17 +2843,6 @@ export default function HeadteacherSupervisoryAssessmentClient({
                   The complete native form is open below. Check every selected score,
                   section total and visit detail before locking the assessment.
                 </p>
-              ) : null}
-
-              {workspace.lifecycle.canCreateRevision ? (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void createRevision()}
-                  className="mt-5 min-h-14 w-full rounded-2xl border border-amber-300/25 bg-amber-400/15 px-5 text-base font-bold text-amber-50 hover:bg-amber-400/20 disabled:opacity-50"
-                >
-                  Create correction copy
-                </button>
               ) : null}
 
               {!workspace.assessment.canFinalize && editable ? (

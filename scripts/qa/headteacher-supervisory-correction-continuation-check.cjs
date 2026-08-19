@@ -39,7 +39,10 @@ for (const marker of [
   "HEADTEACHER_SUPERVISORY_HOS_CORRECTION_REVIEW_CONTINUED",
   'reviewType: "HOS_SUPERVISORY_REVIEW"',
   'continuationType: "CORRECTED_ASSESSMENT"',
-  "ensureHeadteacherDirectorCorrectionReviewContinuation",
+  'directorContinuationMode: "INDEPENDENT_GOVERNANCE"',
+  "staffFeedbackIncludedInDirectorContinuation: false",
+  'reviewType: "DIRECTOR_GOVERNANCE_REVIEW"',
+  "HEADTEACHER_GOVERNANCE_DIRECTOR_CORRECTION_REVIEW_CONTINUED",
   "preserveReturningReviewer: true",
   "preserveReviewStage: true",
   'decision: "PENDING"',
@@ -52,6 +55,17 @@ for (const marker of [
   "assessmentMutationAllowed: false",
   "cycleStatusChanges: false",
   "providerCallsAllowed: false",
+  "directorCarrierStatusMutationRequired: false",
+  "directorCarrierTimestampMutationRequired: false",
+  "directorCarrierWorkflowIndependent: true",
+  "directorCarrierGovernanceProofRequired: true",
+  "assertDirectorCarrierReturnProof",
+  "assertDirectorCarrierPendingProof",
+  "RETURNED_FOR_CORRECTION",
+  "carrierCycleStatusMutationPerformed",
+  "carrierCycleTimestampMutationPerformed",
+  "assertHosCycleBoundary",
+  "assertDirectorCarrierBoundary",
 ]) {
   assert(source.includes(marker), `Required B4 marker missing: ${marker}`);
 }
@@ -67,6 +81,9 @@ for (const forbidden of [
   "setInterval(",
   "appraisalAssessment.update",
   "appraisalAssessmentScore",
+  'from "@/lib/appraisals/headteacherDirectorReview"',
+  "ensureHeadteacherDirectorCorrectionReviewContinuation",
+  "staffFeedbackIncluded: true",
 ]) {
   assert(!source.includes(forbidden), `Forbidden B4 marker found: ${forbidden}`);
 }
@@ -311,6 +328,139 @@ function makeHosState() {
   };
 }
 
+function makeDirectorState() {
+  const state = makeHosState();
+  state.cycle.status = "RELEASED";
+  state.cycle.reviewStartedAt = null;
+  state.cycle.releasedAt = new Date("2026-08-12T12:00:00.000Z");
+  state.cycle.metadata.workflow = "HEADTEACHER_STAFF_FEEDBACK";
+  const source = state.assessments[0];
+  const current = state.assessments[1];
+  const review = state.reviews[0];
+
+  review.id = "director-return-review-002";
+  review.reviewerUserId = "director-user";
+  review.reviewerAssignmentId = "director-assignment";
+  review.stage = 2;
+  review.decision = "RETURNED";
+  review.note = REASON;
+  review.decidedAt = RETURNED_AT;
+  review.metadata = {
+    schemaVersion: 1,
+    workflow: WORKFLOW,
+    evidenceStream: EVIDENCE_STREAM,
+    reviewType: "DIRECTOR_GOVERNANCE_REVIEW",
+    reviewStage: 2,
+    reviewerRole: "DISTRICT_DIRECTOR",
+    reviewEvidenceHash: "f".repeat(64),
+    assessmentId: source.id,
+    assessmentRevision: source.revision,
+    assessmentHash: SOURCE_HASH,
+    visitContextHash: VISIT_HASH,
+    assessorRole: "SISSO",
+    admissionType: "HOS_FORWARDED",
+    immutableEvidenceReverified: true,
+    staffFeedbackIncluded: false,
+    respondentIdentitiesIncluded: false,
+    reviewerMayRewriteScores: false,
+    reviewerMayRewriteVisitEvidence: false,
+    scoreMutationAllowed: false,
+    assessmentMutationAllowed: false,
+    combinedWeightingDefined: false,
+    notificationsSeeded: false,
+    providerCalled: false,
+    decisionSchemaVersion: 1,
+    decisionAction: "RETURN",
+    decisionContractHash: "1".repeat(64),
+    decisionRequestHash: "2".repeat(64),
+    decidedByRole: "DISTRICT_DIRECTOR",
+    decidedAt: RETURNED_AT.toISOString(),
+    reasonHash: hashJson({ note: REASON }),
+    reasonLength: REASON.length,
+    revisionRequired: true,
+    nextReviewId: null,
+    nextReviewStage: null,
+    releasePerformed: false,
+    scoreMutationPerformed: false,
+    visitEvidenceMutationPerformed: false,
+  };
+
+  source.metadata = {
+    visitContextHash: VISIT_HASH,
+    supersededByAssessmentId: current.id,
+    returnedByDirectorReviewId: review.id,
+    returnedByDirectorReviewStage: review.stage,
+    returnDecisionContractHash: review.metadata.decisionContractHash,
+    returnDecisionRequestHash: review.metadata.decisionRequestHash,
+    returnedAt: RETURNED_AT.toISOString(),
+    reviewerMayRewriteScores: false,
+    scoreMutationPerformed: false,
+    separateFromStaffFeedback: true,
+    combinedWeightingDefined: false,
+    providerCalled: false,
+  };
+
+  state.cycle.metadata.directorGovernanceReview = {
+    schemaVersion: 1,
+    state: "RETURNED_FOR_CORRECTION",
+    assessmentId: source.id,
+    assessmentRevision: source.revision,
+    sourceReviewId: review.id,
+    sourceReviewStage: review.stage,
+    decision: "RETURN",
+    decisionContractHash: review.metadata.decisionContractHash,
+    decisionRequestHash: review.metadata.decisionRequestHash,
+    currentReviewId: review.id,
+    currentReviewStage: review.stage,
+    revisionRequired: true,
+    releaseProofHash: null,
+    releasedAt: null,
+    staffFeedbackIncluded: false,
+    respondentIdentitiesIncluded: false,
+    carrierCycleStatusMutationPerformed: false,
+    carrierCycleTimestampMutationPerformed: false,
+    reviewerMayRewriteScores: false,
+    scoreMutationAllowed: false,
+    combinedWeightingDefined: false,
+    providerCalled: false,
+  };
+
+  const returnHash = returnEvidenceHash(source, review);
+  current.metadata = {
+    workflow: WORKFLOW,
+    evidenceStream: EVIDENCE_STREAM,
+    sourceAssessmentId: source.id,
+    sourceAssessmentHash: SOURCE_HASH,
+    returnReviewId: review.id,
+    returnReviewStage: review.stage,
+    returnEvidenceHash: returnHash,
+    returnReason: REASON,
+    visitContextHash: VISIT_HASH,
+    preserveVisitContext: true,
+    reviewerMayRewriteScores: false,
+  };
+
+  state.assignments = [
+    {
+      id: "director-assignment",
+      userId: "director-user",
+      role: "DISTRICT_DIRECTOR",
+      status: "ACTIVE",
+      revokedAt: null,
+      startsAt: null,
+      endsAt: null,
+      zoneId: state.cycle.scopeZoneId,
+      zone: {
+        id: state.cycle.scopeZoneId,
+        isActive: true,
+        zoneType: { level: 2 },
+      },
+    },
+  ];
+  delete state.cycle.metadata.headteacherSupervisoryReview;
+  return state;
+}
+
 function cloneValue(value) {
   if (value instanceof Date) return new Date(value);
   if (Array.isArray(value)) return value.map(cloneValue);
@@ -350,9 +500,12 @@ class FakeDatabase {
         updateMany: async ({ where, data }) => {
           if (
             this.state.cycle.id !== where.id ||
-            this.state.cycle.status !== where.status ||
-            this.state.cycle.releasedAt !== null ||
-            this.state.cycle.cancelledAt !== null
+            (Object.prototype.hasOwnProperty.call(where, "status") &&
+              this.state.cycle.status !== where.status) ||
+            (Object.prototype.hasOwnProperty.call(where, "releasedAt") &&
+              this.state.cycle.releasedAt !== where.releasedAt) ||
+            (Object.prototype.hasOwnProperty.call(where, "cancelledAt") &&
+              this.state.cycle.cancelledAt !== where.cancelledAt)
           ) {
             return { count: 0 };
           }
@@ -459,10 +612,17 @@ Module._load = function load(request, parent, isMain) {
     return { Prisma: { TransactionIsolationLevel: { Serializable: "Serializable" } } };
   }
   if (request === "@/lib/prisma") return { prisma: {} };
-  if (request === "@/lib/appraisals/headteacherDirectorReview") {
+  if (request === "@/lib/appraisals/headteacherDirectorGovernanceReview") {
     return {
-      ensureHeadteacherDirectorCorrectionReviewContinuation: async () => {
-        throw new Error("default Director continuation not expected in QA");
+      HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY: {
+        schemaVersion: 1,
+        workflow: WORKFLOW,
+        evidenceStream: EVIDENCE_STREAM,
+        eligibleAssessorRoles: [
+          "SISSO",
+          "BASIC_SCHOOL_COORDINATOR",
+          "HEAD_OF_SUPERVISION",
+        ],
       },
     };
   }
@@ -471,6 +631,10 @@ Module._load = function load(request, parent, isMain) {
       HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY: {
         workflow: WORKFLOW,
         districtZoneLevel: 2,
+      },
+      canonicalHeadteacherSupervisoryAssessorRole: (value) => {
+        const role = String(value || "").trim().toUpperCase().replace(/[\s-]+/g, "_");
+        return role === "CIRCUIT_SUPERVISOR" ? "SISSO" : role;
       },
     };
   }
@@ -482,7 +646,22 @@ Module._load = function load(request, parent, isMain) {
     };
   }
   if (request === "@/lib/appraisals/headteacherSupervisoryAssessmentScoring") {
-    return { loadHeadteacherSupervisoryAssessment: async () => ({}) };
+    return {
+      loadHeadteacherSupervisoryAssessment: async ({ assessmentId, database }) => {
+        const row = database?.state?.assessments?.find((item) => item.id === assessmentId);
+        if (!row) throw new Error("QA assessment not found");
+        return {
+          assessmentId: row.id,
+          cycleId: row.cycleId,
+          revision: row.revision,
+          status: row.status,
+          assessorUserId: row.assessorUserId,
+          assessorAssignmentId: row.assessorAssignmentId,
+          visitContextHash: row.metadata.visitContextHash,
+          assessmentHash: row.assessmentHash,
+        };
+      },
+    };
   }
   if (request === "@/lib/appraisals/headteacherSupervisoryReviewAdmission") {
     return {
@@ -530,6 +709,30 @@ async function expectCode(operation, code) {
     );
     assert.strictEqual(
       HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_POLICY.directorContinuationDelegated,
+      true,
+    );
+    assert.strictEqual(
+      HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_POLICY.directorContinuationMode,
+      "INDEPENDENT_GOVERNANCE",
+    );
+    assert.strictEqual(
+      HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_POLICY.staffFeedbackIncludedInDirectorContinuation,
+      false,
+    );
+    assert.strictEqual(
+      HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_POLICY.directorCarrierStatusMutationRequired,
+      false,
+    );
+    assert.strictEqual(
+      HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_POLICY.directorCarrierTimestampMutationRequired,
+      false,
+    );
+    assert.strictEqual(
+      HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_POLICY.directorCarrierWorkflowIndependent,
+      true,
+    );
+    assert.strictEqual(
+      HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_POLICY.directorCarrierGovernanceProofRequired,
       true,
     );
 
@@ -636,6 +839,153 @@ async function expectCode(operation, code) {
       "HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_AMBIGUOUS_RETURN_PROVENANCE",
     );
 
+    const closedHosState = makeHosState();
+    closedHosState.cycle.status = "CLOSED";
+    closedHosState.cycle.reviewStartedAt = null;
+    await expectCode(
+      () =>
+        ensureHeadteacherSupervisoryCorrectionReviewContinuation(
+          makeInput(closedHosState),
+        ),
+      "HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_CYCLE_INVALID",
+    );
+
+    const missingDirectorCarrierProof = makeDirectorState();
+    delete missingDirectorCarrierProof.cycle.metadata.directorGovernanceReview;
+    await expectCode(
+      () =>
+        ensureHeadteacherSupervisoryCorrectionReviewContinuation({
+          actorUserId: "sisso-user",
+          actorRoleName: "SISSO",
+          assessmentId: "assessment-current",
+          reqId: "req-b4-director-missing-carrier-proof",
+          now: NOW,
+          database: new FakeDatabase(missingDirectorCarrierProof),
+        }),
+      "HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_DIRECTOR_CARRIER_RETURN_PROOF_DRIFT",
+    );
+
+    const driftedDirectorCarrierProof = makeDirectorState();
+    driftedDirectorCarrierProof.cycle.metadata.directorGovernanceReview.sourceReviewId =
+      "wrong-review";
+    await expectCode(
+      () =>
+        ensureHeadteacherSupervisoryCorrectionReviewContinuation({
+          actorUserId: "sisso-user",
+          actorRoleName: "SISSO",
+          assessmentId: "assessment-current",
+          reqId: "req-b4-director-drifted-carrier-proof",
+          now: NOW,
+          database: new FakeDatabase(driftedDirectorCarrierProof),
+        }),
+      "HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_DIRECTOR_CARRIER_RETURN_PROOF_DRIFT",
+    );
+
+    const independentDirectorState = makeDirectorState();
+    const independentDirectorDatabase = new FakeDatabase(independentDirectorState);
+    const independentDirectorCreated =
+      await ensureHeadteacherSupervisoryCorrectionReviewContinuation({
+        actorUserId: "sisso-user",
+        actorRoleName: "SISSO",
+        assessmentId: "assessment-current",
+        reqId: "req-b4-director-independent",
+        now: NOW,
+        database: independentDirectorDatabase,
+      });
+    assert.strictEqual(independentDirectorCreated.outcome, "CREATED");
+    assert.strictEqual(
+      independentDirectorCreated.continuationReviewerRole,
+      "DISTRICT_DIRECTOR",
+    );
+    assert.strictEqual(independentDirectorCreated.reviewStage, 2);
+    assert.strictEqual(independentDirectorCreated.reviewDecision, "PENDING");
+    assert.strictEqual(independentDirectorCreated.reviewerUserId, "director-user");
+    assert.strictEqual(
+      independentDirectorCreated.reviewerAssignmentId,
+      "director-assignment",
+    );
+    assert.strictEqual(independentDirectorCreated.staffFeedbackIncluded, false);
+    assert.strictEqual(independentDirectorState.reviews.length, 2);
+    assert.strictEqual(independentDirectorState.audits.length, 1);
+    assert.strictEqual(
+      independentDirectorState.cycle.metadata.directorGovernanceReview.state,
+      "PENDING",
+    );
+    assert.strictEqual(
+      independentDirectorState.cycle.metadata.directorGovernanceReview.staffFeedbackIncluded,
+      false,
+    );
+    assert.strictEqual(
+      independentDirectorState.cycle.metadata.directorGovernanceReview.carrierCycleStatusMutationPerformed,
+      false,
+    );
+    assert.strictEqual(
+      independentDirectorState.cycle.metadata.directorGovernanceReview.carrierCycleTimestampMutationPerformed,
+      false,
+    );
+    assert.strictEqual(
+      independentDirectorState.cycle.status,
+      "RELEASED",
+      "Director continuation must preserve unchanged released carrier status",
+    );
+    assert.strictEqual(
+      independentDirectorState.cycle.releasedAt.toISOString(),
+      "2026-08-12T12:00:00.000Z",
+      "Director continuation must preserve the carrier release timestamp",
+    );
+    assert.strictEqual(
+      independentDirectorState.cycle.metadata.workflow,
+      "HEADTEACHER_STAFF_FEEDBACK",
+      "Director continuation must not require or rewrite the carrier workflow",
+    );
+    assert.strictEqual(
+      independentDirectorState.cycle.reviewStartedAt,
+      null,
+      "Director continuation must not invent carrier review timestamps",
+    );
+    assert.strictEqual(
+      independentDirectorState.audits[0].metadata.reasonTextRecordedInAudit,
+      false,
+    );
+
+    const independentDirectorRetried =
+      await ensureHeadteacherSupervisoryCorrectionReviewContinuation({
+        actorUserId: "sisso-user",
+        actorRoleName: "SISSO",
+        assessmentId: "assessment-current",
+        reqId: "req-b4-director-independent-retry",
+        now: NOW,
+        database: independentDirectorDatabase,
+      });
+    assert.strictEqual(independentDirectorRetried.outcome, "EXISTING_REVIEW");
+    assert.strictEqual(independentDirectorState.reviews.length, 2);
+    assert.strictEqual(independentDirectorState.audits.length, 1);
+
+    const pendingProofDriftState = makeDirectorState();
+    const pendingProofDriftDatabase = new FakeDatabase(pendingProofDriftState);
+    await ensureHeadteacherSupervisoryCorrectionReviewContinuation({
+      actorUserId: "sisso-user",
+      actorRoleName: "SISSO",
+      assessmentId: "assessment-current",
+      reqId: "req-b4-director-pending-proof-create",
+      now: NOW,
+      database: pendingProofDriftDatabase,
+    });
+    pendingProofDriftState.cycle.metadata.directorGovernanceReview.reviewId =
+      "wrong-current-review";
+    await expectCode(
+      () =>
+        ensureHeadteacherSupervisoryCorrectionReviewContinuation({
+          actorUserId: "sisso-user",
+          actorRoleName: "SISSO",
+          assessmentId: "assessment-current",
+          reqId: "req-b4-director-pending-proof-drift",
+          now: NOW,
+          database: pendingProofDriftDatabase,
+        }),
+      "HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_DIRECTOR_CARRIER_PENDING_PROOF_DRIFT",
+    );
+
     const directorState = makeHosState();
     delete directorState.assessments[0].metadata.headteacherSupervisoryReturn;
     directorState.assessments[0].metadata.returnedByDirectorReviewId =
@@ -651,6 +1001,7 @@ async function expectCode(operation, code) {
             return {
               outcome: "CREATED",
               continuationRequired: true,
+              continuationReviewerRole: "DISTRICT_DIRECTOR",
               cycleId: directorState.cycle.id,
               assessmentId: "assessment-current",
               assessmentRevision: 2,
@@ -666,6 +1017,9 @@ async function expectCode(operation, code) {
               reviewEvidenceHash: "f".repeat(64),
               reviewCreated: true,
               scoreMutationPerformed: false,
+              visitEvidenceMutationPerformed: false,
+              staffFeedbackIncluded: false,
+              respondentIdentitiesIncluded: false,
               providerCalled: false,
             };
           },
@@ -674,7 +1028,7 @@ async function expectCode(operation, code) {
     );
     assert.strictEqual(directorCalls, 1);
     assert.strictEqual(directorResult.continuationReviewerRole, "DISTRICT_DIRECTOR");
-    assert.strictEqual(directorResult.staffFeedbackIncluded, true);
+    assert.strictEqual(directorResult.staffFeedbackIncluded, false);
     assert.strictEqual(directorState.reviews.length, 1);
     assert.strictEqual(directorState.audits.length, 0);
 
@@ -684,12 +1038,16 @@ async function expectCode(operation, code) {
     console.log("Ordinary finalization           : no continuation");
     console.log("HOS-return correction           : same HOS reviewer + assignment + stage");
     console.log("HOS continued decision          : PENDING");
-    console.log("Cycle status                    : remains UNDER_REVIEW");
+    console.log("HOS carrier boundary            : remains UNDER_REVIEW");
+    console.log("Director carrier boundary       : foreign workflow + released state preserved");
+    console.log("Director RETURN carrier proof   : assessment-keyed and fail-closed");
+    console.log("Director PENDING carrier proof  : retry state reverified");
     console.log("Corrected assessment            : remains FINALIZED and immutable");
-    console.log("Director-return correction      : delegated to existing Director bridge");
+    console.log("Director-return correction      : independent Governance bridge executed");
     console.log("Ambiguous return provenance     : fail closed");
     console.log("Returning HOS assignment        : revalidated active in exact district");
     console.log("Staff feedback in HOS branch    : absent");
+    console.log("Staff feedback in Director path : absent");
     console.log("Respondent identities           : absent");
     console.log("Score / visit evidence mutation : absent");
     console.log("Audit reason text               : absent");

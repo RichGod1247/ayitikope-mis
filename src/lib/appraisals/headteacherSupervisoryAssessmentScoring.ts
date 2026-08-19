@@ -27,6 +27,10 @@ export const HEADTEACHER_SUPERVISORY_SCORING_POLICY = {
   correctionRevisionMinimum: 2,
   correctionRevisionSchemaVersion: 1,
   correctionRevisionMetadataRequired: true,
+  legacyCorrectionAdmissionMode: "LEGACY_UNDER_REVIEW_RETURN",
+  directorGovernanceCorrectionAdmissionMode: "DIRECTOR_GOVERNANCE_RETURN",
+  directorGovernanceCarrierStatusMutationRequired: false,
+  directorGovernanceCarrierTimestampMutationRequired: false,
   expectedSectionCount: 4,
   expectedItemCount: 34,
   expectedSectionMaximums: [55, 45, 40, 30] as const,
@@ -580,6 +584,18 @@ function assertInitialDraftCycleBoundary(
   }
 }
 
+function correctionRevisionCandidate(record: AssessmentContextRecord) {
+  const metadata = objectValue(record.metadata);
+  return (
+    normalized(record.status) === "DRAFT" &&
+    record.revision >=
+      HEADTEACHER_SUPERVISORY_SCORING_POLICY.correctionRevisionMinimum &&
+    Boolean(clean(record.priorAssessmentId)) &&
+    Number(metadata.revisionSchemaVersion) ===
+      HEADTEACHER_SUPERVISORY_SCORING_POLICY.correctionRevisionSchemaVersion
+  );
+}
+
 function assertCorrectionRevisionBoundary(record: AssessmentContextRecord) {
   const metadata = objectValue(record.metadata);
   const priorAssessmentId = clean(record.priorAssessmentId);
@@ -597,9 +613,17 @@ function assertCorrectionRevisionBoundary(record: AssessmentContextRecord) {
     metadata.returnEvidenceHash,
   ).toLowerCase();
   const visitContextHash = clean(metadata.visitContextHash).toLowerCase();
+  const returnAdmissionMode = normalized(metadata.returnAdmissionMode);
+  const returnDecisionContractHash = clean(
+    metadata.returnDecisionContractHash,
+  ).toLowerCase();
+  const returnDecisionRequestHash = clean(
+    metadata.returnDecisionRequestHash,
+  ).toLowerCase();
+  const cycleStatus = normalized(record.cycle.status);
   const validHash = (value: string) => /^[a-f0-9]{64}$/.test(value);
 
-  const valid =
+  const commonValid =
     normalized(record.status) === "DRAFT" &&
     record.revision >=
       HEADTEACHER_SUPERVISORY_SCORING_POLICY.correctionRevisionMinimum &&
@@ -631,31 +655,119 @@ function assertCorrectionRevisionBoundary(record: AssessmentContextRecord) {
     record.finalizedByUserId === null &&
     record.finalizedAt === null &&
     Boolean(record.cycle.openedAt) &&
-    Boolean(record.cycle.closedAt) &&
-    Boolean(record.cycle.reviewStartedAt) &&
-    record.cycle.releasedAt === null &&
     record.cycle.cancelledAt === null &&
-    Boolean(
-      record.cycle.reviewStartedAt &&
-        record.createdAt.getTime() >= record.cycle.reviewStartedAt.getTime(),
-    );
+    cycleStatus !== "CANCELLED";
 
-  if (!valid) {
+  if (!commonValid) {
     fail(
       "HEADTEACHER_SUPERVISORY_SCORING_CORRECTION_REVISION_INVALID",
       409,
       {
         cycleId: record.cycle.id,
         assessmentId: record.id,
-        status: normalized(record.cycle.status),
+        status: cycleStatus,
         reason: "VERIFIED_RETURNED_REVISION_REQUIRED",
       },
     );
   }
+
+  const legacyAdmission =
+    !returnAdmissionMode ||
+    returnAdmissionMode ===
+      HEADTEACHER_SUPERVISORY_SCORING_POLICY.legacyCorrectionAdmissionMode;
+
+  if (legacyAdmission) {
+    const legacyCycleValid =
+      cycleStatus ===
+        HEADTEACHER_SUPERVISORY_SCORING_POLICY.correctionDraftCycleStatus &&
+      Boolean(record.cycle.closedAt) &&
+      Boolean(record.cycle.reviewStartedAt) &&
+      record.cycle.releasedAt === null &&
+      returnDecisionContractHash.length === 0 &&
+      returnDecisionRequestHash.length === 0 &&
+      Boolean(
+        record.cycle.reviewStartedAt &&
+          record.createdAt.getTime() >= record.cycle.reviewStartedAt.getTime(),
+      );
+
+    if (!legacyCycleValid) {
+      fail(
+        "HEADTEACHER_SUPERVISORY_SCORING_CORRECTION_REVISION_INVALID",
+        409,
+        {
+          cycleId: record.cycle.id,
+          assessmentId: record.id,
+          status: cycleStatus,
+          reason: "LEGACY_UNDER_REVIEW_RETURN_REQUIRED",
+        },
+      );
+    }
+    return;
+  }
+
+  if (
+    returnAdmissionMode ===
+    HEADTEACHER_SUPERVISORY_SCORING_POLICY
+      .directorGovernanceCorrectionAdmissionMode
+  ) {
+    const expectedRevisionKey = hashJson({
+      schemaVersion:
+        HEADTEACHER_SUPERVISORY_SCORING_POLICY.correctionRevisionSchemaVersion,
+      originalAssessmentId: priorAssessmentId,
+      nextRevision: record.revision,
+      sourceAssessmentHash,
+      returnEvidenceHash,
+      returnAdmissionMode,
+      returnDecisionContractHash,
+      returnDecisionRequestHash,
+      visitContextHash,
+    });
+    const directorReturnValid =
+      validHash(returnDecisionContractHash) &&
+      validHash(returnDecisionRequestHash) &&
+      revisionKey === expectedRevisionKey;
+
+    if (!directorReturnValid) {
+      fail(
+        "HEADTEACHER_SUPERVISORY_SCORING_CORRECTION_REVISION_INVALID",
+        409,
+        {
+          cycleId: record.cycle.id,
+          assessmentId: record.id,
+          status: cycleStatus,
+          reason: "DIRECTOR_GOVERNANCE_RETURN_PROOF_REQUIRED",
+        },
+      );
+    }
+
+    // Director Governance review is an independent evidence stream. Its
+    // RETURN action does not mutate the Staff Feedback carrier cycle status
+    // or timestamps. The revision service already reverified the immutable
+    // Director-return provenance before creating this DRAFT revision, so
+    // scoring must gate on that proof-bound revision metadata rather than
+    // requiring the carrier cycle to be UNDER_REVIEW.
+    return;
+  }
+
+  fail(
+    "HEADTEACHER_SUPERVISORY_SCORING_CORRECTION_REVISION_INVALID",
+    409,
+    {
+      cycleId: record.cycle.id,
+      assessmentId: record.id,
+      status: cycleStatus,
+      reason: "SUPPORTED_RETURN_ADMISSION_MODE_REQUIRED",
+    },
+  );
 }
 
 function assertDraftCycleBoundary(record: AssessmentContextRecord) {
   const status = normalized(record.cycle.status);
+
+  if (correctionRevisionCandidate(record)) {
+    assertCorrectionRevisionBoundary(record);
+    return;
+  }
 
   if (
     HEADTEACHER_SUPERVISORY_SCORING_POLICY.eligibleDraftCycleStatuses.includes(

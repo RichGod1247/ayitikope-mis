@@ -211,7 +211,9 @@ function workflowFromCycle(cycle: CycleRecord) {
 
 function participantCounts(cycle: CycleRecord) {
   return {
-    eligibleResponses: cycle.participants.length,
+    eligibleResponses: cycle.participants.filter(
+      (participant) => participant.status !== "REVOKED",
+    ).length,
     finalizedResponses: cycle.participants.filter(
       (participant) => participant.status === "FINALIZED",
     ).length,

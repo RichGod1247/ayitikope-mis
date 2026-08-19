@@ -22,12 +22,17 @@ export const HEADTEACHER_GOVERNANCE_RELEASED_RESULTS_CLIENT_POLICY = {
   nativeFormParity: "DIRECTOR_FINAL_RELEASE_INSPECTION_FORM",
   recipientCopyLabelOnlyDiffers: true,
 } as const;
+type GovernanceAssessorOffice =
+  | "SISSO"
+  | "Basic School Coordinator"
+  | "Head of Supervision"
+  | "District Director";
 
 type ReleasedSummary = {
   assessmentId: string;
   dateObserved: string;
   releasedAt: string;
-  assessorOffice: "District Director";
+  assessorOffice: GovernanceAssessorOffice;
   overallPercentage: number | null;
   schoolName: string;
   circuitName: string;
@@ -51,10 +56,10 @@ type ReleasedResult = {
   };
   assessment: {
     assessmentId: string;
-    revision: 1;
+    revision: number;
     dateObserved: string;
     finalizedAt: string;
-    assessorOffice: "District Director";
+    assessorOffice: GovernanceAssessorOffice;
     instrumentCode: string;
     instrumentVersion: 1;
     overallPercentage: number | null;

@@ -2,12 +2,11 @@ import { createHash, randomUUID } from "crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
-  ensureHeadteacherDirectorCorrectionReviewContinuation,
-  type HeadteacherDirectorReviewDatabase,
-  type EnsureHeadteacherDirectorCorrectionReviewContinuationResult,
-} from "@/lib/appraisals/headteacherDirectorReview";
+  HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY,
+} from "@/lib/appraisals/headteacherDirectorGovernanceReview";
 import {
   HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY,
+  canonicalHeadteacherSupervisoryAssessorRole,
 } from "@/lib/appraisals/headteacherSupervisoryAssessment";
 import {
   HEADTEACHER_SUPERVISORY_REVISION_POLICY,
@@ -42,7 +41,9 @@ export const HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_POLICY = {
   preserveVisitContext: true,
   exactReturningAssignmentRequired: true,
   directorContinuationDelegated: true,
+  directorContinuationMode: "INDEPENDENT_GOVERNANCE",
   staffFeedbackIncludedInHosContinuation: false,
+  staffFeedbackIncludedInDirectorContinuation: false,
   respondentIdentitiesIncluded: false,
   reviewerMayRewriteScores: false,
   reviewerMayRewriteVisitEvidence: false,
@@ -54,6 +55,10 @@ export const HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_POLICY = {
   transactionIsolation: "SERIALIZABLE",
   transactionMaxWaitMs: 10_000,
   transactionTimeoutMs: 25_000,
+  directorCarrierStatusMutationRequired: false,
+  directorCarrierTimestampMutationRequired: false,
+  directorCarrierWorkflowIndependent: true,
+  directorCarrierGovernanceProofRequired: true,
 } as const;
 
 const HOS_CORRECTION_CONTINUED_AUDIT_ACTION =
@@ -91,14 +96,14 @@ export type EnsureHeadteacherSupervisoryCorrectionReviewContinuationResult = {
   reviewCreated: boolean;
   scoreMutationPerformed: false;
   visitEvidenceMutationPerformed: false;
-  staffFeedbackIncluded: boolean;
+  staffFeedbackIncluded: false;
   respondentIdentitiesIncluded: false;
   providerCalled: false;
 };
 
 export type HeadteacherSupervisoryCorrectionContinuationDependencies = {
   loadAssessment: typeof loadHeadteacherSupervisoryAssessment;
-  ensureDirectorContinuation: typeof ensureHeadteacherDirectorCorrectionReviewContinuation;
+  ensureDirectorContinuation: typeof ensureDirectorGovernanceCorrectionContinuation;
 };
 
 type AssessmentRecord = {
@@ -391,37 +396,6 @@ function notRequiredResult(
   };
 }
 
-function mapDirectorResult(
-  result: EnsureHeadteacherDirectorCorrectionReviewContinuationResult,
-): EnsureHeadteacherSupervisoryCorrectionReviewContinuationResult {
-  return {
-    outcome: result.outcome,
-    continuationRequired: result.continuationRequired,
-    continuationReviewerRole: result.continuationRequired
-      ? "DISTRICT_DIRECTOR"
-      : null,
-    cycleId: result.cycleId,
-    assessmentId: result.assessmentId,
-    assessmentRevision: result.assessmentRevision,
-    assessmentStatus: "FINALIZED",
-    sourceAssessmentId: result.sourceAssessmentId,
-    sourceReviewId: result.sourceReviewId,
-    sourceReviewStage: result.sourceReviewStage,
-    reviewId: result.reviewId,
-    reviewStage: result.reviewStage,
-    reviewDecision: result.reviewDecision,
-    reviewerUserId: result.reviewerUserId,
-    reviewerAssignmentId: result.reviewerAssignmentId,
-    reviewEvidenceHash: result.reviewEvidenceHash,
-    reviewCreated: result.reviewCreated,
-    scoreMutationPerformed: false,
-    visitEvidenceMutationPerformed: false,
-    staffFeedbackIncluded: result.continuationRequired,
-    respondentIdentitiesIncluded: false,
-    providerCalled: false,
-  };
-}
-
 function correctionReturnEvidenceHash(
   source: AssessmentRecord,
   review: ReviewRecord,
@@ -496,7 +470,7 @@ function sourceHasDirectorReturn(source: AssessmentRecord) {
   );
 }
 
-function assertCycleBoundary(cycle: CycleRecord) {
+function assertHosCycleBoundary(cycle: CycleRecord) {
   const metadata = objectValue(cycle.metadata);
   if (
     normalized(cycle.status) !==
@@ -510,6 +484,21 @@ function assertCycleBoundary(cycle: CycleRecord) {
     !clean(cycle.targetTenantId)
   ) {
     fail("HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_CYCLE_INVALID", 409);
+  }
+}
+
+function assertDirectorCarrierBoundary(cycle: CycleRecord) {
+  if (
+    cycle.cancelledAt ||
+    normalized(cycle.targetRoleSnapshot) !== "HEADTEACHER" ||
+    !clean(cycle.targetTenantId) ||
+    !clean(cycle.scopeZoneId)
+  ) {
+    fail(
+      "HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_DIRECTOR_CARRIER_INVALID",
+      409,
+      { cycleStatus: normalized(cycle.status) },
+    );
   }
 }
 
@@ -1028,7 +1017,7 @@ async function runHosContinuation(input: {
       }
       assertCurrentFinalizedBoundary(current, input.request.actorUserId);
       assertCorrectionLineage({ current, source });
-      assertCycleBoundary(cycle);
+      assertHosCycleBoundary(cycle);
       const sourceProof = assertHosSourceReturn({
         current,
         source,
@@ -1213,6 +1202,718 @@ async function runHosContinuation(input: {
   );
 }
 
+
+function directorCorrectionAssessorRole(actorRoleName: unknown) {
+  const role = canonicalHeadteacherSupervisoryAssessorRole(actorRoleName);
+  if (
+    !HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY.eligibleAssessorRoles.includes(
+      role as "SISSO" | "BASIC_SCHOOL_COORDINATOR" | "HEAD_OF_SUPERVISION",
+    )
+  ) {
+    fail(
+      "HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_DIRECTOR_SOURCE_ROLE_INVALID",
+      409,
+      { actorRole: normalized(actorRoleName) },
+    );
+  }
+  return role as "SISSO" | "BASIC_SCHOOL_COORDINATOR" | "HEAD_OF_SUPERVISION";
+}
+
+function directorGovernanceReviewEvidenceHash(input: {
+  current: AssessmentRecord;
+  cycle: CycleRecord;
+  sourceReview: ReviewRecord;
+  reviewerAssignmentId: string;
+  assessorRole: "SISSO" | "BASIC_SCHOOL_COORDINATOR" | "HEAD_OF_SUPERVISION";
+  visitContextHash: string;
+  sourceReviewEvidenceHash: string;
+  sourceDecisionRequestHash: string;
+}) {
+  return hashJson({
+    schemaVersion: HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY.schemaVersion,
+    workflow: HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY.workflow,
+    evidenceStream:
+      HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY.evidenceStream,
+    assessment: {
+      id: input.current.id,
+      cycleId: input.current.cycleId,
+      revision: input.current.revision,
+      assessmentHash: clean(input.current.assessmentHash).toLowerCase(),
+      visitContextHash: input.visitContextHash,
+      assessorRole: input.assessorRole,
+      assessorAssignmentId: input.current.assessorAssignmentId,
+    },
+    review: {
+      stage: input.sourceReview.stage,
+      reviewerUserId: input.sourceReview.reviewerUserId,
+      reviewerAssignmentId: input.reviewerAssignmentId,
+      reviewerRole: "DISTRICT_DIRECTOR",
+    },
+    admission: {
+      type: "CORRECTED_ASSESSMENT",
+      sourceReviewId: input.sourceReview.id,
+      sourceReviewStage: input.sourceReview.stage,
+      sourceReviewEvidenceHash: input.sourceReviewEvidenceHash,
+      sourceDecisionRequestHash: input.sourceDecisionRequestHash,
+      sourceDecisionEvidenceHash: null,
+    },
+    jurisdiction: {
+      districtZoneId: input.cycle.scopeZoneId,
+      targetTenantId: input.cycle.targetTenantId,
+    },
+    staffFeedbackIncluded: false,
+    respondentIdentitiesIncluded: false,
+    reviewerMayRewriteScores: false,
+    scoreMutationAllowed: false,
+    combinedWeightingDefined: false,
+  });
+}
+
+function assertDirectorReturnProvenance(input: {
+  current: AssessmentRecord;
+  source: AssessmentRecord;
+  sourceReview: ReviewRecord;
+  cycle: CycleRecord;
+}) {
+  const currentMetadata = objectValue(input.current.metadata);
+  const sourceMetadata = objectValue(input.source.metadata);
+  const reviewMetadata = objectValue(input.sourceReview.metadata);
+  const expectedReturnEvidenceHash = correctionReturnEvidenceHash(
+    input.source,
+    input.sourceReview,
+  );
+  const sourceReviewEvidenceHash = clean(
+    reviewMetadata.reviewEvidenceHash,
+  ).toLowerCase();
+  const sourceDecisionRequestHash = clean(
+    reviewMetadata.decisionRequestHash,
+  ).toLowerCase();
+  const sourceDecisionContractHash = clean(
+    reviewMetadata.decisionContractHash,
+  ).toLowerCase();
+  const sourceVisitContextHash = clean(
+    objectValue(input.source.metadata).visitContextHash,
+  ).toLowerCase();
+
+  if (
+    clean(reviewMetadata.reviewType) !== "DIRECTOR_GOVERNANCE_REVIEW" ||
+    normalized(reviewMetadata.reviewerRole) !== "DISTRICT_DIRECTOR" ||
+    Number(reviewMetadata.reviewStage) !== input.sourceReview.stage ||
+    normalized(input.sourceReview.decision) !== "RETURNED" ||
+    clean(reviewMetadata.decisionAction) !== "RETURN" ||
+    normalized(reviewMetadata.decidedByRole) !== "DISTRICT_DIRECTOR" ||
+    !input.sourceReview.decidedAt ||
+    !clean(input.sourceReview.note) ||
+    input.sourceReview.cycleId !== input.source.cycleId ||
+    input.sourceReview.assessmentId !== input.source.id ||
+    !clean(input.sourceReview.reviewerAssignmentId) ||
+    !isSha256(sourceReviewEvidenceHash) ||
+    !isSha256(sourceDecisionRequestHash) ||
+    !isSha256(sourceDecisionContractHash) ||
+    !isSha256(sourceVisitContextHash) ||
+    clean(sourceMetadata.returnedByDirectorReviewId) !== input.sourceReview.id ||
+    Number(sourceMetadata.returnedByDirectorReviewStage) !==
+      input.sourceReview.stage ||
+    clean(sourceMetadata.returnDecisionContractHash).toLowerCase() !==
+      sourceDecisionContractHash ||
+    clean(sourceMetadata.returnDecisionRequestHash).toLowerCase() !==
+      sourceDecisionRequestHash ||
+    clean(currentMetadata.returnReviewId) !== input.sourceReview.id ||
+    Number(currentMetadata.returnReviewStage) !== input.sourceReview.stage ||
+    clean(currentMetadata.returnEvidenceHash).toLowerCase() !==
+      expectedReturnEvidenceHash ||
+    reviewMetadata.immutableEvidenceReverified !== true ||
+    reviewMetadata.staffFeedbackIncluded !== false ||
+    reviewMetadata.respondentIdentitiesIncluded !== false ||
+    reviewMetadata.reviewerMayRewriteScores !== false ||
+    reviewMetadata.reviewerMayRewriteVisitEvidence !== false ||
+    reviewMetadata.scoreMutationPerformed !== false ||
+    reviewMetadata.visitEvidenceMutationPerformed !== false ||
+    reviewMetadata.combinedWeightingDefined !== false ||
+    reviewMetadata.providerCalled !== false ||
+    sourceMetadata.separateFromStaffFeedback !== true ||
+    sourceMetadata.combinedWeightingDefined !== false ||
+    sourceMetadata.providerCalled !== false
+  ) {
+    fail(
+      "HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_DIRECTOR_RETURN_PROVENANCE_DRIFT",
+      409,
+    );
+  }
+
+  return {
+    returnEvidenceHash: expectedReturnEvidenceHash,
+    sourceReviewEvidenceHash,
+    sourceDecisionRequestHash,
+    sourceDecisionContractHash,
+    visitContextHash: sourceVisitContextHash,
+  };
+}
+
+function assertDirectorCarrierReturnProof(input: {
+  cycle: CycleRecord;
+  source: AssessmentRecord;
+  sourceReview: ReviewRecord;
+  sourceDecisionContractHash: string;
+  sourceDecisionRequestHash: string;
+}) {
+  const carrier = objectValue(
+    objectValue(input.cycle.metadata).directorGovernanceReview,
+  );
+
+  if (
+    Number(carrier.schemaVersion) !== 1 ||
+    clean(carrier.state) !== "RETURNED_FOR_CORRECTION" ||
+    clean(carrier.assessmentId) !== input.source.id ||
+    Number(carrier.assessmentRevision) !== input.source.revision ||
+    clean(carrier.sourceReviewId) !== input.sourceReview.id ||
+    Number(carrier.sourceReviewStage) !== input.sourceReview.stage ||
+    clean(carrier.decision) !== "RETURN" ||
+    clean(carrier.decisionContractHash).toLowerCase() !==
+      input.sourceDecisionContractHash ||
+    clean(carrier.decisionRequestHash).toLowerCase() !==
+      input.sourceDecisionRequestHash ||
+    clean(carrier.currentReviewId) !== input.sourceReview.id ||
+    Number(carrier.currentReviewStage) !== input.sourceReview.stage ||
+    carrier.revisionRequired !== true ||
+    carrier.staffFeedbackIncluded !== false ||
+    carrier.respondentIdentitiesIncluded !== false ||
+    carrier.carrierCycleStatusMutationPerformed !== false ||
+    carrier.carrierCycleTimestampMutationPerformed !== false ||
+    carrier.reviewerMayRewriteScores !== false ||
+    carrier.scoreMutationAllowed !== false ||
+    carrier.combinedWeightingDefined !== false ||
+    carrier.providerCalled !== false
+  ) {
+    fail(
+      "HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_DIRECTOR_CARRIER_RETURN_PROOF_DRIFT",
+      409,
+    );
+  }
+}
+
+function assertDirectorCarrierPendingProof(input: {
+  cycle: CycleRecord;
+  current: AssessmentRecord;
+  source: AssessmentRecord;
+  sourceReview: ReviewRecord;
+  existing: ReviewRecord;
+  expectedReviewEvidenceHash: string;
+}) {
+  const carrier = objectValue(
+    objectValue(input.cycle.metadata).directorGovernanceReview,
+  );
+
+  if (
+    Number(carrier.schemaVersion) !== 1 ||
+    clean(carrier.state) !== "PENDING" ||
+    clean(carrier.assessmentId) !== input.current.id ||
+    Number(carrier.assessmentRevision) !== input.current.revision ||
+    clean(carrier.reviewId) !== input.existing.id ||
+    Number(carrier.reviewStage) !== input.existing.stage ||
+    clean(carrier.reviewEvidenceHash).toLowerCase() !==
+      input.expectedReviewEvidenceHash ||
+    clean(carrier.admissionType) !== "CORRECTED_ASSESSMENT" ||
+    clean(carrier.continuedFromAssessmentId) !== input.source.id ||
+    clean(carrier.continuedFromReviewId) !== input.sourceReview.id ||
+    carrier.preserveReturningReviewer !== true ||
+    carrier.preserveReviewStage !== true ||
+    carrier.staffFeedbackIncluded !== false ||
+    carrier.respondentIdentitiesIncluded !== false ||
+    carrier.carrierCycleStatusMutationPerformed !== false ||
+    carrier.carrierCycleTimestampMutationPerformed !== false ||
+    carrier.reviewerMayRewriteScores !== false ||
+    carrier.scoreMutationAllowed !== false ||
+    carrier.combinedWeightingDefined !== false ||
+    carrier.providerCalled !== false
+  ) {
+    fail(
+      "HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_DIRECTOR_CARRIER_PENDING_PROOF_DRIFT",
+      409,
+    );
+  }
+}
+
+function directorAssignmentIsCurrent(input: {
+  assignment: AssignmentRecord;
+  sourceReview: ReviewRecord;
+  cycle: CycleRecord;
+  now: Date;
+}) {
+  const assignment = input.assignment;
+  if (
+    assignment.id !== clean(input.sourceReview.reviewerAssignmentId) ||
+    assignment.userId !== input.sourceReview.reviewerUserId ||
+    normalized(assignment.role) !== "DISTRICT_DIRECTOR" ||
+    normalized(assignment.status) !== "ACTIVE" ||
+    assignment.revokedAt ||
+    assignment.zoneId !== input.cycle.scopeZoneId ||
+    assignment.zone.id !== input.cycle.scopeZoneId ||
+    assignment.zone.isActive !== true ||
+    assignment.zone.zoneType.level !==
+      HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.districtZoneLevel
+  ) {
+    return false;
+  }
+  if (assignment.startsAt && assignment.startsAt.getTime() > input.now.getTime()) {
+    return false;
+  }
+  if (assignment.endsAt && assignment.endsAt.getTime() <= input.now.getTime()) {
+    return false;
+  }
+  return true;
+}
+
+function requireReturningDirectorAssignment(input: {
+  assignments: AssignmentRecord[];
+  sourceReview: ReviewRecord;
+  cycle: CycleRecord;
+  now: Date;
+}) {
+  const matches = input.assignments.filter((assignment) =>
+    directorAssignmentIsCurrent({
+      assignment,
+      sourceReview: input.sourceReview,
+      cycle: input.cycle,
+      now: input.now,
+    }),
+  );
+  if (matches.length === 0) {
+    fail(
+      "HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_DIRECTOR_ASSIGNMENT_REQUIRED",
+      409,
+    );
+  }
+  if (matches.length !== 1) {
+    fail(
+      "HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_DIRECTOR_ASSIGNMENT_AMBIGUOUS",
+      409,
+    );
+  }
+  return matches[0];
+}
+
+function directorContinuationMetadata(input: {
+  current: AssessmentRecord;
+  source: AssessmentRecord;
+  sourceReview: ReviewRecord;
+  assignment: AssignmentRecord;
+  assessorRole: "SISSO" | "BASIC_SCHOOL_COORDINATOR" | "HEAD_OF_SUPERVISION";
+  reviewEvidenceHash: string;
+  returnEvidenceHash: string;
+  sourceReviewEvidenceHash: string;
+  sourceDecisionRequestHash: string;
+  visitContextHash: string;
+}) {
+  return {
+    schemaVersion: 1,
+    workflow: HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY.workflow,
+    evidenceStream: HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY.evidenceStream,
+    reviewType: "DIRECTOR_GOVERNANCE_REVIEW",
+    continuationType: "CORRECTED_ASSESSMENT",
+    reviewStage: input.sourceReview.stage,
+    reviewerRole: "DISTRICT_DIRECTOR",
+    reviewEvidenceHash: input.reviewEvidenceHash,
+    assessmentId: input.current.id,
+    assessmentRevision: input.current.revision,
+    assessmentHash: clean(input.current.assessmentHash).toLowerCase(),
+    visitContextHash: input.visitContextHash,
+    assessorRole: input.assessorRole,
+    admissionType: "CORRECTED_ASSESSMENT",
+    admittedFromReviewId: input.sourceReview.id,
+    admittedFromReviewStage: input.sourceReview.stage,
+    admittedFromReviewEvidenceHash: input.sourceReviewEvidenceHash,
+    admittedFromDecisionRequestHash: input.sourceDecisionRequestHash,
+    admittedFromDecisionEvidenceHash: null,
+    hosForwardVerified: false,
+    immutableEvidenceReverified: true,
+    sourceAssessmentId: input.source.id,
+    sourceAssessmentRevision: input.source.revision,
+    sourceAssessmentHash: clean(input.source.assessmentHash).toLowerCase(),
+    continuedFromAssessmentId: input.source.id,
+    continuedFromAssessmentRevision: input.source.revision,
+    continuedFromReviewId: input.sourceReview.id,
+    continuedFromStage: input.sourceReview.stage,
+    returnEvidenceHash: input.returnEvidenceHash,
+    preserveReturningReviewer: true,
+    preserveReviewStage: true,
+    staffFeedbackIncluded: false,
+    respondentIdentitiesIncluded: false,
+    reviewerMayRewriteScores: false,
+    reviewerMayRewriteVisitEvidence: false,
+    scoreMutationAllowed: false,
+    assessmentMutationAllowed: false,
+    combinedWeightingDefined: false,
+    notificationsSeeded: false,
+    providerCalled: false,
+    reviewerAssignmentZoneId: input.assignment.zoneId,
+  };
+}
+
+function assertExistingDirectorContinuation(input: {
+  current: AssessmentRecord;
+  source: AssessmentRecord;
+  sourceReview: ReviewRecord;
+  existing: ReviewRecord;
+  expectedReviewEvidenceHash: string;
+  returnEvidenceHash: string;
+  sourceReviewEvidenceHash: string;
+  sourceDecisionRequestHash: string;
+  visitContextHash: string;
+}) {
+  const metadata = objectValue(input.existing.metadata);
+  if (
+    input.existing.cycleId !== input.current.cycleId ||
+    input.existing.assessmentId !== input.current.id ||
+    input.existing.stage !== input.sourceReview.stage ||
+    input.existing.reviewerUserId !== input.sourceReview.reviewerUserId ||
+    input.existing.reviewerAssignmentId !== input.sourceReview.reviewerAssignmentId ||
+    normalized(input.existing.decision) !== "PENDING" ||
+    clean(input.existing.note) ||
+    input.existing.decidedAt ||
+    clean(metadata.reviewType) !== "DIRECTOR_GOVERNANCE_REVIEW" ||
+    clean(metadata.continuationType) !== "CORRECTED_ASSESSMENT" ||
+    normalized(metadata.reviewerRole) !== "DISTRICT_DIRECTOR" ||
+    Number(metadata.reviewStage) !== input.sourceReview.stage ||
+    clean(metadata.reviewEvidenceHash).toLowerCase() !==
+      input.expectedReviewEvidenceHash ||
+    clean(metadata.assessmentHash).toLowerCase() !==
+      clean(input.current.assessmentHash).toLowerCase() ||
+    clean(metadata.continuedFromAssessmentId) !== input.source.id ||
+    clean(metadata.continuedFromReviewId) !== input.sourceReview.id ||
+    Number(metadata.continuedFromStage) !== input.sourceReview.stage ||
+    clean(metadata.returnEvidenceHash).toLowerCase() !== input.returnEvidenceHash ||
+    clean(metadata.admittedFromReviewEvidenceHash).toLowerCase() !==
+      input.sourceReviewEvidenceHash ||
+    clean(metadata.admittedFromDecisionRequestHash).toLowerCase() !==
+      input.sourceDecisionRequestHash ||
+    clean(metadata.visitContextHash).toLowerCase() !== input.visitContextHash ||
+    metadata.preserveReturningReviewer !== true ||
+    metadata.preserveReviewStage !== true ||
+    metadata.staffFeedbackIncluded !== false ||
+    metadata.respondentIdentitiesIncluded !== false ||
+    metadata.reviewerMayRewriteScores !== false ||
+    metadata.reviewerMayRewriteVisitEvidence !== false ||
+    metadata.scoreMutationAllowed !== false ||
+    metadata.assessmentMutationAllowed !== false ||
+    metadata.combinedWeightingDefined !== false ||
+    metadata.providerCalled !== false
+  ) {
+    fail(
+      "HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_DIRECTOR_EXISTING_REVIEW_DRIFT",
+      409,
+    );
+  }
+}
+
+async function ensureDirectorGovernanceCorrectionContinuation(
+  input: EnsureHeadteacherSupervisoryCorrectionReviewContinuationInput,
+): Promise<EnsureHeadteacherSupervisoryCorrectionReviewContinuationResult> {
+  const actorUserId = requireIdentifier(input.actorUserId, "actorUserId");
+  const assessmentId = requireIdentifier(input.assessmentId, "assessmentId");
+  const reqId = requireIdentifier(clean(input.reqId) || randomUUID(), "reqId");
+  const now = requireNow(input.now);
+  const database =
+    input.database ??
+    (prisma as unknown as HeadteacherSupervisoryCorrectionContinuationDatabase);
+
+  const current = await readAssessment(database, assessmentId);
+  assertCurrentFinalizedBoundary(current, actorUserId);
+  if (!current.priorAssessmentId || current.revision < 2) {
+    return notRequiredResult(current);
+  }
+  const source = await readAssessment(database, clean(current.priorAssessmentId));
+  assertCorrectionLineage({ current, source });
+  const cycle = await database.appraisalCycle.findUnique({
+    where: { id: current.cycleId },
+    select: CYCLE_SELECT,
+  });
+  if (!cycle) {
+    fail("HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_CYCLE_NOT_FOUND", 404);
+  }
+  assertDirectorCarrierBoundary(cycle);
+
+  const currentMetadata = objectValue(current.metadata);
+  const sourceReviewId = requireIdentifier(currentMetadata.returnReviewId, "returnReviewId");
+  const sourceReviews = await database.appraisalReview.findMany({
+    where: { assessmentId: source.id },
+    select: REVIEW_SELECT,
+    orderBy: [{ stage: "asc" }, { createdAt: "asc" }],
+  });
+  const sourceReview = sourceReviews.find((review) => review.id === sourceReviewId);
+  if (!sourceReview) {
+    fail(
+      "HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_SOURCE_REVIEW_NOT_FOUND",
+      409,
+    );
+  }
+  const proof = assertDirectorReturnProvenance({
+    current,
+    source,
+    sourceReview,
+    cycle,
+  });
+  const assessorRole = directorCorrectionAssessorRole(input.actorRoleName);
+  const expectedReviewEvidenceHash = directorGovernanceReviewEvidenceHash({
+    current,
+    cycle,
+    sourceReview,
+    reviewerAssignmentId: clean(sourceReview.reviewerAssignmentId),
+    assessorRole,
+    visitContextHash: proof.visitContextHash,
+    sourceReviewEvidenceHash: proof.sourceReviewEvidenceHash,
+    sourceDecisionRequestHash: proof.sourceDecisionRequestHash,
+  });
+
+  const currentReviews = await database.appraisalReview.findMany({
+    where: { assessmentId: current.id },
+    select: REVIEW_SELECT,
+    orderBy: [{ stage: "asc" }, { createdAt: "asc" }],
+  });
+  if (currentReviews.length > 0) {
+    if (currentReviews.length !== 1) {
+      fail(
+        "HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_DIRECTOR_REVIEW_CHAIN_DRIFT",
+        409,
+      );
+    }
+    const existing = currentReviews[0];
+    assertExistingDirectorContinuation({
+      current,
+      source,
+      sourceReview,
+      existing,
+      expectedReviewEvidenceHash,
+      returnEvidenceHash: proof.returnEvidenceHash,
+      sourceReviewEvidenceHash: proof.sourceReviewEvidenceHash,
+      sourceDecisionRequestHash: proof.sourceDecisionRequestHash,
+      visitContextHash: proof.visitContextHash,
+    });
+    assertDirectorCarrierPendingProof({
+      cycle,
+      current,
+      source,
+      sourceReview,
+      existing,
+      expectedReviewEvidenceHash,
+    });
+    return {
+      outcome: "EXISTING_REVIEW",
+      continuationRequired: true,
+      continuationReviewerRole: "DISTRICT_DIRECTOR",
+      cycleId: current.cycleId,
+      assessmentId: current.id,
+      assessmentRevision: current.revision,
+      assessmentStatus: "FINALIZED",
+      sourceAssessmentId: source.id,
+      sourceReviewId: sourceReview.id,
+      sourceReviewStage: sourceReview.stage,
+      reviewId: existing.id,
+      reviewStage: existing.stage,
+      reviewDecision: "PENDING",
+      reviewerUserId: existing.reviewerUserId,
+      reviewerAssignmentId: existing.reviewerAssignmentId,
+      reviewEvidenceHash: expectedReviewEvidenceHash,
+      reviewCreated: false,
+      scoreMutationPerformed: false,
+      visitEvidenceMutationPerformed: false,
+      staffFeedbackIncluded: false,
+      respondentIdentitiesIncluded: false,
+      providerCalled: false,
+    };
+  }
+
+  assertDirectorCarrierReturnProof({
+    cycle,
+    source,
+    sourceReview,
+    sourceDecisionContractHash: proof.sourceDecisionContractHash,
+    sourceDecisionRequestHash: proof.sourceDecisionRequestHash,
+  });
+
+  return database.$transaction(
+    async (tx) => {
+      const assignments = await tx.governanceOfficerAssignment.findMany({
+        where: {
+          id: clean(sourceReview.reviewerAssignmentId),
+          userId: sourceReview.reviewerUserId,
+          role: "DISTRICT_DIRECTOR",
+          status: "ACTIVE",
+          zoneId: cycle.scopeZoneId,
+        },
+        select: ASSIGNMENT_SELECT,
+      });
+      const assignment = requireReturningDirectorAssignment({
+        assignments,
+        sourceReview,
+        cycle,
+        now,
+      });
+
+      const existingRace = await tx.appraisalReview.findMany({
+        where: { assessmentId: current.id },
+        select: REVIEW_SELECT,
+        orderBy: [{ stage: "asc" }, { createdAt: "asc" }],
+      });
+      if (existingRace.length !== 0) {
+        fail(
+          "HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_DIRECTOR_WRITE_RACE",
+          409,
+        );
+      }
+
+      const created = await tx.appraisalReview.create({
+        data: {
+          cycleId: current.cycleId,
+          assessmentId: current.id,
+          reviewerUserId: sourceReview.reviewerUserId,
+          reviewerAssignmentId: assignment.id,
+          stage: sourceReview.stage,
+          decision: "PENDING",
+          note: null,
+          decidedAt: null,
+          metadata: directorContinuationMetadata({
+            current,
+            source,
+            sourceReview,
+            assignment,
+            assessorRole,
+            reviewEvidenceHash: expectedReviewEvidenceHash,
+            returnEvidenceHash: proof.returnEvidenceHash,
+            sourceReviewEvidenceHash: proof.sourceReviewEvidenceHash,
+            sourceDecisionRequestHash: proof.sourceDecisionRequestHash,
+            visitContextHash: proof.visitContextHash,
+          }),
+        },
+        select: REVIEW_SELECT,
+      });
+
+      const freshCycle = await tx.appraisalCycle.findUnique({
+        where: { id: current.cycleId },
+        select: CYCLE_SELECT,
+      });
+      if (!freshCycle) {
+        fail("HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_CYCLE_NOT_FOUND", 404);
+      }
+      assertDirectorCarrierBoundary(freshCycle);
+      assertDirectorCarrierReturnProof({
+        cycle: freshCycle,
+        source,
+        sourceReview,
+        sourceDecisionContractHash: proof.sourceDecisionContractHash,
+        sourceDecisionRequestHash: proof.sourceDecisionRequestHash,
+      });
+      const cycleUpdated = await tx.appraisalCycle.updateMany({
+        where: {
+          id: freshCycle.id,
+          cancelledAt: null,
+        },
+        data: {
+          metadata: {
+            ...objectValue(freshCycle.metadata),
+            directorGovernanceReview: {
+              schemaVersion: 1,
+              state: "PENDING",
+              assessmentId: current.id,
+              assessmentRevision: current.revision,
+              reviewId: created.id,
+              reviewStage: created.stage,
+              reviewEvidenceHash: expectedReviewEvidenceHash,
+              admissionType: "CORRECTED_ASSESSMENT",
+              continuedFromAssessmentId: source.id,
+              continuedFromReviewId: sourceReview.id,
+              preserveReturningReviewer: true,
+              preserveReviewStage: true,
+              staffFeedbackIncluded: false,
+              respondentIdentitiesIncluded: false,
+              carrierCycleStatusMutationPerformed: false,
+              carrierCycleTimestampMutationPerformed: false,
+              reviewerMayRewriteScores: false,
+              scoreMutationAllowed: false,
+              combinedWeightingDefined: false,
+              providerCalled: false,
+              continuedAt: now.toISOString(),
+            },
+          },
+        },
+      });
+      if (cycleUpdated.count !== 1) {
+        fail(
+          "HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_DIRECTOR_CYCLE_WRITE_RACE",
+          409,
+        );
+      }
+
+      await tx.auditLog.create({
+        data: {
+          tenantId: clean(freshCycle.targetTenantId),
+          userId: actorUserId,
+          action: "HEADTEACHER_GOVERNANCE_DIRECTOR_CORRECTION_REVIEW_CONTINUED",
+          resource: "AppraisalReview",
+          resourceId: created.id,
+          ip: input.ip ?? undefined,
+          userAgent: input.userAgent ?? undefined,
+          metadata: {
+            reqId,
+            cycleId: current.cycleId,
+            correctedAssessmentId: current.id,
+            correctedAssessmentRevision: current.revision,
+            correctedAssessmentHash: clean(current.assessmentHash).toLowerCase(),
+            sourceAssessmentId: source.id,
+            sourceAssessmentRevision: source.revision,
+            sourceAssessmentHash: clean(source.assessmentHash).toLowerCase(),
+            sourceReturnReviewId: sourceReview.id,
+            sourceReturnReviewStage: sourceReview.stage,
+            continuedReviewId: created.id,
+            continuedReviewStage: created.stage,
+            correctedReviewEvidenceHash: expectedReviewEvidenceHash,
+            returnEvidenceHash: proof.returnEvidenceHash,
+            sourceReviewEvidenceHash: proof.sourceReviewEvidenceHash,
+            sourceDecisionRequestHash: proof.sourceDecisionRequestHash,
+            preserveReturningReviewer: true,
+            preserveReviewStage: true,
+            reasonTextRecordedInAudit: false,
+            scoreValuesRecordedInAudit: false,
+            staffFeedbackIncluded: false,
+            respondentIdentitiesIncluded: false,
+            scoreMutationPerformed: false,
+            visitEvidenceMutationPerformed: false,
+            assessmentMutationPerformed: false,
+            cycleStatusChanged: false,
+            providerCalled: false,
+          },
+        },
+      });
+
+      return {
+        outcome: "CREATED" as const,
+        continuationRequired: true,
+        continuationReviewerRole: "DISTRICT_DIRECTOR" as const,
+        cycleId: current.cycleId,
+        assessmentId: current.id,
+        assessmentRevision: current.revision,
+        assessmentStatus: "FINALIZED" as const,
+        sourceAssessmentId: source.id,
+        sourceReviewId: sourceReview.id,
+        sourceReviewStage: sourceReview.stage,
+        reviewId: created.id,
+        reviewStage: created.stage,
+        reviewDecision: "PENDING" as const,
+        reviewerUserId: created.reviewerUserId,
+        reviewerAssignmentId: created.reviewerAssignmentId,
+        reviewEvidenceHash: expectedReviewEvidenceHash,
+        reviewCreated: true,
+        scoreMutationPerformed: false as const,
+        visitEvidenceMutationPerformed: false as const,
+        staffFeedbackIncluded: false as const,
+        respondentIdentitiesIncluded: false as const,
+        providerCalled: false as const,
+      };
+    },
+    transactionOptions(),
+  );
+}
+
 export async function ensureHeadteacherSupervisoryCorrectionReviewContinuation(
   input: EnsureHeadteacherSupervisoryCorrectionReviewContinuationInput,
 ): Promise<EnsureHeadteacherSupervisoryCorrectionReviewContinuationResult> {
@@ -1226,7 +1927,7 @@ export async function ensureHeadteacherSupervisoryCorrectionReviewContinuation(
   const dependencies = input.dependencies ?? {
     loadAssessment: loadHeadteacherSupervisoryAssessment,
     ensureDirectorContinuation:
-      ensureHeadteacherDirectorCorrectionReviewContinuation,
+      ensureDirectorGovernanceCorrectionContinuation,
   };
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -1267,7 +1968,6 @@ export async function ensureHeadteacherSupervisoryCorrectionReviewContinuation(
     if (!cycle) {
       fail("HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_CYCLE_NOT_FOUND", 404);
     }
-    assertCycleBoundary(cycle);
 
     const currentMetadata = objectValue(current.metadata);
     const returnReviewId = requireIdentifier(
@@ -1292,6 +1992,7 @@ export async function ensureHeadteacherSupervisoryCorrectionReviewContinuation(
     }
 
     if (hasHosReturn) {
+      assertHosCycleBoundary(cycle);
       assertEligibleHosCorrectionAssessorRole(input.actorRoleName);
       assertHosSourceReturn({
         current,
@@ -1316,6 +2017,7 @@ export async function ensureHeadteacherSupervisoryCorrectionReviewContinuation(
     }
 
     if (hasDirectorReturn) {
+      assertDirectorCarrierBoundary(cycle);
       const directorMetadata = objectValue(source.metadata);
       if (
         clean(directorMetadata.returnedByDirectorReviewId) !== sourceReview.id ||
@@ -1333,14 +2035,9 @@ export async function ensureHeadteacherSupervisoryCorrectionReviewContinuation(
         ip: input.ip,
         userAgent: input.userAgent,
         now,
-        ...(input.database
-          ? {
-              database:
-                input.database as unknown as HeadteacherDirectorReviewDatabase,
-            }
-          : {}),
+        ...(input.database ? { database: input.database } : {}),
       });
-      return mapDirectorResult(directorResult);
+      return directorResult;
     }
 
     fail("HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_RETURN_PROVENANCE_MISSING", 409);

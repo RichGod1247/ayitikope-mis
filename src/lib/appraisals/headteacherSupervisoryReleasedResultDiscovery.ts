@@ -4,6 +4,7 @@ import {
 } from "@/lib/appraisals/headteacherSupervisoryDirectorDirectRelease";
 import {
   readHeadteacherSupervisoryReleasedResult,
+  type HeadteacherSupervisoryReleasedResult,
   type HeadteacherSupervisoryReleasedResultDatabase,
 } from "@/lib/appraisals/headteacherSupervisoryReleasedResult";
 import { effectiveRole } from "@/lib/roleRouting";
@@ -31,7 +32,7 @@ export type HeadteacherSupervisoryReleasedResultSummary = {
   assessmentId: string;
   dateObserved: string;
   releasedAt: string;
-  assessorOffice: "District Director";
+  assessorOffice: HeadteacherSupervisoryReleasedResult["assessment"]["assessorOffice"];
   overallPercentage: number | null;
   schoolName: string;
   circuitName: string;

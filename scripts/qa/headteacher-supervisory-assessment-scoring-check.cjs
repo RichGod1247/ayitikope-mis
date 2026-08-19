@@ -414,6 +414,9 @@ function correctionRevisionAssessment(overrides = {}) {
       returnReviewStage: 3,
       returnEvidenceHash: "3".repeat(64),
       returnReason: "Correct the two specified scores.",
+      returnAdmissionMode: "LEGACY_UNDER_REVIEW_RETURN",
+      returnDecisionContractHash: null,
+      returnDecisionRequestHash: null,
       visitContextHash,
       visitContextSchemaVersion: 1,
       visitDetailsSchemaVersion: null,
@@ -428,6 +431,38 @@ function correctionRevisionAssessment(overrides = {}) {
     },
     ...overrides,
   };
+}
+
+function directorGovernanceCorrectionRevisionAssessment(overrides = {}) {
+  const legacy = correctionRevisionAssessment();
+  const releasedAt = new Date("2026-07-29T09:30:00.000Z");
+  return correctionRevisionAssessment({
+    ...legacy,
+    cycle: baseCycle({
+      status: "RELEASED",
+      closedAt: new Date("2026-07-28T18:00:00.000Z"),
+      reviewStartedAt: new Date("2026-07-29T09:00:00.000Z"),
+      releasedAt,
+    }),
+    metadata: {
+      ...legacy.metadata,
+      returnAdmissionMode: "DIRECTOR_GOVERNANCE_RETURN",
+      returnDecisionContractHash: "4".repeat(64),
+      returnDecisionRequestHash: "5".repeat(64),
+      revisionKey: hashJson({
+        schemaVersion: 1,
+        originalAssessmentId: legacy.priorAssessmentId,
+        nextRevision: legacy.revision,
+        sourceAssessmentHash: legacy.metadata.sourceAssessmentHash,
+        returnEvidenceHash: legacy.metadata.returnEvidenceHash,
+        returnAdmissionMode: "DIRECTOR_GOVERNANCE_RETURN",
+        returnDecisionContractHash: "4".repeat(64),
+        returnDecisionRequestHash: "5".repeat(64),
+        visitContextHash: legacy.metadata.visitContextHash,
+      }),
+    },
+    ...overrides,
+  });
 }
 
 function auditText(database) {
@@ -453,8 +488,12 @@ async function main() {
   assertEqual(HEADTEACHER_SUPERVISORY_SCORING_POLICY.expectedItemCount, 34, "Official item count drift");
   assertEqual(HEADTEACHER_SUPERVISORY_SCORING_POLICY.finalizedScoresImmutable, true, "Finalized immutability missing");
   assertEqual(HEADTEACHER_SUPERVISORY_SCORING_POLICY.reviewerMayRewriteScores, false, "Reviewer score rewrite must remain forbidden");
-  assertEqual(HEADTEACHER_SUPERVISORY_SCORING_POLICY.correctionDraftCycleStatus, "UNDER_REVIEW", "Correction-cycle boundary drift");
+  assertEqual(HEADTEACHER_SUPERVISORY_SCORING_POLICY.correctionDraftCycleStatus, "UNDER_REVIEW", "Legacy correction-cycle boundary drift");
   assertEqual(HEADTEACHER_SUPERVISORY_SCORING_POLICY.correctionRevisionMetadataRequired, true, "Correction metadata gate missing");
+  assertEqual(HEADTEACHER_SUPERVISORY_SCORING_POLICY.legacyCorrectionAdmissionMode, "LEGACY_UNDER_REVIEW_RETURN", "Legacy correction admission marker drift");
+  assertEqual(HEADTEACHER_SUPERVISORY_SCORING_POLICY.directorGovernanceCorrectionAdmissionMode, "DIRECTOR_GOVERNANCE_RETURN", "Director Governance correction admission marker drift");
+  assertEqual(HEADTEACHER_SUPERVISORY_SCORING_POLICY.directorGovernanceCarrierStatusMutationRequired, false, "Director Governance correction must not depend on carrier status mutation");
+  assertEqual(HEADTEACHER_SUPERVISORY_SCORING_POLICY.directorGovernanceCarrierTimestampMutationRequired, false, "Director Governance correction must not depend on carrier timestamp mutation");
 
   const database = new FakeDatabase();
   const initial = await loadHeadteacherSupervisoryAssessment({
@@ -814,11 +853,161 @@ async function main() {
   assertEqual(correction.assessment.status, "FINALIZED", "Correction revision final status mismatch");
   assertEqual(correction.assessment.cycle.status, "UNDER_REVIEW", "Correction finalization must leave Director review open");
 
+  const releasedWithoutDirectorProof = new FakeDatabase({
+    assessment: correctionRevisionAssessment({
+      cycle: baseCycle({
+        status: "RELEASED",
+        closedAt: new Date("2026-07-28T18:00:00.000Z"),
+        reviewStartedAt: new Date("2026-07-29T09:00:00.000Z"),
+        releasedAt: new Date("2026-07-29T09:30:00.000Z"),
+      }),
+    }),
+  });
+  await expectReject(
+    () =>
+      loadHeadteacherSupervisoryAssessment({
+        actorUserId: "actor-001",
+        actorRoleName: "DISTRICT_DIRECTOR",
+        assessmentId: "assessment-revision-002",
+        now: NOW,
+        database: releasedWithoutDirectorProof,
+      }),
+    "HEADTEACHER_SUPERVISORY_SCORING_CORRECTION_REVISION_INVALID",
+    "A legacy or unproven correction draft must not reopen on a RELEASED carrier",
+  );
+
+  const malformedDirectorProof = new FakeDatabase({
+    assessment: directorGovernanceCorrectionRevisionAssessment({
+      metadata: {
+        ...directorGovernanceCorrectionRevisionAssessment().metadata,
+        returnDecisionRequestHash: "",
+      },
+    }),
+  });
+  await expectReject(
+    () =>
+      loadHeadteacherSupervisoryAssessment({
+        actorUserId: "actor-001",
+        actorRoleName: "DISTRICT_DIRECTOR",
+        assessmentId: "assessment-revision-002",
+        now: NOW,
+        database: malformedDirectorProof,
+      }),
+    "HEADTEACHER_SUPERVISORY_SCORING_CORRECTION_REVISION_INVALID",
+    "Director-return correction must fail closed when its proof hashes are incomplete",
+  );
+
+  const directorCorrection = new FakeDatabase({
+    assessment: directorGovernanceCorrectionRevisionAssessment(),
+  });
+  const directorCorrectionLoaded =
+    await loadHeadteacherSupervisoryAssessment({
+      actorUserId: "actor-001",
+      actorRoleName: "DISTRICT_DIRECTOR",
+      assessmentId: "assessment-revision-002",
+      now: NOW,
+      database: directorCorrection,
+    });
+  assertEqual(
+    directorCorrectionLoaded.canEdit,
+    true,
+    "Proof-bound Director-return correction must be editable on its preserved RELEASED carrier",
+  );
+  assertEqual(
+    directorCorrectionLoaded.canFinalize,
+    true,
+    "Copied complete Director-return correction must remain finalizable",
+  );
+
+  const directorCorrectionFirstSection =
+    directorCorrection.assessment.instrumentVersion.sections[0];
+  const directorCorrectionSave =
+    await saveHeadteacherSupervisoryAssessmentSection({
+      actorUserId: "actor-001",
+      actorRoleName: "DISTRICT_DIRECTOR",
+      assessmentId: "assessment-revision-002",
+      sectionKey: directorCorrectionFirstSection.key,
+      scores: [{
+        itemKey: directorCorrectionFirstSection.items[0].key,
+        score: 2,
+        notApplicable: false,
+      }],
+      reqId: "request-director-correction-save-001",
+      now: NOW,
+      database: directorCorrection,
+    });
+  assertEqual(
+    directorCorrectionSave.outcome,
+    "SAVED",
+    "Director-return correction score save should succeed",
+  );
+  assertEqual(
+    directorCorrection.assessment.cycle.status,
+    "RELEASED",
+    "Director-return correction save must not mutate the carrier cycle",
+  );
+
+  const directorCorrectionFinalized =
+    await finalizeHeadteacherSupervisoryAssessment({
+      actorUserId: "actor-001",
+      actorRoleName: "DISTRICT_DIRECTOR",
+      assessmentId: "assessment-revision-002",
+      reqId: "request-director-correction-finalize-001",
+      now: NOW,
+      database: directorCorrection,
+    });
+  assertEqual(
+    directorCorrectionFinalized.outcome,
+    "FINALIZED",
+    "Proof-bound Director-return correction should finalize",
+  );
+  assertEqual(
+    directorCorrection.assessment.status,
+    "FINALIZED",
+    "Director-return correction final status mismatch",
+  );
+  assertEqual(
+    directorCorrection.assessment.cycle.status,
+    "RELEASED",
+    "Director-return correction finalization must preserve the carrier cycle",
+  );
+
+  const cancelledDirectorCorrection = new FakeDatabase({
+    assessment: directorGovernanceCorrectionRevisionAssessment({
+      cycle: baseCycle({
+        status: "CANCELLED",
+        closedAt: new Date("2026-07-28T18:00:00.000Z"),
+        reviewStartedAt: new Date("2026-07-29T09:00:00.000Z"),
+        cancelledAt: new Date("2026-07-29T09:30:00.000Z"),
+      }),
+    }),
+  });
+  await expectReject(
+    () =>
+      loadHeadteacherSupervisoryAssessment({
+        actorUserId: "actor-001",
+        actorRoleName: "DISTRICT_DIRECTOR",
+        assessmentId: "assessment-revision-002",
+        now: NOW,
+        database: cancelledDirectorCorrection,
+      }),
+    "HEADTEACHER_SUPERVISORY_SCORING_CORRECTION_REVISION_INVALID",
+    "Cancelled carrier must remain fail-closed even for Director-return correction",
+  );
+
   assert(source.includes("Prisma.TransactionIsolationLevel.Serializable"), "Serializable transaction marker missing");
   assert(source.includes("calculateAppraisalScores"), "Shared scoring engine must be reused");
   assert(source.includes("assessmentId_instrumentItemId"), "Score upsert idempotency marker missing");
   assert(source.includes("assessmentHashSchemaVersion"), "Assessment hash schema marker missing");
-  assert(source.includes('correctionDraftCycleStatus: "UNDER_REVIEW"'), "Correction cycle marker missing");
+  assert(source.includes('correctionDraftCycleStatus: "UNDER_REVIEW"'), "Legacy correction cycle marker missing");
+  assert(source.includes('legacyCorrectionAdmissionMode: "LEGACY_UNDER_REVIEW_RETURN"'), "Legacy correction admission marker missing");
+  assert(source.includes('directorGovernanceCorrectionAdmissionMode: "DIRECTOR_GOVERNANCE_RETURN"'), "Director Governance correction admission marker missing");
+  assert(source.includes("directorGovernanceCarrierStatusMutationRequired: false"), "Director Governance carrier-status independence marker missing");
+  assert(source.includes("directorGovernanceCarrierTimestampMutationRequired: false"), "Director Governance carrier-timestamp independence marker missing");
+  assert(source.includes("correctionRevisionCandidate"), "Correction revision must be detected before carrier-cycle routing");
+  assert(source.includes("returnDecisionContractHash"), "Director-return decision contract hash gate missing");
+  assert(source.includes("returnDecisionRequestHash"), "Director-return decision request hash gate missing");
+  assert(source.includes("expectedRevisionKey"), "Director-return revision-key coherence gate missing");
   assert(source.includes("HEADTEACHER_SUPERVISORY_SCORING_CORRECTION_REVISION_INVALID"), "Correction metadata fail-closed marker missing");
   assert(!source.includes("appraisalReview.create"), "F3 must not create reviews");
   assert(!source.includes("appraisalCycle.update"), "F3 must not transition cycles");
@@ -838,7 +1027,10 @@ async function main() {
   console.log("Finalized evidence              : immutable SHA-256 proof");
   console.log("Finalization retry              : EXISTING_FINALIZED");
   console.log("Returned assessment             : new revision required");
-  console.log("Correction revision             : verified draft editable during UNDER_REVIEW");
+  console.log("Legacy correction revision      : verified draft editable during UNDER_REVIEW");
+  console.log("Director-return correction      : proof-bound draft editable on preserved carrier");
+  console.log("Unproven RELEASED draft         : rejected");
+  console.log("Cancelled carrier               : rejected");
   console.log("Unverified review-time draft    : rejected");
   console.log("Reviewer score rewriting        : absent");
   console.log("Free-text comments              : prohibited");

@@ -538,9 +538,12 @@ function createDatabase(options = {}) {
       [
         {
           id: assessment.id,
+          cycleId: assessment.cycleId,
           status: assessment.status,
           revision: assessment.revision,
           priorAssessmentId: assessment.priorAssessmentId,
+          assessorUserId: assessment.assessorUserId,
+          assessorAssignmentId: assessment.assessorAssignmentId,
         },
       ],
     membership:
@@ -563,7 +566,17 @@ function createDatabase(options = {}) {
       },
       async findMany(args) {
         state.reads.push(["appraisalAssessment.findMany", clone(args)]);
-        return clone(state.currentAssessments);
+        const where = args?.where ?? {};
+        return clone(
+          state.currentAssessments.filter(
+            (row) =>
+              (!where.cycleId || row.cycleId === where.cycleId) &&
+              (!where.assessorUserId ||
+                row.assessorUserId === where.assessorUserId) &&
+              (where.assessorAssignmentId === undefined ||
+                row.assessorAssignmentId === where.assessorAssignmentId),
+          ),
+        );
       },
     },
     membership: {
@@ -887,14 +900,54 @@ async function main() {
     "B2 package requires CLOSED pre-review cycle",
   );
 
+  {
+    const assessment = makeAssessment();
+    const independentBscAssessment = {
+      id: "assessment-bsc-002",
+      cycleId: assessment.cycleId,
+      status: "FINALIZED",
+      revision: 1,
+      priorAssessmentId: null,
+      assessorUserId: "bsc-user-002",
+      assessorAssignmentId: "bsc-assignment-002",
+    };
+    const resultWithParallelOfficerAssessment =
+      await readHeadteacherSupervisoryReviewPackage({
+        ...baseInput(),
+        database: createDatabase({
+          assessment,
+          currentAssessments: [
+            {
+              id: assessment.id,
+              cycleId: assessment.cycleId,
+              status: assessment.status,
+              revision: assessment.revision,
+              priorAssessmentId: assessment.priorAssessmentId,
+              assessorUserId: assessment.assessorUserId,
+              assessorAssignmentId: assessment.assessorAssignmentId,
+            },
+            independentBscAssessment,
+          ],
+        }).db,
+      });
+    assertEqual(
+      resultWithParallelOfficerAssessment.assessment.id,
+      assessment.id,
+      "Parallel finalized assessment from another officer lane must not make the selected HOS package ambiguous",
+    );
+  }
+
   await expectReject(
     () => {
       const assessment = makeAssessment();
-      const second = {
-        id: "assessment-002",
+      const secondSameLane = {
+        id: "assessment-same-lane-002",
+        cycleId: assessment.cycleId,
         status: "FINALIZED",
         revision: 1,
         priorAssessmentId: null,
+        assessorUserId: assessment.assessorUserId,
+        assessorAssignmentId: assessment.assessorAssignmentId,
       };
       return readHeadteacherSupervisoryReviewPackage({
         ...baseInput(),
@@ -903,17 +956,20 @@ async function main() {
           currentAssessments: [
             {
               id: assessment.id,
+              cycleId: assessment.cycleId,
               status: assessment.status,
               revision: assessment.revision,
               priorAssessmentId: assessment.priorAssessmentId,
+              assessorUserId: assessment.assessorUserId,
+              assessorAssignmentId: assessment.assessorAssignmentId,
             },
-            second,
+            secondSameLane,
           ],
         }).db,
       });
     },
     "HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_CURRENT_ASSESSMENT_AMBIGUOUS",
-    "Multiple current finalized assessments must fail closed",
+    "Multiple finalized assessments in the same frozen assessor lane must fail closed",
   );
 
   await expectReject(
@@ -926,15 +982,21 @@ async function main() {
           currentAssessments: [
             {
               id: assessment.id,
+              cycleId: assessment.cycleId,
               status: assessment.status,
               revision: assessment.revision,
               priorAssessmentId: null,
+              assessorUserId: assessment.assessorUserId,
+              assessorAssignmentId: assessment.assessorAssignmentId,
             },
             {
               id: "assessment-draft-002",
+              cycleId: assessment.cycleId,
               status: "DRAFT",
               revision: 1,
               priorAssessmentId: null,
+              assessorUserId: assessment.assessorUserId,
+              assessorAssignmentId: assessment.assessorAssignmentId,
             },
           ],
         }).db,
@@ -996,6 +1058,8 @@ async function main() {
     "calculateAppraisalScores",
     "visitDetailsFromEvidenceSnapshot",
     "assessmentHashPayload",
+    "assessorUserId: record.assessorUserId",
+    "assessorAssignmentId: record.assessorAssignmentId",
     "currentHosAssignmentVerified: true",
     "noExistingReviewCustody: true",
     "staffFeedbackIncluded: false",
@@ -1035,7 +1099,8 @@ async function main() {
   console.log("Review custody                   : zero existing AppraisalReview rows");
   console.log("Eligible assessor origins        : SISSO / Basic School Coordinator");
   console.log("HOS/Director self-review         : excluded");
-  console.log("Current finalized assessment     : exactly one, unresolved work fails closed");
+  console.log("Current finalized assessment     : exactly one per frozen assessor lane");
+  console.log("Parallel officer assessments     : allowed and independently reviewable");
   console.log("Instrument                       : native 4 sections / 34 indicators");
   console.log("Score scale                      : 1-5 / N/A");
   console.log("Stored calculations              : independently recalculated");

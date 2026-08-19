@@ -9,12 +9,17 @@ import {
   Fragment,
   type ChangeEvent,
 } from "react";
-import type { HeadteacherDirectorReviewPackage } from "@/lib/appraisals/headteacherDirectorReviewPackage";
+import type {
+  HeadteacherDirectorGovernanceQueue,
+  HeadteacherDirectorGovernanceQueueItem,
+  HeadteacherDirectorGovernanceReviewPackage,
+} from "@/lib/appraisals/headteacherDirectorGovernanceReview";
 import type { HeadteacherDirectorAnonymousResponsesView } from "@/lib/appraisals/headteacherDirectorAnonymousResponses";
 
 type DecisionMode = "RETURN" | "HOLD" | "RELEASE";
 type QueuePanel = "ALL" | "APPROVAL" | "COMPLETE" | "READY" | "OPEN";
-type ReviewMode = "HOME" | "STAFF" | "SUPERVISORY" | "ANALYTICS";
+type ReviewMode = "HOME" | "STAFF";
+type GovernanceFocus = "TEACHER" | "HEADTEACHER" | "MINE";
 type StaffLevel = "CIRCUIT" | "SCHOOL" | "RESPONDENTS" | "FORM";
 
 type DirectorQueueItem = {
@@ -40,6 +45,17 @@ type DirectorQueueItem = {
   directReleaseAssessmentId: string | null;
   governanceAssessmentDirectReleased: boolean;
   governanceAssessmentId: string | null;
+  staffFeedbackReviewState:
+    | "NOT_STARTED"
+    | "PENDING"
+    | "RETURNED"
+    | "HELD"
+    | "RELEASED";
+  staffFeedbackReviewId: string | null;
+  staffFeedbackReviewStage: number | null;
+  canStartStaffFeedbackReview: boolean;
+  canDecideStaffFeedbackReview: boolean;
+  staffFeedbackReleasedAt: string | null;
 };
 
 type DirectorQueue = {
@@ -51,6 +67,70 @@ type DirectorQueue = {
 type DirectorQueueApiResponse =
   | { ok: true; reqId: string; queue: DirectorQueue }
   | { ok: false; reqId?: string; error: string; details?: unknown };
+
+type StaffFeedbackReviewState = {
+  cycleId: string;
+  snapshotId: string;
+  lifecycleState:
+    | "READY_TO_START"
+    | "PENDING_DECISION"
+    | "RETURNED_TO_QUEUE"
+    | "HELD_CONTINUATION"
+    | "RELEASED";
+  latestReviewId: string | null;
+  latestStage: number | null;
+  latestDecision: "PENDING" | "RETURNED" | "HELD" | "ACCEPTED" | null;
+  canStartReview: boolean;
+  canDecide: boolean;
+  releasedAt: string | null;
+  releaseProofHash: string | null;
+  governanceAssessmentRequired: false;
+  carrierCycleStatusMutationPerformed: false;
+};
+
+type StaffReviewStartApiResponse =
+  | {
+      ok: true;
+      reqId: string;
+      result: {
+        outcome: "STARTED" | "EXISTING_PENDING";
+        state: StaffFeedbackReviewState;
+        reviewId: string;
+        stage: number;
+        snapshotId: string;
+        reviewEvidenceHash: string;
+        providerCalled: false;
+      };
+    }
+  | { ok: false; reqId?: string; error: string; details?: unknown };
+
+type StaffReviewDecisionResult = {
+  outcome: string;
+  cycleId: string;
+  sourceReviewId: string;
+  sourceReviewStage: number;
+  sourceReviewDecision: "RETURNED" | "HELD" | "ACCEPTED";
+  snapshotId: string;
+  nextReviewId: string | null;
+  nextReviewStage: number | null;
+  releaseProofHash: string | null;
+  releasedAt: string | null;
+};
+
+type StaffReviewDecisionApiResponse =
+  | {
+      ok: true;
+      reqId: string;
+      result: StaffReviewDecisionResult;
+    }
+  | {
+      ok: false;
+      reqId?: string;
+      error: string;
+      releaseCommitted?: boolean;
+      retrySafe?: boolean;
+      result?: StaffReviewDecisionResult;
+    };
 
 type DirectorGovernanceWorkspaceItem = {
   itemKey: string;
@@ -122,8 +202,76 @@ type DirectorGovernanceWorkspaceApiResponse =
   | { ok: true; reqId: string; workspace: DirectorGovernanceWorkspace }
   | { ok: false; reqId?: string; error: string; details?: unknown };
 
+type DirectorGovernanceQueueApiResponse =
+  | { ok: true; reqId: string; queue: HeadteacherDirectorGovernanceQueue }
+  | { ok: false; reqId?: string; error: string; details?: unknown };
+
+type TeacherDirectorReviewQueueItem = {
+  cycleId: string;
+  assessmentId: string;
+  revision: number;
+  dateObserved: string;
+  targetName: string | null;
+  schoolId: string;
+  schoolName: string;
+  circuitId: string;
+  circuitName: string;
+  districtId: string;
+  districtName: string;
+  assessorRole:
+    | "SISSO"
+    | "BASIC_SCHOOL_COORDINATOR"
+    | "HEAD_OF_SUPERVISION"
+    | "DISTRICT_DIRECTOR";
+  assessorOfficeLabel: string;
+  state: "READY_TO_START" | "READY_TO_REVIEW" | "READY_TO_RELEASE";
+  nextAction: "START_REVIEW" | "CONTINUE_REVIEW" | "DIRECT_RELEASE";
+  eligible: true;
+};
+
+type TeacherDirectorReviewQueue = {
+  actorRole: string;
+  officeLabel: string;
+  summary: {
+    assessments: number;
+    readyToStart: number;
+    readyToReview: number;
+    readyToRelease: number;
+    circuits: number;
+    schools: number;
+  };
+  items: TeacherDirectorReviewQueueItem[];
+  readOnlyDiscovery: true;
+  assessmentEvidenceIncluded: false;
+  scoresIncluded: false;
+  generalCommentIncluded: false;
+  observationDetailsIncluded: false;
+  classEnrolmentEvidenceIncluded: false;
+  contactDetailsIncluded: false;
+  assessorUserIdIncluded: false;
+  targetUserIdIncluded: false;
+  reviewIdIncluded: false;
+  assignmentIdsIncluded: false;
+  proofHashesIncluded: false;
+  legacyTeacherAppraisalIncluded: false;
+  noBackgroundPolling: true;
+  providerCalled: false;
+};
+
+type TeacherDirectorReviewQueueApiResponse =
+  | { ok: true; reqId: string; reviewQueue: TeacherDirectorReviewQueue }
+  | { ok: false; reqId?: string; error: string; details?: unknown };
+
+type DirectorGovernanceReviewPackageApiResponse =
+  | {
+      ok: true;
+      reqId: string;
+      reviewPackage: HeadteacherDirectorGovernanceReviewPackage;
+    }
+  | { ok: false; reqId?: string; error: string; details?: unknown };
+
 type DirectReleaseInspection = {
-  item: DirectorQueueItem;
+  item: HeadteacherDirectorGovernanceQueueItem;
   workspace: DirectorGovernanceWorkspace;
 };
 
@@ -136,14 +284,6 @@ type DeadlineExtensionApiResponse =
         newDeadlineAt: string;
         extensionDays: number;
       };
-    }
-  | { ok: false; reqId?: string; error: string; details?: unknown };
-
-type ReviewPackageApiResponse =
-  | {
-      ok: true;
-      reqId: string;
-      reviewPackage: HeadteacherDirectorReviewPackage;
     }
   | { ok: false; reqId?: string; error: string; details?: unknown };
 
@@ -164,23 +304,16 @@ type ApiFailure = {
   closureCommitted?: boolean;
 };
 
-type SupervisorySection = {
-  sectionKey: string;
-  sectionTitle: string;
-  sectionOrder: number;
-  sectionMaxScore: number;
-  percentage: number | null;
-  rawScore: number;
-  applicableMaximum: number;
-  notApplicableItems: number;
-  items: HeadteacherDirectorReviewPackage["supervisoryAssessment"]["items"];
-};
-
 type AnonymousSelectedResponse = NonNullable<
   HeadteacherDirectorAnonymousResponsesView["selectedResponse"]
 >;
 
 const API_BASE = "/api/district/headteacher-appraisals";
+const TEACHER_REVIEW_QUEUE_API =
+  "/api/governance/appraisals/teacher-supervisory/review-queue";
+const TEACHER_REVIEW_WORKSPACE =
+  "/governance/appraisals/teacher-supervisory/review";
+
 
 const DIRECTOR_REVIEW_UI_POLICY = Object.freeze({
   audience: "DISTRICT_DIRECTOR",
@@ -199,6 +332,26 @@ const DIRECTOR_REVIEW_UI_POLICY = Object.freeze({
   appraisalChannels: ["STAFF_FEEDBACK", "GOVERNANCE_SUPERVISORY"],
   directReleaseInspectionRequired: true,
   directReleaseMutationFromInspectionOnly: true,
+  governanceReviewedDecisionPath: "ASSESSMENT_KEYED_RETURN_HOLD_RELEASE",
+  governanceStaffFeedbackPrerequisite: false,
+  governanceNativeFormReadOnly: true,
+  bbcGovernanceQueueVersion: 3,
+  governanceReleasedHistoryCollapsedByDefault: true,
+  governanceStateSpecificActions: true,
+  governanceCompactCards: true,
+  governanceReturnedCorrectionTracking: true,
+  governanceCorrectionReceivedNotification: true,
+  governanceStageNumberPrimaryStatus: false,
+  bbcGovernanceFocusVersion: 1,
+  governanceFocusGroups: [
+    "TEACHER_APPRAISALS",
+    "HEADTEACHER_APPRAISALS",
+    "MY_ASSESSMENTS",
+  ],
+  teacherReviewQueueIntegrated: true,
+  teacherReviewWorkspaceReused: true,
+  teacherReviewBackendModified: false,
+  onlySelectedGovernanceGroupExpanded: true,
 });
 
 function panel(extra = "") {
@@ -226,13 +379,6 @@ function wholePercentage(value: number | null | undefined) {
     : `${Math.round(value)}%`;
 }
 
-function differenceLabel(value: number | null | undefined) {
-  if (value == null || !Number.isFinite(value)) return "Not comparable";
-  const rounded = Math.round(value);
-  if (rounded === 0) return "No difference";
-  return `${rounded > 0 ? "+" : ""}${rounded} points`;
-}
-
 function errorText(value: unknown, fallback: string) {
   const candidate = value as ApiFailure | null;
   return (
@@ -241,30 +387,6 @@ function errorText(value: unknown, fallback: string) {
     clean(candidate?.error) ||
     fallback
   );
-}
-
-function fullReviewFailureText(value: unknown, fallback: string) {
-  const candidate = value as ApiFailure | null;
-  if (
-    candidate?.error ===
-    "HEADTEACHER_DIRECTOR_REVIEW_PACKAGE_CYCLE_NOT_ACTIVE"
-  ) {
-    return (
-      "This appraisal is ready, but the full Director review has not started. " +
-      "Use Start full decision review on the record, confirm the action, then load the evidence package."
-    );
-  }
-  if (
-    candidate?.error ===
-    "HEADTEACHER_DIRECTOR_REVIEW_SUPERVISORY_ASSESSMENT_REQUIRED"
-  ) {
-    return (
-      "The staff feedback is ready, but the separate governance assessment " +
-      "has not yet been finalized. Review the anonymous staff forms now, or " +
-      "start the full decision review after the governance assessment is finalized."
-    );
-  }
-  return errorText(value, fallback);
 }
 
 async function readJson<T>(response: Response): Promise<T | null> {
@@ -287,40 +409,53 @@ function anonymousContractSafe(value: HeadteacherDirectorAnonymousResponsesView)
   );
 }
 
-function buildSupervisorySections(
-  reviewPackage: HeadteacherDirectorReviewPackage | null,
-): SupervisorySection[] {
-  if (!reviewPackage) return [];
+function teacherReviewQueueContractSafe(
+  value: TeacherDirectorReviewQueue,
+) {
+  const actorRole = clean(value.actorRole)
+    .toUpperCase()
+    .replace(/[\s-]+/g, "_");
 
-  const grouped = new Map<string, SupervisorySection>();
-  const percentages = reviewPackage.supervisoryAssessment.sectionPercentages;
-
-  for (const item of reviewPackage.supervisoryAssessment.items) {
-    const current = grouped.get(item.sectionKey) ?? {
-      sectionKey: item.sectionKey,
-      sectionTitle: item.sectionTitle,
-      sectionOrder: item.sectionOrder,
-      sectionMaxScore: 0,
-      percentage: percentages[item.sectionKey] ?? null,
-      rawScore: 0,
-      applicableMaximum: 0,
-      notApplicableItems: 0,
-      items: [],
-    };
-
-    current.items.push(item);
-    current.sectionMaxScore += item.itemMaxScore;
-    if (item.notApplicable) {
-      current.notApplicableItems += 1;
-    } else {
-      current.rawScore += item.score ?? 0;
-      current.applicableMaximum += item.itemMaxScore;
-    }
-    grouped.set(item.sectionKey, current);
-  }
-
-  return [...grouped.values()].sort(
-    (left, right) => left.sectionOrder - right.sectionOrder,
+  return (
+    actorRole === "DISTRICT_DIRECTOR" &&
+    value.readOnlyDiscovery === true &&
+    value.assessmentEvidenceIncluded === false &&
+    value.scoresIncluded === false &&
+    value.generalCommentIncluded === false &&
+    value.observationDetailsIncluded === false &&
+    value.classEnrolmentEvidenceIncluded === false &&
+    value.contactDetailsIncluded === false &&
+    value.assessorUserIdIncluded === false &&
+    value.targetUserIdIncluded === false &&
+    value.reviewIdIncluded === false &&
+    value.assignmentIdsIncluded === false &&
+    value.proofHashesIncluded === false &&
+    value.legacyTeacherAppraisalIncluded === false &&
+    value.noBackgroundPolling === true &&
+    value.providerCalled === false &&
+    value.items.every((item) => {
+      if (!clean(item.assessmentId) || item.eligible !== true) return false;
+      if (
+        item.state === "READY_TO_START" &&
+        item.nextAction !== "START_REVIEW"
+      ) {
+        return false;
+      }
+      if (
+        item.state === "READY_TO_REVIEW" &&
+        item.nextAction !== "CONTINUE_REVIEW"
+      ) {
+        return false;
+      }
+      if (
+        item.state === "READY_TO_RELEASE" &&
+        (item.nextAction !== "DIRECT_RELEASE" ||
+          item.assessorRole !== "DISTRICT_DIRECTOR")
+      ) {
+        return false;
+      }
+      return true;
+    })
   );
 }
 
@@ -407,7 +542,10 @@ function ActionButton(props: {
   onClick: () => void;
   disabled?: boolean;
   primary?: boolean;
+  mobileFullWidth?: boolean;
 }) {
+  const width = props.mobileFullWidth ? "w-full sm:w-auto" : "";
+
   return (
     <button
       type="button"
@@ -415,8 +553,8 @@ function ActionButton(props: {
       onClick={props.onClick}
       className={
         props.primary
-          ? "min-h-11 rounded-xl bg-amber-300 px-4 py-2.5 text-sm font-black text-slate-950 disabled:cursor-wait disabled:opacity-50"
-          : "min-h-11 rounded-xl border border-white/15 bg-slate-950 px-4 py-2.5 text-sm font-black text-slate-100 disabled:cursor-wait disabled:opacity-50"
+          ? `${width} min-h-11 rounded-xl bg-amber-300 px-4 py-2.5 text-sm font-black text-slate-950 disabled:cursor-wait disabled:opacity-50`
+          : `${width} min-h-11 rounded-xl border border-white/15 bg-slate-950 px-4 py-2.5 text-sm font-black text-slate-100 disabled:cursor-wait disabled:opacity-50`
       }
     >
       {props.children}
@@ -433,8 +571,6 @@ function QueueRecord(props: {
   onCloseEarly: () => void;
   onWait: () => void;
   onReviewStaff: () => void;
-  onStart: () => void;
-  onLoad: () => void;
 }) {
   const { item } = props;
   const feedbackWindowExpired =
@@ -448,10 +584,6 @@ function QueueRecord(props: {
     item.participantCount === item.eligibleParticipantCount
       ? ""
       : ` · ${item.participantCount} originally selected`;
-  const hasDirectorOwnGovernanceAssessment = Boolean(
-    item.governanceAssessmentId,
-  );
-
   return (
     <article
       className={
@@ -490,9 +622,17 @@ function QueueRecord(props: {
                     ? `All ${item.finalizedResponseCount} eligible responses finalized${frozenPopulationSuffix} · deadline ${formatDate(item.deadlineAt)}`
                     : `${item.finalizedResponseCount} of ${item.eligibleParticipantCount} eligible responses finalized${frozenPopulationSuffix} · deadline ${formatDate(item.deadlineAt)}`
                 : item.cycleStatus === "CLOSED"
-                  ? `Responses closed ${formatDate(item.closedAt)}`
+                  ? item.staffFeedbackReviewState === "RELEASED"
+                    ? `Staff-feedback result released ${formatDate(item.staffFeedbackReleasedAt)}`
+                    : item.staffFeedbackReviewState === "PENDING"
+                      ? `Independent Staff Feedback review · stage ${item.staffFeedbackReviewStage ?? 1}`
+                      : item.staffFeedbackReviewState === "RETURNED"
+                        ? "Staff Feedback review returned to queue"
+                        : `Responses closed ${formatDate(item.closedAt)}`
                   : item.cycleStatus === "UNDER_REVIEW"
-                    ? "Director review already started"
+                    ? item.staffFeedbackReviewState === "RELEASED"
+                      ? `Staff-feedback result released ${formatDate(item.staffFeedbackReleasedAt)}`
+                      : "Legacy combined review exists · Staff Feedback remains independent"
                     : item.releasedAt
                       ? `Staff-feedback result released ${formatDate(item.releasedAt)}`
                       : item.label}
@@ -532,30 +672,19 @@ function QueueRecord(props: {
               </ActionButton>
             </>
           ) : null}
-          {item.cycleStatus === "CLOSED" ? (
-            <>
-              <ActionButton
-                primary
-                disabled={props.busy}
-                onClick={props.onReviewStaff}
-              >
-                Review staff feedback
-              </ActionButton>
-              {!hasDirectorOwnGovernanceAssessment ? (
-                <ActionButton disabled={props.busy} onClick={props.onStart}>
-                  Start full decision review
-                </ActionButton>
-              ) : null}
-            </>
-          ) : null}
-          {item.cycleStatus === "UNDER_REVIEW" &&
-          !hasDirectorOwnGovernanceAssessment ? (
+          {item.cycleStatus === "CLOSED" || item.cycleStatus === "UNDER_REVIEW" ? (
             <ActionButton
-              primary
+              primary={item.staffFeedbackReviewState !== "RELEASED"}
               disabled={props.busy}
-              onClick={props.onLoad}
+              onClick={props.onReviewStaff}
             >
-              Load review package
+              {item.staffFeedbackReviewState === "PENDING"
+                ? "Continue staff review"
+                : item.staffFeedbackReviewState === "RETURNED"
+                  ? "Review staff feedback again"
+                  : item.staffFeedbackReviewState === "RELEASED"
+                    ? "View released staff evidence"
+                    : "Review staff feedback"}
             </ActionButton>
           ) : null}
         </div>
@@ -564,77 +693,225 @@ function QueueRecord(props: {
   );
 }
 
+function GovernanceFocusButton(props: {
+  label: string;
+  count: number;
+  helper: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={props.active}
+      onClick={props.onClick}
+      className={
+        props.active
+          ? "min-h-[92px] rounded-2xl border border-amber-200/45 bg-amber-300/12 p-3 text-left shadow-[0_12px_30px_rgba(245,196,69,0.10)]"
+          : "min-h-[92px] rounded-2xl border border-white/10 bg-slate-950/70 p-3 text-left transition hover:border-white/20"
+      }
+    >
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm font-black text-white">{props.label}</span>
+        <span
+          className={
+            props.count > 0
+              ? "flex h-8 min-w-8 items-center justify-center rounded-full bg-amber-300 px-2 text-xs font-black text-slate-950"
+              : "flex h-8 min-w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 px-2 text-xs font-black text-slate-300"
+          }
+        >
+          {props.count}
+        </span>
+      </div>
+      <p className="mt-2 text-xs leading-5 text-slate-400">{props.helper}</p>
+    </button>
+  );
+}
+
+function TeacherQueueRecord(props: {
+  item: TeacherDirectorReviewQueueItem;
+  busy: boolean;
+  onOpen: () => void;
+}) {
+  const { item } = props;
+  const directorAuthored = item.assessorRole === "DISTRICT_DIRECTOR";
+  const stateLabel =
+    item.state === "READY_TO_RELEASE"
+      ? "Your assessment · ready to release"
+      : item.state === "READY_TO_REVIEW"
+        ? "Ready for your decision"
+        : "Needs your review";
+  const actionLabel =
+    item.nextAction === "DIRECT_RELEASE"
+      ? "Inspect & release"
+      : item.nextAction === "CONTINUE_REVIEW"
+        ? "Continue review"
+        : "Open & start review";
+
+  return (
+    <article className="rounded-xl border border-white/10 bg-slate-950/70 p-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-cyan-300/25 bg-cyan-400/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-cyan-100">
+              Teacher
+            </span>
+            <h3 className="text-base font-black text-slate-50">
+              {item.targetName || "Teacher"}
+            </h3>
+            <span className="rounded-full border border-amber-300/30 bg-amber-400/10 px-2 py-0.5 text-[11px] font-black text-amber-100">
+              {stateLabel}
+            </span>
+          </div>
+          <p className="mt-1 truncate text-sm text-slate-300">
+            {item.schoolName}
+            {item.circuitName ? ` · ${item.circuitName}` : ""}
+          </p>
+          <p className="mt-1 text-xs font-semibold leading-5 text-cyan-200">
+            {directorAuthored
+              ? "Your Teacher assessment"
+              : `${item.assessorOfficeLabel} assessment`}{" "}
+            · Observed {formatDate(item.dateObserved)} · Rev {item.revision}
+          </p>
+        </div>
+
+        <ActionButton
+          primary
+          mobileFullWidth
+          disabled={props.busy}
+          onClick={props.onOpen}
+        >
+          {actionLabel}
+        </ActionButton>
+      </div>
+    </article>
+  );
+}
+
 function GovernanceQueueRecord(props: {
-  item: DirectorQueueItem;
+  item: HeadteacherDirectorGovernanceQueueItem;
   selected: boolean;
   busy: boolean;
   onInspect: () => void;
 }) {
   const { item } = props;
+  const correctionReceived =
+    !item.directorAuthored &&
+    item.state === "READY_TO_DECIDE" &&
+    item.revision > 1;
+  const waitingForCorrection = item.state === "RETURNED_FOR_CORRECTION";
+  const actionReady = item.canDirectRelease || item.canStartReview || item.canDecide;
+  const stateLabel =
+    item.state === "RELEASED"
+      ? "Released"
+      : item.state === "DIRECT_RELEASE_READY"
+        ? "Your assessment · ready to release"
+        : item.state === "READY_TO_START"
+          ? "Needs your review"
+          : correctionReceived
+            ? "Correction received"
+            : item.state === "READY_TO_DECIDE"
+              ? "Ready for your decision"
+              : "Waiting for correction";
+  const actionLabel = item.canDirectRelease
+    ? "Inspect & release"
+    : item.canStartReview
+      ? "Open & start review"
+      : item.canDecide
+        ? correctionReceived
+          ? "Review corrected report"
+          : "Continue review"
+        : null;
+  const sourceLabel = item.directorAuthored
+    ? "Your assessment"
+    : `${item.assessorOffice} assessment`;
 
   return (
     <article
       className={
         props.selected
-          ? "rounded-2xl border border-cyan-300/40 bg-cyan-300/8 p-4"
-          : "rounded-2xl border border-white/10 bg-slate-950/75 p-4"
+          ? "rounded-xl border border-cyan-300/40 bg-cyan-300/8 p-3"
+          : correctionReceived
+            ? "rounded-xl border border-amber-300/35 bg-amber-400/8 p-3"
+            : "rounded-xl border border-white/10 bg-slate-950/70 p-3"
       }
     >
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-cyan-300/25 bg-cyan-400/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-cyan-100">
-              Governance assessment
-            </span>
-            <h3 className="truncate text-base font-black text-slate-50">
+            <h3 className="text-base font-black text-slate-50">
               {item.targetHeadteacherName || "Headteacher"}
             </h3>
-            {item.governanceAssessmentDirectReleased ? (
-              <span className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-2.5 py-1 text-[11px] font-black text-emerald-100">
-                Released
+            <span
+              className={
+                item.state === "RELEASED"
+                  ? "rounded-full border border-emerald-300/25 bg-emerald-400/10 px-2 py-0.5 text-[11px] font-black text-emerald-100"
+                  : waitingForCorrection
+                    ? "rounded-full border border-rose-300/25 bg-rose-400/10 px-2 py-0.5 text-[11px] font-black text-rose-100"
+                    : correctionReceived
+                      ? "rounded-full border border-amber-200/45 bg-amber-300/15 px-2 py-0.5 text-[11px] font-black text-amber-100"
+                      : "rounded-full border border-amber-300/30 bg-amber-400/10 px-2 py-0.5 text-[11px] font-black text-amber-100"
+              }
+            >
+              {stateLabel}
+            </span>
+            {correctionReceived ? (
+              <span
+                aria-label="1 corrected Governance appraisal needs your action"
+                className="flex h-7 min-w-7 items-center justify-center rounded-full border border-amber-100/70 bg-amber-300 px-2 text-xs font-black text-slate-950 shadow-[0_0_0_4px_rgba(245,196,69,0.10)]"
+              >
+                1
               </span>
-            ) : item.canDirectReleaseOwnAssessment ? (
-              <span className="rounded-full border border-amber-300/30 bg-amber-400/10 px-2.5 py-1 text-[11px] font-black text-amber-100">
-                Ready for final inspection
-              </span>
-            ) : (
-              <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-black text-slate-300">
-                Recorded
-              </span>
-            )}
+            ) : null}
           </div>
-          <p className="mt-1 text-sm text-slate-300">
+
+          <p className="mt-1 truncate text-sm text-slate-300">
             {item.schoolName}
             {item.circuitName ? ` · ${item.circuitName}` : ""}
           </p>
-          <p className="mt-2 text-xs font-semibold leading-5 text-cyan-200">
-            Official governance assessment of the Headteacher. It is independent of confidential Staff Feedback and follows its own release path.
-          </p>
-          {item.governanceAssessmentDirectReleased ? (
-            <p className="mt-2 text-xs leading-5 text-emerald-200">
-              This governance assessment has already been released. The separate confidential Staff Feedback appraisal continues on its own state.
+
+          {correctionReceived ? (
+            <>
+              <p className="mt-1 text-sm font-semibold leading-5 text-amber-100">
+                {item.assessorOffice} has corrected and resubmitted this appraisal.
+              </p>
+              <p className="mt-1 text-xs font-black leading-5 text-cyan-200">
+                Revision {item.revision} · Ready for your final decision
+              </p>
+            </>
+          ) : (
+            <p className="mt-1 text-xs font-semibold leading-5 text-cyan-200">
+              {sourceLabel} · Visit {formatDate(item.dateObserved)} · Rev {item.revision}
             </p>
-          ) : item.canDirectReleaseOwnAssessment ? (
-            <p className="mt-2 text-xs leading-5 text-slate-400">
-              Inspect the complete locked native form before publishing this governance assessment to the Headteacher.
+          )}
+
+          {waitingForCorrection ? (
+            <p className="mt-1 text-xs leading-5 text-rose-200">
+              Waiting for {item.assessorOffice} to correct and resubmit this appraisal.
+            </p>
+          ) : null}
+
+          {item.state === "RELEASED" ? (
+            <p className="mt-1 text-xs leading-5 text-emerald-200">
+              Released {formatDate(item.releasedAt)}
             </p>
           ) : null}
         </div>
 
-        {item.canDirectReleaseOwnAssessment && item.directReleaseAssessmentId ? (
+        {actionReady && actionLabel ? (
           <ActionButton
             primary
+            mobileFullWidth
             disabled={props.busy}
             onClick={props.onInspect}
           >
-            Review governance assessment
+            {actionLabel}
           </ActionButton>
         ) : null}
       </div>
     </article>
   );
 }
-
 function DecisionButtons(props: {
   disabled: boolean;
   onChoose: (mode: DecisionMode) => void;
@@ -676,6 +953,7 @@ function DecisionButtons(props: {
 
 function DecisionDialog(props: {
   mode: DecisionMode;
+  stream?: "STAFF" | "GOVERNANCE";
   reason: string;
   releaseNote: string;
   busy: boolean;
@@ -684,8 +962,14 @@ function DecisionDialog(props: {
   onClose: () => void;
   onConfirm: () => void;
 }) {
-  const title =
-    props.mode === "RETURN"
+  const staffStream = props.stream === "STAFF";
+  const title = staffStream
+    ? props.mode === "RETURN"
+      ? "Return staff review to queue"
+      : props.mode === "HOLD"
+        ? "Hold staff feedback review"
+        : "Release staff feedback"
+    : props.mode === "RETURN"
       ? "Return for correction"
       : props.mode === "HOLD"
         ? "Hold Director review"
@@ -697,7 +981,7 @@ function DecisionDialog(props: {
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-300">
-              Director decision
+              {staffStream ? "Staff Feedback decision" : "Governance decision"}
             </p>
             <h2 className="mt-2 text-xl font-black text-white">{title}</h2>
           </div>
@@ -715,7 +999,9 @@ function DecisionDialog(props: {
           <div className="mt-5">
             <label htmlFor="director-decision-reason" className="text-sm font-black">
               {props.mode === "RETURN"
-                ? "Reason for correction"
+                ? staffStream
+                  ? "Reason for return"
+                  : "Reason for correction"
                 : "Reason for hold"}
             </label>
             <textarea
@@ -768,85 +1054,6 @@ function DecisionDialog(props: {
   );
 }
 
-function EvidenceGateway(props: {
-  reviewPackage: HeadteacherDirectorReviewPackage;
-  onStaff: () => void;
-  onSupervisory: () => void;
-}) {
-  return (
-    <section className="grid gap-4 lg:grid-cols-2">
-      <button
-        type="button"
-        onClick={props.onStaff}
-        className="group rounded-[26px] border border-violet-300/20 bg-[linear-gradient(145deg,rgba(76,29,149,0.24),rgba(15,23,42,0.96))] p-5 text-left transition hover:border-violet-300/40"
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-200">
-              Confidential evidence
-            </p>
-            <h2 className="mt-2 text-xl font-black text-white">Staff feedback</h2>
-          </div>
-          <span className="rounded-full border border-violet-200/20 bg-black/20 px-3 py-1 text-xs font-black text-violet-100">
-            {props.reviewPackage.staffFeedback.finalizedResponses} respondent
-            {props.reviewPackage.staffFeedback.finalizedResponses === 1 ? "" : "s"}
-          </span>
-        </div>
-        <p className="mt-3 text-sm leading-6 text-violet-50/80">
-          Open circuit, school and anonymous Respondent 1…N forms. Real Teacher identities remain hidden from the Director.
-        </p>
-        <div className="mt-5 flex items-end justify-between gap-3">
-          <div>
-            <p className="text-xs font-bold text-violet-200/70">Aggregate evidence</p>
-            <p className="mt-1 text-3xl font-black text-white">
-              {wholePercentage(props.reviewPackage.staffFeedback.overallPercentage)}
-            </p>
-          </div>
-          <span className="text-sm font-black text-violet-100 group-hover:translate-x-1">
-            Open native forms →
-          </span>
-        </div>
-      </button>
-
-      <button
-        type="button"
-        onClick={props.onSupervisory}
-        className="group rounded-[26px] border border-cyan-300/20 bg-[linear-gradient(145deg,rgba(8,145,178,0.20),rgba(15,23,42,0.96))] p-5 text-left transition hover:border-cyan-300/40"
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-200">
-              Governance evidence
-            </p>
-            <h2 className="mt-2 text-xl font-black text-white">
-              Supervisory assessment
-            </h2>
-          </div>
-          <span className="rounded-full border border-cyan-200/20 bg-black/20 px-3 py-1 text-xs font-black text-cyan-100">
-            34 indicators
-          </span>
-        </div>
-        <p className="mt-3 text-sm leading-6 text-cyan-50/80">
-          Open the exact four-section Monitoring and Inspection Sheet with immutable, colour-coded SISSO scores.
-        </p>
-        <div className="mt-5 flex items-end justify-between gap-3">
-          <div>
-            <p className="text-xs font-bold text-cyan-200/70">Final supervisory result</p>
-            <p className="mt-1 text-3xl font-black text-white">
-              {wholePercentage(
-                props.reviewPackage.supervisoryAssessment.overallPercentage,
-              )}
-            </p>
-          </div>
-          <span className="text-sm font-black text-cyan-100 group-hover:translate-x-1">
-            Open official form →
-          </span>
-        </div>
-      </button>
-    </section>
-  );
-}
-
 function paperScoreCellTone(input: {
   selected: boolean;
   score: number | null;
@@ -874,287 +1081,6 @@ function paperScoreCellTone(input: {
 function paperValue(value: unknown) {
   return clean(value) || "Not captured in this historical record";
 }
-
-function SupervisoryForm(props: {
-  reviewPackage: HeadteacherDirectorReviewPackage;
-  sections: SupervisorySection[];
-  onBack: () => void;
-}) {
-  const assessment = props.reviewPackage.supervisoryAssessment;
-  const visit = assessment.visit;
-  const cycle = props.reviewPackage.cycle;
-  const officialMaximum = props.sections.reduce(
-    (sum, section) => sum + section.sectionMaxScore,
-    0,
-  );
-  const applicableMaximum = props.sections.reduce(
-    (sum, section) => sum + section.applicableMaximum,
-    0,
-  );
-  const rawTotal = props.sections.reduce(
-    (sum, section) => sum + section.rawScore,
-    0,
-  );
-  const totalNotApplicable = props.sections.reduce(
-    (sum, section) => sum + section.notApplicableItems,
-    0,
-  );
-
-  return (
-    <section className="space-y-4">
-      <div className={panel("p-4 sm:p-5")}>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">
-              Official supervisory evidence · read-only
-            </p>
-            <h2 className="mt-2 text-xl font-black text-white">
-              Native Monitoring and Inspection Sheet
-            </h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
-              This is the Director&apos;s paper-form view of the finalized SISSO assessment. Scores are immutable and colour-coded only to improve review speed.
-            </p>
-          </div>
-          <ActionButton onClick={props.onBack}>Back to evidence</ActionButton>
-        </div>
-      </div>
-
-      <div className="overflow-x-auto rounded-[24px] border border-white/10 bg-slate-950/60 p-2 shadow-[0_22px_70px_rgba(0,0,0,0.30)] sm:p-4">
-        <div className="min-w-[1040px] overflow-hidden rounded-[20px] bg-white text-slate-950 shadow-[0_16px_55px_rgba(0,0,0,0.30)]">
-          <div className="border-b-2 border-slate-900 px-6 py-5 text-center">
-            <p className="text-[13px] font-black uppercase tracking-[0.12em]">
-              {cycle.districtName || "District Education Directorate"}
-            </p>
-            <h3 className="mt-1 text-[16px] font-black uppercase">
-              Monitoring and Inspection Sheet (Headteachers)
-            </h3>
-          </div>
-
-          <table className="w-full border-collapse text-[12px] leading-5">
-            <tbody>
-              {[
-                [
-                  "Name of School",
-                  cycle.schoolName,
-                  "Staff Strength",
-                  visit.staffStrength,
-                ],
-                [
-                  "Name of Circuit",
-                  cycle.circuitName,
-                  "Total Enrolment",
-                  visit.totalEnrolment,
-                ],
-                ["Name of Head", cycle.targetName, "Girls", visit.girls],
-                [
-                  "Date of Visit",
-                  formatDate(assessment.dateObserved),
-                  "Boys",
-                  visit.boys,
-                ],
-                [
-                  "Arrival Time",
-                  visit.arrivalTime,
-                  "Teachers Present at the Time of Visit",
-                  visit.teachersPresentAtVisit,
-                ],
-              ].map((row) => (
-                <tr key={String(row[0])}>
-                  <th className="w-[16%] border border-slate-300 bg-slate-100 px-3 py-2 text-left text-[11px] font-black uppercase">
-                    {row[0]}
-                  </th>
-                  <td className="w-[34%] border border-slate-300 px-3 py-2 font-semibold">
-                    {paperValue(row[1])}
-                  </td>
-                  <th className="w-[24%] border border-slate-300 bg-slate-100 px-3 py-2 text-left text-[11px] font-black uppercase">
-                    {row[2]}
-                  </th>
-                  <td className="w-[26%] border border-slate-300 px-3 py-2 font-semibold text-slate-600">
-                    {paperValue(row[3])}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {visit.officialDetailsAvailable ? (
-            <div className="border-x border-b border-slate-300 bg-emerald-50 px-4 py-3 text-[11px] leading-5 text-emerald-950">
-              Official visit particulars were captured when this assessment was created and are displayed from the immutable evidence snapshot.
-            </div>
-          ) : (
-            <div className="border-x border-b border-slate-300 bg-amber-50 px-4 py-3 text-[11px] leading-5 text-amber-950">
-              This version-1 historical assessment predates the expanded visit header. Missing arrival-time, staffing and enrolment values are shown as not captured rather than reconstructed.
-            </div>
-          )}
-
-          <table className="w-full border-collapse text-[11px] leading-4">
-            <colgroup>
-              <col className="w-[6%]" />
-              <col className="w-[58%]" />
-              <col className="w-[5%]" />
-              <col className="w-[5%]" />
-              <col className="w-[5%]" />
-              <col className="w-[5%]" />
-              <col className="w-[5%]" />
-              <col className="w-[5%]" />
-              <col className="w-[6%]" />
-            </colgroup>
-            <thead>
-              <tr className="bg-slate-100">
-                <th className="border border-slate-300 px-2 py-3 text-center font-black">S/N</th>
-                <th className="border border-slate-300 px-3 py-3 text-left">
-                  <div className="text-[15px] font-black uppercase tracking-[0.04em]">
-                    Behavioural Competence
-                  </div>
-                  <div className="mt-1 text-[10px] font-semibold normal-case">
-                    [1—Very Poor] [2—Poor] [3—Acceptable] [4—Good] [5—Very Good]
-                  </div>
-                </th>
-                <th className="border border-slate-300 px-1 py-3 text-center font-black">N/A</th>
-                {[1, 2, 3, 4, 5].map((score) => (
-                  <th key={score} className="border border-slate-300 px-1 py-3 text-center font-black">
-                    {score}
-                  </th>
-                ))}
-                <th className="border border-slate-300 px-2 py-3 text-center font-black">
-                  Final Score
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {props.sections.map((section) => (
-                <Fragment key={section.sectionKey}>
-                  <tr className="bg-[#344A67] text-white">
-                    <td className="border border-slate-300 px-2 py-2 text-center font-black">
-                      {section.sectionOrder}.0
-                    </td>
-                    <td colSpan={8} className="border border-slate-300 px-3 py-2 font-black uppercase tracking-[0.03em]">
-                      {section.sectionTitle}
-                    </td>
-                  </tr>
-
-                  {section.items.map((item) => {
-                    const options: Array<{ score: number | null; notApplicable: boolean; label: string }> = [
-                      { score: null, notApplicable: true, label: "N/A" },
-                      ...[1, 2, 3, 4, 5].map((score) => ({
-                        score,
-                        notApplicable: false,
-                        label: String(score),
-                      })),
-                    ];
-
-                    return (
-                      <tr key={item.itemKey} className="align-middle">
-                        <td className="border border-slate-300 px-2 py-2 text-center font-semibold">
-                          {item.itemKey}
-                        </td>
-                        <td className="border border-slate-300 px-3 py-2 text-[12px] font-medium leading-5">
-                          {item.itemLabel}
-                        </td>
-                        {options.map((option) => {
-                          const selected = option.notApplicable
-                            ? item.notApplicable
-                            : !item.notApplicable && item.score === option.score;
-
-                          return (
-                            <td
-                              key={option.label}
-                              className={`border border-slate-300 px-1 py-2 text-center text-[15px] font-black ${paperScoreCellTone({
-                                selected,
-                                score: option.score,
-                                notApplicable: option.notApplicable,
-                              })}`}
-                              aria-label={selected ? `Selected ${option.label}` : undefined}
-                            >
-                              {selected ? "✓" : ""}
-                            </td>
-                          );
-                        })}
-                        <td
-                          className={`border border-slate-300 px-2 py-2 text-center text-[13px] font-black ${paperScoreCellTone({
-                            selected: true,
-                            score: item.score,
-                            notApplicable: item.notApplicable,
-                          })}`}
-                          aria-label={
-                            item.notApplicable
-                              ? "Final score: Not applicable"
-                              : `Final score: ${item.score ?? "Not scored"}`
-                          }
-                        >
-                          {item.notApplicable ? "N/A" : item.score ?? "—"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-
-                  <tr className="bg-slate-50">
-                    <td colSpan={8} className="border border-slate-300 px-3 py-2 text-right font-black uppercase">
-                      Total score
-                    </td>
-                    <td className="border border-slate-300 px-2 py-2 text-center text-[12px] font-black">
-                      {section.rawScore} / {section.applicableMaximum}
-                    </td>
-                  </tr>
-                  <tr className="bg-slate-50">
-                    <td colSpan={8} className="border border-slate-300 px-3 py-2 text-right font-black uppercase">
-                      Percentage score
-                    </td>
-                    <td className="border border-slate-300 px-2 py-2 text-center text-[12px] font-black">
-                      {wholePercentage(section.percentage)}
-                    </td>
-                  </tr>
-                  <tr className="bg-sky-50 text-sky-950">
-                    <td colSpan={9} className="border border-slate-300 px-3 py-2 text-right text-[10px] font-semibold">
-                      Official section maximum: {section.sectionMaxScore}. Applicable maximum after {section.notApplicableItems} N/A exclusion{section.notApplicableItems === 1 ? "" : "s"}: {section.applicableMaximum}.
-                    </td>
-                  </tr>
-                </Fragment>
-              ))}
-
-              <tr className="bg-[#22344F] text-white">
-                <td colSpan={8} className="border border-slate-300 px-3 py-3 text-right text-[12px] font-black uppercase">
-                  Overall percentage — average of the four official section percentages
-                </td>
-                <td className="border border-slate-300 px-2 py-3 text-center text-[14px] font-black">
-                  {wholePercentage(assessment.overallPercentage)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div className="grid grid-cols-4 border-x border-b border-slate-300 bg-slate-50 text-[11px]">
-            <div className="border-r border-slate-300 px-3 py-3">
-              <p className="font-black uppercase text-slate-500">Raw total</p>
-              <p className="mt-1 text-base font-black">{rawTotal} / {applicableMaximum}</p>
-            </div>
-            <div className="border-r border-slate-300 px-3 py-3">
-              <p className="font-black uppercase text-slate-500">Official maximum</p>
-              <p className="mt-1 text-base font-black">{officialMaximum}</p>
-            </div>
-            <div className="border-r border-slate-300 px-3 py-3">
-              <p className="font-black uppercase text-slate-500">N/A exclusions</p>
-              <p className="mt-1 text-base font-black">{totalNotApplicable}</p>
-            </div>
-            <div className="px-3 py-3">
-              <p className="font-black uppercase text-slate-500">Final result</p>
-              <p className="mt-1 text-base font-black">{wholePercentage(assessment.overallPercentage)}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className={panel("grid gap-3 p-4 sm:grid-cols-4 sm:p-5")}>
-        <EvidenceField label="Assessor" value={assessment.assessor.name} />
-        <EvidenceField label="Office" value={assessment.assessor.office} />
-        <EvidenceField label="Status" value="Finalized and locked" />
-        <EvidenceField label="Finalized" value={formatDate(assessment.finalizedAt)} />
-      </div>
-    </section>
-  );
-}
-
 
 type DirectReleasePaperSection = {
   sectionKey: string;
@@ -1223,13 +1149,15 @@ function directReleaseOverallPercentage(
   );
 }
 
-function DirectReleaseNativeForm(props: {
-  inspection: DirectReleaseInspection;
+function GovernanceNativePaper(props: {
+  workspace: DirectorGovernanceWorkspace;
   busy: boolean;
   onBack: () => void;
-  onRelease: () => void;
+  heading: string;
+  copy: string;
+  footer: React.ReactNode;
 }) {
-  const workspace = props.inspection.workspace;
+  const workspace = props.workspace;
   const visit = workspace.visit;
   const sections = buildDirectReleasePaperSections(workspace);
   const overallPercentage = directReleaseOverallPercentage(sections);
@@ -1259,10 +1187,10 @@ function DirectReleaseNativeForm(props: {
               Governance appraisal · final inspection · read-only
             </p>
             <h2 className="mt-2 text-xl font-black text-white">
-              Review the official assessment before release
+              {props.heading}
             </h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
-              This is the same native 4-section, 34-indicator Monitoring and Inspection Sheet used at the assessor stage. This screen is read-only. Nothing on the official form can be changed here.
+              {props.copy}
             </p>
           </div>
           <ActionButton onClick={props.onBack}>
@@ -1495,32 +1423,201 @@ function DirectReleaseNativeForm(props: {
         </div>
       </div>
 
-      <div className={panel("p-4 sm:p-5")}>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-300">
-              Final release
-            </p>
-            <h3 className="mt-1 text-lg font-black text-white">
-              Release only after checking the complete form above
-            </h3>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
-              Releasing publishes this governance assessment only. No self-review will be created, and the confidential Staff Feedback appraisal will remain unchanged.
-            </p>
-          </div>
-          <ActionButton primary disabled={props.busy} onClick={props.onRelease}>
-            Release governance assessment
-          </ActionButton>
-        </div>
-      </div>
+      {props.footer}
     </section>
+  );
+}
+
+
+function DirectReleaseNativeForm(props: {
+  inspection: DirectReleaseInspection;
+  busy: boolean;
+  onBack: () => void;
+  onRelease: () => void;
+}) {
+  return (
+    <GovernanceNativePaper
+      workspace={props.inspection.workspace}
+      busy={props.busy}
+      onBack={props.onBack}
+      heading="Your assessment — inspect before release"
+      copy="This is the assessment you authored as District Director. There is no Start Governance review step and no self-review. Read the locked 4-section, 34-indicator form, then use Release governance assessment at the bottom."
+      footer={
+        <div className={panel("p-4 sm:p-5")}>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-300">
+                Final release
+              </p>
+              <h3 className="mt-1 text-lg font-black text-white">
+                Release only after checking the complete form above
+              </h3>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
+                Releasing publishes this governance assessment only. No self-review will be created, and the confidential Staff Feedback appraisal will remain unchanged.
+              </p>
+            </div>
+            <ActionButton primary disabled={props.busy} onClick={props.onRelease}>
+              Release governance assessment
+            </ActionButton>
+          </div>
+        </div>
+      }
+    />
+  );
+}
+
+function governanceReviewWorkspace(
+  reviewPackage: HeadteacherDirectorGovernanceReviewPackage,
+): DirectorGovernanceWorkspace {
+  const sections = reviewPackage.assessment.sections.map((section) => ({
+    sectionKey: section.sectionKey,
+    title: section.title,
+    description: section.description,
+    order: section.order,
+    maxScore: section.maxScore,
+    items: section.items.map((item) => ({
+      itemKey: item.itemKey,
+      label: item.label,
+      order: item.order,
+      maxScore: item.maxScore,
+      score: item.score,
+      notApplicable: item.notApplicable,
+      answered: true,
+    })),
+  }));
+  const totalItems = sections.reduce((sum, section) => sum + section.items.length, 0);
+  const notApplicableItems = sections.reduce(
+    (sum, section) =>
+      sum + section.items.filter((item) => item.notApplicable).length,
+    0,
+  );
+
+  return {
+    assessment: {
+      assessmentId: reviewPackage.assessment.assessmentId,
+      cycleId: reviewPackage.cycle.id,
+      revision: reviewPackage.assessment.revision,
+      status: reviewPackage.assessment.status,
+      dateObserved: reviewPackage.assessment.dateObserved,
+      canEdit: false,
+      canFinalize: false,
+      progress: {
+        totalSections: sections.length,
+        completedSections: sections.length,
+        totalItems,
+        answeredItems: totalItems,
+        notApplicableItems,
+        completionPercentage: totalItems === 34 ? 100 : 0,
+        missingItemKeys: [],
+      },
+    },
+    lifecycle: {
+      state: reviewPackage.lifecycleState,
+      label: "Director governance review",
+      description: "Read-only finalized governance assessment",
+      readOnly: true,
+      canEdit: false,
+      canCreateRevision: false,
+      returnReason: null,
+    },
+    visit: {
+      contextSchemaVersion: reviewPackage.assessment.visit.contextSchemaVersion,
+      officialDetailsAvailable:
+        reviewPackage.assessment.visit.officialDetailsAvailable,
+      targetName: reviewPackage.cycle.targetName,
+      schoolName: reviewPackage.cycle.schoolName,
+      circuitName: reviewPackage.cycle.circuitName,
+      districtName: reviewPackage.cycle.districtName,
+      dateObserved: reviewPackage.assessment.dateObserved,
+      assessorRole: reviewPackage.assessment.assessorOffice,
+      arrivalTime: reviewPackage.assessment.visit.arrivalTime,
+      staffStrength: reviewPackage.assessment.visit.staffStrength,
+      totalEnrolment: reviewPackage.assessment.visit.totalEnrolment,
+      girls: reviewPackage.assessment.visit.girls,
+      boys: reviewPackage.assessment.visit.boys,
+      teachersPresentAtVisit:
+        reviewPackage.assessment.visit.teachersPresentAtVisit,
+    },
+    sections,
+  };
+}
+
+function GovernanceReviewNativeForm(props: {
+  reviewPackage: HeadteacherDirectorGovernanceReviewPackage;
+  busy: boolean;
+  onBack: () => void;
+  onStart: () => void;
+  onChooseDecision: (mode: DecisionMode) => void;
+}) {
+  const workspace = governanceReviewWorkspace(props.reviewPackage);
+  const readyToStart = props.reviewPackage.lifecycleState === "READY_TO_START";
+  const correctionReceived =
+    props.reviewPackage.lifecycleState === "READY_TO_DECIDE" &&
+    props.reviewPackage.assessment.revision > 1;
+
+  return (
+    <GovernanceNativePaper
+      workspace={workspace}
+      busy={props.busy}
+      onBack={props.onBack}
+      heading={
+        correctionReceived
+          ? `Correction received from ${props.reviewPackage.assessment.assessorOffice}`
+          : `${props.reviewPackage.assessment.assessorOffice} assessment — Director review`
+      }
+      copy={
+        readyToStart
+          ? "This assessment was submitted by a governance officer. Read the locked 4-section, 34-indicator form, then scroll to the bottom and click Start Governance review."
+          : correctionReceived
+            ? `${props.reviewPackage.assessment.assessorOffice} has corrected and resubmitted the appraisal for ${props.reviewPackage.cycle.targetName}. Read the locked corrected form, then choose Return, Hold or Release at the bottom.`
+            : "This governance review is already in progress. Read the locked form, then use Return, Hold or Release at the bottom."
+      }
+      footer={
+        <div className={panel("p-4 sm:p-5")}>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-300">
+                Independent Governance decision
+              </p>
+              <h3 className="mt-1 text-lg font-black text-white">
+                {readyToStart
+                  ? "Start the Director review after checking the complete form"
+                  : correctionReceived
+                    ? "Correction received · ready for your final review"
+                    : "Ready for your decision"}
+              </h3>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
+                {readyToStart
+                  ? `Review the ${props.reviewPackage.assessment.assessorOffice}'s appraisal report for ${props.reviewPackage.cycle.targetName}.`
+                  : correctionReceived
+                    ? `Review the corrected appraisal for ${props.reviewPackage.cycle.targetName}, then choose Return, Hold or Release. Review stage ${props.reviewPackage.review?.stage ?? 1} is preserved.`
+                    : `Review the ${props.reviewPackage.assessment.assessorOffice}'s appraisal report for ${props.reviewPackage.cycle.targetName}, then choose Return, Hold or Release.`}
+              </p>
+            </div>
+            {readyToStart ? (
+              <ActionButton primary disabled={props.busy} onClick={props.onStart}>
+                Start Governance review
+              </ActionButton>
+            ) : (
+              <DecisionButtons
+                disabled={props.busy}
+                onChoose={props.onChooseDecision}
+              />
+            )}
+          </div>
+        </div>
+      }
+    />
   );
 }
 
 function StaffNativeForm(props: {
   data: HeadteacherDirectorAnonymousResponsesView;
   selected: AnonymousSelectedResponse;
+  busy: boolean;
+  showDecisionButtons: boolean;
   onBack: () => void;
+  onChooseDecision: (mode: DecisionMode) => void;
 }) {
   const sections = props.selected.officialForm.sections;
   const officialMaximum = sections.reduce(
@@ -1857,6 +1954,20 @@ function StaffNativeForm(props: {
           </div>
         </div>
       </div>
+
+      {props.showDecisionButtons ? (
+        <div
+          aria-label="Staff Feedback decision controls"
+          className="flex justify-end"
+        >
+          <div className="w-full sm:max-w-md">
+            <DecisionButtons
+              disabled={props.busy}
+              onChoose={props.onChooseDecision}
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1868,12 +1979,13 @@ function StaffEvidence(props: {
   onLevel: (level: StaffLevel) => void;
   onRespondent: (key: string) => void;
   onBackHome: () => void;
-  staffOnly?: boolean;
+  reviewState: StaffFeedbackReviewState | null;
+  onChooseDecision: (mode: DecisionMode) => void;
 }) {
   const selected = props.data.selectedResponse;
 
   return (
-    <section className="space-y-4">
+    <section id="staff-evidence-review" className="scroll-mt-4 space-y-4">
       <div className={panel("p-4 sm:p-5")}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -1889,20 +2001,18 @@ function StaffEvidence(props: {
             </p>
           </div>
           <ActionButton onClick={props.onBackHome}>
-            {props.staffOnly ? "Back to work queue" : "Back to evidence"}
+            Back to work queue
           </ActionButton>
         </div>
       </div>
 
-      {props.staffOnly ? (
-        <div className="rounded-2xl border border-violet-300/25 bg-violet-400/10 p-4 text-sm leading-6 text-violet-50">
-          <p className="font-black">Staff evidence review only</p>
-          <p className="mt-1">
-            The anonymous staff-feedback stream is complete and may be inspected
-            now. Return, Hold and Release remain unavailable until the separate
-            governance assessment is finalized and the full decision review is
-            started.
-          </p>
+      {props.reviewState?.lifecycleState === "RELEASED" ? (
+        <div className="rounded-2xl border border-emerald-300/25 bg-emerald-400/10 p-4 text-sm font-semibold leading-6 text-emerald-100">
+          Staff Feedback released independently {formatDate(props.reviewState.releasedAt)}. Governance Appraisals remain unchanged.
+        </div>
+      ) : props.reviewState?.lifecycleState === "RETURNED_TO_QUEUE" ? (
+        <div className="rounded-2xl border border-amber-300/25 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
+          This Staff Feedback review was returned to the queue. Use Review staff feedback again when ready to begin the next review stage.
         </div>
       ) : null}
 
@@ -2004,159 +2114,15 @@ function StaffEvidence(props: {
         <StaffNativeForm
           data={props.data}
           selected={selected}
+          busy={props.busy}
+          showDecisionButtons={
+            props.reviewState?.lifecycleState === "PENDING_DECISION"
+          }
           onBack={() => props.onLevel("RESPONDENTS")}
+          onChooseDecision={props.onChooseDecision}
         />
       ) : null}
     </section>
-  );
-}
-
-function AnalyticsView(props: {
-  reviewPackage: HeadteacherDirectorReviewPackage;
-  currentItemIndex: number;
-  onCurrentItemIndex: (value: number) => void;
-  onBack: () => void;
-}) {
-  const comparison = props.reviewPackage.comparison;
-  const currentItem = comparison.items[props.currentItemIndex] ?? null;
-
-  return (
-    <section className="space-y-4">
-      <div className={panel("p-4 sm:p-5")}>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-300">
-              Appraisal analytics
-            </p>
-            <h2 className="mt-2 text-xl font-black text-white">
-              Evidence comparison
-            </h2>
-          </div>
-          <ActionButton onClick={props.onBack}>Back to native forms</ActionButton>
-        </div>
-        <p className="mt-3 text-sm leading-6 text-slate-300">
-          Analytics support the Director’s judgment. No combined appraisal score or automatic decision is created.
-        </p>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <EvidenceField
-          label="Staff feedback"
-          value={wholePercentage(comparison.overall.staffAveragePercentage)}
-        />
-        <EvidenceField
-          label="Supervisory assessment"
-          value={wholePercentage(comparison.overall.supervisoryPercentage)}
-        />
-        <EvidenceField
-          label="Difference"
-          value={differenceLabel(
-            comparison.overall.supervisoryMinusStaffPercentagePoints,
-          )}
-        />
-      </div>
-
-      <div className={panel("p-4 sm:p-5")}>
-        <h3 className="text-lg font-black text-white">Section summary</h3>
-        <div className="mt-4 grid gap-3 lg:grid-cols-2">
-          {comparison.sections.map((section) => (
-            <article
-              key={section.sectionKey}
-              className="rounded-2xl border border-white/10 bg-slate-950/75 p-4"
-            >
-              <p className="font-black text-white">{section.sectionTitle}</p>
-              <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-                <EvidenceField
-                  label="Staff"
-                  value={wholePercentage(section.staffAveragePercentage)}
-                />
-                <EvidenceField
-                  label="Supervisory"
-                  value={wholePercentage(section.supervisoryPercentage)}
-                />
-                <EvidenceField
-                  label="Difference"
-                  value={differenceLabel(
-                    section.supervisoryMinusStaffPercentagePoints,
-                  )}
-                />
-              </div>
-            </article>
-          ))}
-        </div>
-      </div>
-
-      {currentItem ? (
-        <article className={panel("border-amber-300/25 p-4 sm:p-5")}>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-amber-300">
-              Item {props.currentItemIndex + 1} of {comparison.items.length}
-            </p>
-            <p className="text-xs font-bold text-slate-400">{currentItem.sectionTitle}</p>
-          </div>
-          <h3 className="mt-3 text-lg font-black leading-7 text-white">
-            <span className="mr-2 text-amber-300">{currentItem.itemKey}</span>
-            {currentItem.itemLabel}
-          </h3>
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            <EvidenceField
-              label="Staff feedback"
-              value={
-                currentItem.staffAveragePercentage == null
-                  ? "N/A"
-                  : wholePercentage(currentItem.staffAveragePercentage)
-              }
-            />
-            <EvidenceField
-              label="Supervisory assessment"
-              value={
-                currentItem.supervisoryNotApplicable
-                  ? "N/A"
-                  : wholePercentage(currentItem.supervisoryPercentage)
-              }
-            />
-            <EvidenceField
-              label="Difference"
-              value={differenceLabel(
-                currentItem.supervisoryMinusStaffPercentagePoints,
-              )}
-            />
-          </div>
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            <ActionButton
-              disabled={props.currentItemIndex === 0}
-              onClick={() =>
-                props.onCurrentItemIndex(Math.max(0, props.currentItemIndex - 1))
-              }
-            >
-              Previous
-            </ActionButton>
-            <ActionButton
-              primary
-              disabled={props.currentItemIndex >= comparison.items.length - 1}
-              onClick={() =>
-                props.onCurrentItemIndex(
-                  Math.min(comparison.items.length - 1, props.currentItemIndex + 1),
-                )
-              }
-            >
-              Next
-            </ActionButton>
-          </div>
-        </article>
-      ) : null}
-    </section>
-  );
-}
-
-function EvidenceField(props: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/75 p-3.5">
-      <p className="text-[11px] font-black uppercase tracking-[0.10em] text-slate-400">
-        {props.label}
-      </p>
-      <p className="mt-1.5 text-sm font-black leading-5 text-white">{props.value}</p>
-    </div>
   );
 }
 
@@ -2170,14 +2136,30 @@ export default function HeadteacherDirectorReviewClient({
   const [queuePanel, setQueuePanel] = useState<QueuePanel>("ALL");
   const [queueLoading, setQueueLoading] = useState(false);
   const [queueFailure, setQueueFailure] = useState("");
-  const [reviewPackage, setReviewPackage] =
-    useState<HeadteacherDirectorReviewPackage | null>(null);
+  const [governanceQueue, setGovernanceQueue] =
+    useState<HeadteacherDirectorGovernanceQueue | null>(null);
+  const [governanceQueueLoading, setGovernanceQueueLoading] = useState(false);
+  const [governanceQueueFailure, setGovernanceQueueFailure] = useState("");
+  const [teacherReviewQueue, setTeacherReviewQueue] =
+    useState<TeacherDirectorReviewQueue | null>(null);
+  const [teacherReviewQueueLoading, setTeacherReviewQueueLoading] =
+    useState(false);
+  const [teacherReviewQueueFailure, setTeacherReviewQueueFailure] =
+    useState("");
+  const [governanceFocus, setGovernanceFocus] =
+    useState<GovernanceFocus>("TEACHER");
+  const [governanceReviewPackage, setGovernanceReviewPackage] =
+    useState<HeadteacherDirectorGovernanceReviewPackage | null>(null);
   const [reviewMode, setReviewMode] = useState<ReviewMode>("HOME");
   const [staffLevel, setStaffLevel] = useState<StaffLevel>("CIRCUIT");
   const [anonymousResponses, setAnonymousResponses] =
     useState<HeadteacherDirectorAnonymousResponsesView | null>(null);
-  const [currentItemIndex, setCurrentItemIndex] = useState(0);
-  const [decisionMode, setDecisionMode] = useState<DecisionMode | null>(null);
+  const [staffReviewState, setStaffReviewState] =
+    useState<StaffFeedbackReviewState | null>(null);
+  const [governanceExpanded, setGovernanceExpanded] = useState(false);
+  const [governanceDecisionMode, setGovernanceDecisionMode] =
+    useState<DecisionMode | null>(null);
+  const [staffDecisionMode, setStaffDecisionMode] = useState<DecisionMode | null>(null);
   const [reason, setReason] = useState("");
   const [releaseNote, setReleaseNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -2194,8 +2176,9 @@ export default function HeadteacherDirectorReviewClient({
     () =>
       queue?.items.filter(
         (item) =>
-          item.cycleStatus === "CLOSED" ||
-          item.cycleStatus === "UNDER_REVIEW",
+          (item.cycleStatus === "CLOSED" ||
+            item.cycleStatus === "UNDER_REVIEW") &&
+          item.staffFeedbackReviewState !== "RELEASED",
       ) ?? [],
     [queue],
   );
@@ -2237,17 +2220,134 @@ export default function HeadteacherDirectorReviewClient({
     readyItems,
   ]);
   const governanceItems = useMemo(
-    () => queue?.items.filter((item) => Boolean(item.governanceAssessmentId)) ?? [],
-    [queue],
+    () => governanceQueue?.items ?? [],
+    [governanceQueue],
   );
-  const governanceReadyItems = useMemo(
-    () => governanceItems.filter((item) => item.canDirectReleaseOwnAssessment),
+  const governanceCorrectionReceivedItems = useMemo(
+    () =>
+      governanceItems.filter(
+        (item) =>
+          !item.directorAuthored &&
+          item.state === "READY_TO_DECIDE" &&
+          item.revision > 1,
+      ),
     [governanceItems],
   );
-  const supervisorySections = useMemo(
-    () => buildSupervisorySections(reviewPackage),
-    [reviewPackage],
+  const governanceWaitingItems = useMemo(
+    () =>
+      governanceItems.filter(
+        (item) => item.state === "RETURNED_FOR_CORRECTION",
+      ),
+    [governanceItems],
   );
+  const governanceReleasedItems = useMemo(
+    () => governanceItems.filter((item) => item.state === "RELEASED"),
+    [governanceItems],
+  );
+  const teacherReviewItems = useMemo(
+    () => teacherReviewQueue?.items ?? [],
+    [teacherReviewQueue],
+  );
+  const teacherAppraisalItems = useMemo(
+    () =>
+      teacherReviewItems.filter(
+        (item) => item.assessorRole !== "DISTRICT_DIRECTOR",
+      ),
+    [teacherReviewItems],
+  );
+  const directorOwnTeacherItems = useMemo(
+    () =>
+      teacherReviewItems.filter(
+        (item) =>
+          item.assessorRole === "DISTRICT_DIRECTOR" &&
+          item.state === "READY_TO_RELEASE",
+      ),
+    [teacherReviewItems],
+  );
+  const headteacherAppraisalItems = useMemo(
+    () => governanceItems.filter((item) => !item.directorAuthored),
+    [governanceItems],
+  );
+  const headteacherReadyItems = useMemo(
+    () =>
+      headteacherAppraisalItems.filter(
+        (item) => item.canStartReview || item.canDecide,
+      ),
+    [headteacherAppraisalItems],
+  );
+  const headteacherWaitingItems = useMemo(
+    () =>
+      headteacherAppraisalItems.filter(
+        (item) => item.state === "RETURNED_FOR_CORRECTION",
+      ),
+    [headteacherAppraisalItems],
+  );
+  const headteacherReleasedItems = useMemo(
+    () =>
+      headteacherAppraisalItems.filter((item) => item.state === "RELEASED"),
+    [headteacherAppraisalItems],
+  );
+  const directorOwnHeadteacherItems = useMemo(
+    () => governanceItems.filter((item) => item.directorAuthored),
+    [governanceItems],
+  );
+  const directorOwnHeadteacherReadyItems = useMemo(
+    () =>
+      directorOwnHeadteacherItems.filter((item) => item.canDirectRelease),
+    [directorOwnHeadteacherItems],
+  );
+  const directorOwnHeadteacherReleasedItems = useMemo(
+    () =>
+      directorOwnHeadteacherItems.filter((item) => item.state === "RELEASED"),
+    [directorOwnHeadteacherItems],
+  );
+  const myAssessmentActionCount =
+    directorOwnTeacherItems.length + directorOwnHeadteacherReadyItems.length;
+  const directorGovernanceActionCount =
+    teacherAppraisalItems.length +
+    headteacherReadyItems.length +
+    myAssessmentActionCount;
+  const visibleGovernanceItems = useMemo(() => {
+    if (governanceFocus === "HEADTEACHER") {
+      return governanceExpanded
+        ? headteacherAppraisalItems
+        : [...headteacherReadyItems, ...headteacherWaitingItems];
+    }
+    if (governanceFocus === "MINE") {
+      return governanceExpanded
+        ? directorOwnHeadteacherItems
+        : directorOwnHeadteacherReadyItems;
+    }
+    return [];
+  }, [
+    directorOwnHeadteacherItems,
+    directorOwnHeadteacherReadyItems,
+    governanceExpanded,
+    governanceFocus,
+    headteacherAppraisalItems,
+    headteacherReadyItems,
+    headteacherWaitingItems,
+  ]);
+  const selectedReleasedCount =
+    governanceFocus === "HEADTEACHER"
+      ? headteacherReleasedItems.length
+      : governanceFocus === "MINE"
+        ? directorOwnHeadteacherReleasedItems.length
+        : 0;
+  const governanceIsCurrentFocus =
+    directorGovernanceActionCount > 0 ||
+    governanceWaitingItems.length > 0 ||
+    Boolean(directReleaseInspection) ||
+    Boolean(governanceReviewPackage);
+  const showGovernanceAppraisals =
+    governanceIsCurrentFocus ||
+    governanceExpanded ||
+    governanceReleasedItems.length > 0 ||
+    governanceQueueLoading ||
+    teacherReviewQueueLoading ||
+    Boolean(governanceQueueFailure) ||
+    Boolean(teacherReviewQueueFailure) ||
+    Boolean(teacherReviewQueue);
 
   function clearMessages() {
     setNotice("");
@@ -2282,26 +2382,105 @@ export default function HeadteacherDirectorReviewClient({
     }
   }, []);
 
+  const loadGovernanceQueue = useCallback(async () => {
+    setGovernanceQueueLoading(true);
+    setGovernanceQueueFailure("");
+    try {
+      const response = await fetch(`${API_BASE}/governance-review`, {
+        method: "GET",
+        cache: "no-store",
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      });
+      const payload = await readJson<DirectorGovernanceQueueApiResponse>(response);
+      if (!response.ok || !payload?.ok) {
+        setGovernanceQueue(null);
+        setGovernanceQueueFailure(
+          errorText(payload, "The Governance appraisal queue could not load."),
+        );
+        return;
+      }
+      setGovernanceQueue(payload.queue);
+    } catch {
+      setGovernanceQueue(null);
+      setGovernanceQueueFailure(
+        "The Governance appraisal queue could not load. Check the connection and refresh it manually.",
+      );
+    } finally {
+      setGovernanceQueueLoading(false);
+    }
+  }, []);
+
+  const loadTeacherReviewQueue = useCallback(async () => {
+    setTeacherReviewQueueLoading(true);
+    setTeacherReviewQueueFailure("");
+    try {
+      const response = await fetch(TEACHER_REVIEW_QUEUE_API, {
+        method: "GET",
+        cache: "no-store",
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      });
+      const payload =
+        await readJson<TeacherDirectorReviewQueueApiResponse>(response);
+      if (!response.ok || !payload?.ok) {
+        setTeacherReviewQueue(null);
+        setTeacherReviewQueueFailure(
+          errorText(payload, "The Teacher appraisal review queue could not load."),
+        );
+        return;
+      }
+      if (!teacherReviewQueueContractSafe(payload.reviewQueue)) {
+        setTeacherReviewQueue(null);
+        setTeacherReviewQueueFailure(
+          "The Teacher review queue failed its read-only Director contract. Nothing was opened.",
+        );
+        return;
+      }
+      setTeacherReviewQueue(payload.reviewQueue);
+    } catch {
+      setTeacherReviewQueue(null);
+      setTeacherReviewQueueFailure(
+        "The Teacher appraisal review queue could not load. Check the connection and refresh it manually.",
+      );
+    } finally {
+      setTeacherReviewQueueLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     void loadQueue();
-    if (initialCycleId) void loadPackage(initialCycleId);
+    void loadGovernanceQueue();
+    void loadTeacherReviewQueue();
     // One explicit initial load only. No polling or background traffic.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadQueue]);
+  }, [loadGovernanceQueue, loadQueue, loadTeacherReviewQueue]);
 
-  async function loadPackage(cycleIdOverride?: string) {
-    const selectedCycleId = clean(cycleIdOverride ?? cycleId);
+  function openTeacherReviewWorkspace(item: TeacherDirectorReviewQueueItem) {
+    const assessmentId = clean(item.assessmentId);
     clearMessages();
-    if (!selectedCycleId) {
-      setFailure("Choose an appraisal from the work queue.");
+    if (!assessmentId) {
+      setFailure("This Teacher appraisal does not have a valid assessment reference.");
+      return;
+    }
+    window.location.assign(
+      `${TEACHER_REVIEW_WORKSPACE}?assessmentId=${encodeURIComponent(assessmentId)}`,
+    );
+  }
+
+  async function loadGovernanceReviewPackage(
+    item: HeadteacherDirectorGovernanceQueueItem,
+  ) {
+    const assessmentId = clean(item.assessmentId);
+    clearMessages();
+    if (!assessmentId || item.directorAuthored) {
+      setFailure("This governance assessment does not use the reviewed-release path.");
       return;
     }
 
-    setCycleId(selectedCycleId);
     setBusy(true);
     try {
       const response = await fetch(
-        `${API_BASE}/${encodeURIComponent(selectedCycleId)}/review-package`,
+        `${API_BASE}/governance-review/${encodeURIComponent(assessmentId)}`,
         {
           method: "GET",
           cache: "no-store",
@@ -2309,43 +2488,213 @@ export default function HeadteacherDirectorReviewClient({
           headers: { Accept: "application/json" },
         },
       );
-      const payload = await readJson<ReviewPackageApiResponse>(response);
+      const payload =
+        await readJson<DirectorGovernanceReviewPackageApiResponse>(response);
       if (!response.ok || !payload?.ok) {
-        setReviewPackage(null);
-        setAnonymousResponses(null);
+        setGovernanceReviewPackage(null);
         setFailure(
-          fullReviewFailureText(
-            payload,
-            "The review package is not ready. Start the review or try again.",
-          ),
+          errorText(payload, "The Governance review package could not be loaded."),
         );
         return;
       }
 
-      setReviewPackage(payload.reviewPackage);
-      setAnonymousResponses(null);
+      const reviewPackage = payload.reviewPackage;
+      const itemCount = reviewPackage.assessment.sections.reduce(
+        (sum, section) => sum + section.items.length,
+        0,
+      );
+      if (
+        reviewPackage.audience !== "DISTRICT_DIRECTOR" ||
+        clean(reviewPackage.assessment.assessmentId) !== assessmentId ||
+        clean(reviewPackage.cycle.id) !== item.cycleId ||
+        reviewPackage.assessment.status !== "FINALIZED" ||
+        reviewPackage.assessment.sections.length !== 4 ||
+        itemCount !== 34 ||
+        reviewPackage.privacy.staffFeedbackIncluded !== false ||
+        reviewPackage.privacy.respondentIdentitiesIncluded !== false ||
+        reviewPackage.privacy.assessorIdentityIncluded !== false ||
+        reviewPackage.privacy.reviewerIdentityIncluded !== false ||
+        reviewPackage.integrity.reviewerMayRewriteScores !== false ||
+        reviewPackage.integrity.scoreMutationAllowed !== false ||
+        reviewPackage.integrity.separateFromStaffFeedback !== true ||
+        reviewPackage.integrity.combinedWeightingDefined !== false
+      ) {
+        setGovernanceReviewPackage(null);
+        setFailure(
+          "The Governance review package failed the locked independent 4-section, 34-indicator contract. Nothing was changed.",
+        );
+        return;
+      }
+
+      setCycleId(item.cycleId);
+      setGovernanceReviewPackage(reviewPackage);
       setDirectReleaseInspection(null);
+      setAnonymousResponses(null);
+      setStaffReviewState(null);
       setReviewMode("HOME");
-      setStaffLevel("CIRCUIT");
-      setCurrentItemIndex(0);
-      setDecisionMode(null);
+      setGovernanceDecisionMode(null);
       setReason("");
       setReleaseNote("");
-      setNotice("Review evidence loaded securely.");
+      setNotice(
+        "Governance assessment loaded read-only. Staff Feedback was not loaded or compared.",
+      );
+
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          document
+            .getElementById("governance-final-inspection")
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      });
     } catch {
       setFailure(
-        "Network interrupted. Nothing was changed. Check the connection and load the package again.",
+        "Network interrupted while loading the Governance review. Nothing was changed.",
       );
     } finally {
       setBusy(false);
     }
   }
 
-  async function inspectDirectReleaseAssessment(item: DirectorQueueItem) {
-    const assessmentId = clean(item.directReleaseAssessmentId);
+  async function startGovernanceReview() {
+    if (
+      !governanceReviewPackage ||
+      governanceReviewPackage.lifecycleState !== "READY_TO_START"
+    ) {
+      return;
+    }
+    if (
+      !window.confirm(
+        "Start the independent Director review for this Governance assessment? Staff Feedback will not be loaded or changed.",
+      )
+    ) {
+      return;
+    }
+
+    const assessmentId = governanceReviewPackage.assessment.assessmentId;
+    setBusy(true);
+    clearMessages();
+    try {
+      const response = await fetch(
+        `${API_BASE}/governance-review/${encodeURIComponent(assessmentId)}`,
+        {
+          method: "POST",
+          cache: "no-store",
+          credentials: "include",
+          headers: { Accept: "application/json", "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "START", confirm: true }),
+        },
+      );
+      const payload = await readJson<ApiFailure>(response);
+      if (!response.ok) {
+        setFailure(errorText(payload, "The Governance review could not be started."));
+        return;
+      }
+      const item = governanceItems.find(
+        (candidate) => candidate.assessmentId === assessmentId,
+      );
+      if (item) await loadGovernanceReviewPackage(item);
+      await loadGovernanceQueue();
+      setNotice("Independent Governance review started. Return, Hold and Release are now available below the locked form.");
+    } catch {
+      setFailure(
+        "Network interrupted. Refresh the Governance queue before repeating the start action.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function openGovernanceDecision(mode: DecisionMode) {
+    clearMessages();
+    setGovernanceDecisionMode(mode);
+    setReason("");
+    setReleaseNote("");
+  }
+
+  async function submitGovernanceDecision() {
+    if (!governanceReviewPackage || !governanceDecisionMode) return;
+    const review = governanceReviewPackage.review;
+    if (!review) {
+      setFailure("Start the Governance review before recording a Director decision.");
+      return;
+    }
+    if (
+      (governanceDecisionMode === "RETURN" || governanceDecisionMode === "HOLD") &&
+      reason.trim().length < 3
+    ) {
+      setFailure("Write a clear reason of at least 3 characters.");
+      return;
+    }
+
+    const confirmationText =
+      governanceDecisionMode === "RETURN"
+        ? "Return this Governance assessment for a correction revision?"
+        : governanceDecisionMode === "HOLD"
+          ? "Hold this Governance review and create the next Director review stage?"
+          : "Release this Governance assessment to the Headteacher? Staff Feedback remains separate.";
+    if (!window.confirm(confirmationText)) return;
+
+    const assessmentId = governanceReviewPackage.assessment.assessmentId;
+    const action = governanceDecisionMode;
+    const note =
+      action === "RELEASE" ? releaseNote.trim() : reason.trim();
+    setBusy(true);
+    clearMessages();
+    try {
+      const response = await fetch(
+        `${API_BASE}/governance-review/${encodeURIComponent(assessmentId)}`,
+        {
+          method: "POST",
+          cache: "no-store",
+          credentials: "include",
+          headers: { Accept: "application/json", "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action,
+            reviewId: review.id,
+            note: note || null,
+            confirm: true,
+          }),
+        },
+      );
+      const payload = await readJson<ApiFailure>(response);
+      if (!response.ok) {
+        setFailure(errorText(payload, "The Governance decision was not recorded."));
+        return;
+      }
+
+      setGovernanceDecisionMode(null);
+      setReason("");
+      setReleaseNote("");
+      if (action === "HOLD") {
+        const item = governanceItems.find(
+          (candidate) => candidate.assessmentId === assessmentId,
+        );
+        await loadGovernanceQueue();
+        if (item) await loadGovernanceReviewPackage(item);
+        setNotice("Governance review held. The next Director stage is ready on the same locked assessment.");
+      } else {
+        setGovernanceReviewPackage(null);
+        await loadGovernanceQueue();
+        setNotice(
+          action === "RETURN"
+            ? "Governance assessment returned. The original governance assessor must finalize a correction revision before Director review resumes."
+            : "Governance assessment released independently. The Headteacher can read it in Governance Appraisal Reports.",
+        );
+      }
+    } catch {
+      setFailure(
+        "Network interrupted. Do not repeat the Governance decision blindly. Refresh the Governance queue first.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function inspectDirectReleaseAssessment(item: HeadteacherDirectorGovernanceQueueItem) {
+    const assessmentId = clean(item.assessmentId);
     clearMessages();
 
-    if (!item.canDirectReleaseOwnAssessment || !assessmentId) {
+    if (!item.canDirectRelease || !assessmentId) {
       setFailure(
         "This governance assessment is not ready for Director final inspection.",
       );
@@ -2401,7 +2750,7 @@ export default function HeadteacherDirectorReviewClient({
       }
 
       setCycleId(item.cycleId);
-      setReviewPackage(null);
+      setGovernanceReviewPackage(null);
       setAnonymousResponses(null);
       setReviewMode("HOME");
       setDirectReleaseInspection({ item, workspace });
@@ -2425,10 +2774,10 @@ export default function HeadteacherDirectorReviewClient({
     }
   }
 
-  async function directReleaseOwnAssessment(item: DirectorQueueItem) {
-    const assessmentId = clean(item.directReleaseAssessmentId);
+  async function directReleaseOwnAssessment(item: HeadteacherDirectorGovernanceQueueItem) {
+    const assessmentId = clean(item.assessmentId);
     clearMessages();
-    if (!item.canDirectReleaseOwnAssessment || !assessmentId) {
+    if (!item.canDirectRelease || !assessmentId) {
       setFailure(
         "This record is not eligible for the Director-authored direct-release path.",
       );
@@ -2437,8 +2786,7 @@ export default function HeadteacherDirectorReviewClient({
 
     if (
       !directReleaseInspection ||
-      clean(directReleaseInspection.item.directReleaseAssessmentId) !==
-        assessmentId ||
+      clean(directReleaseInspection.item.assessmentId) !== assessmentId ||
       clean(directReleaseInspection.workspace.assessment.assessmentId) !==
         assessmentId
     ) {
@@ -2484,62 +2832,17 @@ export default function HeadteacherDirectorReviewClient({
       }
 
       setCycleId(item.cycleId);
-      setReviewPackage(null);
+      setGovernanceReviewPackage(null);
       setAnonymousResponses(null);
       setDirectReleaseInspection(null);
       setReviewMode("HOME");
       setNotice(
         "Your finalized governance assessment was released directly. No self-review was created, and the confidential Staff Feedback appraisal remains unchanged.",
       );
-      await loadQueue();
+      await loadGovernanceQueue();
     } catch {
       setFailure(
         "Network interrupted. Do not repeat the release blindly. Refresh the work queue first; the protected endpoint is retry-safe.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function startReview(cycleIdToStart: string) {
-    const selectedCycleId = clean(cycleIdToStart);
-    clearMessages();
-    if (!selectedCycleId) return;
-    if (
-      !window.confirm(
-        "Start the full Director decision review now? This requires both the sealed staff-feedback evidence and the finalized governance assessment.",
-      )
-    ) {
-      return;
-    }
-
-    setBusy(true);
-    try {
-      const response = await fetch(
-        `${API_BASE}/${encodeURIComponent(selectedCycleId)}/review-start`,
-        {
-          method: "POST",
-          cache: "no-store",
-          credentials: "include",
-          headers: { Accept: "application/json", "Content-Type": "application/json" },
-          body: JSON.stringify({ confirm: true }),
-        },
-      );
-      const payload = await readJson<ApiFailure>(response);
-      if (!response.ok) {
-        setFailure(
-          fullReviewFailureText(
-            payload,
-            "The full Director decision review could not be started.",
-          ),
-        );
-        return;
-      }
-      await loadPackage(selectedCycleId);
-      await loadQueue();
-    } catch {
-      setFailure(
-        "Network interrupted. Load the package to confirm the current state before repeating the action.",
       );
     } finally {
       setBusy(false);
@@ -2710,6 +3013,131 @@ export default function HeadteacherDirectorReviewClient({
     );
   }
 
+  function staffReviewStateFromQueueItem(
+    item: DirectorQueueItem,
+  ): StaffFeedbackReviewState {
+    const lifecycleState =
+      item.staffFeedbackReviewState === "RELEASED"
+        ? "RELEASED"
+        : item.staffFeedbackReviewState === "PENDING"
+          ? "PENDING_DECISION"
+          : item.staffFeedbackReviewState === "RETURNED"
+            ? "RETURNED_TO_QUEUE"
+            : item.staffFeedbackReviewState === "HELD"
+              ? "HELD_CONTINUATION"
+              : "READY_TO_START";
+    return {
+      cycleId: item.cycleId,
+      snapshotId: "",
+      lifecycleState,
+      latestReviewId: item.staffFeedbackReviewId,
+      latestStage: item.staffFeedbackReviewStage,
+      latestDecision:
+        item.staffFeedbackReviewState === "RELEASED"
+          ? "ACCEPTED"
+          : item.staffFeedbackReviewState === "PENDING"
+            ? "PENDING"
+            : item.staffFeedbackReviewState === "RETURNED"
+              ? "RETURNED"
+              : item.staffFeedbackReviewState === "HELD"
+                ? "HELD"
+                : null,
+      canStartReview: item.canStartStaffFeedbackReview,
+      canDecide: item.canDecideStaffFeedbackReview,
+      releasedAt: item.staffFeedbackReleasedAt,
+      releaseProofHash: null,
+      governanceAssessmentRequired: false,
+      carrierCycleStatusMutationPerformed: false,
+    };
+  }
+
+  async function reviewStaffFeedback(item: DirectorQueueItem) {
+    const selectedCycleId = clean(item.cycleId);
+    clearMessages();
+    if (!selectedCycleId) return;
+
+    setCycleId(selectedCycleId);
+    setBusy(true);
+    try {
+      if (item.staffFeedbackReviewState === "RELEASED") {
+        setStaffReviewState(staffReviewStateFromQueueItem(item));
+      } else {
+        const response = await fetch(
+          `${API_BASE}/${encodeURIComponent(selectedCycleId)}/staff-review/start`,
+          {
+            method: "POST",
+            cache: "no-store",
+            credentials: "include",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ confirm: true }),
+          },
+        );
+        const payload = await readJson<StaffReviewStartApiResponse>(response);
+        if (!response.ok || !payload?.ok) {
+          setFailure(
+            errorText(
+              payload,
+              "The independent Staff Feedback review could not start.",
+            ),
+          );
+          return;
+        }
+        setStaffReviewState(payload.result.state);
+      }
+
+      const response = await fetch(
+        `${API_BASE}/${encodeURIComponent(selectedCycleId)}/anonymous-responses`,
+        {
+          method: "GET",
+          cache: "no-store",
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        },
+      );
+      const payload = await readJson<AnonymousResponsesApiResponse>(response);
+      if (!response.ok || !payload?.ok) {
+        setFailure(
+          errorText(payload, "Anonymous staff-feedback forms could not be loaded."),
+        );
+        return;
+      }
+      if (!anonymousContractSafe(payload.anonymousResponses)) {
+        setFailure(
+          "The anonymous-response privacy contract could not be verified. No form was displayed.",
+        );
+        return;
+      }
+
+      setGovernanceReviewPackage(null);
+      setAnonymousResponses(payload.anonymousResponses);
+      setDirectReleaseInspection(null);
+      setReviewMode("STAFF");
+      setStaffLevel("CIRCUIT");
+      setNotice(
+        item.staffFeedbackReviewState === "RELEASED"
+          ? "Released Staff Feedback evidence loaded read-only."
+          : "Independent Staff Feedback review opened. Return, Hold and Release are available without Governance Appraisal evidence.",
+      );
+
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          document
+            .getElementById("staff-evidence-review")
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      });
+    } catch {
+      setFailure(
+        "Network interrupted. Nothing was changed blindly. Refresh the work queue before trying again.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function loadAnonymousResponses(
     respondentKey?: string,
     cycleIdOverride?: string,
@@ -2717,7 +3145,6 @@ export default function HeadteacherDirectorReviewClient({
     const selectedCycleId = clean(
       cycleIdOverride ??
         anonymousResponses?.cycle.id ??
-        reviewPackage?.cycle.id ??
         cycleId,
     );
     clearMessages();
@@ -2759,7 +3186,7 @@ export default function HeadteacherDirectorReviewClient({
       setReviewMode("STAFF");
       setStaffLevel(respondentKey ? "FORM" : "CIRCUIT");
       if (payload.anonymousResponses.cycle.status === "CLOSED") {
-        setReviewPackage(null);
+        setGovernanceReviewPackage(null);
         setNotice(
           "Staff feedback loaded read-only. The separate governance assessment is not required for this inspection.",
         );
@@ -2773,102 +3200,140 @@ export default function HeadteacherDirectorReviewClient({
     }
   }
 
-  function openDecision(mode: DecisionMode) {
+  function openStaffDecision(mode: DecisionMode) {
     clearMessages();
-    setDecisionMode(mode);
+    if (!staffReviewState?.canDecide || !staffReviewState.latestReviewId) {
+      setFailure("Open the independent Staff Feedback review before recording a decision.");
+      return;
+    }
+    setStaffDecisionMode(mode);
     setReason("");
     setReleaseNote("");
   }
 
-  async function submitDecision() {
-    if (!reviewPackage || !decisionMode) return;
-    const selectedCycleId = reviewPackage.cycle.id;
-    const reviewId = reviewPackage.review.id;
+  async function submitStaffDecision() {
+    if (!staffReviewState?.latestReviewId || !staffDecisionMode) return;
+    const selectedCycleId = clean(staffReviewState.cycleId || cycleId);
+    const reviewId = staffReviewState.latestReviewId;
+    const note =
+      staffDecisionMode === "RELEASE"
+        ? releaseNote.trim()
+        : reason.trim();
 
-    if (
-      (decisionMode === "RETURN" || decisionMode === "HOLD") &&
-      reason.trim().length < 3
-    ) {
+    if (staffDecisionMode !== "RELEASE" && note.length < 3) {
       setFailure("Write a clear reason of at least 3 characters.");
       return;
     }
 
     const confirmationText =
-      decisionMode === "RETURN"
-        ? "Return this supervisory assessment for a correction revision?"
-        : decisionMode === "HOLD"
-          ? "Hold this appraisal and create the next Director review stage?"
-          : "Release this appraisal as the official Headteacher result?";
-
+      staffDecisionMode === "RETURN"
+        ? "Return this Staff Feedback review to the Director queue for later reconsideration? Finalized anonymous forms will remain locked."
+        : staffDecisionMode === "HOLD"
+          ? "Hold this Staff Feedback review and create the next review stage? Governance Appraisals will not change."
+          : "Release this confidential Staff Feedback aggregate to the Headteacher? Governance Appraisals will not change.";
     if (!window.confirm(confirmationText)) return;
 
     setBusy(true);
     clearMessages();
     try {
-      const isRelease = decisionMode === "RELEASE";
-      const endpoint = isRelease ? "release" : "return-hold";
-      const body = isRelease
-        ? { reviewId, note: releaseNote.trim() || null, confirm: true }
-        : {
-            reviewId,
-            decision: decisionMode,
-            note: reason.trim(),
-            confirm: true,
-          };
       const response = await fetch(
-        `${API_BASE}/${encodeURIComponent(selectedCycleId)}/${endpoint}`,
+        `${API_BASE}/${encodeURIComponent(selectedCycleId)}/staff-review/decision`,
         {
           method: "POST",
           cache: "no-store",
           credentials: "include",
-          headers: { Accept: "application/json", "Content-Type": "application/json" },
-          body: JSON.stringify(body),
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            reviewId,
+            decision: staffDecisionMode,
+            note: note || null,
+            confirm: true,
+          }),
         },
       );
-      const payload = await readJson<ApiFailure>(response);
-      if (!response.ok) {
+      const payload = await readJson<StaffReviewDecisionApiResponse>(response);
+      if (!response.ok || !payload?.ok) {
         if (
-          payload?.error ===
-            "HEADTEACHER_RELEASE_NOTIFICATION_SEEDING_RETRY_REQUIRED" &&
+          payload &&
+          !payload.ok &&
+          payload.error ===
+            "HEADTEACHER_STAFF_FEEDBACK_RELEASE_NOTIFICATION_RETRY_REQUIRED" &&
           payload.releaseCommitted === true
         ) {
           setFailure(
-            "The appraisal was released, but the Headteacher notification still needs retrying. Repeating release will not duplicate the official result.",
+            "Staff Feedback was released, but the Headteacher notification still needs retrying. Refresh the queue before repeating anything.",
           );
+          await loadQueue();
           return;
         }
-        setFailure(errorText(payload, "The Director decision was not recorded."));
+        setFailure(
+          errorText(payload, "The independent Staff Feedback decision was not recorded."),
+        );
         return;
       }
 
-      const completed =
-        decisionMode === "RETURN"
-          ? "Assessment returned. The assessor must create a correction revision."
-          : decisionMode === "HOLD"
-            ? "Appraisal held. The next Director review stage is ready."
-            : "Appraisal released. The Headteacher notification was queued safely.";
+      const result = payload.result;
+      if (result.sourceReviewDecision === "HELD" && result.nextReviewId) {
+        setStaffReviewState({
+          ...staffReviewState,
+          lifecycleState: "PENDING_DECISION",
+          latestReviewId: result.nextReviewId,
+          latestStage: result.nextReviewStage,
+          latestDecision: "PENDING",
+          canStartReview: false,
+          canDecide: true,
+          releasedAt: null,
+          releaseProofHash: null,
+        });
+        setNotice("Staff Feedback held. The next independent review stage is ready.");
+      } else if (result.sourceReviewDecision === "RETURNED") {
+        setStaffReviewState({
+          ...staffReviewState,
+          lifecycleState: "RETURNED_TO_QUEUE",
+          latestReviewId: result.sourceReviewId,
+          latestStage: result.sourceReviewStage,
+          latestDecision: "RETURNED",
+          canStartReview: true,
+          canDecide: false,
+          releasedAt: null,
+          releaseProofHash: null,
+        });
+        setNotice(
+          "Staff Feedback review returned to the queue. Finalized anonymous forms remain locked and unchanged.",
+        );
+      } else {
+        setStaffReviewState({
+          ...staffReviewState,
+          lifecycleState: "RELEASED",
+          latestReviewId: result.sourceReviewId,
+          latestStage: result.sourceReviewStage,
+          latestDecision: "ACCEPTED",
+          canStartReview: false,
+          canDecide: false,
+          releasedAt: result.releasedAt,
+          releaseProofHash: result.releaseProofHash,
+        });
+        setNotice(
+          "Staff Feedback released independently. The Governance Appraisal stream was not changed.",
+        );
+      }
 
-      setNotice(completed);
-      setDecisionMode(null);
+      setStaffDecisionMode(null);
       setReason("");
       setReleaseNote("");
-
-      if (decisionMode === "HOLD") {
-        await loadPackage(selectedCycleId);
-      } else {
-        setReviewPackage(null);
-        setAnonymousResponses(null);
-        setReviewMode("HOME");
-      }
       await loadQueue();
     } catch {
       setFailure(
-        "Network interrupted. Do not repeat the decision blindly. Load the package to confirm the server state.",
+        "Network interrupted. Do not repeat the Staff Feedback decision blindly. Refresh the work queue first.",
       );
     } finally {
       setBusy(false);
     }
   }
+
 
   return (
     <main className="min-h-screen bg-slate-950 pb-28 text-slate-50 md:pb-10">
@@ -2880,10 +3345,10 @@ export default function HeadteacherDirectorReviewClient({
                 Director workspace
               </p>
               <h1 className="mt-1 text-xl font-black sm:text-2xl">
-                Headteacher appraisals
+                District appraisal reviews
               </h1>
               <p className="mt-1 max-w-3xl text-sm leading-5 text-slate-300">
-                Two independent appraisal channels are shown separately below: confidential Staff Feedback and official Governance Assessments.
+                Confidential Staff Feedback stays separate. Governance work is grouped into Teacher Appraisals, Headteacher Appraisals and assessments you authored.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -2897,14 +3362,29 @@ export default function HeadteacherDirectorReviewClient({
               </div>
               <div className="rounded-2xl border border-cyan-200/25 bg-cyan-300/10 px-3 py-2 text-center">
                 <p className="text-[10px] font-black uppercase tracking-[0.10em] text-cyan-100/80">
-                  Governance ready
+                  Governance action
                 </p>
                 <p className="mt-0.5 text-xl font-black text-cyan-50">
-                  {governanceReadyItems.length}
+                  {directorGovernanceActionCount}
                 </p>
               </div>
-              <ActionButton disabled={queueLoading} onClick={() => void loadQueue()}>
-                {queueLoading ? "Refreshing…" : "Refresh"}
+              <ActionButton
+                disabled={
+                  queueLoading ||
+                  governanceQueueLoading ||
+                  teacherReviewQueueLoading
+                }
+                onClick={() => {
+                  void loadQueue();
+                  void loadGovernanceQueue();
+                  void loadTeacherReviewQueue();
+                }}
+              >
+                {queueLoading ||
+                governanceQueueLoading ||
+                teacherReviewQueueLoading
+                  ? "Refreshing…"
+                  : "Refresh"}
               </ActionButton>
             </div>
           </div>
@@ -3005,11 +3485,7 @@ export default function HeadteacherDirectorReviewClient({
                     onExtend={() => void extendFeedbackWindow(item.cycleId)}
                     onCloseEarly={() => void closeCompletedEarly(item.cycleId)}
                     onWait={() => waitUntilDeadline(item)}
-                    onReviewStaff={() =>
-                      void loadAnonymousResponses(undefined, item.cycleId)
-                    }
-                    onStart={() => void startReview(item.cycleId)}
-                    onLoad={() => void loadPackage(item.cycleId)}
+                    onReviewStaff={() => void reviewStaffFeedback(item)}
                   />
                 ))
               ) : (
@@ -3021,45 +3497,200 @@ export default function HeadteacherDirectorReviewClient({
           </div>
         </section>
 
-        <section className={panel("p-4 sm:p-5")}>
-          <div className="rounded-2xl border border-cyan-300/20 bg-cyan-400/8 p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <section className={panel("p-3 sm:p-4")}>
+          {showGovernanceAppraisals ? (
+            <>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-base font-black text-white sm:text-lg">
+                      Governance
+                    </h2>
+                    {governanceCorrectionReceivedItems.length > 0 ? (
+                      <span className="inline-flex items-center gap-2 rounded-full border border-amber-200/45 bg-amber-300/15 px-2.5 py-1 text-xs font-black text-amber-100">
+                        <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-amber-300 px-1.5 text-[11px] text-slate-950">
+                          {governanceCorrectionReceivedItems.length}
+                        </span>
+                        Correction received
+                      </span>
+                    ) : null}
+                    {directorGovernanceActionCount > 0 ? (
+                      <span className="rounded-full border border-amber-300/30 bg-amber-400/10 px-2.5 py-1 text-xs font-black text-amber-100">
+                        {directorGovernanceActionCount} need your action
+                      </span>
+                    ) : (
+                      <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2.5 py-1 text-xs font-black text-emerald-100">
+                        No action due
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-sm leading-5 text-slate-300">
+                    Open only the assessment you need to act on.
+                  </p>
+                </div>
+
+                {selectedReleasedCount > 0 ? (
+                  <ActionButton
+                    onClick={() => setGovernanceExpanded((current) => !current)}
+                  >
+                    {governanceExpanded
+                      ? "Hide released"
+                      : `Show released (${selectedReleasedCount})`}
+                  </ActionButton>
+                ) : null}
+              </div>
+
+              <div
+                aria-label="Governance appraisal filters"
+                className="mt-3 grid gap-2 sm:grid-cols-3"
+              >
+                <GovernanceFocusButton
+                  label="Teacher Appraisals"
+                  count={teacherAppraisalItems.length}
+                  helper="Teacher reports ready for Director action."
+                  active={governanceFocus === "TEACHER"}
+                  onClick={() => {
+                    setGovernanceFocus("TEACHER");
+                    setGovernanceExpanded(false);
+                  }}
+                />
+                <GovernanceFocusButton
+                  label="Headteacher Appraisals"
+                  count={headteacherReadyItems.length}
+                  helper="Headteacher reports from governance officers."
+                  active={governanceFocus === "HEADTEACHER"}
+                  onClick={() => {
+                    setGovernanceFocus("HEADTEACHER");
+                    setGovernanceExpanded(false);
+                  }}
+                />
+                <GovernanceFocusButton
+                  label="My Assessments"
+                  count={myAssessmentActionCount}
+                  helper="Assessments you authored and must inspect before release."
+                  active={governanceFocus === "MINE"}
+                  onClick={() => {
+                    setGovernanceFocus("MINE");
+                    setGovernanceExpanded(false);
+                  }}
+                />
+              </div>
+
+              <div className="mt-3 space-y-2">
+                {governanceFocus === "TEACHER" ? (
+                  teacherReviewQueueLoading ? (
+                    <p className="rounded-xl border border-white/10 bg-slate-950/70 p-3 text-sm text-slate-300">
+                      Loading Teacher Appraisals…
+                    </p>
+                  ) : teacherReviewQueueFailure ? (
+                    <div
+                      role="alert"
+                      className="rounded-xl border border-rose-300/25 bg-rose-400/10 p-3 text-sm text-rose-100"
+                    >
+                      {teacherReviewQueueFailure}
+                    </div>
+                  ) : teacherAppraisalItems.length ? (
+                    teacherAppraisalItems.map((item) => (
+                      <TeacherQueueRecord
+                        key={`teacher-${item.assessmentId}`}
+                        item={item}
+                        busy={busy}
+                        onOpen={() => openTeacherReviewWorkspace(item)}
+                      />
+                    ))
+                  ) : (
+                    <p className="rounded-xl border border-white/10 bg-slate-950/70 p-3 text-sm leading-5 text-slate-300">
+                      No Teacher appraisal currently needs your action.
+                    </p>
+                  )
+                ) : governanceQueueLoading ? (
+                  <p className="rounded-xl border border-white/10 bg-slate-950/70 p-3 text-sm text-slate-300">
+                    Loading Governance…
+                  </p>
+                ) : governanceQueueFailure ? (
+                  <div
+                    role="alert"
+                    className="rounded-xl border border-rose-300/25 bg-rose-400/10 p-3 text-sm text-rose-100"
+                  >
+                    {governanceQueueFailure}
+                  </div>
+                ) : governanceFocus === "MINE" ? (
+                  directorOwnTeacherItems.length > 0 ||
+                  visibleGovernanceItems.length > 0 ? (
+                    <>
+                      {directorOwnTeacherItems.map((item) => (
+                        <TeacherQueueRecord
+                          key={`my-teacher-${item.assessmentId}`}
+                          item={item}
+                          busy={busy}
+                          onOpen={() => openTeacherReviewWorkspace(item)}
+                        />
+                      ))}
+                      {visibleGovernanceItems.map((item) => (
+                        <GovernanceQueueRecord
+                          key={`my-headteacher-${item.assessmentId}`}
+                          item={item}
+                          selected={
+                            directReleaseInspection?.item.assessmentId ===
+                              item.assessmentId ||
+                            governanceReviewPackage?.assessment.assessmentId ===
+                              item.assessmentId
+                          }
+                          busy={busy}
+                          onInspect={() =>
+                            void inspectDirectReleaseAssessment(item)
+                          }
+                        />
+                      ))}
+                    </>
+                  ) : (
+                    <p className="rounded-xl border border-white/10 bg-slate-950/70 p-3 text-sm leading-5 text-slate-300">
+                      None of your own finalized assessments currently needs release.
+                    </p>
+                  )
+                ) : visibleGovernanceItems.length ? (
+                  visibleGovernanceItems.map((item) => (
+                    <GovernanceQueueRecord
+                      key={`governance-${item.assessmentId}`}
+                      item={item}
+                      selected={
+                        directReleaseInspection?.item.assessmentId ===
+                          item.assessmentId ||
+                        governanceReviewPackage?.assessment.assessmentId ===
+                          item.assessmentId
+                      }
+                      busy={busy}
+                      onInspect={() =>
+                        void loadGovernanceReviewPackage(item)
+                      }
+                    />
+                  ))
+                ) : (
+                  <p className="rounded-xl border border-white/10 bg-slate-950/70 p-3 text-sm leading-5 text-slate-300">
+                    No Headteacher appraisal currently needs your action.
+                  </p>
+                )}
+              </div>
+
+              <p className="mt-3 text-xs leading-5 text-slate-400">
+                Teacher Appraisals open the existing Teacher review workspace. Headteacher Appraisals keep their independent Governance review path. My Assessments use <span className="font-bold text-slate-200">Inspect & release</span> without self-review. <span className="font-bold text-amber-100">Correction received</span> means the officer has finished the returned work and it is ready for your final review. Staff Feedback stays separate.
+              </p>
+            </>
+          ) : (
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-200">
-                  Governance Appraisals
-                </p>
-                <h2 className="mt-1 text-lg font-black text-white">
-                  Official governance assessments of Headteachers
-                </h2>
-                <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-300">
-                  This channel contains finalized assessments completed by authorized governance officers. Governance release is independent of Teacher Staff Feedback; the two outcomes meet later only for analytics.
+                <h2 className="text-base font-black text-white">Governance</h2>
+                <p className="mt-1 text-sm text-slate-300">
+                  Nothing needs your attention here.
                 </p>
               </div>
-              <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-xs font-black text-cyan-100">
-                {governanceItems.length} record{governanceItems.length === 1 ? "" : "s"}
-              </span>
+              {governanceReleasedItems.length > 0 ? (
+                <ActionButton onClick={() => setGovernanceExpanded(true)}>
+                  Show released ({governanceReleasedItems.length})
+                </ActionButton>
+              ) : null}
             </div>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            {governanceItems.length ? (
-              governanceItems.map((item) => (
-                <GovernanceQueueRecord
-                  key={`governance-${item.cycleId}`}
-                  item={item}
-                  selected={
-                    directReleaseInspection?.item.cycleId === item.cycleId
-                  }
-                  busy={busy}
-                  onInspect={() => void inspectDirectReleaseAssessment(item)}
-                />
-              ))
-            ) : (
-              <p className="rounded-2xl border border-white/10 bg-slate-950/75 p-4 text-sm leading-6 text-slate-300">
-                No Director-authored governance assessment is currently ready or released in this work list.
-              </p>
-            )}
-          </div>
+          )}
         </section>
 
         {notice ? (
@@ -3087,94 +3718,39 @@ export default function HeadteacherDirectorReviewClient({
           />
         ) : null}
 
+        {governanceReviewPackage ? (
+          <GovernanceReviewNativeForm
+            reviewPackage={governanceReviewPackage}
+            busy={busy}
+            onBack={() => {
+              setGovernanceReviewPackage(null);
+              setGovernanceDecisionMode(null);
+              clearMessages();
+            }}
+            onStart={() => void startGovernanceReview()}
+            onChooseDecision={openGovernanceDecision}
+          />
+        ) : null}
+
         {reviewMode === "STAFF" && anonymousResponses ? (
           <StaffEvidence
             data={anonymousResponses}
             level={staffLevel}
             busy={busy}
-            staffOnly={!reviewPackage}
+            reviewState={staffReviewState}
+            onChooseDecision={openStaffDecision}
             onLevel={setStaffLevel}
             onRespondent={(key) =>
               void loadAnonymousResponses(key, anonymousResponses.cycle.id)
             }
             onBackHome={() => {
               setReviewMode("HOME");
-              if (!reviewPackage) setAnonymousResponses(null);
+              setAnonymousResponses(null);
+              setStaffReviewState(null);
             }}
           />
         ) : null}
 
-        {reviewPackage && reviewMode !== "STAFF" ? (
-          <>
-            <section className={panel("p-4 sm:p-5")}>
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.14em] text-amber-300">
-                    Current review · stage {reviewPackage.review.stage}
-                  </p>
-                  <h2 className="mt-1 text-xl font-black text-white">
-                    {reviewPackage.cycle.targetName}
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-300">
-                    {reviewPackage.cycle.schoolName} · {reviewPackage.cycle.circuitName}
-                  </p>
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <ActionButton onClick={() => setReviewMode("HOME")}>
-                    Native evidence
-                  </ActionButton>
-                  <ActionButton
-                    primary={reviewMode === "ANALYTICS"}
-                    onClick={() => setReviewMode("ANALYTICS")}
-                  >
-                    Appraisal analytics
-                  </ActionButton>
-                </div>
-              </div>
-            </section>
-
-            <div className="sticky top-3 z-40 hidden rounded-2xl border border-white/15 bg-slate-950/95 p-3 shadow-2xl backdrop-blur md:block">
-              <div className="grid grid-cols-[1fr_auto] items-center gap-4">
-                <div>
-                  <p className="text-xs font-black text-white">Director decision</p>
-                  <p className="mt-0.5 text-xs text-slate-400">
-                    Always available while reviewing this package.
-                  </p>
-                </div>
-                <DecisionButtons disabled={busy} onChoose={openDecision} />
-              </div>
-            </div>
-
-            {reviewMode === "HOME" ? (
-              <EvidenceGateway
-                reviewPackage={reviewPackage}
-                onStaff={() => void loadAnonymousResponses()}
-                onSupervisory={() => setReviewMode("SUPERVISORY")}
-              />
-            ) : null}
-
-            {reviewMode === "SUPERVISORY" ? (
-              <SupervisoryForm
-                reviewPackage={reviewPackage}
-                sections={supervisorySections}
-                onBack={() => setReviewMode("HOME")}
-              />
-            ) : null}
-
-            {reviewMode === "ANALYTICS" ? (
-              <AnalyticsView
-                reviewPackage={reviewPackage}
-                currentItemIndex={currentItemIndex}
-                onCurrentItemIndex={setCurrentItemIndex}
-                onBack={() => setReviewMode("HOME")}
-              />
-            ) : null}
-
-            <div className="fixed inset-x-3 bottom-3 z-50 rounded-2xl border border-white/15 bg-slate-950/95 p-3 shadow-2xl backdrop-blur md:hidden">
-              <DecisionButtons compact disabled={busy} onChoose={openDecision} />
-            </div>
-          </>
-        ) : null}
 
         <footer className={panel("p-4 text-xs leading-5 text-slate-400")}>
           Staff Feedback Appraisals and Governance Appraisals remain independent channels. No background polling. No combined appraisal score. Anonymous individual staff forms use cycle-scoped Respondent 1…N labels; real Teacher identities are not available to the District Director.
@@ -3182,16 +3758,31 @@ export default function HeadteacherDirectorReviewClient({
         </footer>
       </div>
 
-      {decisionMode ? (
+      {staffDecisionMode ? (
         <DecisionDialog
-          mode={decisionMode}
+          mode={staffDecisionMode}
+          stream="STAFF"
           reason={reason}
           releaseNote={releaseNote}
           busy={busy}
           onReasonChange={setReason}
           onReleaseNoteChange={setReleaseNote}
-          onClose={() => setDecisionMode(null)}
-          onConfirm={() => void submitDecision()}
+          onClose={() => setStaffDecisionMode(null)}
+          onConfirm={() => void submitStaffDecision()}
+        />
+      ) : null}
+
+      {governanceDecisionMode ? (
+        <DecisionDialog
+          mode={governanceDecisionMode}
+          stream="GOVERNANCE"
+          reason={reason}
+          releaseNote={releaseNote}
+          busy={busy}
+          onReasonChange={setReason}
+          onReleaseNoteChange={setReleaseNote}
+          onClose={() => setGovernanceDecisionMode(null)}
+          onConfirm={() => void submitGovernanceDecision()}
         />
       ) : null}
     </main>

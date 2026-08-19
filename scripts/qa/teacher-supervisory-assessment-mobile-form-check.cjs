@@ -170,6 +170,26 @@ assert(client.includes("6-section, 34-indicator"), "Official Teacher form count 
 assert(client.includes("General Comments"), "General Comments control missing");
 assert(client.includes("<textarea"), "General Comments textarea missing");
 assert(client.includes("allItemsAnswered"), "Completion-gated overall result missing");
+assert(
+  client.includes('return `${Math.round(Number(value))}%`;'),
+  "Teacher percentage presentation must round to a whole number",
+);
+assert(
+  !client.includes('return `${round2(Number(value))}%`;'),
+  "Teacher percentage presentation must not expose stored decimal precision",
+);
+assert(
+  client.includes("function round2(value: number)"),
+  "Stored/live Teacher calculation precision helper must remain present",
+);
+assert(
+  client.includes("formatPercent(liveScore?.percentage)"),
+  "Interactive Teacher section result must use whole-number presentation",
+);
+assert(
+  client.includes("formatPercent(sectionScore?.percentage)"),
+  "Native Teacher section result must use whole-number presentation",
+);
 assert(client.includes('"After 34/34"'), "Incomplete overall-result suppression missing");
 assert(client.includes("Review Before you Submit"), "Native review entry missing");
 assert(client.includes("Final review · read-only preview"), "Native review state missing");

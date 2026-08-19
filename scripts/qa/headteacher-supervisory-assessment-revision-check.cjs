@@ -94,12 +94,159 @@ function returnedAssessment(overrides={}) {
 function membership(overrides={}) { return { id:"membership-headteacher-001",userId:"headteacher-001",tenantId:"tenant-001",status:"ACTIVE",role:{name:"HEADTEACHER"},tenant:{id:"tenant-001",status:"ACTIVE",zone:{id:"circuit-001",name:"Circuit One",isActive:true,parentZoneId:"district-001",zoneType:{level:1,countryCode:"GH"},parentZone:{id:"district-001",name:"District One",isActive:true,zoneType:{level:2,countryCode:"GH"}}}},...overrides}; }
 function assignment(overrides={}) { return {id:"assignment-director-001",userId:"actor-001",role:"DISTRICT_DIRECTOR",status:"ACTIVE",startsAt:new Date("2026-01-01T00:00:00.000Z"),endsAt:null,zoneId:"district-001",zone:{id:"district-001",name:"District One",isActive:true,parentZoneId:null,zoneType:{level:2,countryCode:"GH"},parentZone:null},...overrides}; }
 
+function directorReturnedHosAssessment(overrides={}) {
+  const context=visitContext();
+  context.assessor={
+    userId:"hos-001",
+    name:"HOS One",
+    role:"HEAD_OF_SUPERVISION",
+    assignmentId:"assignment-hos-001",
+    assignmentRole:"HEAD_OF_SUPERVISION",
+    scopeLevel:"DISTRICT",
+  };
+  const record=returnedAssessment({
+    assessorUserId:"hos-001",
+    assessorAssignmentId:"assignment-hos-001",
+    finalizedByUserId:"hos-001",
+    evidenceSnapshotJson:context,
+    cycle:cycle({status:"CLOSED"}),
+    reviews:[],
+  });
+  const note="Correct one Governance assessment entry and resubmit.";
+  const reviewEvidenceHash="e".repeat(64);
+  const review={
+    id:"director-review-002",
+    cycleId:record.cycleId,
+    assessmentId:record.id,
+    reviewerUserId:"director-001",
+    reviewerAssignmentId:"assignment-director-review-001",
+    stage:2,
+    decision:"RETURNED",
+    note,
+    decidedAt:RETURNED,
+    metadata:{},
+    createdAt:new Date("2026-08-03T10:00:00.000Z"),
+  };
+  const decisionContractHash=hashJson({
+    schemaVersion:1,
+    workflow:"HEADTEACHER_GOVERNANCE_SUPERVISORY_ASSESSMENT",
+    evidenceStream:"GOVERNANCE_SUPERVISORY_ASSESSMENT",
+    reviewId:review.id,
+    reviewStage:review.stage,
+    assessmentId:record.id,
+    assessmentRevision:record.revision,
+    action:"RETURN",
+    reviewerMayRewriteScores:false,
+    scoreMutationAllowed:false,
+    staffFeedbackIncluded:false,
+    combinedWeightingDefined:false,
+  });
+  const decisionRequestHash=hashJson({
+    schemaVersion:1,
+    workflow:"HEADTEACHER_GOVERNANCE_SUPERVISORY_ASSESSMENT",
+    reviewId:review.id,
+    reviewStage:review.stage,
+    assessmentId:record.id,
+    assessmentRevision:record.revision,
+    assessmentHash:record.assessmentHash,
+    reviewEvidenceHash,
+    decisionContractHash,
+    action:"RETURN",
+    note,
+    reviewerMayRewriteScores:false,
+    scoreMutationAllowed:false,
+    staffFeedbackIncluded:false,
+  });
+  review.metadata={
+    schemaVersion:1,
+    workflow:"HEADTEACHER_GOVERNANCE_SUPERVISORY_ASSESSMENT",
+    evidenceStream:"GOVERNANCE_SUPERVISORY_ASSESSMENT",
+    reviewType:"DIRECTOR_GOVERNANCE_REVIEW",
+    reviewStage:review.stage,
+    reviewerRole:"DISTRICT_DIRECTOR",
+    reviewEvidenceHash,
+    assessmentId:record.id,
+    assessmentRevision:record.revision,
+    assessmentHash:record.assessmentHash,
+    visitContextHash:record.metadata.visitContextHash,
+    assessorRole:"HEAD_OF_SUPERVISION",
+    admissionType:"HOS_AUTHORED",
+    immutableEvidenceReverified:true,
+    staffFeedbackIncluded:false,
+    respondentIdentitiesIncluded:false,
+    reviewerMayRewriteScores:false,
+    reviewerMayRewriteVisitEvidence:false,
+    scoreMutationAllowed:false,
+    assessmentMutationAllowed:false,
+    combinedWeightingDefined:false,
+    notificationsSeeded:false,
+    providerCalled:false,
+    reviewerAssignmentZoneId:"district-001",
+    decisionSchemaVersion:1,
+    decisionAction:"RETURN",
+    decisionContractHash,
+    decisionRequestHash,
+    decidedByRole:"DISTRICT_DIRECTOR",
+    decidedAt:RETURNED.toISOString(),
+    reasonHash:hashJson({note}),
+    reasonLength:note.length,
+    revisionRequired:true,
+    nextReviewId:null,
+    nextReviewStage:null,
+    releasePerformed:false,
+    scoreMutationPerformed:false,
+    visitEvidenceMutationPerformed:false,
+  };
+  record.reviews=[review];
+  record.metadata={
+    ...record.metadata,
+    returnedByDirectorReviewId:review.id,
+    returnedByDirectorReviewStage:review.stage,
+    returnDecisionContractHash:decisionContractHash,
+    returnDecisionRequestHash:decisionRequestHash,
+    returnedAt:RETURNED.toISOString(),
+    reviewerMayRewriteScores:false,
+    scoreMutationPerformed:false,
+    separateFromStaffFeedback:true,
+    combinedWeightingDefined:false,
+    providerCalled:false,
+  };
+  record.cycle.metadata={
+    directorGovernanceReview:{
+      schemaVersion:1,
+      state:"RETURNED_FOR_CORRECTION",
+      assessmentId:record.id,
+      assessmentRevision:record.revision,
+      sourceReviewId:review.id,
+      sourceReviewStage:review.stage,
+      decision:"RETURN",
+      decisionContractHash,
+      decisionRequestHash,
+      currentReviewId:review.id,
+      currentReviewStage:review.stage,
+      revisionRequired:true,
+      releaseProofHash:null,
+      releasedAt:null,
+      staffFeedbackIncluded:false,
+      respondentIdentitiesIncluded:false,
+      carrierCycleStatusMutationPerformed:false,
+      carrierCycleTimestampMutationPerformed:false,
+      reviewerMayRewriteScores:false,
+      scoreMutationAllowed:false,
+      combinedWeightingDefined:false,
+      providerCalled:false,
+    },
+  };
+  return {...record,...overrides};
+}
+
 class FakeDatabase {
   constructor(overrides={}) {
     this.original = returnedAssessment(overrides.assessment ?? {});
-    this.assessments = [this.original]; this.membershipRecord = membership(overrides.membership ?? {}); this.assignments=overrides.assignments??[assignment()]; this.audits=[]; this.transactionOptions=[]; this.nextId=2; this.conflictOnce=overrides.conflictOnce??false;
+    this.assessments = [this.original]; this.membershipRecord = membership(overrides.membership ?? {}); this.assignments=overrides.assignments??[assignment()]; this.audits=[]; this.transactionOptions=[]; this.nextId=2; this.conflictOnce=overrides.conflictOnce??false; this.inTransaction=false; this.transactionAssessmentReads=0;
     this.appraisalAssessment = {
       findUnique: async (args) => {
+        if (this.inTransaction) this.transactionAssessmentReads += 1;
         if (args.where.id) return structuredClone(this.assessments.find((a)=>a.id===args.where.id)??null);
         const key=args.where.cycleId_assessorUserId_revision;
         if (key) return structuredClone(this.assessments.find((a)=>a.cycleId===key.cycleId&&a.assessorUserId===key.assessorUserId&&a.revision===key.revision)??null);
@@ -116,19 +263,21 @@ class FakeDatabase {
     this.governanceOfficerAssignment={findMany:async()=>structuredClone(this.assignments)};
     this.auditLog={create:async(args)=>{this.audits.push(structuredClone(args.data));return args.data;}};
   }
-  async $transaction(operation,options){this.transactionOptions.push(structuredClone(options));const snapshot=structuredClone({assessments:this.assessments,audits:this.audits,nextId:this.nextId});try{return await operation(this);}catch(error){this.assessments=snapshot.assessments;this.original=this.assessments[0];this.audits=snapshot.audits;this.nextId=snapshot.nextId;throw error;}}
+  async $transaction(operation,options){this.transactionOptions.push(structuredClone(options));const snapshot=structuredClone({assessments:this.assessments,audits:this.audits,nextId:this.nextId});this.inTransaction=true;try{return await operation(this);}catch(error){this.assessments=snapshot.assessments;this.original=this.assessments[0];this.audits=snapshot.audits;this.nextId=snapshot.nextId;throw error;}finally{this.inTransaction=false;}}
 }
 function auditText(db){return JSON.stringify(db.audits);}
 
 async function main(){
   const sourcePath=path.join(repoRoot,"src/lib/appraisals/headteacherSupervisoryAssessmentRevision.ts");
   const source=fs.readFileSync(sourcePath,"utf8");
-  for(const marker of ["createReturnedHeadteacherSupervisoryAssessmentRevision","readHeadteacherSupervisoryAssessorState","planReturnedHeadteacherSupervisoryRevision","visitDetailsFromEvidenceSnapshot","preserveVisitDetailsMetadata: true","inheritedReturnReason","Prisma.TransactionIsolationLevel.Serializable","reviewerMayRewriteScores: false","providerCalled: false"]){assert(source.includes(marker),`Missing source marker: ${marker}`);}
+  for(const marker of ["createReturnedHeadteacherSupervisoryAssessmentRevision","readHeadteacherSupervisoryAssessorState","planReturnedHeadteacherSupervisoryRevision","visitDetailsFromEvidenceSnapshot","preserveVisitDetailsMetadata: true","inheritedReturnReason","Prisma.TransactionIsolationLevel.Serializable","reviewerMayRewriteScores: false","providerCalled: false","directorReturnRevisionAdmission: true","directorReturnCarrierStatusMutationRequired: false","directorGovernanceReturnAdmission","DIRECTOR_GOVERNANCE_RETURN","HEADTEACHER_SUPERVISORY_REVISION_DIRECTOR_RETURN_PROVENANCE_DRIFT"]){assert(source.includes(marker),`Missing source marker: ${marker}`);}
   for(const forbidden of ["sendSms","sendEmail","appraisalReview.create","appraisalAggregateSnapshot.create"]){assert(!source.includes(forbidden),`Forbidden source marker: ${forbidden}`);}
   const revisionModule=require(sourcePath);
   const {createReturnedHeadteacherSupervisoryAssessmentRevision,readHeadteacherSupervisoryAssessorState,HEADTEACHER_SUPERVISORY_REVISION_POLICY}=revisionModule;
-  assertEqual(HEADTEACHER_SUPERVISORY_REVISION_POLICY.eligibleCycleStatus,"UNDER_REVIEW","Cycle boundary must be under review");
+  assertEqual(HEADTEACHER_SUPERVISORY_REVISION_POLICY.eligibleCycleStatus,"UNDER_REVIEW","Legacy cycle boundary must remain under review");
   assertEqual(HEADTEACHER_SUPERVISORY_REVISION_POLICY.preserveVisitDetailsMetadata,true,"Revision must preserve visit-details metadata");
+  assertEqual(HEADTEACHER_SUPERVISORY_REVISION_POLICY.directorReturnRevisionAdmission,true,"Director-return revision bridge must be explicit");
+  assertEqual(HEADTEACHER_SUPERVISORY_REVISION_POLICY.directorReturnCarrierStatusMutationRequired,false,"Director-return bridge must not require carrier status mutation");
 
   const db=new FakeDatabase();
   const created=await createReturnedHeadteacherSupervisoryAssessmentRevision({actorUserId:"actor-001",actorRoleName:"DISTRICT_DIRECTOR",returnedAssessmentId:"assessment-001",now:NOW,database:db});
@@ -148,11 +297,14 @@ async function main(){
   assert(!auditText(db).includes('"score":5'),"Audit must not contain score values");
   assert(!auditText(db).includes("Director One"),"Audit must not contain names");
   assertEqual(db.transactionOptions[0].isolationLevel,"Serializable","Transaction must be serializable");
+  assertEqual(db.transactionOptions[0].timeout,25000,"Write transaction must use the bounded 25s timeout");
+  assertEqual(db.transactionAssessmentReads,0,"Full assessment reads must stay outside the write transaction");
 
   const retry=await createReturnedHeadteacherSupervisoryAssessmentRevision({actorUserId:"actor-001",actorRoleName:"DISTRICT_DIRECTOR",returnedAssessmentId:"assessment-001",now:NOW,database:db});
   assertEqual(retry.outcome,"EXISTING_MATCH","Repeated creation should be idempotent");
   assertEqual(db.assessments.length,2,"Retry must not duplicate revision");
   assertEqual(db.audits.length,1,"Retry must not duplicate audit");
+  assertEqual(db.transactionOptions.length,1,"Idempotent retry should resolve during read-only preflight without opening another write transaction");
 
   const revisionState=await readHeadteacherSupervisoryAssessorState({actorUserId:"actor-001",assessmentId:db.assessments[1].id,database:db});
   assertEqual(revisionState.state,"REVISION_DRAFT","Revision draft state should be truthful");
@@ -169,6 +321,52 @@ async function main(){
   assertEqual(returnedState.canCreateRevision,true,"Returned state should allow revision creation");
   assert(returnedState.returnReason.includes("Clarify"),"Return reason should be visible to assessor");
   assertEqual(returnedState.reviewerIdentityIncluded,false,"Reviewer identity should not be returned");
+
+  const directorReturnRecord=directorReturnedHosAssessment();
+  const directorReturnDb=new FakeDatabase({
+    assessment:directorReturnRecord,
+    assignments:[
+      assignment({
+        id:"assignment-hos-001",
+        userId:"hos-001",
+        role:"HEAD_OF_SUPERVISION",
+      }),
+    ],
+  });
+  directorReturnDb.original=structuredClone(directorReturnRecord);
+  directorReturnDb.assessments=[directorReturnDb.original];
+  const directorReturnedState=await readHeadteacherSupervisoryAssessorState({
+    actorUserId:"hos-001",
+    assessmentId:"assessment-001",
+    database:directorReturnDb,
+  });
+  assertEqual(directorReturnedState.state,"RETURNED_REVISION_REQUIRED","Director-returned HOS assessment should require revision");
+  assertEqual(directorReturnedState.canCreateRevision,true,"Verified Director-return provenance should admit correction despite unchanged carrier status");
+  assertEqual(directorReturnedState.returnReason,directorReturnRecord.reviews[0].note,"Director return reason should remain visible");
+
+  const directorCreated=await createReturnedHeadteacherSupervisoryAssessmentRevision({
+    actorUserId:"hos-001",
+    actorRoleName:"HEAD_OF_SUPERVISION",
+    returnedAssessmentId:"assessment-001",
+    now:NOW,
+    database:directorReturnDb,
+  });
+  assertEqual(directorCreated.outcome,"CREATED","Director-returned assessment should create correction revision");
+  assertEqual(directorCreated.revision.revision,2,"Director-return correction should increment revision");
+  assertEqual(directorReturnDb.assessments[0].status,"SUPERSEDED","Director-returned source should become superseded");
+  assertEqual(directorReturnDb.assessments[1].status,"DRAFT","Director-return correction should be editable draft");
+  assertEqual(directorReturnDb.assessments[1].metadata.returnAdmissionMode,"DIRECTOR_GOVERNANCE_RETURN","Director-return lineage marker should be copied");
+  assertEqual(directorReturnDb.assessments[1].metadata.returnDecisionContractHash,directorReturnRecord.metadata.returnDecisionContractHash,"Director decision contract hash should be preserved");
+  assertEqual(directorReturnDb.assessments[1].metadata.returnDecisionRequestHash,directorReturnRecord.metadata.returnDecisionRequestHash,"Director decision request hash should be preserved");
+
+  const directorRetry=await createReturnedHeadteacherSupervisoryAssessmentRevision({
+    actorUserId:"hos-001",
+    actorRoleName:"HEAD_OF_SUPERVISION",
+    returnedAssessmentId:"assessment-001",
+    now:NOW,
+    database:directorReturnDb,
+  });
+  assertEqual(directorRetry.outcome,"EXISTING_MATCH","Director-return correction retry should be idempotent");
 
   const finalizedDb=new FakeDatabase({assessment:{status:"FINALIZED",reviews:[]}});
   const finalizedState=await readHeadteacherSupervisoryAssessorState({actorUserId:"actor-001",assessmentId:"assessment-001",database:finalizedDb});
@@ -192,7 +390,57 @@ async function main(){
 
   await expectReject(()=>createReturnedHeadteacherSupervisoryAssessmentRevision({actorUserId:"other",actorRoleName:"DISTRICT_DIRECTOR",returnedAssessmentId:"assessment-001",now:NOW,database:new FakeDatabase()}),"HEADTEACHER_SUPERVISORY_REVISION_ASSESSOR_ONLY","Outsider must be rejected");
   await expectReject(()=>createReturnedHeadteacherSupervisoryAssessmentRevision({actorUserId:"actor-001",actorRoleName:"DISTRICT_DIRECTOR",returnedAssessmentId:"assessment-001",now:NOW,database:new FakeDatabase({assignments:[]})}),"HEADTEACHER_SUPERVISORY_REVISION_AUTHORITY_ACTIVE_ASSIGNMENT_REQUIRED","Active assignment must be revalidated");
-  await expectReject(()=>createReturnedHeadteacherSupervisoryAssessmentRevision({actorUserId:"actor-001",actorRoleName:"DISTRICT_DIRECTOR",returnedAssessmentId:"assessment-001",now:NOW,database:new FakeDatabase({assessment:{cycle:cycle({status:"CLOSED",reviewStartedAt:null})}})}),"HEADTEACHER_SUPERVISORY_REVISION_CYCLE_NOT_UNDER_REVIEW","Cycle must be under review");
+  await expectReject(()=>createReturnedHeadteacherSupervisoryAssessmentRevision({actorUserId:"actor-001",actorRoleName:"DISTRICT_DIRECTOR",returnedAssessmentId:"assessment-001",now:NOW,database:new FakeDatabase({assessment:{cycle:cycle({status:"CLOSED",reviewStartedAt:null})}})}),"HEADTEACHER_SUPERVISORY_REVISION_CYCLE_NOT_UNDER_REVIEW","Legacy closed carrier without Director proof must remain rejected");
+
+  const directorProofDrift=directorReturnedHosAssessment();
+  directorProofDrift.reviews[0].metadata.decisionRequestHash="f".repeat(64);
+  await expectReject(
+    ()=>readHeadteacherSupervisoryAssessorState({
+      actorUserId:"hos-001",
+      assessmentId:"assessment-001",
+      database:{
+        appraisalAssessment:{
+          findUnique:async()=>structuredClone(directorProofDrift),
+        },
+      },
+    }),
+    "HEADTEACHER_SUPERVISORY_REVISION_DIRECTOR_RETURN_PROVENANCE_DRIFT",
+    "Director-return request-hash drift must fail closed",
+  );
+
+  const directorReleasedCarrier=directorReturnedHosAssessment();
+  directorReleasedCarrier.cycle={...directorReleasedCarrier.cycle,status:"RELEASED",releasedAt:NOW};
+  const directorReleasedCarrierState=await readHeadteacherSupervisoryAssessorState({
+    actorUserId:"hos-001",
+    assessmentId:"assessment-001",
+    database:{
+      appraisalAssessment:{
+        findUnique:async()=>structuredClone(directorReleasedCarrier),
+      },
+    },
+  });
+  assertEqual(
+    directorReleasedCarrierState.canCreateRevision,
+    true,
+    "Independent Director-return correction must not be blocked by carrier RELEASED state",
+  );
+
+  const directorCancelledCarrier=directorReturnedHosAssessment();
+  directorCancelledCarrier.cycle={...directorCancelledCarrier.cycle,status:"CANCELLED",cancelledAt:NOW};
+  await expectReject(
+    ()=>readHeadteacherSupervisoryAssessorState({
+      actorUserId:"hos-001",
+      assessmentId:"assessment-001",
+      database:{
+        appraisalAssessment:{
+          findUnique:async()=>structuredClone(directorCancelledCarrier),
+        },
+      },
+    }),
+    "HEADTEACHER_SUPERVISORY_REVISION_DIRECTOR_RETURN_CARRIER_INVALID",
+    "Cancelled carrier must reject Director-return correction",
+  );
+
   await expectReject(()=>createReturnedHeadteacherSupervisoryAssessmentRevision({actorUserId:"actor-001",actorRoleName:"DISTRICT_DIRECTOR",returnedAssessmentId:"assessment-001",now:NOW,database:new FakeDatabase({assessment:{reviews:[{...returnedAssessment().reviews[0],metadata:{scoreEdits:{"1.1":2}}}]}})}),"HEADTEACHER_SUPERVISORY_REVISION_REVIEWER_SCORE_REWRITE_FORBIDDEN","Reviewer score edits must be rejected");
   const driftDb=new FakeDatabase(); driftDb.original.scores[0].score=1;
   await expectReject(()=>createReturnedHeadteacherSupervisoryAssessmentRevision({actorUserId:"actor-001",actorRoleName:"DISTRICT_DIRECTOR",returnedAssessmentId:"assessment-001",now:NOW,database:driftDb}),"HEADTEACHER_SUPERVISORY_REVISION_SOURCE_CALCULATION_DRIFT","Score drift must fail closed");
@@ -204,7 +452,10 @@ async function main(){
 
   console.log("=== D3.4F4 HEADTEACHER SUPERVISORY RETURNED REVISION + READ STATES ===\n");
   console.log("Returned source status          : RETURNED only");
-  console.log("Parent cycle boundary           : UNDER_REVIEW only");
+  console.log("Legacy parent-cycle boundary    : UNDER_REVIEW only");
+  console.log("Director-return correction      : proof-bound, carrier mutation not required");
+  console.log("Director return hashes          : contract + request recomputed");
+  console.log("Director carrier state          : RELEASED tolerated; CANCELLED rejected");
   console.log("Revision ownership              : exact original assessor");
   console.log("Current authority               : capability + active assignment revalidated");
   console.log("Return evidence                 : latest decided RETURNED review + reason");
@@ -219,7 +470,11 @@ async function main(){
   console.log("Correction instruction          : retained on revision draft");
   console.log("Read-state scores/percentages   : absent");
   console.log("Audit score/name leakage        : absent");
-  console.log("Transaction                     : serializable and bounded");
+  console.log("Source/evidence preflight       : outside write transaction");
+  console.log("Write transaction source read   : none");
+  console.log("Current authority in write      : revalidated");
+  console.log("Write transaction timeout       : bounded 25 seconds");
+  console.log("Transaction                     : serializable and compact");
   console.log("Notifications/providers         : absent");
   console.log("Database accessed               : false\n");
   console.log("RESULT: D3.4F4 HEADTEACHER SUPERVISORY REVISION GREEN");

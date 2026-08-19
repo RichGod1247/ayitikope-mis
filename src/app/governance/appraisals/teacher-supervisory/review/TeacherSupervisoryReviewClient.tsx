@@ -250,13 +250,9 @@ function cx(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
 }
 
-function round2(value: number) {
-  return Number(value.toFixed(2));
-}
-
 function formatPercent(value: number | null | undefined) {
   if (value == null || !Number.isFinite(Number(value))) return "—";
-  return `${round2(Number(value))}%`;
+  return `${Math.round(Number(value))}%`;
 }
 
 function dashboardHref(actorRole: string | undefined) {

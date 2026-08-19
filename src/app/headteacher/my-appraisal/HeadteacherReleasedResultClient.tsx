@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Fragment, useState } from "react";
 import type { HeadteacherReleasedResult } from "@/lib/appraisals/headteacherReleasedResult";
+import type { HeadteacherStaffFeedbackReleasedResult } from "@/lib/appraisals/headteacherStaffFeedbackReleasedResult";
 import type { HeadteacherOwnAppraisalReadState } from "@/lib/appraisals/headteacherFeedbackReadStates";
 
 export const HEADTEACHER_RELEASED_RESULT_UI_POLICY = {
@@ -44,6 +45,18 @@ type ReleasedResultApiResponse =
       ok: true;
       reqId: string;
       item: HeadteacherReleasedResult;
+    }
+  | {
+      ok: false;
+      reqId?: string;
+      error: string;
+    };
+
+type ReleasedStaffFeedbackApiResponse =
+  | {
+      ok: true;
+      reqId: string;
+      item: HeadteacherStaffFeedbackReleasedResult;
     }
   | {
       ok: false;
@@ -150,6 +163,12 @@ function stateGuidance(state: HeadteacherOwnAppraisalReadState | null) {
         title: "Director review in progress",
         message: "The evidence is under official review. The result will appear here only after release.",
       };
+    case "VIEW_RELEASED_STAFF_FEEDBACK":
+      return {
+        title: "Staff feedback released",
+        message:
+          "Your confidential Staff Feedback aggregate has been released independently. Governance Appraisal evidence follows its own separate lifecycle.",
+      };
     case "VIEW_RELEASED_APPRAISAL":
       return {
         title: "Released result ready",
@@ -168,7 +187,10 @@ function errorMessage(error: string) {
   if (error === "UNAUTHORIZED") return "Your session has expired. Sign in again.";
   if (error === "FORBIDDEN") return "This result is not available to this account.";
   if (error === "INVALID_CYCLE_ID") return "The appraisal reference is invalid.";
-  if (error.startsWith("HEADTEACHER_RELEASED_RESULT_")) {
+  if (
+    error.startsWith("HEADTEACHER_RELEASED_RESULT_") ||
+    error.startsWith("HEADTEACHER_STAFF_FEEDBACK_RELEASED_RESULT_")
+  ) {
     return "The official result is not available or its release proof could not be verified.";
   }
   return "The result could not be loaded. Check the network and try again.";
@@ -231,6 +253,109 @@ function releasedResultContractSafe(item: HeadteacherReleasedResult) {
         /^\d{2}:\d{2}$/.test(
           item.supervisoryAssessment.visit.arrivalTime,
         )))
+  );
+}
+
+function releasedStaffFeedbackContractSafe(
+  item: HeadteacherStaffFeedbackReleasedResult,
+) {
+  return (
+    item.audience === "RELEASED_HEADTEACHER_STAFF_FEEDBACK" &&
+    item.lifecycleState === "RELEASED" &&
+    item.release.releaseMode === "INDEPENDENT_STAFF_FEEDBACK_RELEASE" &&
+    item.privacy.responseCountsIncluded === false &&
+    item.privacy.staffItemAveragesIncluded === false &&
+    item.privacy.respondentIdentitiesIncluded === false &&
+    item.privacy.individualStaffResponsesIncluded === false &&
+    item.privacy.participantListIncluded === false &&
+    item.privacy.responseHashesIncluded === false &&
+    item.privacy.reviewerIdentityIncluded === false &&
+    item.privacy.governanceAssessmentIncluded === false &&
+    item.integrity.governanceAssessmentRequired === false &&
+    item.integrity.governanceAssessmentAccessed === false &&
+    item.integrity.carrierCycleStatusMutationPerformed === false &&
+    item.integrity.combinedWeightingDefined === false &&
+    item.integrity.scoreMutationAllowed === false &&
+    item.staffFeedback.sections.length === 4
+  );
+}
+
+function IndependentStaffFeedbackReleasedView(props: {
+  result: HeadteacherStaffFeedbackReleasedResult;
+}) {
+  return (
+    <section className={panelClass("p-4 sm:p-5")}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-200">
+            Released Staff Feedback · aggregate only
+          </p>
+          <h2 className="mt-2 text-xl font-black text-white">
+            Confidential staff-feedback result
+          </h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#C9CDD6]">
+            This result is independent of Governance Appraisal evidence. No respondent identity, individual form, response count or staff item-level score is included.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-4 py-3 text-sm font-bold text-emerald-100">
+          Release verified
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-[24px] border border-cyan-300/20 bg-cyan-400/10 p-5">
+        <p className="text-xs font-black uppercase tracking-[0.14em] text-cyan-100">
+          Overall staff-feedback average
+        </p>
+        <p className="mt-2 text-4xl font-black text-white">
+          {percentage(props.result.staffFeedback.overallPercentage)}
+        </p>
+      </div>
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        {props.result.staffFeedback.sections.map((section) => (
+          <article
+            key={section.sectionKey}
+            className="rounded-[24px] border border-white/10 bg-[#0C1730] p-4"
+          >
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-cyan-200">
+              Section {section.sectionOrder}
+            </p>
+            <h3 className="mt-2 text-base font-black leading-6 text-white">
+              {section.sectionTitle}
+            </h3>
+            <p className="mt-3 text-2xl font-black text-white">
+              {percentage(section.averagePercentage)}
+            </p>
+          </article>
+        ))}
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-2xl border border-white/10 bg-[#0C1730] p-4">
+          <p className="text-xs text-[#8F98A8]">Released</p>
+          <p className="mt-1 text-sm font-black text-white">
+            {dateLabel(props.result.cycle.releasedAt)}
+          </p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-[#0C1730] p-4">
+          <p className="text-xs text-[#8F98A8]">Proof reference</p>
+          <p className="mt-1 font-mono text-sm font-black text-white">
+            {props.result.release.releaseProofHash.slice(0, 12)}…
+          </p>
+        </div>
+      </div>
+
+      {props.result.release.releaseNoteIncluded ? (
+        <div className="mt-4 rounded-2xl border border-white/10 bg-[#0C1730] p-4">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#E8C96A]">
+            Director release note
+          </p>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-[#F7F4ED]">
+            {props.result.release.releaseNote}
+          </p>
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -975,6 +1100,8 @@ export default function HeadteacherReleasedResultClient({ initialState }: Props)
   const [appraisalState, setAppraisalState] =
     useState<HeadteacherOwnAppraisalReadState | null>(initialState);
   const [result, setResult] = useState<HeadteacherReleasedResult | null>(null);
+  const [staffResult, setStaffResult] =
+    useState<HeadteacherStaffFeedbackReleasedResult | null>(null);
   const [resultView, setResultView] =
     useState<ReleasedResultView>("OVERVIEW");
   const [loading, setLoading] = useState(false);
@@ -988,6 +1115,54 @@ export default function HeadteacherReleasedResultClient({ initialState }: Props)
     appraisalState?.canViewReleasedAppraisal === true &&
     appraisalState.cycleStatus === "RELEASED" &&
     Boolean(appraisalState.cycleId);
+  const staffFeedbackReleased =
+    appraisalState?.canViewReleasedStaffFeedback === true &&
+    Boolean(appraisalState.cycleId);
+
+  async function loadReleasedStaffFeedback() {
+    if (!staffFeedbackReleased || !appraisalState?.cycleId || loading) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `/api/headteacher/headteacher-appraisal/${encodeURIComponent(appraisalState.cycleId)}/released-staff-feedback`,
+        {
+          method: "GET",
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        },
+      );
+      const payload = (await response.json().catch(() => null)) as
+        | ReleasedStaffFeedbackApiResponse
+        | null;
+      if (!response.ok || !payload?.ok) {
+        setStaffResult(null);
+        setError(
+          errorMessage(
+            payload && !payload.ok ? payload.error : "REQUEST_FAILED",
+          ),
+        );
+        return;
+      }
+      if (!releasedStaffFeedbackContractSafe(payload.item)) {
+        setStaffResult(null);
+        setError(
+          "The released Staff Feedback privacy or integrity contract could not be verified. No evidence was displayed.",
+        );
+        return;
+      }
+      setStaffResult(payload.item);
+    } catch {
+      setStaffResult(null);
+      setError(
+        "The released Staff Feedback could not be loaded. Check the network and try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function loadReleasedResult() {
     if (!released || !appraisalState?.cycleId || loading) return;
@@ -1120,6 +1295,7 @@ export default function HeadteacherReleasedResultClient({ initialState }: Props)
 
       setAppraisalState(payload.state);
       setResult(null);
+      setStaffResult(null);
       setResultView("OVERVIEW");
       setRequestNotice(
         "Request submitted. The Director will review it before staff feedback opens.",
@@ -1200,9 +1376,9 @@ export default function HeadteacherReleasedResultClient({ initialState }: Props)
                 {guidance.message}
               </p>
 
-              {appraisalState?.releasedAt ? (
+              {appraisalState?.staffFeedbackReleasedAt || appraisalState?.releasedAt ? (
                 <p className="mt-2 text-xs font-semibold text-[#AEB6C4]">
-                  Released {dateLabel(appraisalState.releasedAt)}
+                  Released {dateLabel(appraisalState.staffFeedbackReleasedAt || appraisalState.releasedAt)}
                 </p>
               ) : null}
             </div>
@@ -1270,7 +1446,10 @@ export default function HeadteacherReleasedResultClient({ initialState }: Props)
                 },
                 {
                   label: "4. Official review",
-                  complete: Boolean(appraisalState?.releasedAt),
+                  complete: Boolean(
+                    appraisalState?.staffFeedbackReleasedAt ||
+                      appraisalState?.releasedAt,
+                  ),
                   active: lifecycleStep(appraisalState, [
                     "RESPONSES_CLOSED_AWAITING_REVIEW",
                     "DIRECTOR_REVIEWING_APPRAISAL",
@@ -1278,8 +1457,12 @@ export default function HeadteacherReleasedResultClient({ initialState }: Props)
                 },
                 {
                   label: "5. Released result",
-                  complete: Boolean(appraisalState?.releasedAt),
+                  complete: Boolean(
+                    appraisalState?.staffFeedbackReleasedAt ||
+                      appraisalState?.releasedAt,
+                  ),
                   active: lifecycleStep(appraisalState, [
+                    "VIEW_RELEASED_STAFF_FEEDBACK",
                     "VIEW_RELEASED_APPRAISAL",
                   ]),
                 },
@@ -1310,6 +1493,37 @@ export default function HeadteacherReleasedResultClient({ initialState }: Props)
           </div>
         </div>
       </section>
+
+      {staffFeedbackReleased ? (
+        <section className={panelClass("p-4 sm:p-5")}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-[#F7F4ED]">
+                Released Staff Feedback
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-[#C9CDD6]">
+                This confidential aggregate was released independently. It does not wait for a Governance Appraisal.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void loadReleasedStaffFeedback()}
+              disabled={loading}
+              className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-5 py-3 text-sm font-extrabold text-[#071A3D] transition hover:brightness-105 disabled:cursor-wait disabled:opacity-70"
+            >
+              {loading
+                ? "Loading Staff Feedback…"
+                : staffResult
+                  ? "Reload Staff Feedback"
+                  : "View released Staff Feedback"}
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      {staffResult ? (
+        <IndependentStaffFeedbackReleasedView result={staffResult} />
+      ) : null}
 
       {released ? (
         <section className={panelClass("p-4 sm:p-5")}>

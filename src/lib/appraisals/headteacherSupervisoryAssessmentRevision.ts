@@ -32,7 +32,13 @@ export const HEADTEACHER_SUPERVISORY_REVISION_POLICY = {
   providerCallsAllowed: false,
   transactionIsolation: "SERIALIZABLE",
   transactionMaxWaitMs: 10_000,
-  transactionTimeoutMs: 15_000,
+  transactionTimeoutMs: 25_000,
+  revisionSourceReadMode: "OUTSIDE_WRITE_TRANSACTION",
+  writeTransactionFullSourceRead: false,
+  writeTransactionCurrentAuthorityRevalidated: true,
+  directorReturnRevisionAdmission: true,
+  directorReturnCarrierStatusMutationRequired: false,
+  directorReturnCarrierTimestampMutationRequired: false,
 } as const;
 
 const SUPERVISORY_REVISION_CREATED_AUDIT_ACTION =
@@ -286,6 +292,12 @@ export type HeadteacherSupervisoryRevisionTransactionClient = {
 
 export type HeadteacherSupervisoryRevisionDatabase = {
   appraisalAssessment: AssessmentDelegate;
+  membership: {
+    findFirst(args: unknown): Promise<TargetMembershipRecord | null>;
+  };
+  governanceOfficerAssignment: {
+    findMany(args: unknown): Promise<AssignmentRecord[]>;
+  };
   $transaction<T>(
     operation: (tx: HeadteacherSupervisoryRevisionTransactionClient) => Promise<T>,
     options?: {
@@ -529,6 +541,212 @@ function assertCycleBoundary(record: AssessmentRecord) {
       cycleStatus: normalized(record.cycle.status),
     });
   }
+}
+
+type ReturnedRevisionAdmission =
+  | {
+      mode: "LEGACY_UNDER_REVIEW_RETURN";
+      review: ReviewRecord;
+      decisionContractHash: null;
+      decisionRequestHash: null;
+    }
+  | {
+      mode: "DIRECTOR_GOVERNANCE_RETURN";
+      review: ReviewRecord;
+      decisionContractHash: string;
+      decisionRequestHash: string;
+    };
+
+function isSha256(value: unknown) {
+  return /^[a-f0-9]{64}$/i.test(clean(value));
+}
+
+function directorReturnDecisionContractHash(
+  record: AssessmentRecord,
+  review: ReviewRecord,
+) {
+  return hashJson({
+    schemaVersion: 1,
+    workflow: HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.workflow,
+    evidenceStream: "GOVERNANCE_SUPERVISORY_ASSESSMENT",
+    reviewId: review.id,
+    reviewStage: review.stage,
+    assessmentId: record.id,
+    assessmentRevision: record.revision,
+    action: "RETURN",
+    reviewerMayRewriteScores: false,
+    scoreMutationAllowed: false,
+    staffFeedbackIncluded: false,
+    combinedWeightingDefined: false,
+  });
+}
+
+function directorReturnDecisionRequestHash(input: {
+  record: AssessmentRecord;
+  review: ReviewRecord;
+  contractHash: string;
+}) {
+  const metadata = objectValue(input.review.metadata);
+  return hashJson({
+    schemaVersion: 1,
+    workflow: HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.workflow,
+    reviewId: input.review.id,
+    reviewStage: input.review.stage,
+    assessmentId: input.record.id,
+    assessmentRevision: input.record.revision,
+    assessmentHash: clean(input.record.assessmentHash).toLowerCase(),
+    reviewEvidenceHash: clean(metadata.reviewEvidenceHash).toLowerCase(),
+    decisionContractHash: input.contractHash,
+    action: "RETURN",
+    note: clean(input.review.note) || null,
+    reviewerMayRewriteScores: false,
+    scoreMutationAllowed: false,
+    staffFeedbackIncluded: false,
+  });
+}
+
+function directorGovernanceReturnAdmission(
+  record: AssessmentRecord,
+  review: ReviewRecord,
+): ReturnedRevisionAdmission | null {
+  const assessmentMetadata = objectValue(record.metadata);
+  const reviewMetadata = objectValue(review.metadata);
+  const cycleReview = objectValue(
+    objectValue(record.cycle.metadata).directorGovernanceReview,
+  );
+
+  const hasDirectorReturnMarker =
+    Boolean(clean(assessmentMetadata.returnedByDirectorReviewId)) ||
+    clean(reviewMetadata.reviewType) === "DIRECTOR_GOVERNANCE_REVIEW" ||
+    clean(cycleReview.state) === "RETURNED_FOR_CORRECTION";
+
+  if (!hasDirectorReturnMarker) return null;
+
+  const reviewEvidenceHash = clean(reviewMetadata.reviewEvidenceHash).toLowerCase();
+  const storedContractHash = clean(reviewMetadata.decisionContractHash).toLowerCase();
+  const storedRequestHash = clean(reviewMetadata.decisionRequestHash).toLowerCase();
+  const expectedContractHash = directorReturnDecisionContractHash(record, review);
+  const expectedRequestHash = directorReturnDecisionRequestHash({
+    record,
+    review,
+    contractHash: expectedContractHash,
+  });
+  const decidedAt = review.decidedAt?.toISOString() ?? null;
+  const note = clean(review.note);
+  const carrierStatus = normalized(record.cycle.status);
+
+  if (
+    !record.cycle.openedAt ||
+    record.cycle.cancelledAt ||
+    carrierStatus === "CANCELLED"
+  ) {
+    fail(
+      "HEADTEACHER_SUPERVISORY_REVISION_DIRECTOR_RETURN_CARRIER_INVALID",
+      409,
+      { cycleStatus: carrierStatus },
+    );
+  }
+
+  if (
+    review.assessmentId !== record.id ||
+    review.cycleId !== record.cycleId ||
+    normalized(review.decision) !== "RETURNED" ||
+    !review.decidedAt ||
+    note.length < 3 ||
+    clean(review.reviewerAssignmentId).length === 0 ||
+    clean(reviewMetadata.reviewType) !== "DIRECTOR_GOVERNANCE_REVIEW" ||
+    normalized(reviewMetadata.reviewerRole) !== "DISTRICT_DIRECTOR" ||
+    Number(reviewMetadata.reviewStage) !== review.stage ||
+    clean(reviewMetadata.assessmentId) !== record.id ||
+    Number(reviewMetadata.assessmentRevision) !== record.revision ||
+    clean(reviewMetadata.assessmentHash).toLowerCase() !==
+      clean(record.assessmentHash).toLowerCase() ||
+    !isSha256(reviewEvidenceHash) ||
+    clean(reviewMetadata.decisionAction) !== "RETURN" ||
+    normalized(reviewMetadata.decidedByRole) !== "DISTRICT_DIRECTOR" ||
+    clean(reviewMetadata.decidedAt) !== decidedAt ||
+    reviewMetadata.revisionRequired !== true ||
+    reviewMetadata.releasePerformed !== false ||
+    reviewMetadata.immutableEvidenceReverified !== true ||
+    reviewMetadata.reviewerMayRewriteScores !== false ||
+    reviewMetadata.reviewerMayRewriteVisitEvidence !== false ||
+    reviewMetadata.scoreMutationPerformed !== false ||
+    reviewMetadata.visitEvidenceMutationPerformed !== false ||
+    reviewMetadata.staffFeedbackIncluded !== false ||
+    reviewMetadata.respondentIdentitiesIncluded !== false ||
+    reviewMetadata.combinedWeightingDefined !== false ||
+    reviewMetadata.providerCalled !== false ||
+    clean(reviewMetadata.reasonHash).toLowerCase() !==
+      hashJson({ note }).toLowerCase() ||
+    Number(reviewMetadata.reasonLength) !== note.length ||
+    !isSha256(storedContractHash) ||
+    storedContractHash !== expectedContractHash ||
+    !isSha256(storedRequestHash) ||
+    storedRequestHash !== expectedRequestHash ||
+    clean(assessmentMetadata.returnedByDirectorReviewId) !== review.id ||
+    Number(assessmentMetadata.returnedByDirectorReviewStage) !== review.stage ||
+    clean(assessmentMetadata.returnDecisionContractHash).toLowerCase() !==
+      expectedContractHash ||
+    clean(assessmentMetadata.returnDecisionRequestHash).toLowerCase() !==
+      expectedRequestHash ||
+    clean(assessmentMetadata.returnedAt) !== decidedAt ||
+    assessmentMetadata.reviewerMayRewriteScores !== false ||
+    assessmentMetadata.scoreMutationPerformed !== false ||
+    assessmentMetadata.separateFromStaffFeedback !== true ||
+    assessmentMetadata.combinedWeightingDefined !== false ||
+    assessmentMetadata.providerCalled !== false ||
+    clean(cycleReview.state) !== "RETURNED_FOR_CORRECTION" ||
+    clean(cycleReview.assessmentId) !== record.id ||
+    Number(cycleReview.assessmentRevision) !== record.revision ||
+    clean(cycleReview.sourceReviewId) !== review.id ||
+    Number(cycleReview.sourceReviewStage) !== review.stage ||
+    clean(cycleReview.decision) !== "RETURN" ||
+    clean(cycleReview.decisionContractHash).toLowerCase() !==
+      expectedContractHash ||
+    clean(cycleReview.decisionRequestHash).toLowerCase() !==
+      expectedRequestHash ||
+    clean(cycleReview.currentReviewId) !== review.id ||
+    Number(cycleReview.currentReviewStage) !== review.stage ||
+    cycleReview.revisionRequired !== true ||
+    Boolean(clean(cycleReview.releaseProofHash)) ||
+    Boolean(clean(cycleReview.releasedAt)) ||
+    cycleReview.staffFeedbackIncluded !== false ||
+    cycleReview.respondentIdentitiesIncluded !== false ||
+    cycleReview.carrierCycleStatusMutationPerformed !== false ||
+    cycleReview.carrierCycleTimestampMutationPerformed !== false ||
+    cycleReview.reviewerMayRewriteScores !== false ||
+    cycleReview.scoreMutationAllowed !== false ||
+    cycleReview.combinedWeightingDefined !== false ||
+    cycleReview.providerCalled !== false
+  ) {
+    fail(
+      "HEADTEACHER_SUPERVISORY_REVISION_DIRECTOR_RETURN_PROVENANCE_DRIFT",
+      409,
+    );
+  }
+
+  return {
+    mode: "DIRECTOR_GOVERNANCE_RETURN",
+    review,
+    decisionContractHash: expectedContractHash,
+    decisionRequestHash: expectedRequestHash,
+  };
+}
+
+function returnedRevisionAdmission(
+  record: AssessmentRecord,
+  review: ReviewRecord,
+): ReturnedRevisionAdmission {
+  const directorAdmission = directorGovernanceReturnAdmission(record, review);
+  if (directorAdmission) return directorAdmission;
+
+  assertCycleBoundary(record);
+  return {
+    mode: "LEGACY_UNDER_REVIEW_RETURN",
+    review,
+    decisionContractHash: null,
+    decisionRequestHash: null,
+  };
 }
 
 function instrumentSections(record: AssessmentRecord) {
@@ -854,7 +1072,10 @@ function assignmentInputs(rows: AssignmentRecord[]): HeadteacherSupervisoryGover
 }
 
 async function assertCurrentAuthority(
-  tx: HeadteacherSupervisoryRevisionTransactionClient,
+  tx: Pick<
+    HeadteacherSupervisoryRevisionTransactionClient,
+    "membership" | "governanceOfficerAssignment"
+  >,
   record: AssessmentRecord,
   input: { actorUserId: string; actorRoleName: string; now: Date },
 ) {
@@ -989,6 +1210,7 @@ function existingRevisionSummary(input: {
   returnHash: string;
   sourceHash: string;
   visitHash: string;
+  returnAdmission: ReturnedRevisionAdmission;
   visitEvidence: {
     contextSchemaVersion: 1 | 2;
     visitDetailsSchemaVersion: 1 | null;
@@ -1016,6 +1238,14 @@ function existingRevisionSummary(input: {
         input.visitEvidence.visitDetailsSchemaVersion) ||
     metadata.officialVisitDetailsIncluded !==
       input.visitEvidence.officialVisitDetailsIncluded ||
+    clean(metadata.returnAdmissionMode) !== input.returnAdmission.mode ||
+    (input.returnAdmission.mode === "DIRECTOR_GOVERNANCE_RETURN"
+      ? clean(metadata.returnDecisionContractHash).toLowerCase() !==
+          input.returnAdmission.decisionContractHash ||
+        clean(metadata.returnDecisionRequestHash).toLowerCase() !==
+          input.returnAdmission.decisionRequestHash
+      : metadata.returnDecisionContractHash != null ||
+        metadata.returnDecisionRequestHash != null) ||
     metadata.reviewerMayRewriteScores !== false ||
     metadata.preserveVisitContext !== true
   ) {
@@ -1053,10 +1283,18 @@ function buildRevisionSummary(
 }
 
 function isRetryableConflict(error: unknown) {
-  return Boolean(
-    error &&
-      typeof error === "object" &&
-      ["P2002", "P2034"].includes(clean((error as { code?: unknown }).code)),
+  const code =
+    error && typeof error === "object"
+      ? clean((error as { code?: unknown }).code)
+      : "";
+  const message =
+    error && typeof error === "object"
+      ? clean((error as { message?: unknown }).message)
+      : "";
+
+  return (
+    ["P2002", "P2034"].includes(code) ||
+    message === "HEADTEACHER_SUPERVISORY_REVISION_WRITE_RACE"
   );
 }
 
@@ -1072,6 +1310,8 @@ function deriveState(record: AssessmentRecord): HeadteacherSupervisoryAssessorRe
   const status = normalized(record.status) as AppraisalAssessmentStatus;
   const cycleStatus = normalized(record.cycle.status);
   const returnReview = status === "RETURNED" ? latestReturnedReview(record) : null;
+  const directorReturnAdmission =
+    returnReview ? directorGovernanceReturnAdmission(record, returnReview) : null;
   const inheritedReturnReason =
     record.revision > 1
       ? clean(objectValue(record.metadata).returnReason)
@@ -1083,7 +1323,12 @@ function deriveState(record: AssessmentRecord): HeadteacherSupervisoryAssessorRe
   const canFinalize = false;
   let canCreateRevision = false;
 
-  if (cycleStatus === "RELEASED") {
+  if (status === "RETURNED" && directorReturnAdmission) {
+    state = "RETURNED_REVISION_REQUIRED";
+    label = "Revision required";
+    description = "The returned assessment remains locked. Create a new revision to respond.";
+    canCreateRevision = true;
+  } else if (cycleStatus === "RELEASED") {
     state = "RELEASED_READ_ONLY";
     label = "Appraisal released";
     description = "This supervisory evidence is locked as part of the released appraisal.";
@@ -1104,7 +1349,9 @@ function deriveState(record: AssessmentRecord): HeadteacherSupervisoryAssessorRe
     state = "RETURNED_REVISION_REQUIRED";
     label = "Revision required";
     description = "The returned assessment remains locked. Create a new revision to respond.";
-    canCreateRevision = cycleStatus === "UNDER_REVIEW" && Boolean(returnReview);
+    canCreateRevision = Boolean(
+      returnReview && returnedRevisionAdmission(record, returnReview),
+    );
   } else {
     state = "SUPERSEDED_READ_ONLY";
     label = "Superseded";
@@ -1156,94 +1403,175 @@ export async function readHeadteacherSupervisoryAssessorState(
   return deriveState(record);
 }
 
-async function performRevisionTransaction(input: {
+type RevisionCreatePreflight = {
+  original: AssessmentRecord;
+  review: ReviewRecord;
+  returnAdmission: ReturnedRevisionAdmission;
+  evidence: ReturnType<typeof assertFinalizedSourceEvidence>;
+  sourceHash: string;
+  reviewHash: string;
+  nextRevision: number;
+  revisionKey: string;
+};
+
+type RevisionPreflight =
+  | {
+      outcome: "EXISTING_MATCH";
+      result: CreateReturnedHeadteacherSupervisoryRevisionResult;
+    }
+  | {
+      outcome: "CREATE";
+      value: RevisionCreatePreflight;
+    };
+
+async function prepareRevisionPreflight(input: {
   database: HeadteacherSupervisoryRevisionDatabase;
   actorUserId: string;
   actorRoleName: string;
   returnedAssessmentId: string;
-  reqId: string;
-  ip: string | null;
-  userAgent: string | null;
   now: Date;
-}): Promise<CreateReturnedHeadteacherSupervisoryRevisionResult> {
-  return input.database.$transaction(async (tx) => {
-    const original = await tx.appraisalAssessment.findUnique({
-      where: { id: input.returnedAssessmentId },
-      select: assessmentSelect,
-    });
-    if (!original) fail("HEADTEACHER_SUPERVISORY_REVISION_ASSESSMENT_NOT_FOUND", 404);
-    if (original.assessorUserId !== input.actorUserId) {
-      fail("HEADTEACHER_SUPERVISORY_REVISION_ASSESSOR_ONLY", 403);
-    }
-    if (!Number.isInteger(original.revision) || original.revision < 1) {
-      fail("HEADTEACHER_SUPERVISORY_REVISION_NUMBER_INVALID", 409);
-    }
-    assertCycleBoundary(original);
-    const review = latestReturnedReview(original);
-    const evidence = assertFinalizedSourceEvidence(original);
-    const sourceHash = clean(original.assessmentHash).toLowerCase();
-    const reviewHash = returnEvidenceHash(original, review);
-    const authority = await assertCurrentAuthority(tx, original, {
-      actorUserId: input.actorUserId,
-      actorRoleName: input.actorRoleName,
-      now: input.now,
-    });
-    const nextRevision = original.revision + 1;
-    const existing = await tx.appraisalAssessment.findUnique({
-      where: {
-        cycleId_assessorUserId_revision: {
-          cycleId: original.cycleId,
-          assessorUserId: original.assessorUserId,
-          revision: nextRevision,
-        },
+}): Promise<RevisionPreflight> {
+  const original = await input.database.appraisalAssessment.findUnique({
+    where: { id: input.returnedAssessmentId },
+    select: assessmentSelect,
+  });
+  if (!original) {
+    fail("HEADTEACHER_SUPERVISORY_REVISION_ASSESSMENT_NOT_FOUND", 404);
+  }
+  if (original.assessorUserId !== input.actorUserId) {
+    fail("HEADTEACHER_SUPERVISORY_REVISION_ASSESSOR_ONLY", 403);
+  }
+  if (!Number.isInteger(original.revision) || original.revision < 1) {
+    fail("HEADTEACHER_SUPERVISORY_REVISION_NUMBER_INVALID", 409);
+  }
+
+  const review = latestReturnedReview(original);
+  const returnAdmission = returnedRevisionAdmission(original, review);
+  const evidence = assertFinalizedSourceEvidence(original);
+  const sourceHash = clean(original.assessmentHash).toLowerCase();
+  const reviewHash = returnEvidenceHash(original, review);
+
+  // Full target + actor authority validation is intentionally read-only and
+  // happens before the write transaction so a slow remote read cannot consume
+  // the bounded SERIALIZABLE write window.
+  await assertCurrentAuthority(input.database, original, {
+    actorUserId: input.actorUserId,
+    actorRoleName: input.actorRoleName,
+    now: input.now,
+  });
+
+  const nextRevision = original.revision + 1;
+  const existing = await input.database.appraisalAssessment.findUnique({
+    where: {
+      cycleId_assessorUserId_revision: {
+        cycleId: original.cycleId,
+        assessorUserId: original.assessorUserId,
+        revision: nextRevision,
       },
-      select: assessmentSelect,
-    });
-    if (existing) {
-      if (normalized(original.status) !== "SUPERSEDED") {
-        fail("HEADTEACHER_SUPERVISORY_REVISION_ORIGINAL_NOT_SUPERSEDED", 409);
-      }
-      return {
-        outcome: "EXISTING_MATCH" as const,
+    },
+    select: assessmentSelect,
+  });
+
+  if (existing) {
+    if (normalized(original.status) !== "SUPERSEDED") {
+      fail("HEADTEACHER_SUPERVISORY_REVISION_ORIGINAL_NOT_SUPERSEDED", 409);
+    }
+    return {
+      outcome: "EXISTING_MATCH",
+      result: {
+        outcome: "EXISTING_MATCH",
         originalAssessmentId: original.id,
-        originalStatus: "SUPERSEDED" as const,
+        originalStatus: "SUPERSEDED",
         revision: existingRevisionSummary({
           original,
           existing,
           returnHash: reviewHash,
           sourceHash,
           visitHash: evidence.contextHash,
+          returnAdmission,
           visitEvidence: evidence.visitEvidence,
         }),
-      };
-    }
-    if (normalized(original.status) !== "RETURNED") {
-      fail("HEADTEACHER_SUPERVISORY_REVISION_RETURNED_STATUS_REQUIRED", 409);
-    }
-    const plan = planReturnedHeadteacherSupervisoryRevision({
-      assessmentId: original.id,
-      status: original.status,
-      revisionNumber: original.revision,
-      assessorUserId: original.assessorUserId,
-      targetUserId: original.cycle.targetUserId,
-      returnReason: clean(review.note),
-      reviewerScoreEdits: objectValue(review.metadata).scoreEdits,
-    });
-    if (!plan.ok) {
-      fail(`HEADTEACHER_SUPERVISORY_REVISION_PLAN_${plan.code}`, 409);
-    }
-    if (plan.value.newRevision.revisionNumber !== nextRevision) {
-      fail("HEADTEACHER_SUPERVISORY_REVISION_PLAN_DRIFT", 409);
-    }
+      },
+    };
+  }
 
-    const revisionKey = hashJson({
-      schemaVersion: HEADTEACHER_SUPERVISORY_REVISION_POLICY.schemaVersion,
-      originalAssessmentId: original.id,
+  if (normalized(original.status) !== "RETURNED") {
+    fail("HEADTEACHER_SUPERVISORY_REVISION_RETURNED_STATUS_REQUIRED", 409);
+  }
+
+  const plan = planReturnedHeadteacherSupervisoryRevision({
+    assessmentId: original.id,
+    status: original.status,
+    revisionNumber: original.revision,
+    assessorUserId: original.assessorUserId,
+    targetUserId: original.cycle.targetUserId,
+    returnReason: clean(review.note),
+    reviewerScoreEdits: objectValue(review.metadata).scoreEdits,
+  });
+  if (!plan.ok) {
+    fail(`HEADTEACHER_SUPERVISORY_REVISION_PLAN_${plan.code}`, 409);
+  }
+  if (plan.value.newRevision.revisionNumber !== nextRevision) {
+    fail("HEADTEACHER_SUPERVISORY_REVISION_PLAN_DRIFT", 409);
+  }
+
+  const revisionKey = hashJson({
+    schemaVersion: HEADTEACHER_SUPERVISORY_REVISION_POLICY.schemaVersion,
+    originalAssessmentId: original.id,
+    nextRevision,
+    sourceAssessmentHash: sourceHash,
+    returnEvidenceHash: reviewHash,
+    returnAdmissionMode: returnAdmission.mode,
+    returnDecisionContractHash: returnAdmission.decisionContractHash,
+    returnDecisionRequestHash: returnAdmission.decisionRequestHash,
+    visitContextHash: evidence.contextHash,
+  });
+
+  return {
+    outcome: "CREATE",
+    value: {
+      original,
+      review,
+      returnAdmission,
+      evidence,
+      sourceHash,
+      reviewHash,
       nextRevision,
-      sourceAssessmentHash: sourceHash,
-      returnEvidenceHash: reviewHash,
-      visitContextHash: evidence.contextHash,
+      revisionKey,
+    },
+  };
+}
+
+async function performRevisionTransaction(input: {
+  database: HeadteacherSupervisoryRevisionDatabase;
+  actorUserId: string;
+  actorRoleName: string;
+  reqId: string;
+  ip: string | null;
+  userAgent: string | null;
+  now: Date;
+  preflight: RevisionCreatePreflight;
+}): Promise<CreateReturnedHeadteacherSupervisoryRevisionResult> {
+  const {
+    original,
+    review,
+    returnAdmission,
+    evidence,
+    sourceHash,
+    reviewHash,
+    nextRevision,
+    revisionKey,
+  } = input.preflight;
+
+  return input.database.$transaction(async (tx) => {
+    // Revalidate current authority inside the write transaction. The expensive
+    // immutable source/evidence read remains outside this bounded write phase.
+    const authority = await assertCurrentAuthority(tx, original, {
+      actorUserId: input.actorUserId,
+      actorRoleName: input.actorRoleName,
+      now: input.now,
     });
+
     const created = await tx.appraisalAssessment.create({
       data: {
         cycleId: original.cycleId,
@@ -1264,7 +1592,8 @@ async function performRevisionTransaction(input: {
         metadata: {
           workflow: HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.workflow,
           evidenceStream: "GOVERNANCE_SUPERVISORY_ASSESSMENT",
-          revisionSchemaVersion: HEADTEACHER_SUPERVISORY_REVISION_POLICY.schemaVersion,
+          revisionSchemaVersion:
+            HEADTEACHER_SUPERVISORY_REVISION_POLICY.schemaVersion,
           revisionKey,
           sourceAssessmentId: original.id,
           sourceAssessmentHash: sourceHash,
@@ -1272,6 +1601,9 @@ async function performRevisionTransaction(input: {
           returnReviewStage: review.stage,
           returnEvidenceHash: reviewHash,
           returnReason: clean(review.note),
+          returnAdmissionMode: returnAdmission.mode,
+          returnDecisionContractHash: returnAdmission.decisionContractHash,
+          returnDecisionRequestHash: returnAdmission.decisionRequestHash,
           visitContextHash: evidence.contextHash,
           visitContextSchemaVersion:
             evidence.visitEvidence.contextSchemaVersion,
@@ -1288,7 +1620,24 @@ async function performRevisionTransaction(input: {
           providerCalled: false,
         },
       },
-      select: assessmentSelect,
+      select: {
+        id: true,
+        cycleId: true,
+        instrumentVersionId: true,
+        assessorUserId: true,
+        assessorAssignmentId: true,
+        status: true,
+        revision: true,
+        priorAssessmentId: true,
+        dateObserved: true,
+        createdAt: true,
+        cycle: {
+          select: {
+            targetUserId: true,
+            targetTenantId: true,
+          },
+        },
+      },
     });
 
     const copied = await tx.appraisalAssessmentScore.createMany({
@@ -1304,7 +1653,13 @@ async function performRevisionTransaction(input: {
 
     const originalMetadata = objectValue(original.metadata);
     const updated = await tx.appraisalAssessment.updateMany({
-      where: { id: original.id, status: "RETURNED" },
+      where: {
+        id: original.id,
+        status: "RETURNED",
+        revision: original.revision,
+        assessorUserId: original.assessorUserId,
+        assessmentHash: sourceHash,
+      },
       data: {
         status: "SUPERSEDED",
         metadata: {
@@ -1312,13 +1667,16 @@ async function performRevisionTransaction(input: {
           supersededByAssessmentId: created.id,
           supersededAt: input.now.toISOString(),
           returnEvidenceHash: reviewHash,
+          returnAdmissionMode: returnAdmission.mode,
+          returnDecisionContractHash: returnAdmission.decisionContractHash,
+          returnDecisionRequestHash: returnAdmission.decisionRequestHash,
           reviewerMayRewriteScores: false,
           providerCalled: false,
         },
       },
     });
     if (updated.count !== 1) {
-      fail("HEADTEACHER_SUPERVISORY_REVISION_ORIGINAL_TRANSITION_CONFLICT", 409);
+      fail("HEADTEACHER_SUPERVISORY_REVISION_WRITE_RACE", 409);
     }
 
     await tx.auditLog.create({
@@ -1345,6 +1703,9 @@ async function performRevisionTransaction(input: {
           scopeLevel: authority.scopeLevel,
           sourceAssessmentHash: sourceHash,
           returnEvidenceHash: reviewHash,
+          returnAdmissionMode: returnAdmission.mode,
+          returnDecisionContractHash: returnAdmission.decisionContractHash,
+          returnDecisionRequestHash: returnAdmission.decisionRequestHash,
           visitContextHash: evidence.contextHash,
           visitContextSchemaVersion:
             evidence.visitEvidence.contextSchemaVersion,
@@ -1362,19 +1723,12 @@ async function performRevisionTransaction(input: {
       },
     });
 
-    const createdWithScores: AssessmentRecord = {
-      ...created,
-      scores: scoreCopyRows(original, created.id).map((row, index) => ({
-        id: `copied-${index + 1}`,
-        ...row,
-      })),
-    };
     return {
       outcome: "CREATED" as const,
       originalAssessmentId: original.id,
       originalStatus: "SUPERSEDED" as const,
       revision: buildRevisionSummary(
-        createdWithScores,
+        created,
         original,
         reviewHash,
         sourceHash,
@@ -1401,15 +1755,27 @@ export async function createReturnedHeadteacherSupervisoryAssessmentRevision(
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      return await performRevisionTransaction({
+      const preflight = await prepareRevisionPreflight({
         database,
         actorUserId,
         actorRoleName,
         returnedAssessmentId,
+        now,
+      });
+
+      if (preflight.outcome === "EXISTING_MATCH") {
+        return preflight.result;
+      }
+
+      return await performRevisionTransaction({
+        database,
+        actorUserId,
+        actorRoleName,
         reqId,
         ip: input.ip ?? null,
         userAgent: input.userAgent ?? null,
         now,
+        preflight: preflight.value,
       });
     } catch (error) {
       if (attempt === 0 && isRetryableConflict(error)) continue;

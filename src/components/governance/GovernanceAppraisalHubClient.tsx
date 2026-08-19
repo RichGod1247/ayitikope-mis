@@ -197,25 +197,34 @@ export default function GovernanceAppraisalHubClient({
                   official four-section, 34-indicator supervisory assessment.
                 </p>
 
-                <Link
-                  href="/governance/appraisals/headteacher-supervisory"
-                  className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-3 text-center text-sm font-black text-[#071A3D] transition hover:brightness-105"
-                >
-                  Assess Headteacher
-                </Link>
-
                 <div
-                  aria-disabled="true"
-                  className="mt-3 rounded-2xl border border-white/10 bg-black/20 px-3 py-3"
+                  className={`mt-4 grid gap-3 ${
+                    role === "HEAD_OF_SUPERVISION" ? "sm:grid-cols-2" : ""
+                  }`}
                 >
-                  <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
-                    Review reports · next phase
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-slate-300">
-                    Headteacher report review stays locked until its exact
-                    authorized queue is grounded for this dashboard.
-                  </p>
+                  <Link
+                    href="/governance/appraisals/headteacher-supervisory"
+                    className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-3 text-center text-sm font-black text-[#071A3D] transition hover:brightness-105"
+                  >
+                    Assess Headteacher
+                  </Link>
+
+                  {role === "HEAD_OF_SUPERVISION" ? (
+                    <Link
+                      href="/governance/appraisals/headteacher-supervisory/review"
+                      className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl border border-indigo-300/30 bg-indigo-400/15 px-4 py-3 text-center text-sm font-black text-indigo-50 transition hover:bg-indigo-400/25"
+                    >
+                      Review Headteacher
+                    </Link>
+                  ) : null}
                 </div>
+
+                {role === "HEAD_OF_SUPERVISION" ? (
+                  <p className="mt-3 text-xs leading-5 text-indigo-100/75">
+                    Review finalized SISSO and Basic School Coordinator
+                    Headteacher reports assigned to the Head of Supervision.
+                  </p>
+                ) : null}
               </article>
 
               <LockedAction

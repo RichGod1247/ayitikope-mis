@@ -28,6 +28,7 @@ export const HEADTEACHER_OWN_APPRAISAL_STATE_LABELS = {
   RESPONSES_CLOSED_AWAITING_REVIEW:
     "Responses closed — awaiting review",
   DIRECTOR_REVIEWING_APPRAISAL: "Director reviewing appraisal",
+  VIEW_RELEASED_STAFF_FEEDBACK: "View released staff feedback",
   VIEW_RELEASED_APPRAISAL: "View released appraisal",
   REQUEST_CLOSED: "Request closed",
 } as const;
@@ -79,6 +80,16 @@ export type HeadteacherOwnAppraisalReadState = {
   cancelledAt: string | null;
   canRequestNewCycle: boolean;
   canViewReleasedAppraisal: boolean;
+  canViewReleasedStaffFeedback: boolean;
+  staffFeedbackReviewState:
+    | "NOT_STARTED"
+    | "PENDING"
+    | "RETURNED"
+    | "HELD"
+    | "RELEASED";
+  staffFeedbackReviewId: string | null;
+  staffFeedbackReviewStage: number | null;
+  staffFeedbackReleasedAt: string | null;
 };
 
 export type TeacherHeadteacherAppraisalAssignmentReadState = {
@@ -129,6 +140,17 @@ export type DirectorHeadteacherAppraisalReadItem = {
   directReleaseAssessmentId: string | null;
   governanceAssessmentDirectReleased: boolean;
   governanceAssessmentId: string | null;
+  staffFeedbackReviewState:
+    | "NOT_STARTED"
+    | "PENDING"
+    | "RETURNED"
+    | "HELD"
+    | "RELEASED";
+  staffFeedbackReviewId: string | null;
+  staffFeedbackReviewStage: number | null;
+  canStartStaffFeedbackReview: boolean;
+  canDecideStaffFeedbackReview: boolean;
+  staffFeedbackReleasedAt: string | null;
 };
 
 export type DirectorHeadteacherAppraisalReadState = {
@@ -171,6 +193,13 @@ type ReadCycleRecord = {
   metadata: unknown;
   participants: Array<{
     status: AppraisalParticipantStatus;
+  }>;
+  staffFeedbackReviews: Array<{
+    id: string;
+    stage: number;
+    decision: string;
+    decidedAt: Date | null;
+    metadata: unknown;
   }>;
 };
 
@@ -381,9 +410,55 @@ async function assertActiveSchoolMembership(input: {
   return membership;
 }
 
+function staffFeedbackReviewSummary(cycle: ReadCycleRecord | null) {
+  const reviews = [...(cycle?.staffFeedbackReviews ?? [])].sort(
+    (left, right) => left.stage - right.stage,
+  );
+  const latest = reviews.at(-1) ?? null;
+  const decision = clean(latest?.decision).toUpperCase();
+  const release = objectValue(objectValue(latest?.metadata).staffFeedbackRelease);
+  const releasedAt = clean(release.releasedAt);
+  const validReleasedAt = releasedAt && !Number.isNaN(new Date(releasedAt).getTime())
+    ? releasedAt
+    : null;
+  const releaseProofHash = clean(release.releaseProofHash);
+  const released =
+    decision === "ACCEPTED" &&
+    clean(release.releaseMode) === "INDEPENDENT_STAFF_FEEDBACK_RELEASE" &&
+    release.carrierCycleStatusMutationPerformed === false &&
+    release.governanceAssessmentRequired === false &&
+    release.governanceAssessmentAccessed === false &&
+    /^[a-f0-9]{64}$/i.test(releaseProofHash) &&
+    Boolean(validReleasedAt);
+
+  const state = released
+    ? "RELEASED"
+    : decision === "PENDING"
+      ? "PENDING"
+      : decision === "RETURNED"
+        ? "RETURNED"
+        : decision === "HELD"
+          ? "HELD"
+          : "NOT_STARTED";
+
+  return {
+    state: state as "NOT_STARTED" | "PENDING" | "RETURNED" | "HELD" | "RELEASED",
+    reviewId: latest?.id ?? null,
+    stage: latest?.stage ?? null,
+    canStart: state === "NOT_STARTED" || state === "RETURNED",
+    canDecide: state === "PENDING",
+    releasedAt: released ? validReleasedAt : null,
+  };
+}
+
 function headteacherStateCode(
   status: AppraisalCycleStatus | null,
+  staffFeedbackReleased = false,
 ): HeadteacherOwnAppraisalStateCode {
+  if (staffFeedbackReleased && status !== "RELEASED") {
+    return "VIEW_RELEASED_STAFF_FEEDBACK";
+  }
+
   switch (status) {
     case null:
       return "REQUEST_APPRAISAL";
@@ -455,7 +530,11 @@ function teacherStateCode(input: {
 export function buildHeadteacherOwnAppraisalReadState(
   cycle: ReadCycleRecord | null,
 ): HeadteacherOwnAppraisalReadState {
-  const state = headteacherStateCode(cycle?.status ?? null);
+  const staffReview = staffFeedbackReviewSummary(cycle);
+  const state = headteacherStateCode(
+    cycle?.status ?? null,
+    staffReview.state === "RELEASED",
+  );
   const canRequestNewCycle =
     cycle === null ||
     cycle.status === "RELEASED" ||
@@ -478,6 +557,11 @@ export function buildHeadteacherOwnAppraisalReadState(
     cancelledAt: iso(cycle?.cancelledAt),
     canRequestNewCycle,
     canViewReleasedAppraisal: cycle?.status === "RELEASED",
+    canViewReleasedStaffFeedback: staffReview.state === "RELEASED",
+    staffFeedbackReviewState: staffReview.state,
+    staffFeedbackReviewId: staffReview.reviewId,
+    staffFeedbackReviewStage: staffReview.stage,
+    staffFeedbackReleasedAt: staffReview.releasedAt,
   };
 }
 
@@ -574,6 +658,7 @@ export function buildDirectorHeadteacherAppraisalReadItem(
       participant.status === "NOT_STARTED" ||
       participant.status === "IN_PROGRESS",
   ).length;
+  const staffReview = staffFeedbackReviewSummary(cycle);
 
   return {
     audience: "DIRECTOR",
@@ -613,6 +698,16 @@ export function buildDirectorHeadteacherAppraisalReadItem(
       clean(directReleaseAssessmentId) ||
       clean(releasedDirectorAssessmentId) ||
       null,
+    staffFeedbackReviewState: staffReview.state,
+    staffFeedbackReviewId: staffReview.reviewId,
+    staffFeedbackReviewStage: staffReview.stage,
+    canStartStaffFeedbackReview:
+      (cycle.status === "CLOSED" || cycle.status === "UNDER_REVIEW") &&
+      staffReview.canStart,
+    canDecideStaffFeedbackReview:
+      (cycle.status === "CLOSED" || cycle.status === "UNDER_REVIEW") &&
+      staffReview.canDecide,
+    staffFeedbackReleasedAt: staffReview.releasedAt,
   };
 }
 
@@ -672,6 +767,16 @@ export async function readHeadteacherOwnAppraisalState(
       participants: {
         select: {
           status: true,
+        },
+      },
+      staffFeedbackReviews: {
+        orderBy: [{ stage: "asc" }, { createdAt: "asc" }],
+        select: {
+          id: true,
+          stage: true,
+          decision: true,
+          decidedAt: true,
+          metadata: true,
         },
       },
     },
@@ -754,6 +859,16 @@ export async function readTeacherHeadteacherAppraisalAssignmentState(
           participants: {
             select: {
               status: true,
+            },
+          },
+          staffFeedbackReviews: {
+            orderBy: [{ stage: "asc" }, { createdAt: "asc" }],
+            select: {
+              id: true,
+              stage: true,
+              decision: true,
+              decidedAt: true,
+              metadata: true,
             },
           },
         },
@@ -851,6 +966,16 @@ export async function readDirectorHeadteacherAppraisalStates(
       participants: {
         select: {
           status: true,
+        },
+      },
+      staffFeedbackReviews: {
+        orderBy: [{ stage: "asc" }, { createdAt: "asc" }],
+        select: {
+          id: true,
+          stage: true,
+          decision: true,
+          decidedAt: true,
+          metadata: true,
         },
       },
     },
