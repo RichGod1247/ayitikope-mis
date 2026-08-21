@@ -11,6 +11,9 @@ const routePath =
   "src/app/api/governance/appraisals/headteacher-supervisory/[assessmentId]/direct-release/route.ts";
 const servicePath =
   "src/lib/appraisals/headteacherSupervisoryDirectorDirectRelease.ts";
+const notificationPath =
+  "src/lib/appraisals/headteacherDirectorReleaseNotifications.ts";
+const outboxPath = "src/lib/appraisals/notificationOutbox.ts";
 
 function fail(message, detail) {
   const suffix = detail === undefined ? "" : `\n${JSON.stringify(detail, null, 2)}`;
@@ -34,6 +37,8 @@ function between(text, startMarker, endMarker, label) {
 
 const route = read(routePath);
 const service = read(servicePath);
+const notifications = read(notificationPath);
+const outbox = read(outboxPath);
 
 for (const marker of [
   'export const runtime = "nodejs"',
@@ -50,6 +55,16 @@ for (const marker of [
   "executeHeadteacherSupervisoryDirectorDirectRelease",
   "governanceScope: auth.scope",
   "browserReleaseResult",
+  "ensureHeadteacherDirectorReleaseNotifications",
+  "assessmentId: result.assessmentId",
+  "cycleId: result.cycleId",
+  "releaseProofHash: result.releaseProofHash",
+  "releasedAt: result.releasedAt",
+  "HEADTEACHER_RELEASE_NOTIFICATION_SEEDING_RETRY_REQUIRED",
+  "releaseCommitted: true",
+  "retrySafe: true",
+  "providerCalled: false",
+  "jsonNoStore(503",
   "jsonNoStore",
   "supervisoryApiError",
   "[HEADTEACHER_GOVERNANCE_DIRECT_RELEASE_API_ERROR]",
@@ -65,10 +80,8 @@ for (const forbidden of [
   "governanceOfficerAssignment.",
   "executeHeadteacherDirectorDirectRelease",
   "@/lib/appraisals/headteacherDirectorDirectRelease",
-  "ensureHeadteacherDirectorReleaseNotifications",
-  "HEADTEACHER_RELEASE_NOTIFICATION_SEEDING_RETRY_REQUIRED",
-  "releaseCommitted:",
-  "retrySafe:",
+  "sendSms",
+  "sendEmail",
   "reviewId",
   "note:",
   "reason:",
@@ -157,22 +170,50 @@ for (const forbidden of [
   assert(!service.includes(forbidden), "Current service contains legacy Staff coupling", forbidden);
 }
 
+for (const marker of [
+  "HEADTEACHER_SUPERVISORY_RELEASES_METADATA_KEY",
+  "computeHeadteacherSupervisoryDirectorDirectReleaseProofHashFromMetadata",
+  "assertCurrentDirectReleasedCycle",
+  "assessmentId?: string | null",
+  "release.notificationsSeeded === false",
+  "release.providerCalled === false",
+  "AppraisalNotificationType.FEEDBACK_RELEASED",
+  "GovernanceOfficialNoticeChannel.IN_APP",
+  "AppraisalNotificationChannel.SMS",
+  "AppraisalNotificationChannel.EMAIL",
+  "HEADTEACHER_RELEASE_NOTIFICATION_V3",
+]) {
+  assert(notifications.includes(marker), "Current release notification marker missing", marker);
+}
+
+for (const marker of [
+  "AppraisalNotificationType.CYCLE_OPENED",
+  "AppraisalNotificationType.FEEDBACK_RELEASED",
+  `'FEEDBACK_RELEASED'::"AppraisalNotificationType"`,
+  "HEADTEACHER_RELEASE_NOTIFICATION_V3",
+  `"payload" ->> 'deliveryContract'`,
+  "for update skip locked",
+]) {
+  assert(outbox.includes(marker), "Release outbox delivery marker missing", marker);
+}
+
 console.log("");
-console.log("=== N7-P2C3L-R2F CURRENT DIRECT RELEASE THIN API CONTRACT ===");
+console.log("=== N7-P2C3L-R3M CURRENT DIRECT RELEASE + NOTIFICATION API CONTRACT ===");
 console.log("");
-console.log("HTTP method                     : POST only");
-console.log("Audience                        : exact District Director");
-console.log("Assessment identifier           : strict UUID");
-console.log("JSON body                       : application/json + 16 KiB bound");
-console.log("Allowed browser input           : confirm only");
-console.log("Actor/role/scope                : server-authenticated + full scope passed");
-console.log("Release mutation                : current supervisory service only");
-console.log("Staff Feedback prerequisite     : absent");
-console.log("Carrier lifecycle mutation      : absent");
-console.log("Browser result                  : minimized; internal proof/identity excluded");
-console.log("Notification seeding/providers  : absent");
-console.log("No-store response               : shared API helper");
-console.log("Direct Prisma calls             : absent from route");
-console.log("Database accessed               : false");
+console.log("Release authority                : current supervisory service only");
+console.log("Release transaction              : immutable + Staff-independent");
+console.log("Notification seeding             : post-commit + idempotent");
+console.log("Notification recipient           : exact released Headteacher");
+console.log("Official in-app                  : visible notice");
+console.log("SMS/email                        : durable outbox");
+console.log("Outbox delivery event            : FEEDBACK_RELEASED claimable");
+console.log("Provider call in release route   : absent");
+console.log("Notification failure             : releaseCommitted + retrySafe");
+console.log("Browser proof internals          : excluded");
+console.log("Staff Feedback prerequisite      : absent");
+console.log("Carrier lifecycle mutation       : absent");
+console.log("No-store response                : shared API helper");
+console.log("Direct Prisma calls in route     : absent");
+console.log("Database accessed                : false");
 console.log("");
-console.log("RESULT: N7-P2C3L-R2F CURRENT DIRECT RELEASE API CONTRACT GREEN");
+console.log("RESULT: N7-P2C3L-R3M CURRENT RELEASE NOTIFICATION API CONTRACT GREEN");

@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { executeHeadteacherSupervisoryDirectorDirectRelease } from "@/lib/appraisals/headteacherSupervisoryDirectorDirectRelease";
+import { ensureHeadteacherDirectorReleaseNotifications } from "@/lib/appraisals/headteacherDirectorReleaseNotifications";
 import {
   clean,
   isUuidIdentifier,
@@ -147,11 +148,57 @@ export async function POST(req: NextRequest, context: RouteContext) {
         userAgent: meta.userAgent,
       });
 
-    return jsonNoStore(200, {
-      ok: true,
-      reqId: meta.reqId,
-      result: browserReleaseResult(result),
-    });
+    const browserResult = browserReleaseResult(result);
+
+    try {
+      const notifications =
+        await ensureHeadteacherDirectorReleaseNotifications({
+          cycleId: result.cycleId,
+          assessmentId: result.assessmentId,
+          actorUserId: auth.ctx.userId,
+          releaseProofHash: result.releaseProofHash,
+          releasedAt: result.releasedAt,
+          reqId: meta.reqId,
+          ip: meta.ip,
+          userAgent: meta.userAgent,
+        });
+
+      return jsonNoStore(200, {
+        ok: true,
+        reqId: meta.reqId,
+        result: browserResult,
+        notifications,
+      });
+    } catch (notificationError) {
+      const notificationFailure = notificationError as Error & {
+        code?: unknown;
+        status?: unknown;
+      };
+
+      console.error(
+        "[HEADTEACHER_GOVERNANCE_DIRECT_RELEASE_NOTIFICATION_SEEDING_ERROR]",
+        {
+          reqId: meta.reqId,
+          cycleId: result.cycleId,
+          assessmentId: result.assessmentId,
+          error: clean(notificationFailure.code || notificationFailure.message),
+          status: Number(notificationFailure.status) || null,
+        },
+      );
+
+      return jsonNoStore(503, {
+        ok: false,
+        reqId: meta.reqId,
+        error: "HEADTEACHER_RELEASE_NOTIFICATION_SEEDING_RETRY_REQUIRED",
+        releaseCommitted: true,
+        retrySafe: true,
+        result: browserResult,
+        notifications: {
+          outcome: "RETRY_REQUIRED",
+          providerCalled: false,
+        },
+      });
+    }
   } catch (error) {
     return supervisoryApiError({
       error,

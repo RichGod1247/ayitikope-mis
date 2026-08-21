@@ -122,6 +122,30 @@ Module._load = function patchedLoad(request, parent, isMain) {
       },
     };
   }
+  if (
+    request ===
+    "@/lib/appraisals/headteacherSupervisoryDirectorDirectRelease"
+  ) {
+    return {
+      HEADTEACHER_SUPERVISORY_RELEASES_METADATA_KEY:
+        "headteacherSupervisoryReleases",
+      HEADTEACHER_SUPERVISORY_DIRECTOR_DIRECT_RELEASE_POLICY: {
+        proofSchemaVersion: 1,
+        workflow: "HEADTEACHER_GOVERNANCE_SUPERVISORY_ASSESSMENT",
+        evidenceStream: "GOVERNANCE_SUPERVISORY_ASSESSMENT",
+        releaseMode: "DIRECTOR_AUTHORED_DIRECT_RELEASE",
+        eligibleCarrierCycleStatuses: [
+          "OPEN",
+          "CLOSED",
+          "UNDER_REVIEW",
+          "RELEASED",
+        ],
+      },
+      computeHeadteacherSupervisoryDirectorDirectReleaseProofHashFromMetadata() {
+        return "0".repeat(64);
+      },
+    };
+  }
   return originalLoad.call(this, request, parent, isMain);
 };
 
@@ -154,7 +178,7 @@ const noticeClientPath = path.join(
 );
 const directorClientPath = path.join(
   repositoryRoot,
-  "src/app/district/headteacher-appraisals/review/HeadteacherDirectorReviewClient.tsx",
+  "src/app/governance/appraisals/headteacher-supervisory/HeadteacherSupervisoryAssessmentClient.tsx",
 );
 
 const serviceSource = fs.readFileSync(servicePath, "utf8");
@@ -566,9 +590,9 @@ async function main() {
   excludes(routeSource, "sendEmail", "route has no email provider call");
 
   for (const marker of [
-    "providerDeliveryIncluded: false",
     "HEADTEACHER_RELEASE_NOTIFICATION_SEEDING_RETRY_REQUIRED",
     "payload.releaseCommitted === true",
+    "payload.retrySafe === true",
     "The appraisal was released, but the Headteacher notification still needs retrying.",
     "Repeating release will not duplicate the official result.",
     "The Headteacher notification was queued safely.",

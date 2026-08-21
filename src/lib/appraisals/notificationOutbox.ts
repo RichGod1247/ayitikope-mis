@@ -1,4 +1,5 @@
 // src/lib/appraisals/notificationOutbox.ts
+
 import {
   AppraisalNotification,
   AppraisalNotificationChannel,
@@ -7,7 +8,23 @@ import {
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
-const DELIVERY_TYPE = AppraisalNotificationType.CYCLE_OPENED;
+const RELEASE_DELIVERY_CONTRACT =
+  "HEADTEACHER_RELEASE_NOTIFICATION_V3";
+
+function deliverableTypeWhere() {
+  return {
+    OR: [
+      { type: AppraisalNotificationType.CYCLE_OPENED },
+      {
+        type: AppraisalNotificationType.FEEDBACK_RELEASED,
+        payload: {
+          path: ["deliveryContract"],
+          equals: RELEASE_DELIVERY_CONTRACT,
+        },
+      },
+    ],
+  };
+}
 
 export type ClaimAppraisalNotificationsInput = {
   workerId: string;
@@ -42,7 +59,6 @@ function boundedStaleMinutes(value: unknown) {
 function safeError(value: unknown) {
   const message =
     value instanceof Error ? value.message : String(value ?? "UNKNOWN_ERROR");
-
   return message
     .replace(/https?:\/\/\S+/gi, "[URL_REDACTED]")
     .replace(/Bearer\s+\S+/gi, "Bearer [REDACTED]")
@@ -84,7 +100,7 @@ export async function quarantineAmbiguousAppraisalNotifications(input?: {
   const [smsDead, emailDead] = await prisma.$transaction([
     prisma.appraisalNotification.updateMany({
       where: {
-        type: DELIVERY_TYPE,
+        ...deliverableTypeWhere(),
         channel: AppraisalNotificationChannel.SMS,
         status: AppraisalNotificationStatus.PROCESSING,
         lockedAt: { lt: staleBefore },
@@ -100,7 +116,7 @@ export async function quarantineAmbiguousAppraisalNotifications(input?: {
     }),
     prisma.appraisalNotification.updateMany({
       where: {
-        type: DELIVERY_TYPE,
+        ...deliverableTypeWhere(),
         channel: AppraisalNotificationChannel.EMAIL,
         status: AppraisalNotificationStatus.PROCESSING,
         lockedAt: { lt: emailIdempotencyFloor },
@@ -147,7 +163,14 @@ export async function claimAppraisalNotifications(
         select "id"
         from "appraisal_notification"
         where
-          "type" = 'CYCLE_OPENED'::"AppraisalNotificationType"
+          (
+            "type" = 'CYCLE_OPENED'::"AppraisalNotificationType"
+            or (
+              "type" = 'FEEDBACK_RELEASED'::"AppraisalNotificationType"
+              and "payload" ->> 'deliveryContract' =
+                'HEADTEACHER_RELEASE_NOTIFICATION_V3'
+            )
+          )
           and "channel" in (
             'SMS'::"AppraisalNotificationChannel",
             'EMAIL'::"AppraisalNotificationChannel"
@@ -204,7 +227,6 @@ export async function markAppraisalNotificationSent(input: {
   workerId: string;
 }) {
   const workerId = cleanWorkerId(input.workerId);
-
   return prisma.appraisalNotification.updateMany({
     where: {
       id: input.notificationId,
@@ -229,7 +251,6 @@ export async function markAppraisalNotificationFailed(input: {
   retryable: boolean;
 }) {
   const workerId = cleanWorkerId(input.workerId);
-
   const existing = await prisma.appraisalNotification.findFirst({
     where: {
       id: input.notificationId,
@@ -270,9 +291,7 @@ export async function markAppraisalNotificationFailed(input: {
 export async function getAppraisalNotificationHealth(): Promise<AppraisalNotificationHealth> {
   const rows = await prisma.appraisalNotification.groupBy({
     by: ["channel", "status"],
-    where: {
-      type: DELIVERY_TYPE,
-    },
+    where: deliverableTypeWhere(),
     _count: { _all: true },
   });
 

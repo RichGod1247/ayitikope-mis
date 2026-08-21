@@ -22,32 +22,23 @@ function assert(condition, message, detail) {
 }
 
 function read(relativePath) {
-  const absolutePath =
-    path.join(repoRoot, relativePath);
-
-  assert(
-    fs.existsSync(absolutePath),
-    "D3_3F_REQUIRED_FILE_MISSING",
-    { relativePath },
-  );
-
+  const absolutePath = path.join(repoRoot, relativePath);
+  assert(fs.existsSync(absolutePath), "D3_3F_REQUIRED_FILE_MISSING", {
+    relativePath,
+  });
   return fs.readFileSync(absolutePath, "utf8");
 }
 
 function contains(source, marker, label) {
-  assert(
-    source.includes(marker),
-    `D3_3F_MARKER_MISSING:${label}`,
-    { marker },
-  );
+  assert(source.includes(marker), `D3_3F_MARKER_MISSING:${label}`, {
+    marker,
+  });
 }
 
 function excludes(source, marker, label) {
-  assert(
-    !source.includes(marker),
-    `D3_3F_FORBIDDEN_MARKER:${label}`,
-    { marker },
-  );
+  assert(!source.includes(marker), `D3_3F_FORBIDDEN_MARKER:${label}`, {
+    marker,
+  });
 }
 
 function transpile(relativePath, source) {
@@ -59,26 +50,20 @@ function transpile(relativePath, source) {
       target: ts.ScriptTarget.ES2022,
       jsx: ts.JsxEmit.Preserve,
       esModuleInterop: true,
-      moduleResolution:
-        ts.ModuleResolutionKind.Bundler,
+      moduleResolution: ts.ModuleResolutionKind.Bundler,
       strict: true,
     },
   });
 
   const errors = (output.diagnostics ?? []).filter(
-    (diagnostic) =>
-      diagnostic.category ===
-      ts.DiagnosticCategory.Error,
+    (diagnostic) => diagnostic.category === ts.DiagnosticCategory.Error,
   );
 
   if (errors.length) {
     fail("D3_3F_TYPESCRIPT_TRANSPILE_FAILED", {
       relativePath,
       diagnostics: errors.map((diagnostic) =>
-        ts.flattenDiagnosticMessageText(
-          diagnostic.messageText,
-          "\n",
-        ),
+        ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
       ),
     });
   }
@@ -86,10 +71,8 @@ function transpile(relativePath, source) {
 
 function main() {
   const emailPath = "src/lib/email/sendEmail.ts";
-  const outboxPath =
-    "src/lib/appraisals/notificationOutbox.ts";
-  const workerPath =
-    "src/lib/appraisals/notificationWorker.ts";
+  const outboxPath = "src/lib/appraisals/notificationOutbox.ts";
+  const workerPath = "src/lib/appraisals/notificationWorker.ts";
   const cronPath =
     "src/app/api/internal/appraisals/notifications/cron/route.ts";
 
@@ -112,21 +95,34 @@ function main() {
     'headers["Idempotency-Key"] = idempotencyKey;',
     "email:provider-idempotency",
   );
-  contains(
-    email,
-    "slice(0, 256)",
-    "email:key-bound",
-  );
+  contains(email, "slice(0, 256)", "email:key-bound");
 
+  contains(outbox, "for update skip locked", "outbox:skip-locked");
+  contains(outbox, '"appraisal_notification"', "outbox:correct-table");
   contains(
     outbox,
-    "for update skip locked",
-    "outbox:skip-locked",
+    "AppraisalNotificationType.CYCLE_OPENED",
+    "outbox:cycle-opened-delivery",
   );
   contains(
     outbox,
-    '"appraisal_notification"',
-    "outbox:correct-table",
+    "AppraisalNotificationType.FEEDBACK_RELEASED",
+    "outbox:feedback-released-delivery",
+  );
+  contains(
+    outbox,
+    `'FEEDBACK_RELEASED'::"AppraisalNotificationType"`,
+    "outbox:feedback-released-claim",
+  );
+  contains(
+    outbox,
+    "HEADTEACHER_RELEASE_NOTIFICATION_V3",
+    "outbox:release-delivery-contract",
+  );
+  contains(
+    outbox,
+    `"payload" ->> 'deliveryContract'`,
+    "outbox:no-historical-release-auto-send",
   );
   contains(
     outbox,
@@ -138,42 +134,31 @@ function main() {
     "EMAIL_IDEMPOTENCY_WINDOW_EXPIRED_MANUAL_REVIEW_REQUIRED",
     "outbox:email-expiry-quarantine",
   );
-  contains(
-    outbox,
-    "Math.pow(2",
-    "outbox:exponential-backoff",
-  );
+  contains(outbox, "Math.pow(2", "outbox:exponential-backoff");
   contains(
     outbox,
     "attempts >= existing.maxAttempts",
     "outbox:max-attempts",
   );
-  contains(
-    outbox,
-    "lockedBy: workerId",
-    "outbox:worker-ownership",
-  );
-  excludes(
-    outbox,
-    "FinanceOutboxEvent",
-    "outbox:no-finance-coupling",
-  );
+  contains(outbox, "lockedBy: workerId", "outbox:worker-ownership");
+  excludes(outbox, "FinanceOutboxEvent", "outbox:no-finance-coupling");
 
   contains(
     worker,
     'template: "director-feedback-cycle-opened"',
-    "worker:sms-handler",
+    "worker:default-sms-handler",
+  );
+  contains(
+    worker,
+    "delivery.template ?? DEFAULT_APPRAISAL_SMS_DELIVERY.template",
+    "worker:payload-selected-template",
   );
   contains(
     worker,
     "idempotencyKey: notification.idempotencyKey",
     "worker:email-idempotency",
   );
-  contains(
-    worker,
-    "notification.channel ===",
-    "worker:channel-routing",
-  );
+  contains(worker, "notification.channel ===", "worker:channel-routing");
   contains(
     worker,
     "AppraisalNotificationChannel.EMAIL",
@@ -195,21 +180,9 @@ function main() {
     "x-appraisal-notification-cron-secret",
     "cron:header-secret",
   );
-  contains(
-    cron,
-    "timingSafeEqual",
-    "cron:timing-safe-auth",
-  );
-  contains(
-    cron,
-    "mode: \"HEALTH_ONLY\"",
-    "cron:get-health-only",
-  );
-  contains(
-    cron,
-    "mode: \"WORKER_EXECUTED\"",
-    "cron:post-worker",
-  );
+  contains(cron, "timingSafeEqual", "cron:timing-safe-auth");
+  contains(cron, 'mode: "HEALTH_ONLY"', "cron:get-health-only");
+  contains(cron, 'mode: "WORKER_EXECUTED"', "cron:post-worker");
   contains(
     cron,
     '"Cache-Control": "no-store, max-age=0"',
@@ -221,11 +194,13 @@ function main() {
   excludes(cron, "school", "cron:no-school-output");
 
   console.log("");
-  console.log("=== D3.3F APPRAISAL NOTIFICATION DELIVERY PROOF ===");
+  console.log("=== N7-P2C3L-R3M APPRAISAL NOTIFICATION DELIVERY PROOF ===");
   console.log("");
   console.log("Queue table                  : AppraisalNotification");
+  console.log("Delivery events              : CYCLE_OPENED + new-contract FEEDBACK_RELEASED");
   console.log("Claiming                     : bounded + SKIP LOCKED");
   console.log("Worker ownership             : enforced");
+  console.log("SMS template                 : payload-selected with safe default");
   console.log("Email provider idempotency   : verified");
   console.log("Email retry window           : bounded below 24 hours");
   console.log("Email retry delay            : exponential");
@@ -236,12 +211,11 @@ function main() {
   console.log("POST cron                    : bounded worker");
   console.log("Cron secret                  : appraisal-specific");
   console.log("Finance outbox coupling      : absent");
-  console.log("Barrel export dependency     : intentionally not required");
   console.log("Recipient identity output    : absent");
   console.log("Database accessed            : false");
   console.log("");
   console.log(
-    "RESULT: D3.3F APPRAISAL NOTIFICATION DELIVERY WORKERS GREEN",
+    "RESULT: N7-P2C3L-R3M RELEASE NOTIFICATION DELIVERY WORKERS GREEN",
   );
 }
 
@@ -250,10 +224,8 @@ try {
 } catch (error) {
   console.error("");
   console.error(
-    "RESULT: D3.3F APPRAISAL NOTIFICATION DELIVERY WORKERS FAILED",
+    "RESULT: N7-P2C3L-R3M RELEASE NOTIFICATION DELIVERY WORKERS FAILED",
   );
-  console.error(
-    error instanceof Error ? error.stack : error,
-  );
+  console.error(error instanceof Error ? error.stack : error);
   process.exit(1);
 }

@@ -87,6 +87,8 @@ type ApiFailure = {
   ok?: false;
   error?: string;
   message?: string;
+  releaseCommitted?: boolean;
+  retrySafe?: boolean;
 };
 
 type AutosaveState = "idle" | "queued" | "saving" | "saved" | "waiting";
@@ -1833,13 +1835,27 @@ export default function HeadteacherSupervisoryAssessmentClient({
         | ApiFailure;
 
       if (!response.ok || body.ok !== true) {
+        const payload = body as ApiFailure;
+
+        if (
+          payload.error ===
+            "HEADTEACHER_RELEASE_NOTIFICATION_SEEDING_RETRY_REQUIRED" &&
+          payload.releaseCommitted === true &&
+          payload.retrySafe === true
+        ) {
+          setError(
+            "The appraisal was released, but the Headteacher notification still needs retrying. Repeating release will not duplicate the official result.",
+          );
+          return;
+        }
+
         throw new Error(messageFromFailure(body, response.status));
       }
 
       setNotice(
         body.result.outcome === "EXISTING_RELEASED"
-          ? "This assessment was already released to the Headteacher."
-          : "Assessment released to the Headteacher.",
+          ? "This assessment was already released to the Headteacher. The Headteacher notification was queued safely."
+          : "Assessment released to the Headteacher. The Headteacher notification was queued safely.",
       );
       await loadQueue();
     } catch (releaseError) {

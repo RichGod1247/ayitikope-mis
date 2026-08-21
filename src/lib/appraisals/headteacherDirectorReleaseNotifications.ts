@@ -15,6 +15,11 @@ import {
 import { prisma } from "@/lib/prisma";
 import { APPRAISAL_AUDIT_ACTIONS } from "@/lib/appraisals/audit";
 import { HEADTEACHER_FEEDBACK_POLICY } from "@/lib/appraisals/headteacherFeedback";
+import {
+  HEADTEACHER_SUPERVISORY_DIRECTOR_DIRECT_RELEASE_POLICY,
+  HEADTEACHER_SUPERVISORY_RELEASES_METADATA_KEY,
+  computeHeadteacherSupervisoryDirectorDirectReleaseProofHashFromMetadata,
+} from "@/lib/appraisals/headteacherSupervisoryDirectorDirectRelease";
 
 export const HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY = {
   schemaVersion: 2,
@@ -28,6 +33,7 @@ export const HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY = {
   requiredCycleStatus: "RELEASED",
   requiredReleaseProofVersion: 1,
   releaseMetadataKey: "headteacherDirectorRelease",
+  currentDirectReleaseMetadataKey: HEADTEACHER_SUPERVISORY_RELEASES_METADATA_KEY,
   reviewedReleaseMode: "REVIEWED_DIRECTOR_RELEASE",
   directorAuthoredDirectReleaseMode: "DIRECTOR_AUTHORED_DIRECT_RELEASE",
   dualReleaseModesSupported: true,
@@ -37,6 +43,7 @@ export const HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY = {
   officialNoticeIdempotencyScope:
     "HEADTEACHER_APPRAISAL_FEEDBACK_RELEASED",
   smsTemplate: "headteacher-appraisal-feedback-released",
+  deliveryContract: "HEADTEACHER_RELEASE_NOTIFICATION_V3",
   maximumAttempts: 5,
   priority: 2,
   providerCallsAllowed: false,
@@ -170,6 +177,7 @@ export type HeadteacherDirectorReleaseNotificationSummary = {
 
 export type EnsureHeadteacherDirectorReleaseNotificationsInput = {
   cycleId: string;
+  assessmentId?: string | null;
   actorUserId: string;
   releaseProofHash: string;
   releasedAt: string;
@@ -310,6 +318,7 @@ function targetPhone(cycle: ReleasedCycleRecord) {
 }
 
 function idempotencyKey(input: {
+  workflow: string;
   cycleId: string;
   recipientUserId: string;
   channel: AppraisalNotificationChannel;
@@ -318,7 +327,7 @@ function idempotencyKey(input: {
   const digest = createHash("sha256")
     .update(
       [
-        HEADTEACHER_FEEDBACK_POLICY.workflow,
+        input.workflow,
         input.cycleId,
         input.recipientUserId,
         HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.notificationType,
@@ -338,6 +347,7 @@ function idempotencyKey(input: {
 }
 
 function officialNoticeIdempotencyKey(input: {
+  workflow: string;
   cycleId: string;
   recipientUserId: string;
   releaseProofHash: string;
@@ -345,7 +355,7 @@ function officialNoticeIdempotencyKey(input: {
   const digest = createHash("sha256")
     .update(
       [
-        HEADTEACHER_FEEDBACK_POLICY.workflow,
+        input.workflow,
         input.cycleId,
         input.recipientUserId,
         HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.notificationType,
@@ -360,13 +370,14 @@ function officialNoticeIdempotencyKey(input: {
 }
 
 function officialNoticeMetadata(input: {
+  workflow: string;
   cycleId: string;
   releasedAt: string;
   releaseProofHash: string;
 }) {
   return jsonObject({
     source: "headteacher-appraisal-release",
-    workflow: HEADTEACHER_FEEDBACK_POLICY.workflow,
+    workflow: input.workflow,
     event: HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.notificationType,
     cycleId: input.cycleId,
     releasedAt: input.releasedAt,
@@ -388,13 +399,16 @@ function officialNoticeMetadata(input: {
 }
 
 function commonPayload(input: {
+  workflow: string;
   cycleId: string;
   releasedAt: string;
   releaseProofHash: string;
 }) {
   return {
-    workflow: HEADTEACHER_FEEDBACK_POLICY.workflow,
+    workflow: input.workflow,
     event: HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.notificationType,
+    deliveryContract:
+      HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.deliveryContract,
     cycleId: input.cycleId,
     href: HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.inAppHref,
     title: "Headteacher appraisal result released",
@@ -414,11 +428,14 @@ function commonPayload(input: {
 
 export function buildHeadteacherDirectorReleaseNotificationRows(input: {
   cycle: ReleasedCycleRecord;
+  workflow?: string;
   releasedAt: string;
   releaseProofHash: string;
   now: Date;
 }): Prisma.AppraisalNotificationCreateManyInput[] {
+  const workflow = clean(input.workflow) || HEADTEACHER_FEEDBACK_POLICY.workflow;
   const common = commonPayload({
+    workflow,
     cycleId: input.cycle.id,
     releasedAt: input.releasedAt,
     releaseProofHash: input.releaseProofHash,
@@ -427,6 +444,7 @@ export function buildHeadteacherDirectorReleaseNotificationRows(input: {
   const phone = targetPhone(input.cycle);
   const smsAllowed = input.cycle.targetUser.smsOptIn !== false;
   const keyInput = {
+    workflow,
     cycleId: input.cycle.id,
     recipientUserId: input.cycle.targetUserId,
     releaseProofHash: input.releaseProofHash,
@@ -582,12 +600,108 @@ function releaseProofFromCycle(cycle: ReleasedCycleRecord) {
   );
 }
 
-function assertReleasedCycle(input: {
+function currentDirectReleaseProofFromCycle(
+  cycle: ReleasedCycleRecord,
+  assessmentId: string,
+) {
+  const releases = objectValue(
+    objectValue(cycle.metadata)[HEADTEACHER_SUPERVISORY_RELEASES_METADATA_KEY],
+  );
+  return objectValue(releases[assessmentId]);
+}
+
+type ReleaseNotificationContext = {
+  workflow: string;
+  releaseMode: string;
+  assessmentId: string | null;
+};
+
+function assertCurrentDirectReleasedCycle(input: {
+  cycle: ReleasedCycleRecord;
+  assessmentId: string;
+  releaseProofHash: string;
+  releasedAt: string;
+  actorUserId: string;
+}): ReleaseNotificationContext {
+  const release = currentDirectReleaseProofFromCycle(
+    input.cycle,
+    input.assessmentId,
+  );
+  const carrierStatus = normalized(input.cycle.status);
+  const expectedProofHash =
+    computeHeadteacherSupervisoryDirectorDirectReleaseProofHashFromMetadata(
+      release,
+    );
+
+  const valid =
+    HEADTEACHER_SUPERVISORY_DIRECTOR_DIRECT_RELEASE_POLICY.eligibleCarrierCycleStatuses.includes(
+      carrierStatus as (typeof HEADTEACHER_SUPERVISORY_DIRECTOR_DIRECT_RELEASE_POLICY.eligibleCarrierCycleStatuses)[number],
+    ) &&
+    normalized(input.cycle.targetRoleSnapshot) ===
+      HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.recipientRole &&
+    Boolean(input.cycle.targetTenantId) &&
+    Number(release.proofSchemaVersion) ===
+      HEADTEACHER_SUPERVISORY_DIRECTOR_DIRECT_RELEASE_POLICY.proofSchemaVersion &&
+    clean(release.releaseMode) ===
+      HEADTEACHER_SUPERVISORY_DIRECTOR_DIRECT_RELEASE_POLICY.releaseMode &&
+    clean(release.workflow) ===
+      HEADTEACHER_SUPERVISORY_DIRECTOR_DIRECT_RELEASE_POLICY.workflow &&
+    clean(release.evidenceStream) ===
+      HEADTEACHER_SUPERVISORY_DIRECTOR_DIRECT_RELEASE_POLICY.evidenceStream &&
+    clean(release.cycleId) === input.cycle.id &&
+    clean(release.assessmentId) === input.assessmentId &&
+    Number(release.assessmentRevision) === 1 &&
+    normalized(release.assessmentStatus) === "FINALIZED" &&
+    normalized(release.assessorRole) === "DISTRICT_DIRECTOR" &&
+    normalized(release.releaserRole) === "DISTRICT_DIRECTOR" &&
+    clean(release.assessorUserId) === input.actorUserId &&
+    clean(release.releaserUserId) === input.actorUserId &&
+    Boolean(clean(release.assessorAssignmentId)) &&
+    clean(release.assessorAssignmentId) === clean(release.releaserAssignmentId) &&
+    clean(release.releasedAt) === input.releasedAt &&
+    clean(release.releaseProofHash).toLowerCase() === input.releaseProofHash &&
+    clean(expectedProofHash).toLowerCase() === input.releaseProofHash &&
+    release.reviewRowsRequired === false &&
+    release.reviewRowsPresent === false &&
+    release.selfReviewPerformed === false &&
+    release.releaseNoteIncluded === false &&
+    release.assessmentStatusMutationPerformed === false &&
+    release.scoreMutationPerformed === false &&
+    release.visitContextMutationPerformed === false &&
+    release.staffFeedbackRequired === false &&
+    release.staffFeedbackAccessed === false &&
+    release.respondentIdentitiesAccessed === false &&
+    release.individualStaffResponsesAccessed === false &&
+    release.carrierCycleStatusMutationPerformed === false &&
+    release.carrierCycleTimestampMutationPerformed === false &&
+    release.participantMutationPerformed === false &&
+    release.reviewerMayRewriteScores === false &&
+    release.separateEvidenceStreams === true &&
+    release.combinedWeightingDefined === false &&
+    release.notificationsSeeded === false &&
+    release.providerCalled === false;
+
+  if (!valid) {
+    fail("HEADTEACHER_RELEASE_NOTIFICATION_RELEASE_PROOF_DRIFT", 409, {
+      cycleId: input.cycle.id,
+      assessmentId: input.assessmentId,
+    });
+  }
+
+  return {
+    workflow: HEADTEACHER_SUPERVISORY_DIRECTOR_DIRECT_RELEASE_POLICY.workflow,
+    releaseMode:
+      HEADTEACHER_SUPERVISORY_DIRECTOR_DIRECT_RELEASE_POLICY.releaseMode,
+    assessmentId: input.assessmentId,
+  };
+}
+
+function assertLegacyReleasedCycle(input: {
   cycle: ReleasedCycleRecord;
   releaseProofHash: string;
   releasedAt: string;
   actorUserId: string;
-}) {
+}): ReleaseNotificationContext {
   const release = releaseProofFromCycle(input.cycle);
   const actualReleasedAt = input.cycle.releasedAt?.toISOString() ?? "";
   const releaseMode = clean(release.releaseMode);
@@ -655,6 +769,40 @@ function assertReleasedCycle(input: {
       cycleId: input.cycle.id,
     });
   }
+
+  return {
+    workflow: HEADTEACHER_FEEDBACK_POLICY.workflow,
+    releaseMode:
+      releaseMode ||
+      HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.reviewedReleaseMode,
+    assessmentId: null,
+  };
+}
+
+function assertReleasedCycle(input: {
+  cycle: ReleasedCycleRecord;
+  assessmentId?: string | null;
+  releaseProofHash: string;
+  releasedAt: string;
+  actorUserId: string;
+}): ReleaseNotificationContext {
+  const assessmentId = clean(input.assessmentId);
+  if (assessmentId) {
+    return assertCurrentDirectReleasedCycle({
+      cycle: input.cycle,
+      assessmentId: requireIdentifier(assessmentId, "assessmentId"),
+      releaseProofHash: input.releaseProofHash,
+      releasedAt: input.releasedAt,
+      actorUserId: input.actorUserId,
+    });
+  }
+
+  return assertLegacyReleasedCycle({
+    cycle: input.cycle,
+    releaseProofHash: input.releaseProofHash,
+    releasedAt: input.releasedAt,
+    actorUserId: input.actorUserId,
+  });
 }
 
 function assertActiveTargetMembership(input: {
@@ -718,6 +866,8 @@ async function seedNotificationRows(input: {
   database: HeadteacherDirectorReleaseNotificationDatabase;
   rows: Prisma.AppraisalNotificationCreateManyInput[];
   cycle: ReleasedCycleRecord;
+  workflow: string;
+  assessmentId: string | null;
   actorUserId: string;
   releaseProofHash: string;
   releasedAt: string;
@@ -755,6 +905,7 @@ async function seedNotificationRows(input: {
             idempotencyScope:
               HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.officialNoticeIdempotencyScope,
             metadata: officialNoticeMetadata({
+              workflow: input.workflow,
               cycleId: input.cycle.id,
               releasedAt: input.releasedAt,
               releaseProofHash: input.releaseProofHash,
@@ -778,6 +929,7 @@ async function seedNotificationRows(input: {
             metadata: jsonObject({
               source: "headteacher-appraisal-release",
               cycleId: input.cycle.id,
+              assessmentId: input.assessmentId,
               releaseProofHash: input.releaseProofHash,
             }),
           },
@@ -826,7 +978,8 @@ async function seedNotificationRows(input: {
             metadata: {
               reqId: input.reqId,
               cycleId: input.cycle.id,
-              workflow: HEADTEACHER_FEEDBACK_POLICY.workflow,
+              workflow: input.workflow,
+              assessmentId: input.assessmentId,
               event:
                 HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.notificationType,
               releaseProofHash: input.releaseProofHash,
@@ -873,6 +1026,9 @@ export async function ensureHeadteacherDirectorReleaseNotifications(
     input.database ??
     (prisma as unknown as HeadteacherDirectorReleaseNotificationDatabase);
   const cycleId = requireIdentifier(input.cycleId, "cycleId");
+  const assessmentId = clean(input.assessmentId)
+    ? requireIdentifier(input.assessmentId, "assessmentId")
+    : null;
   const actorUserId = requireIdentifier(input.actorUserId, "actorUserId");
   const releaseProofHash = requireSha256(
     input.releaseProofHash,
@@ -924,8 +1080,9 @@ export async function ensureHeadteacherDirectorReleaseNotifications(
     });
   }
 
-  assertReleasedCycle({
+  const releaseContext = assertReleasedCycle({
     cycle,
+    assessmentId,
     releaseProofHash,
     releasedAt,
     actorUserId,
@@ -956,11 +1113,13 @@ export async function ensureHeadteacherDirectorReleaseNotifications(
 
   const rows = buildHeadteacherDirectorReleaseNotificationRows({
     cycle,
+    workflow: releaseContext.workflow,
     releasedAt,
     releaseProofHash,
     now,
   });
   const officialNoticeKey = officialNoticeIdempotencyKey({
+    workflow: releaseContext.workflow,
     cycleId,
     recipientUserId: cycle.targetUserId,
     releaseProofHash,
@@ -972,6 +1131,8 @@ export async function ensureHeadteacherDirectorReleaseNotifications(
       database,
       rows,
       cycle,
+      workflow: releaseContext.workflow,
+      assessmentId: releaseContext.assessmentId,
       actorUserId,
       releaseProofHash,
       releasedAt,
@@ -987,6 +1148,8 @@ export async function ensureHeadteacherDirectorReleaseNotifications(
       database,
       rows,
       cycle,
+      workflow: releaseContext.workflow,
+      assessmentId: releaseContext.assessmentId,
       actorUserId,
       releaseProofHash,
       releasedAt,
