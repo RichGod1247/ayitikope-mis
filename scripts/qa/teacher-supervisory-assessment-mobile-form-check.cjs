@@ -190,6 +190,39 @@ assert(
   client.includes("formatPercent(sectionScore?.percentage)"),
   "Native Teacher section result must use whole-number presentation",
 );
+
+assert(
+  client.includes("function ratingButtonTone(score: number, selected: boolean)"),
+  "Teacher rating-button colour helper missing",
+);
+for (const marker of [
+  "border-rose-300/70 bg-rose-500/30 text-rose-50",
+  "border-orange-300/70 bg-orange-500/30 text-orange-50",
+  "border-amber-300/70 bg-amber-400/30 text-amber-50",
+  "border-cyan-300/70 bg-cyan-400/30 text-cyan-50",
+  "border-emerald-300/70 bg-emerald-400/30 text-emerald-50",
+]) {
+  assert(
+    client.includes(marker),
+    `Distinct Teacher rating colour missing: ${marker}`,
+  );
+}
+assert(
+  client.includes("ratingButtonTone(score, selected)"),
+  "Interactive Teacher rating controls must use score-specific colour families",
+);
+assert(
+  client.includes(
+    '"border-slate-300/50 bg-slate-300/20 text-slate-100"',
+  ),
+  "Teacher N/A rating must use a neutral selected colour family",
+);
+assert(
+  !client.includes(
+    'selected\n                              ? "border-cyan-300/40 bg-cyan-400/20 text-cyan-50"',
+  ),
+  "Teacher rating controls must not use one selected colour for every score",
+);
 assert(client.includes('"After 34/34"'), "Incomplete overall-result suppression missing");
 assert(client.includes("Review Before you Submit"), "Native review entry missing");
 assert(client.includes("Final review · read-only preview"), "Native review state missing");

@@ -5,6 +5,11 @@ import {
   directOpenHeadteacherFeedbackCycleWithNotifications,
 } from "@/lib/appraisals/headteacherFeedbackNotifications";
 import { readHeadteacherFeedbackDirectOpenTargets } from "@/lib/appraisals/headteacherFeedbackDirectOpen";
+import {
+  bulkOpenHeadteacherFeedbackCycles,
+  previewHeadteacherFeedbackBulkOpen,
+  type HeadteacherFeedbackBulkScopeLevel,
+} from "@/lib/appraisals/headteacherFeedbackBulkOpen";
 import { closeCompletedHeadteacherFeedbackCycleEarly } from "@/lib/appraisals/headteacherFeedbackDeadlineClosure";
 import { sealHeadteacherFeedbackAggregateSnapshot } from "@/lib/appraisals/headteacherFeedbackAggregateSnapshot";
 import {
@@ -31,8 +36,18 @@ export const HEADTEACHER_APPRAISAL_DIRECTOR_QUEUE_API_POLICY = {
   directOpenRequiresConfirmation: true,
   directOpenTargetDiscoveryReadOnly: true,
   directOpenUsesExistingLifecycleEngine: true,
+  bulkDirectOpenPreviewReadOnly: true,
+  bulkDirectOpenScopeLevels: ["DISTRICT", "CIRCUIT", "SCHOOL"] as const,
+  bulkDirectOpenMultipleCircuitsAllowed: true,
+  bulkDirectOpenMultipleSchoolsAllowed: true,
+  bulkDirectOpenBrowserHeadteacherIdsAllowed: false,
+  bulkDirectOpenBrowserRespondentsAllowed: false,
+  bulkDirectOpenServerRevalidatesScopeIds: true,
+  bulkDirectOpenPartialSuccessAllowed: true,
   participantFreezeAtOpen: true,
   notificationRowsSeededAtOpen: true,
+  notificationChannels: ["IN_APP", "SMS", "EMAIL"] as const,
+  notificationRecipientsDerivedFromLockedScope: true,
   earlyCompletionDetectedFromFrozenParticipantCounts: true,
   earlyClosureRequiresAllEligibleResponsesFinalized: true,
   earlyClosureRequiresDirectorConfirmation: true,
@@ -92,6 +107,59 @@ async function readDirectorWork(args: {
   return { queue, directOpenTargets };
 }
 
+function scopeIdValues(value: unknown) {
+  const raw = Array.isArray(value)
+    ? value
+    : typeof value === "string"
+      ? value.split(",")
+      : value == null
+        ? []
+        : [value];
+
+  return [...new Set(raw.map(clean).filter(Boolean))];
+}
+
+function bulkScopeFromValues(input: {
+  scopeType: unknown;
+  scopeIds: unknown;
+  legacyScopeId?: unknown;
+}):
+  | {
+      ok: true;
+      scope: { level: HeadteacherFeedbackBulkScopeLevel; ids: string[] };
+    }
+  | { ok: false; error: string } {
+  const level = clean(input.scopeType).toUpperCase();
+  if (level !== "DISTRICT" && level !== "CIRCUIT" && level !== "SCHOOL") {
+    return { ok: false, error: "INVALID_BULK_SCOPE_TYPE" };
+  }
+
+  const ids = scopeIdValues(
+    input.scopeIds ?? input.legacyScopeId,
+  );
+
+  if (ids.some((id) => !isLikelyIdentifier(id))) {
+    return { ok: false, error: "INVALID_BULK_SCOPE_ID" };
+  }
+  if (ids.length > 100) {
+    return { ok: false, error: "BULK_SCOPE_TOO_LARGE" };
+  }
+  if (level === "DISTRICT" && ids.length > 1) {
+    return { ok: false, error: "MULTIPLE_DISTRICTS_NOT_ALLOWED" };
+  }
+  if (level !== "DISTRICT" && ids.length === 0) {
+    return { ok: false, error: "BULK_SCOPE_IDS_REQUIRED" };
+  }
+
+  return {
+    ok: true,
+    scope: {
+      level,
+      ids,
+    },
+  };
+}
+
 export async function GET(req: NextRequest) {
   const meta = requestMeta(req);
   const auth = await requireDirectorReviewApiContext(req);
@@ -105,6 +173,35 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const mode = clean(req.nextUrl.searchParams.get("mode")).toUpperCase();
+    if (mode === "BULK_PREVIEW") {
+      const parsedScope = bulkScopeFromValues({
+        scopeType: req.nextUrl.searchParams.get("scopeType"),
+        scopeIds: req.nextUrl.searchParams.getAll("scopeId"),
+      });
+      if (!parsedScope.ok) {
+        return jsonNoStore(400, {
+          ok: false,
+          reqId: meta.reqId,
+          error: parsedScope.error,
+        });
+      }
+
+      const preview = await previewHeadteacherFeedbackBulkOpen({
+        actorUserId: auth.ctx.userId,
+        actorRoleName: auth.ctx.roleName,
+        governanceScope: reviewGovernanceScope(auth.scope),
+        scope: parsedScope.scope,
+      });
+
+      return jsonNoStore(200, {
+        ok: true,
+        reqId: meta.reqId,
+        preview,
+        providerCalled: false,
+      });
+    }
+
     const work = await readDirectorWork({
       actorUserId: auth.ctx.userId,
       actorRoleName: auth.ctx.roleName,
@@ -145,6 +242,7 @@ export async function POST(req: NextRequest) {
 
   if (
     action !== "DIRECT_OPEN" &&
+    action !== "BULK_DIRECT_OPEN" &&
     action !== "APPROVE_AND_OPEN" &&
     action !== "CLOSE_COMPLETED_EARLY"
   ) {
@@ -164,6 +262,56 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    if (action === "BULK_DIRECT_OPEN") {
+      const parsedScope = bulkScopeFromValues({
+        scopeType: parsed.body.scopeType,
+        scopeIds: parsed.body.scopeIds,
+        legacyScopeId: parsed.body.scopeId,
+      });
+      if (!parsedScope.ok) {
+        return jsonNoStore(400, {
+          ok: false,
+          reqId: meta.reqId,
+          error: parsedScope.error,
+        });
+      }
+
+      const bulkOpenKey = clean(parsed.body.bulkOpenKey);
+      if (!bulkOpenKey) {
+        return jsonNoStore(400, {
+          ok: false,
+          reqId: meta.reqId,
+          error: "BULK_OPEN_KEY_REQUIRED",
+        });
+      }
+
+      const result = await bulkOpenHeadteacherFeedbackCycles({
+        actorUserId: auth.ctx.userId,
+        actorRoleName: auth.ctx.roleName,
+        governanceScope: reviewGovernanceScope(auth.scope),
+        scope: parsedScope.scope,
+        bulkOpenKey,
+        confirm: true,
+        reqId: meta.reqId,
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+      });
+
+      const work = await readDirectorWork({
+        actorUserId: auth.ctx.userId,
+        actorRoleName: auth.ctx.roleName,
+        scope: auth.scope,
+      });
+
+      return jsonNoStore(result.summary.directlyOpened > 0 ? 201 : 200, {
+        ok: true,
+        reqId: meta.reqId,
+        result,
+        ...work,
+        providerCalled: false,
+      });
+    }
+
     if (action === "DIRECT_OPEN") {
       const targetHeadteacherUserId = clean(
         parsed.body.targetHeadteacherUserId,

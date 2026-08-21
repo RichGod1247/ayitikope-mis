@@ -403,7 +403,7 @@ function formatPercent(value: unknown) {
   if (value === null || value === undefined || value === "") return "—";
   const n = Number(value);
   if (!Number.isFinite(n)) return "—";
-  return `${n.toFixed(1).replace(/\.0$/, "")}%`;
+  return `${Math.round(n)}%`;
 }
 
 function formatDate(value?: string | null) {

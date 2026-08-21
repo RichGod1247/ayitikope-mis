@@ -350,6 +350,12 @@ function input(overrides = {}) {
     actorRoleName: "DISTRICT_DIRECTOR",
     cycleId: "cycle-headteacher-001",
     dateObserved: "2026-07-27",
+    arrivalTime: "08:30",
+    staffStrength: 12,
+    teachersPresentAtVisit: 10,
+    totalEnrolment: 40,
+    girls: 22,
+    boys: 18,
     reqId: "req-f2-0001",
     ip: "127.0.0.1",
     userAgent: "D3.4F2-QA",
@@ -387,6 +393,12 @@ async function main() {
   assertEqual(created.assessment.status, "DRAFT", "Draft status");
   assertEqual(created.assessment.revision, 1, "Draft revision");
   assertEqual(created.assessment.dateObserved, "2026-07-27", "Observed date normalization");
+  assertEqual(created.assessment.visitDetails.arrivalTime, "08:30", "Arrival time normalization");
+  assertEqual(created.assessment.visitDetails.staffStrength, 12, "Staff strength snapshot");
+  assertEqual(created.assessment.visitDetails.teachersPresentAtVisit, 10, "Teachers present snapshot");
+  assertEqual(created.assessment.visitDetails.totalEnrolment, 40, "Total enrolment snapshot");
+  assertEqual(created.assessment.visitDetails.girls, 22, "Girls snapshot");
+  assertEqual(created.assessment.visitDetails.boys, 18, "Boys snapshot");
   assertEqual(created.assessment.assessorAssignmentId, "assignment-director-001", "Assignment snapshot");
   assertEqual(created.assessment.targetTenantId, "tenant-001", "Target tenant snapshot");
   assertEqual(database.assessments.length, 1, "One assessment created");
@@ -401,7 +413,11 @@ async function main() {
   assertEqual(database.transactionOptions[0].timeout, 60000, "UAT latency transaction timeout");
 
   const snapshot = database.assessments[0].evidenceSnapshotJson;
-  assertEqual(snapshot.schemaVersion, 1, "Snapshot schema version");
+  assertEqual(
+    snapshot.schemaVersion,
+    HEADTEACHER_SUPERVISORY_DRAFT_POLICY.visitContextSchemaVersion,
+    "Snapshot schema version",
+  );
   assertEqual(snapshot.evidenceStream, "GOVERNANCE_SUPERVISORY_ASSESSMENT", "Evidence stream");
   assertEqual(snapshot.cycle.id, "cycle-headteacher-001", "Cycle snapshot");
   assertEqual(snapshot.target.userId, "headteacher-001", "Target snapshot");
@@ -414,6 +430,13 @@ async function main() {
   assertEqual(snapshot.instrument.code, "HEADTEACHER_SUPERVISORY_ASSESSMENT_V1", "Instrument snapshot");
   assertEqual(snapshot.instrument.contentHash, CONTENT_HASH, "Definition hash snapshot");
   assertEqual(snapshot.observation.dateObserved, "2026-07-27", "Observation snapshot");
+  assertEqual(snapshot.observation.visitDetails.schemaVersion, 1, "Visit-details schema version");
+  assertEqual(snapshot.observation.visitDetails.arrivalTime, "08:30", "Snapshot arrival time");
+  assertEqual(snapshot.observation.visitDetails.staffStrength, 12, "Snapshot staff strength");
+  assertEqual(snapshot.observation.visitDetails.teachersPresentAtVisit, 10, "Snapshot teachers present");
+  assertEqual(snapshot.observation.visitDetails.totalEnrolment, 40, "Snapshot total enrolment");
+  assertEqual(snapshot.observation.visitDetails.girls, 22, "Snapshot girls");
+  assertEqual(snapshot.observation.visitDetails.boys, 18, "Snapshot boys");
   const snapshotJson = JSON.stringify(snapshot);
   assert(!snapshotJson.includes("@example.test"), "Snapshot must exclude email addresses");
   assert(!snapshotJson.toLowerCase().includes("phone"), "Snapshot must exclude phone fields");
@@ -612,6 +635,7 @@ async function main() {
   console.log("Jurisdiction                    : district/circuit revalidated");
   console.log("Initial assessment              : DRAFT revision 1");
   console.log("Visit date                      : required, opened-to-current day");
+  console.log("Visit details                   : valid HH:mm + balanced whole-number snapshot");
   console.log("Target/school context           : current and cycle-bound");
   console.log("Assessor assignment context     : frozen at creation");
   console.log("Instrument identity/hash        : active supervisory V1 frozen");

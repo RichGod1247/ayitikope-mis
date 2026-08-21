@@ -22,7 +22,10 @@ function assert(condition, message, detail) {
 function read(relativePath) {
   const absolutePath = path.join(repoRoot, relativePath);
   if (!fs.existsSync(absolutePath)) fail("Required file missing", relativePath);
-  return fs.readFileSync(absolutePath, "utf8");
+  return fs
+    .readFileSync(absolutePath, "utf8")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n");
 }
 
 const files = {
@@ -175,6 +178,216 @@ assert(source.service.includes("sections.length !== 4 || itemCount !== 34"), "Of
 assert(
   source.client.includes("clearWorkspaceForAssessmentChange"),
   "Assessment-change stale workspace reset missing",
+);
+
+assert(
+  source.client.includes(
+    'useState<"SUBMITTED" | "NEW" | null>(null)',
+  ),
+  "Director mutually exclusive Headteacher task-panel state missing",
+);
+assert(
+  source.client.includes(
+    'data-director-own-headteacher-appraisal-ui="bbc-v2"',
+  ),
+  "Director compact Headteacher appraisal landing missing",
+);
+assert(
+  source.client.includes("✓ Submitted assessments") &&
+    source.client.includes("＋ New Headteacher appraisal"),
+  "Director submitted/new compact task cards missing",
+);
+assert(
+  source.client.includes('directorLandingPanel === "SUBMITTED"') &&
+    source.client.includes('directorLandingPanel === "NEW"'),
+  "Director task-card expansion contract missing",
+);
+assert(
+  source.client.includes("View submitted assessment") &&
+    source.client.includes(
+      "Opening a submitted assessment shows the native white read-only form, not the questionnaire.",
+    ),
+  "Director submitted assessment native-paper handoff missing",
+);
+assert(
+  source.client.includes("const loadDirectOpenTargets = useCallback(async () =>") &&
+    source.client.includes(
+      'fetch(\n        "/api/district/headteacher-appraisals",\n        { cache: "no-store" },',
+    ),
+  "Director new-target discovery must remain explicit and no-store",
+);
+
+assert(
+  source.client.includes(
+    'data-director-staff-feedback-bulk-ui="multi-scope-v1"',
+  ),
+  "Director multi-scope Staff Feedback UI marker missing",
+);
+for (const marker of [
+  "Invite staff feedback · 7 days",
+  "Assess Headteacher directly",
+  "Entire district",
+  "Circuit(s)",
+  "Choose one or more circuits",
+  'data-single-circuit-school-mode="all-or-selected"',
+  "All schools",
+  "Choose schools",
+  'data-multi-circuit-school-selection="all-auto"',
+  'data-feedback-preview-toggle="compact"',
+  'mode: "BULK_PREVIEW"',
+  'action: "BULK_DIRECT_OPEN"',
+  "Confirm and notify",
+  "scope changes stay local until Preview",
+  "notificationRecipientCount",
+  "Staff feedback is not a prerequisite",
+  "score is never combined",
+  'data-director-governance-direct-start="independent-v1"',
+  "Search Headteacher or school",
+  "Start official assessment",
+  '"/api/governance/appraisals/headteacher-supervisory/direct"',
+  "No Teachers are invited here.",
+  "No 7-day feedback window is opened.",
+  "No new staff feedback was started.",
+]) {
+  assert(
+    source.client.includes(marker),
+    `Director multi-scope Staff Feedback marker missing: ${marker}`,
+  );
+}
+assert(
+  source.client.includes('type="checkbox"') &&
+    source.client.includes("toggleFeedbackCircuit") &&
+    source.client.includes("toggleFeedbackSchool") &&
+    source.client.includes(
+      "disabled={feedbackPreviewLoading || feedbackOpening}",
+    ),
+  "Director multi-Circuit/multi-School checkbox controls missing",
+);
+assert(
+  source.client.includes("window.crypto.randomUUID()") &&
+    source.client.includes("HEADTEACHER-BULK-OPEN:"),
+  "Ephemeral retry-safe bulk opening key missing",
+);
+
+const localScopeStart = source.client.indexOf(
+  'function chooseFeedbackAudience(mode: "DISTRICT" | "CIRCUIT")',
+);
+const localScopeEnd = source.client.indexOf(
+  "async function previewHeadteacherStaffFeedback()",
+  localScopeStart,
+);
+const localScopeSource = source.client.slice(localScopeStart, localScopeEnd);
+assert(
+  localScopeStart >= 0 &&
+    localScopeEnd > localScopeStart &&
+    !localScopeSource.includes("fetch("),
+  "Scope and checkbox changes must remain local until explicit Preview",
+);
+
+const previewStart = source.client.indexOf(
+  "async function previewHeadteacherStaffFeedback()",
+);
+const previewEnd = source.client.indexOf(
+  "async function confirmHeadteacherStaffFeedback()",
+  previewStart,
+);
+const previewSource = source.client.slice(previewStart, previewEnd);
+assert(
+  previewStart >= 0 &&
+    previewEnd > previewStart &&
+    previewSource.includes('mode: "BULK_PREVIEW"') &&
+    previewSource.includes('params.append("scopeId", scopeId)') &&
+    previewSource.includes('{ cache: "no-store" }'),
+  "Explicit no-store multi-scope preview wiring missing",
+);
+
+const bulkConfirmStart = source.client.indexOf(
+  "async function confirmHeadteacherStaffFeedback()",
+);
+const bulkConfirmEnd = source.client.indexOf(
+  "async function createDraft()",
+  bulkConfirmStart,
+);
+const bulkConfirmSource = source.client.slice(
+  bulkConfirmStart,
+  bulkConfirmEnd,
+);
+assert(
+  bulkConfirmStart >= 0 &&
+    bulkConfirmEnd > bulkConfirmStart &&
+    bulkConfirmSource.includes("window.confirm(") &&
+    bulkConfirmSource.includes('action: "BULK_DIRECT_OPEN"') &&
+    bulkConfirmSource.includes("scopeIds: currentIds") &&
+    bulkConfirmSource.includes("scopeType: commandScopeLevel") &&
+    bulkConfirmSource.includes("bulkOpenKey: commandBulkOpenKey") &&
+    bulkConfirmSource.includes("confirm: true") &&
+    bulkConfirmSource.includes(
+      "feedbackBulkOpenKeysRef.current.delete(commandScopeSignature)",
+    ),
+  "Explicit multi-scope confirmation/mutation or post-success key rotation missing",
+);
+assert(
+  bulkConfirmSource.includes("await loadQueue();"),
+  "Bulk success must refresh the Governance supervisory queue through its own endpoint",
+);
+assert(
+  !bulkConfirmSource.includes("setQueue(body.queue)") &&
+    !bulkConfirmSource.includes("queue: SupervisoryQueue"),
+  "District Staff Feedback queue must never be injected or typed as the Governance supervisory queue",
+);
+
+const directorBranchStart = source.client.indexOf(
+  'if (actorRole === "DISTRICT_DIRECTOR") {',
+);
+const directorBranchEnd = source.client.indexOf(
+  '    return (\n      <div className="min-h-screen bg-[#070B12] px-4 py-6',
+  directorBranchStart,
+);
+const directorBranchSource = source.client.slice(
+  directorBranchStart,
+  directorBranchEnd,
+);
+assert(
+  directorBranchStart >= 0 &&
+    directorBranchEnd > directorBranchStart &&
+    !directorBranchSource.includes('action: "DIRECT_OPEN"'),
+  "Director K2 landing must not use the old individual Staff Feedback mutation",
+);
+
+const queueLoaderStart = source.client.indexOf(
+  "const loadQueue = useCallback(async () =>",
+);
+const queueLoaderEnd = source.client.indexOf(
+  "const loadDirectOpenTargets = useCallback(async () =>",
+  queueLoaderStart,
+);
+const queueLoaderSource = source.client.slice(queueLoaderStart, queueLoaderEnd);
+assert(
+  queueLoaderStart >= 0 &&
+    queueLoaderEnd > queueLoaderStart &&
+    !queueLoaderSource.includes("/api/district/headteacher-appraisals"),
+  "Headteacher queue load must not be poisoned by optional Director target discovery",
+);
+assert(
+  source.client.includes(
+    'setReviewMode(body.workspace.assessment.status === "FINALIZED");',
+  ),
+  "Finalized Headteacher deep links must open the native paper automatically",
+);
+assert(
+  source.client.includes(
+    'renderedWorkspace.assessment.status === "FINALIZED" && reviewMode',
+  ) &&
+    source.client.includes("Submitted assessment · read-only") &&
+    source.client.includes("Submitted Headteacher assessment"),
+  "Submitted Headteacher native read-only mode missing",
+);
+assert(
+  source.client.includes("{!submittedNativeView ? (") &&
+    source.client.includes(
+      "This submitted assessment is locked. The native white read-only form is shown below.",
+    ),
+  "Submitted Headteacher questionnaire suppression missing",
 );
 assert(
   source.client.includes('data-hos-own-headteacher-appraisal-ui="bbc-v2"'),

@@ -574,6 +574,33 @@ function nativeScoreTone(
   }
 }
 
+function ratingButtonTone(score: number, selected: boolean) {
+  switch (score) {
+    case 1:
+      return selected
+        ? "border-rose-300/70 bg-rose-500/30 text-rose-50"
+        : "border-rose-300/25 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20";
+    case 2:
+      return selected
+        ? "border-orange-300/70 bg-orange-500/30 text-orange-50"
+        : "border-orange-300/25 bg-orange-500/10 text-orange-100 hover:bg-orange-500/20";
+    case 3:
+      return selected
+        ? "border-amber-300/70 bg-amber-400/30 text-amber-50"
+        : "border-amber-300/25 bg-amber-400/10 text-amber-100 hover:bg-amber-400/20";
+    case 4:
+      return selected
+        ? "border-cyan-300/70 bg-cyan-400/30 text-cyan-50"
+        : "border-cyan-300/25 bg-cyan-400/10 text-cyan-100 hover:bg-cyan-400/20";
+    case 5:
+      return selected
+        ? "border-emerald-300/70 bg-emerald-400/30 text-emerald-50"
+        : "border-emerald-300/25 bg-emerald-400/10 text-emerald-100 hover:bg-emerald-400/20";
+    default:
+      return "border-white/10 bg-white/[0.03] text-slate-300 hover:bg-white/[0.08]";
+  }
+}
+
 export default function TeacherSupervisoryAssessmentClient({
   initialAssessmentId,
 }: ClientProps) {
@@ -2308,9 +2335,7 @@ export default function TeacherSupervisoryAssessmentClient({
                           }
                           className={cx(
                             "h-11 w-11 rounded-2xl border text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60",
-                            selected
-                              ? "border-cyan-300/40 bg-cyan-400/20 text-cyan-50"
-                              : "border-white/10 bg-white/[0.03] text-slate-300 hover:bg-white/[0.08]",
+                            ratingButtonTone(score, selected),
                           )}
                         >
                           {score}
@@ -2332,8 +2357,8 @@ export default function TeacherSupervisoryAssessmentClient({
                       className={cx(
                         "h-11 rounded-2xl border px-3 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60",
                         answer?.notApplicable === true
-                          ? "border-amber-300/40 bg-amber-400/20 text-amber-50"
-                          : "border-white/10 bg-white/[0.03] text-slate-300 hover:bg-white/[0.08]",
+                          ? "border-slate-300/50 bg-slate-300/20 text-slate-100"
+                          : "border-slate-300/20 bg-slate-300/[0.06] text-slate-300 hover:bg-slate-300/10",
                       )}
                     >
                       N/A

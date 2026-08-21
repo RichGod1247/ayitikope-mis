@@ -1,4 +1,3 @@
-//src/app/api/governance/appraisals/headteacher-supervisory/_shared.ts
 import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { requireGovernanceApiContext } from "@/lib/governance/scope";
@@ -51,6 +50,15 @@ export function isIsoDate(value: unknown) {
   return /^\d{4}-\d{2}-\d{2}$/.test(clean(value));
 }
 
+export function isDirectAssessmentKey(value: unknown) {
+  const key = clean(value);
+  return (
+    key.length >= 8 &&
+    key.length <= 120 &&
+    /^[A-Za-z0-9._:-]+$/.test(key)
+  );
+}
+
 export function objectBody(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   return value as Record<string, unknown>;
@@ -73,6 +81,40 @@ export function requestIsJson(req: NextRequest) {
     .includes("application/json");
 }
 
+const MAX_JSON_BODY_BYTES = 16_384;
+
+export async function readBoundedJsonObject(req: NextRequest): Promise<
+  | { ok: true; body: Record<string, unknown> }
+  | { ok: false; status: number; error: string }
+> {
+  const declaredLength = Number(req.headers.get("content-length") || "0");
+  if (
+    Number.isFinite(declaredLength) &&
+    declaredLength > MAX_JSON_BODY_BYTES
+  ) {
+    return { ok: false, status: 413, error: "REQUEST_BODY_TOO_LARGE" };
+  }
+
+  const text = await req.text();
+  if (new TextEncoder().encode(text).byteLength > MAX_JSON_BODY_BYTES) {
+    return { ok: false, status: 413, error: "REQUEST_BODY_TOO_LARGE" };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { ok: false, status: 400, error: "INVALID_JSON_BODY" };
+  }
+
+  const body = objectBody(parsed);
+  if (!body) {
+    return { ok: false, status: 400, error: "JSON_OBJECT_REQUIRED" };
+  }
+
+  return { ok: true, body };
+}
+
 export async function requireSupervisoryGovernanceApiContext(req: NextRequest) {
   return requireGovernanceApiContext(req, {
     allowedRoles:
@@ -83,9 +125,11 @@ export async function requireSupervisoryGovernanceApiContext(req: NextRequest) {
 function safeDetails(value: unknown): Record<string, unknown> | null {
   const body = objectBody(value);
   if (!body) return null;
+
   const safe = Object.fromEntries(
     Object.entries(body).filter(([key]) => SAFE_DETAIL_KEYS.has(key)),
   );
+
   return Object.keys(safe).length ? safe : null;
 }
 
@@ -97,6 +141,7 @@ export function supervisoryApiError(args: {
   const error = args.error as AppraisalServiceError;
   const code = clean(error?.code || error?.message);
   const rawStatus = Number(error?.status);
+
   const knownServiceError =
     code.startsWith("HEADTEACHER_SUPERVISORY_") &&
     Number.isInteger(rawStatus) &&
@@ -108,6 +153,7 @@ export function supervisoryApiError(args: {
       reqId: args.reqId,
       error: args.error,
     });
+
     return jsonNoStore(500, {
       ok: false,
       reqId: args.reqId,
@@ -116,6 +162,7 @@ export function supervisoryApiError(args: {
   }
 
   const details = safeDetails(error.details);
+
   return jsonNoStore(rawStatus, {
     ok: false,
     reqId: args.reqId,

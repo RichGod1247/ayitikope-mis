@@ -5,13 +5,23 @@ import {
   HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY,
   canonicalHeadteacherSupervisoryAssessorRole,
 } from "@/lib/appraisals/headteacherSupervisoryAssessment";
+import {
+  HEADTEACHER_SUPERVISORY_DIRECTOR_DIRECT_RELEASE_POLICY,
+  HEADTEACHER_SUPERVISORY_RELEASES_METADATA_KEY,
+} from "@/lib/appraisals/headteacherSupervisoryDirectorDirectRelease";
 import type { GovernanceScope } from "@/lib/governance/scope";
 
 export const HEADTEACHER_SUPERVISORY_QUEUE_POLICY = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   workflow: HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.workflow,
   parentInstrumentCode: HEADTEACHER_FEEDBACK_POLICY.instrumentCode,
   parentInstrumentVersion: HEADTEACHER_FEEDBACK_POLICY.instrumentVersion,
+  directorGovernanceCarrierKind: "DIRECTOR_GOVERNANCE_ONLY",
+  directorGovernanceInstrumentCode:
+    HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.instrumentCode,
+  directorGovernanceInstrumentVersion:
+    HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.instrumentVersion,
+  directorGovernanceCarrierVisibleToDirectorOnly: true,
   visibleCycleStatuses: ["OPEN", "CLOSED", "UNDER_REVIEW", "RELEASED"] as const,
   actorAssessmentOnly: true,
   tenantScopeRequired: true,
@@ -73,6 +83,10 @@ export type HeadteacherSupervisoryQueueItem = {
     url: string | null;
     enabled: boolean;
   };
+  release: {
+    canDirectRelease: boolean;
+    releasedToHeadteacher: boolean;
+  };
 };
 
 export type HeadteacherSupervisoryQueue = {
@@ -125,6 +139,78 @@ function objectValue(value: unknown): Record<string, unknown> {
 
 function isoDateOnly(value: Date | null) {
   return value ? value.toISOString().slice(0, 10) : null;
+}
+
+function directorDirectReleasePresentation(input: {
+  actorRole: string;
+  cycleId: string;
+  cycleMetadata: unknown;
+  directorGovernanceCarrierValid: boolean;
+  assessment:
+    | {
+        id: string;
+        status: string;
+        revision: number;
+      }
+    | null;
+}) {
+  const policy = HEADTEACHER_SUPERVISORY_DIRECTOR_DIRECT_RELEASE_POLICY;
+  const assessment = input.assessment;
+  const eligible =
+    input.actorRole === policy.requiredActorRole &&
+    input.directorGovernanceCarrierValid &&
+    assessment != null &&
+    normalized(assessment.status) === policy.requiredAssessmentStatus &&
+    assessment.revision === policy.requiredAssessmentRevision;
+
+  if (!eligible || !assessment) {
+    return {
+      canDirectRelease: false,
+      releasedToHeadteacher: false,
+    };
+  }
+
+  const releaseMap = objectValue(
+    objectValue(input.cycleMetadata)[HEADTEACHER_SUPERVISORY_RELEASES_METADATA_KEY],
+  );
+  const release = objectValue(releaseMap[assessment.id]);
+
+  if (Object.keys(release).length === 0) {
+    return {
+      canDirectRelease: true,
+      releasedToHeadteacher: false,
+    };
+  }
+
+  const releasedAt = clean(release.releasedAt);
+  const releasedDate = new Date(releasedAt);
+  const releaseProofHash = clean(release.releaseProofHash).toLowerCase();
+  const releasedToHeadteacher =
+    Number(release.proofSchemaVersion) === policy.proofSchemaVersion &&
+    clean(release.releaseMode) === policy.releaseMode &&
+    clean(release.workflow) === policy.workflow &&
+    clean(release.evidenceStream) === policy.evidenceStream &&
+    clean(release.cycleId) === input.cycleId &&
+    clean(release.assessmentId) === assessment.id &&
+    Number(release.assessmentRevision) === policy.requiredAssessmentRevision &&
+    normalized(release.assessmentStatus) === policy.requiredAssessmentStatus &&
+    normalized(release.assessorRole) === policy.requiredAssessorRole &&
+    normalized(release.releaserRole) === policy.requiredActorRole &&
+    release.staffFeedbackRequired === false &&
+    release.staffFeedbackAccessed === false &&
+    release.respondentIdentitiesAccessed === false &&
+    release.individualStaffResponsesAccessed === false &&
+    release.separateEvidenceStreams === true &&
+    release.combinedWeightingDefined === false &&
+    release.providerCalled === false &&
+    releasedAt.length > 0 &&
+    !Number.isNaN(releasedDate.getTime()) &&
+    /^[a-f0-9]{64}$/.test(releaseProofHash);
+
+  return {
+    canDirectRelease: false,
+    releasedToHeadteacher,
+  };
 }
 
 function officeLabel(role: string) {
@@ -515,10 +601,18 @@ export async function readHeadteacherSupervisoryAssessmentQueue(
       targetSchoolNameSnapshot: true,
       targetZoneNameSnapshot: true,
       openedAt: true,
+      deadlineAt: true,
+      responseWindowDays: true,
+      minimumResponses: true,
       closedAt: true,
       reviewStartedAt: true,
       releasedAt: true,
       metadata: true,
+      _count: {
+        select: {
+          participants: true,
+        },
+      },
       scopeZone: {
         select: {
           id: true,
@@ -593,7 +687,7 @@ export async function readHeadteacherSupervisoryAssessmentQueue(
         clean(cycle.targetZone?.name);
       const districtName = clean(cycle.scopeZone.name);
 
-      const contractValid =
+      const staffCarrierValid =
         clean(metadata.workflow) === HEADTEACHER_FEEDBACK_POLICY.workflow &&
         cycle.instrumentVersion.version ===
           HEADTEACHER_FEEDBACK_POLICY.instrumentVersion &&
@@ -602,6 +696,37 @@ export async function readHeadteacherSupervisoryAssessmentQueue(
         instrument.purpose === "HEADTEACHER_STAFF_FEEDBACK" &&
         instrument.subjectType === "HEADTEACHER" &&
         instrument.isActive === true;
+
+      const directorGovernanceCarrierValid =
+        actorRole === "DISTRICT_DIRECTOR" &&
+        clean(metadata.workflow) ===
+          HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.workflow &&
+        clean(metadata.evidenceStream) ===
+          "GOVERNANCE_SUPERVISORY_ASSESSMENT" &&
+        clean(metadata.carrierKind) ===
+          HEADTEACHER_SUPERVISORY_QUEUE_POLICY.directorGovernanceCarrierKind &&
+        cycle.instrumentVersion.version ===
+          HEADTEACHER_SUPERVISORY_QUEUE_POLICY.directorGovernanceInstrumentVersion &&
+        normalized(cycle.instrumentVersion.status) === "ACTIVE" &&
+        instrument.code ===
+          HEADTEACHER_SUPERVISORY_QUEUE_POLICY.directorGovernanceInstrumentCode &&
+        instrument.purpose === "HEADTEACHER_SUPERVISORY_ASSESSMENT" &&
+        instrument.subjectType === "HEADTEACHER" &&
+        instrument.isActive === true &&
+        cycle.responseWindowDays === 0 &&
+        cycle.minimumResponses === 0 &&
+        cycle.deadlineAt === null &&
+        cycle._count.participants === 0 &&
+        metadata.respondentWorkflow === false &&
+        clean(metadata.participantSelection) === "NONE" &&
+        metadata.staffFeedbackRequired === false &&
+        metadata.staffFeedbackAccessed === false &&
+        metadata.separateFromStaffFeedback === true &&
+        metadata.combinedWeightingDefined === false &&
+        metadata.providerCalled === false;
+
+      const contractValid =
+        staffCarrierValid || directorGovernanceCarrierValid;
 
       const hierarchyValid =
         Boolean(
@@ -634,6 +759,10 @@ export async function readHeadteacherSupervisoryAssessmentQueue(
         cycle.assessments[0] ??
         null;
 
+      if (directorGovernanceCarrierValid && !assessment) {
+        return [];
+      }
+
       if (
         !assessment &&
         cycleStatus !== "OPEN" &&
@@ -645,6 +774,13 @@ export async function readHeadteacherSupervisoryAssessmentQueue(
       const view = supervisoryView({
         cycleId: cycle.id,
         cycleStatus,
+        assessment,
+      });
+      const release = directorDirectReleasePresentation({
+        actorRole,
+        cycleId: cycle.id,
+        cycleMetadata: cycle.metadata,
+        directorGovernanceCarrierValid,
         assessment,
       });
 
@@ -660,11 +796,14 @@ export async function readHeadteacherSupervisoryAssessmentQueue(
           circuitName,
           districtId,
           districtName,
-          staffFeedbackLabel: staffFeedbackLabel({
-            cycleStatus,
-            aggregateReady: cycle.aggregates.length === 1,
-          }),
+          staffFeedbackLabel: directorGovernanceCarrierValid
+            ? "Independent Governance assessment"
+            : staffFeedbackLabel({
+                cycleStatus,
+                aggregateReady: cycle.aggregates.length === 1,
+              }),
           ...view,
+          release,
         },
       ];
     },

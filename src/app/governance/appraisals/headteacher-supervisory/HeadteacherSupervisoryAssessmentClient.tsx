@@ -147,6 +147,10 @@ type SupervisoryQueueItem = {
     url: string | null;
     enabled: boolean;
   };
+  release: {
+    canDirectRelease: boolean;
+    releasedToHeadteacher: boolean;
+  };
 };
 
 type SupervisoryQueue = {
@@ -204,6 +208,90 @@ type DirectOpenTargets = {
   respondentIdentitiesIncluded: false;
   individualStaffResponsesIncluded: false;
   providerCalled: false;
+};
+
+type HeadteacherFeedbackBulkScopeLevel = "DISTRICT" | "CIRCUIT" | "SCHOOL";
+
+type HeadteacherFeedbackBulkPreviewRow = {
+  targetHeadteacherUserId: string;
+  targetHeadteacherName: string | null;
+  targetTenantId: string;
+  schoolName: string;
+  circuitId: string;
+  circuitName: string;
+  districtId: string;
+  districtName: string;
+  eligibleRespondentCount: number;
+  disposition: "OPEN_NEW" | "KEEP_EXISTING" | "SKIP";
+  reason: string;
+  existingCycleId: string | null;
+  existingCycleStatus: string | null;
+};
+
+type HeadteacherFeedbackBulkPreview = {
+  actorRole: "DISTRICT_DIRECTOR";
+  scope: {
+    level: HeadteacherFeedbackBulkScopeLevel;
+    ids: string[];
+  };
+  summary: {
+    schools: number;
+    headteachers: number;
+    eligibleRespondents: number;
+    willOpen: number;
+    keepExisting: number;
+    willSkip: number;
+  };
+  rows: HeadteacherFeedbackBulkPreviewRow[];
+  readOnly: true;
+  respondentIdentitiesIncluded: false;
+  individualStaffResponsesIncluded: false;
+  notificationChannels: readonly ["IN_APP", "SMS", "EMAIL"];
+  notificationRecipientsDerivedFromLockedScope: true;
+  providerCalled: false;
+};
+
+type HeadteacherFeedbackBulkOpenResult = {
+  actorRole: "DISTRICT_DIRECTOR";
+  bulkOpenKey: string;
+  scope: {
+    level: HeadteacherFeedbackBulkScopeLevel;
+    ids: string[];
+  };
+  openedAt: string;
+  responseWindowDays: number;
+  summary: {
+    selectedTargets: number;
+    directlyOpened: number;
+    existingOpen: number;
+    keptExisting: number;
+    skipped: number;
+    retryRequired: number;
+    participantCount: number;
+    notificationRecipientCount: number;
+  };
+  partialSuccess: boolean;
+  respondentIdentitiesIncluded: false;
+  individualStaffResponsesIncluded: false;
+  notificationChannels: readonly ["IN_APP", "SMS", "EMAIL"];
+  notificationRecipientsDerivedFromLockedScope: true;
+  providerCalled: false;
+};
+
+type HeadteacherSupervisoryDirectorDraftResult = {
+  outcome: "CREATED" | "EXISTING_MATCH";
+  draft: {
+    cycleId: string;
+    cycleStatus: "OPEN";
+    assessmentId: string;
+    assessmentStatus: string;
+    revision: number;
+    targetUserId: string;
+    targetTenantId: string;
+    dateObserved: string;
+    evidenceStream: "GOVERNANCE_SUPERVISORY_ASSESSMENT";
+    carrierKind: "DIRECTOR_GOVERNANCE_ONLY";
+  };
 };
 
 type ClientProps = {
@@ -392,6 +480,29 @@ function messageFromFailure(value: unknown, status?: number) {
     return "The server is temporarily busy. Your answers remain on this screen and autosave will retry.";
   }
 
+  if (code === "HEADTEACHER_SUPERVISORY_DIRECT_DRAFT_EXISTING_ACTIVE") {
+    return "This Headteacher already has an unfinished Governance assessment. Continue or release that assessment before starting another one.";
+  }
+
+  if (
+    code === "HEADTEACHER_SUPERVISORY_DIRECT_DRAFT_TARGET_AMBIGUOUS" ||
+    code === "HEADTEACHER_SUPERVISORY_DIRECT_DRAFT_TARGET_CONTEXT_INVALID"
+  ) {
+    return "This school does not have one clear active Headteacher record. Ask MIS to correct the Headteacher assignment, then refresh this page.";
+  }
+
+  if (code === "HEADTEACHER_SUPERVISORY_DIRECT_DRAFT_TARGET_NOT_FOUND") {
+    return "The Headteacher record has changed. Refresh the list and choose the Headteacher again.";
+  }
+
+  if (
+    code === "HEADTEACHER_SUPERVISORY_DIRECT_DRAFT_TENANT_OUT_OF_SCOPE" ||
+    code === "HEADTEACHER_SUPERVISORY_DIRECT_DRAFT_ZONE_OUT_OF_SCOPE" ||
+    code.startsWith("HEADTEACHER_SUPERVISORY_DIRECT_DRAFT_AUTHORITY_")
+  ) {
+    return "This Headteacher is outside your current appraisal authority. Refresh the list and try again.";
+  }
+
   return (
     failure?.message ||
     code ||
@@ -420,6 +531,62 @@ function round2(value: number) {
 function formatScorePercent(value: number | null | undefined) {
   if (value == null || !Number.isFinite(Number(value))) return "—";
   return `${Math.round(Number(value))}%`;
+}
+
+function staffFeedbackResultMessage(result: HeadteacherFeedbackBulkOpenResult) {
+  const opened = result.summary.directlyOpened;
+  const kept = result.summary.existingOpen + result.summary.keptExisting;
+  const skipped = result.summary.skipped;
+  const recipients = result.summary.notificationRecipientCount;
+
+  if (opened === 0) {
+    const parts = ["No new staff feedback was started."];
+
+    if (kept === 1) {
+      parts.push("The existing appraisal was left unchanged.");
+    } else if (kept > 1) {
+      parts.push(`${kept} existing appraisals were left unchanged.`);
+    }
+
+    if (recipients === 0) {
+      parts.push("No new Teacher notices were sent.");
+    } else {
+      parts.push(
+        `Notices for ${recipients} Teacher${recipients === 1 ? "" : "s"} were checked or completed for the existing exercise.`,
+      );
+    }
+
+    if (skipped > 0) {
+      parts.push(
+        `${skipped} school${skipped === 1 ? " was" : "s were"} skipped safely.`,
+      );
+    }
+
+    return parts.join(" ");
+  }
+
+  const parts = [
+    `Staff feedback started for ${opened} Headteacher${opened === 1 ? "" : "s"}.`,
+    `Teachers have 7 days to respond.`,
+  ];
+
+  if (recipients > 0) {
+    parts.push(
+      `Notices were prepared for ${recipients} Teacher${recipients === 1 ? "" : "s"}.`,
+    );
+  }
+  if (kept > 0) {
+    parts.push(
+      `${kept} existing appraisal${kept === 1 ? " was" : "s were"} left unchanged.`,
+    );
+  }
+  if (skipped > 0) {
+    parts.push(
+      `${skipped} school${skipped === 1 ? " was" : "s were"} skipped safely.`,
+    );
+  }
+
+  return parts.join(" ");
 }
 
 type LiveSectionScore = {
@@ -482,6 +649,22 @@ function nativeScoreTone(
   }
 }
 
+function editableScoreTone(score: number) {
+  switch (score) {
+    case 1:
+      return "border-rose-300/55 bg-rose-500/30 text-rose-50";
+    case 2:
+      return "border-orange-300/55 bg-orange-500/30 text-orange-50";
+    case 3:
+      return "border-amber-300/55 bg-amber-400/30 text-amber-50";
+    case 4:
+      return "border-cyan-300/55 bg-cyan-400/30 text-cyan-50";
+    case 5:
+      return "border-emerald-300/55 bg-emerald-400/30 text-emerald-50";
+    default:
+      return "border-white/10 bg-white/[0.03] text-slate-300";
+  }
+}
 export default function HeadteacherSupervisoryAssessmentClient({
   initialAssessmentId,
   initialCycleId,
@@ -515,6 +698,36 @@ export default function HeadteacherSupervisoryAssessmentClient({
   const [showSavedRecords, setShowSavedRecords] = useState(false);
   const [hosLandingPanel, setHosLandingPanel] =
     useState<"RETURNED" | "NEW" | null>(null);
+  const [directorLandingPanel, setDirectorLandingPanel] =
+    useState<"SUBMITTED" | "NEW" | null>(null);
+  const [directOpenTargetsError, setDirectOpenTargetsError] = useState("");
+  const [directOpenTargetsLoading, setDirectOpenTargetsLoading] =
+    useState(false);
+  const [feedbackAudienceMode, setFeedbackAudienceMode] =
+    useState<"DISTRICT" | "CIRCUIT">("DISTRICT");
+  const [feedbackSelectedCircuitIds, setFeedbackSelectedCircuitIds] =
+    useState<string[]>([]);
+  const [feedbackSelectedSchoolIds, setFeedbackSelectedSchoolIds] =
+    useState<string[]>([]);
+  const [feedbackSingleCircuitAllSchools, setFeedbackSingleCircuitAllSchools] =
+    useState(true);
+  const [feedbackSchoolFilter, setFeedbackSchoolFilter] = useState("");
+  const [feedbackPreview, setFeedbackPreview] =
+    useState<HeadteacherFeedbackBulkPreview | null>(null);
+  const [feedbackPreviewExpanded, setFeedbackPreviewExpanded] = useState(false);
+  const [feedbackBulkResult, setFeedbackBulkResult] =
+    useState<HeadteacherFeedbackBulkOpenResult | null>(null);
+  const [feedbackPreviewLoading, setFeedbackPreviewLoading] = useState(false);
+  const [feedbackOpening, setFeedbackOpening] = useState(false);
+  const [directorNewWorkPath, setDirectorNewWorkPath] =
+    useState<"STAFF" | "GOVERNANCE" | null>(null);
+  const [directorDirectSearch, setDirectorDirectSearch] = useState("");
+  const [directorDirectCircuitId, setDirectorDirectCircuitId] = useState("");
+  const [directorDirectSchoolId, setDirectorDirectSchoolId] = useState("");
+  const [directorDirectTargetKey, setDirectorDirectTargetKey] = useState("");
+  const [directorDirectStarting, setDirectorDirectStarting] = useState(false);
+  const [directorReleasingAssessmentId, setDirectorReleasingAssessmentId] =
+    useState("");
   const [autosaveState, setAutosaveState] =
     useState<AutosaveState>("idle");
   const [reviewMode, setReviewMode] = useState(false);
@@ -530,6 +743,8 @@ export default function HeadteacherSupervisoryAssessmentClient({
   const autosaveRunningRef = useRef(false);
   const nativeReviewRef = useRef<HTMLElement | null>(null);
   const directOpenKeysRef = useRef(new Map<string, string>());
+  const feedbackBulkOpenKeysRef = useRef(new Map<string, string>());
+  const directorDirectAssessmentKeysRef = useRef(new Map<string, string>());
 
   const clearWorkspaceForAssessmentChange = useCallback(() => {
     if (autosaveTimerRef.current !== null) {
@@ -572,28 +787,9 @@ export default function HeadteacherSupervisoryAssessmentClient({
 
       const nextQueue = body.queue;
       setQueue(nextQueue);
-
-      if (nextQueue.actorRole === "DISTRICT_DIRECTOR") {
-        const directorResponse = await fetch(
-          "/api/district/headteacher-appraisals",
-          { cache: "no-store" },
-        );
-        const directorBody = (await readApiBody(directorResponse)) as
-          | {
-              ok: true;
-              directOpenTargets: DirectOpenTargets;
-            }
-          | ApiFailure;
-
-        if (!directorResponse.ok || directorBody.ok !== true) {
-          throw new Error(
-            messageFromFailure(directorBody, directorResponse.status),
-          );
-        }
-
-        setDirectOpenTargets(directorBody.directOpenTargets);
-      } else {
+      if (nextQueue.actorRole !== "DISTRICT_DIRECTOR") {
         setDirectOpenTargets(null);
+        setDirectOpenTargetsError("");
       }
     } catch (queueError) {
       setError(
@@ -603,6 +799,39 @@ export default function HeadteacherSupervisoryAssessmentClient({
       );
     } finally {
       setQueueLoading(false);
+    }
+  }, []);
+
+  const loadDirectOpenTargets = useCallback(async () => {
+    setDirectOpenTargetsLoading(true);
+    setDirectOpenTargetsError("");
+    try {
+      const response = await fetch(
+        "/api/district/headteacher-appraisals",
+        { cache: "no-store" },
+      );
+      const body = (await readApiBody(response)) as
+        | {
+            ok: true;
+            directOpenTargets: DirectOpenTargets;
+          }
+        | ApiFailure;
+
+      if (!response.ok || body.ok !== true) {
+        throw new Error(messageFromFailure(body, response.status));
+      }
+
+      setDirectOpenTargets(body.directOpenTargets);
+      setFeedbackPreview(null);
+    } catch (targetError) {
+      setDirectOpenTargets(null);
+      setDirectOpenTargetsError(
+        targetError instanceof Error
+          ? targetError.message
+          : "New Headteacher appraisal targets could not be loaded.",
+      );
+    } finally {
+      setDirectOpenTargetsLoading(false);
     }
   }, []);
 
@@ -664,6 +893,7 @@ export default function HeadteacherSupervisoryAssessmentClient({
         savedSectionSignaturesRef.current = nextSavedSignatures;
         pendingSectionSavesRef.current.clear();
         setAutosaveState("saved");
+        setReviewMode(body.workspace.assessment.status === "FINALIZED");
 
         if (preservePosition) {
           setSectionIndex(
@@ -1246,6 +1476,383 @@ export default function HeadteacherSupervisoryAssessmentClient({
     }
   }
 
+  function resetFeedbackBulkReview() {
+    setFeedbackPreview(null);
+    setFeedbackPreviewExpanded(false);
+    setFeedbackBulkResult(null);
+    setError("");
+    setNotice("");
+  }
+
+  function chooseFeedbackAudience(mode: "DISTRICT" | "CIRCUIT") {
+    setFeedbackAudienceMode(mode);
+    setFeedbackSelectedCircuitIds([]);
+    setFeedbackSelectedSchoolIds([]);
+    setFeedbackSingleCircuitAllSchools(true);
+    setFeedbackSchoolFilter("");
+    resetFeedbackBulkReview();
+  }
+
+  function toggleFeedbackCircuit(circuitId: string) {
+    setFeedbackSelectedCircuitIds((current) =>
+      current.includes(circuitId)
+        ? current.filter((id) => id !== circuitId)
+        : [...current, circuitId],
+    );
+    setFeedbackSelectedSchoolIds([]);
+    setFeedbackSingleCircuitAllSchools(true);
+    setFeedbackSchoolFilter("");
+    resetFeedbackBulkReview();
+  }
+
+  function chooseSingleCircuitSchoolMode(allSchools: boolean) {
+    setFeedbackSingleCircuitAllSchools(allSchools);
+    setFeedbackSelectedSchoolIds([]);
+    setFeedbackSchoolFilter("");
+    resetFeedbackBulkReview();
+  }
+
+  function toggleFeedbackSchool(schoolId: string) {
+    setFeedbackSelectedSchoolIds((current) =>
+      current.includes(schoolId)
+        ? current.filter((id) => id !== schoolId)
+        : [...current, schoolId],
+    );
+    resetFeedbackBulkReview();
+  }
+
+  function currentFeedbackScopeLevel(): HeadteacherFeedbackBulkScopeLevel {
+    if (feedbackAudienceMode === "DISTRICT") return "DISTRICT";
+    if (
+      feedbackSelectedCircuitIds.length === 1 &&
+      !feedbackSingleCircuitAllSchools
+    ) {
+      return "SCHOOL";
+    }
+    return "CIRCUIT";
+  }
+
+  function currentFeedbackScopeIds() {
+    const level = currentFeedbackScopeLevel();
+    if (level === "DISTRICT") return [] as string[];
+    if (level === "CIRCUIT") {
+      return [...feedbackSelectedCircuitIds].sort();
+    }
+    return [...feedbackSelectedSchoolIds].sort();
+  }
+
+  function feedbackScopeSignature() {
+    return `${currentFeedbackScopeLevel()}:${currentFeedbackScopeIds().join(",")}`;
+  }
+
+  function feedbackBulkOpenKeyForCurrentScope() {
+    const signature = feedbackScopeSignature();
+    const existing = feedbackBulkOpenKeysRef.current.get(signature);
+    if (existing) return existing;
+
+    const generated = `HEADTEACHER-BULK-OPEN:${window.crypto.randomUUID()}`;
+    feedbackBulkOpenKeysRef.current.set(signature, generated);
+    return generated;
+  }
+
+  function feedbackScopeReady() {
+    if (feedbackAudienceMode === "DISTRICT") return true;
+    if (feedbackSelectedCircuitIds.length === 0) return false;
+    if (
+      feedbackSelectedCircuitIds.length === 1 &&
+      !feedbackSingleCircuitAllSchools
+    ) {
+      return feedbackSelectedSchoolIds.length > 0;
+    }
+    return true;
+  }
+
+  async function previewHeadteacherStaffFeedback() {
+    if (queue?.actorRole !== "DISTRICT_DIRECTOR" || !feedbackScopeReady()) {
+      return;
+    }
+
+    setFeedbackPreviewLoading(true);
+    setFeedbackBulkResult(null);
+    setError("");
+    setNotice("");
+
+    try {
+      const params = new URLSearchParams({
+        mode: "BULK_PREVIEW",
+        scopeType: currentFeedbackScopeLevel(),
+      });
+      for (const scopeId of currentFeedbackScopeIds()) {
+        params.append("scopeId", scopeId);
+      }
+
+      const response = await fetch(
+        `/api/district/headteacher-appraisals?${params.toString()}`,
+        { cache: "no-store" },
+      );
+      const body = (await readApiBody(response)) as
+        | { ok: true; preview: HeadteacherFeedbackBulkPreview }
+        | ApiFailure;
+
+      if (!response.ok || body.ok !== true) {
+        throw new Error(messageFromFailure(body, response.status));
+      }
+
+      setFeedbackPreview(body.preview);
+      setFeedbackPreviewExpanded(false);
+    } catch (previewError) {
+      setFeedbackPreview(null);
+      setError(
+        previewError instanceof Error
+          ? previewError.message
+          : "The staff-feedback preview could not be loaded.",
+      );
+    } finally {
+      setFeedbackPreviewLoading(false);
+    }
+  }
+
+  async function confirmHeadteacherStaffFeedback() {
+    if (queue?.actorRole !== "DISTRICT_DIRECTOR" || !feedbackPreview) return;
+
+    const currentIds = currentFeedbackScopeIds();
+    const commandScopeLevel = currentFeedbackScopeLevel();
+    const commandScopeSignature = `${commandScopeLevel}:${currentIds.join(",")}`;
+    const commandBulkOpenKey = feedbackBulkOpenKeyForCurrentScope();
+    const previewIds = [...feedbackPreview.scope.ids].sort();
+    if (
+      feedbackPreview.scope.level !== commandScopeLevel ||
+      JSON.stringify(previewIds) !== JSON.stringify(currentIds)
+    ) {
+      setFeedbackPreview(null);
+      setError("The selected scope changed. Preview it again before opening.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Confirm this 7-day staff-feedback exercise? EduLife OS will open ${feedbackPreview.summary.willOpen} new Headteacher cycle(s), keep ${feedbackPreview.summary.keepExisting} existing cycle(s), skip ${feedbackPreview.summary.willSkip}, freeze eligible Teachers server-side, and queue in-app, SMS and email notifications with the same deadline.`,
+    );
+    if (!confirmed) return;
+
+    setFeedbackOpening(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await fetch(
+        "/api/district/headteacher-appraisals",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "BULK_DIRECT_OPEN",
+            scopeType: commandScopeLevel,
+            scopeIds: currentIds,
+            bulkOpenKey: commandBulkOpenKey,
+            confirm: true,
+          }),
+        },
+      );
+      const body = (await readApiBody(response)) as
+        | {
+            ok: true;
+            result: HeadteacherFeedbackBulkOpenResult;
+            directOpenTargets: DirectOpenTargets;
+          }
+        | ApiFailure;
+
+      if (!response.ok || body.ok !== true) {
+        throw new Error(messageFromFailure(body, response.status));
+      }
+
+      feedbackBulkOpenKeysRef.current.delete(commandScopeSignature);
+      setDirectOpenTargets(body.directOpenTargets);
+      setFeedbackBulkResult(body.result);
+      setFeedbackPreview(null);
+      setFeedbackPreviewExpanded(false);
+      setNotice(staffFeedbackResultMessage(body.result));
+
+      // The District endpoint returns the Staff Feedback director queue, not the
+      // Governance supervisory queue rendered by this client. Refresh the latter
+      // only through its own no-store endpoint so incompatible queue shapes can
+      // never replace the current supervisory state after a bulk command.
+      await loadQueue();
+    } catch (openError) {
+      setError(
+        openError instanceof Error
+          ? openError.message
+          : "The staff-feedback exercise could not be opened.",
+      );
+    } finally {
+      setFeedbackOpening(false);
+    }
+  }
+
+  function directorDirectTargetFromKey() {
+    if (!directorDirectTargetKey) return null;
+    return (
+      directOpenTargets?.targets.find(
+        (target) =>
+          `${target.targetTenantId}:${target.targetHeadteacherUserId}` ===
+          directorDirectTargetKey,
+      ) ?? null
+    );
+  }
+
+  function directorDirectCommandSignature(
+    target: DirectOpenTarget,
+    values: ValidatedVisitDetails,
+  ) {
+    return JSON.stringify({
+      targetTenantId: target.targetTenantId,
+      targetHeadteacherUserId: target.targetHeadteacherUserId,
+      dateObserved,
+      ...values,
+    });
+  }
+
+  function directorDirectAssessmentKeyFor(
+    target: DirectOpenTarget,
+    values: ValidatedVisitDetails,
+  ) {
+    const signature = directorDirectCommandSignature(target, values);
+    const existing = directorDirectAssessmentKeysRef.current.get(signature);
+    if (existing) return { key: existing, signature };
+
+    const key = `HEADTEACHER-GOVERNANCE-DIRECT:${window.crypto.randomUUID()}`;
+    directorDirectAssessmentKeysRef.current.set(signature, key);
+    return { key, signature };
+  }
+
+  async function startDirectorDirectAssessment() {
+    if (queue?.actorRole !== "DISTRICT_DIRECTOR") return;
+
+    const target = directorDirectTargetFromKey();
+    if (!target) {
+      setError("Choose the Headteacher you want to assess.");
+      return;
+    }
+
+    const validation = validateVisitDetails(dateObserved, visitDetails);
+    if (!validation.ok) {
+      setError(validation.message);
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Start the official Headteacher assessment for ${target.targetHeadteacherName || "this Headteacher"} at ${target.schoolName}?`,
+    );
+    if (!confirmed) return;
+
+    const command = directorDirectAssessmentKeyFor(target, validation.values);
+    setDirectorDirectStarting(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await fetch(
+        "/api/governance/appraisals/headteacher-supervisory/direct",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            targetUserId: target.targetHeadteacherUserId,
+            targetTenantId: target.targetTenantId,
+            directAssessmentKey: command.key,
+            dateObserved,
+            ...validation.values,
+          }),
+        },
+      );
+      const body = (await readApiBody(response)) as
+        | { ok: true; result: HeadteacherSupervisoryDirectorDraftResult }
+        | ApiFailure;
+
+      if (!response.ok || body.ok !== true) {
+        throw new Error(messageFromFailure(body, response.status));
+      }
+
+      directorDirectAssessmentKeysRef.current.delete(command.signature);
+      const nextId = body.result.draft.assessmentId;
+      clearWorkspaceForAssessmentChange();
+      setAssessmentId(nextId);
+      router.replace(
+        `/governance/appraisals/headteacher-supervisory?assessmentId=${encodeURIComponent(nextId)}`,
+      );
+    } catch (startError) {
+      setError(
+        startError instanceof Error
+          ? startError.message
+          : "The Headteacher assessment could not be started.",
+      );
+    } finally {
+      setDirectorDirectStarting(false);
+    }
+  }
+
+  async function releaseDirectorSubmittedAssessment(
+    item: SupervisoryQueueItem,
+  ) {
+    const submittedAssessmentId = item.supervisory.assessmentId;
+    if (
+      queue?.actorRole !== "DISTRICT_DIRECTOR" ||
+      item.supervisory.state !== "SUBMITTED" ||
+      !submittedAssessmentId ||
+      item.release.canDirectRelease !== true
+    ) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Release the locked Governance assessment for ${item.targetName || "this Headteacher"} at ${item.schoolName}? The Headteacher will be able to see this result. Staff feedback remains separate.`,
+    );
+    if (!confirmed) return;
+
+    setDirectorReleasingAssessmentId(submittedAssessmentId);
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await fetch(
+        `/api/governance/appraisals/headteacher-supervisory/${encodeURIComponent(submittedAssessmentId)}/direct-release`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ confirm: true }),
+        },
+      );
+      const body = (await readApiBody(response)) as
+        | {
+            ok: true;
+            result: {
+              outcome: "RELEASED" | "EXISTING_RELEASED";
+              governanceReleaseStatus: "RELEASED";
+              assessmentId: string;
+            };
+          }
+        | ApiFailure;
+
+      if (!response.ok || body.ok !== true) {
+        throw new Error(messageFromFailure(body, response.status));
+      }
+
+      setNotice(
+        body.result.outcome === "EXISTING_RELEASED"
+          ? "This assessment was already released to the Headteacher."
+          : "Assessment released to the Headteacher.",
+      );
+      await loadQueue();
+    } catch (releaseError) {
+      setError(
+        releaseError instanceof Error
+          ? releaseError.message
+          : "The assessment could not be released to the Headteacher.",
+      );
+    } finally {
+      setDirectorReleasingAssessmentId("");
+    }
+  }
+
   async function createDraft() {
     if (!cycleId) return;
 
@@ -1321,7 +1928,11 @@ export default function HeadteacherSupervisoryAssessmentClient({
       if (!response.ok || body.ok !== true) {
         throw new Error(messageFromFailure(body, response.status));
       }
-      setNotice("Assessment submitted and locked for review.");
+      setNotice(
+        workspace.visit.assessorRole === "DISTRICT_DIRECTOR"
+          ? "Assessment submitted and locked. Return to the work list to release it to the Headteacher."
+          : "Assessment submitted and locked for review.",
+      );
       await loadWorkspace(assessmentId);
     } catch (finalizeError) {
       setError(
@@ -1852,6 +2463,1172 @@ export default function HeadteacherSupervisoryAssessmentClient({
 
             <p className="text-center text-xs leading-5 text-slate-500">
               Explicit actions only · no background polling · no persistent browser storage
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+
+    if (actorRole === "DISTRICT_DIRECTOR") {
+      const directorSubmittedItems =
+        queue?.items.filter(
+          (item) =>
+            item.supervisory.state === "SUBMITTED" &&
+            item.supervisory.assessmentId != null,
+        ) ?? [];
+      const directorContinuableItems =
+        queue?.items.filter(
+          (item) =>
+            (item.supervisory.state === "IN_PROGRESS" ||
+              item.supervisory.state === "RETURNED") &&
+            item.supervisory.assessmentId != null,
+        ) ?? [];
+      const feedbackCircuits = [...(directOpenTargets?.circuits ?? [])].sort(
+        (left, right) => left.circuitName.localeCompare(right.circuitName),
+      );
+      const feedbackSchoolMap = new Map<
+        string,
+        {
+          schoolId: string;
+          schoolName: string;
+          circuitId: string;
+          circuitName: string;
+          districtId: string;
+          districtName: string;
+          headteacherNames: string[];
+        }
+      >();
+
+      for (const target of directOpenTargets?.targets ?? []) {
+        const current = feedbackSchoolMap.get(target.targetTenantId) ?? {
+          schoolId: target.targetTenantId,
+          schoolName: target.schoolName,
+          circuitId: target.circuitId,
+          circuitName: target.circuitName,
+          districtId: target.districtId,
+          districtName: target.districtName,
+          headteacherNames: [],
+        };
+        const targetName = target.targetHeadteacherName || "Headteacher";
+        if (!current.headteacherNames.includes(targetName)) {
+          current.headteacherNames.push(targetName);
+        }
+        feedbackSchoolMap.set(target.targetTenantId, current);
+      }
+
+      const feedbackSchools = [...feedbackSchoolMap.values()].sort(
+        (left, right) =>
+          left.circuitName.localeCompare(right.circuitName) ||
+          left.schoolName.localeCompare(right.schoolName),
+      );
+      const normalizedSchoolFilter = feedbackSchoolFilter.trim().toLowerCase();
+      const selectedSingleCircuit =
+        feedbackSelectedCircuitIds.length === 1
+          ? feedbackCircuits.find(
+              (circuit) => circuit.circuitId === feedbackSelectedCircuitIds[0],
+            ) ?? null
+          : null;
+      const singleCircuitSchools = selectedSingleCircuit
+        ? feedbackSchools.filter(
+            (school) => school.circuitId === selectedSingleCircuit.circuitId,
+          )
+        : [];
+      const filteredSingleCircuitSchools = normalizedSchoolFilter
+        ? singleCircuitSchools.filter((school) =>
+            [school.schoolName, ...school.headteacherNames]
+              .join(" ")
+              .toLowerCase()
+              .includes(normalizedSchoolFilter),
+          )
+        : singleCircuitSchools;
+      const districtNames = [
+        ...new Set(feedbackSchools.map((school) => school.districtName)),
+      ];
+      const effectiveFeedbackScopeLevel = currentFeedbackScopeLevel();
+      const selectedFeedbackCount =
+        feedbackAudienceMode === "DISTRICT"
+          ? feedbackSchools.length
+          : effectiveFeedbackScopeLevel === "SCHOOL"
+            ? feedbackSelectedSchoolIds.length
+            : feedbackSelectedCircuitIds.length;
+      const previewButtonLabel =
+        feedbackAudienceMode === "DISTRICT"
+          ? `Preview district`
+          : effectiveFeedbackScopeLevel === "SCHOOL"
+            ? `Preview ${selectedFeedbackCount || "selected"} school${selectedFeedbackCount === 1 ? "" : "s"}`
+            : `Preview ${selectedFeedbackCount || "selected"} circuit${selectedFeedbackCount === 1 ? "" : "s"}`;
+
+      const directorDirectTargets = [...(directOpenTargets?.targets ?? [])].sort(
+        (left, right) =>
+          left.circuitName.localeCompare(right.circuitName) ||
+          left.schoolName.localeCompare(right.schoolName) ||
+          (left.targetHeadteacherName || "").localeCompare(
+            right.targetHeadteacherName || "",
+          ),
+      );
+      const directorDirectCircuits = [...(directOpenTargets?.circuits ?? [])].sort(
+        (left, right) => left.circuitName.localeCompare(right.circuitName),
+      );
+      const directorDirectSchoolMap = new Map<string, {
+        schoolId: string;
+        schoolName: string;
+        circuitId: string;
+        circuitName: string;
+      }>();
+      for (const target of directorDirectTargets) {
+        if (
+          directorDirectCircuitId &&
+          target.circuitId !== directorDirectCircuitId
+        ) {
+          continue;
+        }
+        directorDirectSchoolMap.set(target.targetTenantId, {
+          schoolId: target.targetTenantId,
+          schoolName: target.schoolName,
+          circuitId: target.circuitId,
+          circuitName: target.circuitName,
+        });
+      }
+      const directorDirectSchools = [...directorDirectSchoolMap.values()].sort(
+        (left, right) => left.schoolName.localeCompare(right.schoolName),
+      );
+      const directorDirectSchoolTargets = directorDirectTargets.filter(
+        (target) =>
+          (!directorDirectCircuitId ||
+            target.circuitId === directorDirectCircuitId) &&
+          (!directorDirectSchoolId ||
+            target.targetTenantId === directorDirectSchoolId),
+      );
+      const normalizedDirectSearch = directorDirectSearch.trim().toLowerCase();
+      const directorDirectSearchResults = normalizedDirectSearch
+        ? directorDirectTargets
+            .filter((target) =>
+              [
+                target.targetHeadteacherName || "",
+                target.schoolName,
+                target.circuitName,
+              ]
+                .join(" ")
+                .toLowerCase()
+                .includes(normalizedDirectSearch),
+            )
+            .slice(0, 12)
+        : [];
+      const directorDirectSelectedTarget = directorDirectTargetFromKey();
+      const directorDirectVisitValidation = validateVisitDetails(
+        dateObserved,
+        visitDetails,
+      );
+
+      return (
+        <div
+          data-director-own-headteacher-appraisal-ui="bbc-v2"
+          data-director-staff-feedback-bulk-ui="multi-scope-v1"
+          className="min-h-screen bg-[#070B12] px-4 py-5 text-[#F7F4ED] sm:px-6"
+        >
+          <div className="mx-auto max-w-5xl space-y-4">
+            <section className="rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(7,11,18,0.97),rgba(28,19,48,0.92))] p-4 shadow-xl sm:p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#E8C96A]">
+                    District Director
+                  </p>
+                  <h1 className="mt-1 text-xl font-black text-white sm:text-2xl">
+                    Headteacher Appraisal
+                  </h1>
+                  <p className="mt-1 text-sm leading-5 text-slate-300">
+                    Choose one task. Only that work opens, so the screen stays simple on phones and weak networks.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Link
+                    href="/district/dashboard"
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm font-bold text-white hover:bg-white/[0.08]"
+                  >
+                    ← Dashboard
+                  </Link>
+                  <button
+                    type="button"
+                    disabled={queueLoading || directOpenTargetsLoading}
+                    onClick={() => {
+                      void loadQueue();
+                      if (directorLandingPanel === "NEW") {
+                        void loadDirectOpenTargets();
+                      }
+                    }}
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-fuchsia-300/25 bg-fuchsia-400/15 px-4 text-sm font-bold text-fuchsia-50 disabled:opacity-50"
+                  >
+                    {queueLoading || directOpenTargetsLoading
+                      ? "Refreshing…"
+                      : "Refresh"}
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            {error ? (
+              <div
+                role="alert"
+                className="rounded-2xl border border-rose-300/25 bg-rose-500/10 p-3 text-sm text-rose-100"
+              >
+                {error}
+              </div>
+            ) : null}
+
+            {notice ? (
+              <div
+                role="status"
+                className="rounded-2xl border border-emerald-300/25 bg-emerald-500/10 p-3 text-sm text-emerald-100"
+              >
+                {notice}
+              </div>
+            ) : null}
+
+            <section
+              aria-label="District Director Headteacher appraisal tasks"
+              className="grid gap-3 sm:grid-cols-2"
+            >
+              <button
+                type="button"
+                aria-expanded={directorLandingPanel === "SUBMITTED"}
+                aria-controls="director-submitted-headteacher-appraisals"
+                onClick={() => {
+                  setDirectorNewWorkPath(null);
+                  setDirectorLandingPanel((current) =>
+                    current === "SUBMITTED" ? null : "SUBMITTED",
+                  );
+                }}
+                className={cx(
+                  "min-h-28 rounded-2xl border p-4 text-left transition",
+                  directorLandingPanel === "SUBMITTED"
+                    ? "border-emerald-300/45 bg-emerald-400/15"
+                    : "border-emerald-300/20 bg-emerald-400/[0.07] hover:bg-emerald-400/10",
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-base font-black text-white">
+                      ✓ Submitted assessments
+                    </p>
+                    <p className="mt-1 text-sm leading-5 text-emerald-50/80">
+                      Open locked assessments in the native white form.
+                    </p>
+                  </div>
+                  <span className="inline-flex min-h-8 min-w-8 shrink-0 items-center justify-center rounded-full border border-emerald-200/35 bg-emerald-300 px-2 text-sm font-black text-slate-950">
+                    {directorSubmittedItems.length}
+                  </span>
+                </div>
+                <p className="mt-3 text-xs font-bold text-emerald-100">
+                  {directorLandingPanel === "SUBMITTED" ? "Close" : "Open"} →
+                </p>
+              </button>
+
+              <button
+                type="button"
+                aria-expanded={directorLandingPanel === "NEW"}
+                aria-controls="director-new-headteacher-appraisal"
+                onClick={() => {
+                  const nextPanel =
+                    directorLandingPanel === "NEW" ? null : "NEW";
+                  setDirectorLandingPanel(nextPanel);
+                  setDirectorNewWorkPath(null);
+                  if (nextPanel === "NEW") {
+                    void loadDirectOpenTargets();
+                  }
+                }}
+                className={cx(
+                  "min-h-28 rounded-2xl border p-4 text-left transition",
+                  directorLandingPanel === "NEW"
+                    ? "border-fuchsia-300/45 bg-fuchsia-400/15"
+                    : "border-fuchsia-300/20 bg-fuchsia-400/[0.07] hover:bg-fuchsia-400/10",
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-base font-black text-white">
+                      ＋ New Headteacher appraisal
+                    </p>
+                    <p className="mt-1 text-sm leading-5 text-fuchsia-50/80">
+                      Invite confidential staff feedback or work on a direct Governance assessment.
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-fuchsia-200/25 bg-fuchsia-300/10 px-2.5 py-1 text-[11px] font-black text-fuchsia-100">
+                    2 choices
+                  </span>
+                </div>
+                <p className="mt-3 text-xs font-bold text-fuchsia-100">
+                  {directorLandingPanel === "NEW" ? "Close" : "Open"} →
+                </p>
+              </button>
+            </section>
+
+            {directorLandingPanel === "SUBMITTED" ? (
+              <section
+                id="director-submitted-headteacher-appraisals"
+                className="rounded-[24px] border border-emerald-300/25 bg-emerald-400/[0.06] p-3 sm:p-4"
+              >
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-200">
+                  Submitted assessments
+                </p>
+                <h2 className="mt-1 text-lg font-black text-white">
+                  Review and release locked assessments
+                </h2>
+                <p className="mt-1 text-sm leading-5 text-slate-300">
+                  View the locked native form, then release a Director-authored Governance result to the Headteacher.
+                </p>
+
+                <div className="mt-3 space-y-2">
+                  {directorSubmittedItems.length === 0 ? (
+                    <p className="rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-slate-300">
+                      No submitted Headteacher assessment is available.
+                    </p>
+                  ) : (
+                    directorSubmittedItems.map((item) => (
+                      <article
+                        key={`director-submitted:${item.cycleId}:${item.supervisory.assessmentId}`}
+                        className="rounded-xl border border-white/10 bg-black/25 p-3"
+                      >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0">
+                            <p className="font-black text-white">
+                              {item.targetName || "Headteacher"}
+                            </p>
+                            <p className="mt-1 text-sm text-slate-300">
+                              {item.schoolName} · {item.circuitName}
+                            </p>
+                            <p className="mt-1 text-xs font-semibold text-emerald-200">
+                              {item.release.releasedToHeadteacher
+                                ? item.supervisory.overallPercentage == null
+                                  ? "Released to Headteacher"
+                                  : `Released to Headteacher · ${formatPercent(item.supervisory.overallPercentage)}`
+                                : item.supervisory.overallPercentage == null
+                                  ? "Submitted and locked"
+                                  : `Submitted result · ${formatPercent(item.supervisory.overallPercentage)}`}
+                            </p>
+                          </div>
+                          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                            <a
+                              href={`/governance/appraisals/headteacher-supervisory?assessmentId=${encodeURIComponent(
+                                item.supervisory.assessmentId || "",
+                              )}`}
+                              className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-emerald-200/25 bg-emerald-300 px-4 text-sm font-black text-slate-950 hover:bg-emerald-200 sm:w-auto"
+                            >
+                              View
+                            </a>
+                            {item.release.canDirectRelease ? (
+                              <button
+                                type="button"
+                                disabled={
+                                  directorReleasingAssessmentId ===
+                                  item.supervisory.assessmentId
+                                }
+                                onClick={() =>
+                                  void releaseDirectorSubmittedAssessment(item)
+                                }
+                                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-sky-200/30 bg-sky-300 px-4 text-sm font-black text-slate-950 hover:bg-sky-200 disabled:cursor-wait disabled:opacity-50 sm:w-auto"
+                              >
+                                {directorReleasingAssessmentId ===
+                                item.supervisory.assessmentId
+                                  ? "Releasing…"
+                                  : "Release to Headteacher"}
+                              </button>
+                            ) : item.release.releasedToHeadteacher ? (
+                              <span className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-emerald-200/25 bg-emerald-400/10 px-4 text-sm font-black text-emerald-100 sm:w-auto">
+                                Released to Headteacher
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      </article>
+                    ))
+                  )}
+                </div>
+              </section>
+            ) : null}
+
+            {directorLandingPanel === "NEW" ? (
+              <section
+                id="director-new-headteacher-appraisal"
+                data-director-new-work-paths="compact-accordion-v1"
+                className="space-y-2 rounded-2xl border border-fuchsia-300/20 bg-fuchsia-400/[0.05] p-2.5 sm:p-3"
+              >
+                <p className="px-1 text-xs leading-5 text-slate-300">
+                  Choose one. Staff feedback and the Governance assessment stay separate.
+                </p>
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    aria-expanded={directorNewWorkPath === "STAFF"}
+                    onClick={() =>
+                      setDirectorNewWorkPath((current) =>
+                        current === "STAFF" ? null : "STAFF",
+                      )
+                    }
+                    className={cx(
+                      "rounded-xl border p-2.5 text-left transition",
+                      directorNewWorkPath === "STAFF"
+                        ? "border-amber-200/45 bg-amber-300/15"
+                        : "border-amber-200/20 bg-amber-300/[0.07] hover:bg-amber-300/10",
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-black text-white">
+                          📣 Invite staff feedback · 7 days
+                        </p>
+                        <p className="mt-0.5 text-xs text-slate-300">
+                          District or one/more circuits
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-full border border-amber-200/25 bg-amber-300/10 px-2 py-0.5 text-[10px] font-black text-amber-100">
+                        Ready
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-[11px] font-bold text-amber-100">
+                      {directorNewWorkPath === "STAFF" ? "Hide" : "Open"} →
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    aria-expanded={directorNewWorkPath === "GOVERNANCE"}
+                    onClick={() =>
+                      setDirectorNewWorkPath((current) =>
+                        current === "GOVERNANCE" ? null : "GOVERNANCE",
+                      )
+                    }
+                    className={cx(
+                      "rounded-xl border p-2.5 text-left transition",
+                      directorNewWorkPath === "GOVERNANCE"
+                        ? "border-fuchsia-200/45 bg-fuchsia-300/15"
+                        : "border-fuchsia-200/20 bg-fuchsia-300/[0.07] hover:bg-fuchsia-300/10",
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-black text-white">
+                          📝 Assess Headteacher directly
+                        </p>
+                        <p className="mt-0.5 text-xs text-slate-300">
+                          Official 4/34 Governance form
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-full border border-fuchsia-200/25 bg-fuchsia-300/10 px-2 py-0.5 text-[10px] font-black text-fuchsia-100">
+                        Separate
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-[11px] font-bold text-fuchsia-100">
+                      {directorNewWorkPath === "GOVERNANCE" ? "Hide" : "Open"} →
+                    </p>
+                  </button>
+                </div>
+
+                {directorNewWorkPath === "STAFF" ? (
+                  <section
+                    data-headteacher-feedback-audience="district-or-circuits"
+                    className="rounded-xl border border-amber-300/20 bg-black/15 p-2.5"
+                  >
+                    {directOpenTargetsError ? (
+                      <div className="rounded-lg border border-amber-300/25 bg-amber-400/10 p-2.5 text-xs text-amber-100">
+                        <p className="font-bold text-white">Scope list could not load.</p>
+                        <p className="mt-1 leading-5">{directOpenTargetsError}</p>
+                        <button
+                          type="button"
+                          onClick={() => void loadDirectOpenTargets()}
+                          className="mt-2 min-h-9 rounded-lg border border-amber-200/25 bg-amber-300 px-3 text-xs font-black text-slate-950"
+                        >
+                          Try again
+                        </button>
+                      </div>
+                    ) : null}
+
+                    {directOpenTargetsLoading ? (
+                      <p className="rounded-lg border border-white/10 bg-black/20 p-2.5 text-xs text-slate-300">
+                        Loading circuits and schools…
+                      </p>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-2 gap-2" aria-label="Staff feedback audience">
+                          <button
+                            type="button"
+                            aria-pressed={feedbackAudienceMode === "DISTRICT"}
+                            disabled={feedbackPreviewLoading || feedbackOpening}
+                            onClick={() => chooseFeedbackAudience("DISTRICT")}
+                            className={cx(
+                              "rounded-lg border p-2.5 text-left disabled:cursor-wait disabled:opacity-50",
+                              feedbackAudienceMode === "DISTRICT"
+                                ? "border-amber-200/50 bg-amber-300/15"
+                                : "border-white/10 bg-black/20",
+                            )}
+                          >
+                            <p className="text-sm font-black text-white">Entire district</p>
+                            <p className="mt-0.5 text-[11px] text-slate-300">
+                              {feedbackSchools.length} school(s)
+                            </p>
+                          </button>
+                          <button
+                            type="button"
+                            aria-pressed={feedbackAudienceMode === "CIRCUIT"}
+                            disabled={feedbackPreviewLoading || feedbackOpening}
+                            onClick={() => chooseFeedbackAudience("CIRCUIT")}
+                            className={cx(
+                              "rounded-lg border p-2.5 text-left disabled:cursor-wait disabled:opacity-50",
+                              feedbackAudienceMode === "CIRCUIT"
+                                ? "border-amber-200/50 bg-amber-300/15"
+                                : "border-white/10 bg-black/20",
+                            )}
+                          >
+                            <p className="text-sm font-black text-white">Circuit(s)</p>
+                            <p className="mt-0.5 text-[11px] text-slate-300">
+                              Choose one or more
+                            </p>
+                          </button>
+                        </div>
+
+                        {feedbackAudienceMode === "DISTRICT" ? (
+                          <p className="mt-2 rounded-lg border border-white/10 bg-black/20 px-2.5 py-2 text-xs leading-5 text-slate-300">
+                            {districtNames.length === 1
+                              ? districtNames[0]
+                              : "Your authorized district"} · all discoverable schools.
+                          </p>
+                        ) : null}
+
+                        {feedbackAudienceMode === "CIRCUIT" ? (
+                          <div
+                            data-feedback-circuit-selection="one-or-many"
+                            className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2.5"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-xs font-black text-white">
+                                Choose one or more circuits
+                              </p>
+                              <span className="text-[11px] font-bold text-amber-100">
+                                {feedbackSelectedCircuitIds.length} selected
+                              </span>
+                            </div>
+                            <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+                              {feedbackCircuits.map((circuit) => {
+                                const selected = feedbackSelectedCircuitIds.includes(
+                                  circuit.circuitId,
+                                );
+                                return (
+                                  <label
+                                    key={`feedback-circuit:${circuit.circuitId}`}
+                                    className={cx(
+                                      "flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-2",
+                                      selected
+                                        ? "border-amber-200/45 bg-amber-300/10"
+                                        : "border-white/10 bg-white/[0.03]",
+                                    )}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={selected}
+                                      disabled={feedbackPreviewLoading || feedbackOpening}
+                                      onChange={() =>
+                                        toggleFeedbackCircuit(circuit.circuitId)
+                                      }
+                                      className="h-4 w-4 shrink-0"
+                                    />
+                                    <span className="min-w-0 flex-1">
+                                      <span className="block truncate text-xs font-black text-white">
+                                        {circuit.circuitName}
+                                      </span>
+                                      <span className="block text-[11px] text-slate-400">
+                                        {circuit.schoolCount} school(s)
+                                      </span>
+                                    </span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+
+                            {feedbackSelectedCircuitIds.length === 1 &&
+                            selectedSingleCircuit ? (
+                              <div
+                                data-single-circuit-school-mode="all-or-selected"
+                                className="mt-2 rounded-lg border border-amber-200/20 bg-amber-300/[0.05] p-2"
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="truncate text-xs font-black text-white">
+                                    {selectedSingleCircuit.circuitName}
+                                  </p>
+                                  <span className="shrink-0 text-[11px] text-slate-300">
+                                    {singleCircuitSchools.length} school(s)
+                                  </span>
+                                </div>
+                                <div className="mt-2 grid grid-cols-2 gap-1.5">
+                                  <button
+                                    type="button"
+                                    aria-pressed={feedbackSingleCircuitAllSchools}
+                                    disabled={feedbackPreviewLoading || feedbackOpening}
+                                    onClick={() => chooseSingleCircuitSchoolMode(true)}
+                                    className={cx(
+                                      "rounded-lg border px-2.5 py-2 text-xs font-black",
+                                      feedbackSingleCircuitAllSchools
+                                        ? "border-amber-200/45 bg-amber-300/15 text-white"
+                                        : "border-white/10 bg-black/20 text-slate-300",
+                                    )}
+                                  >
+                                    All schools
+                                  </button>
+                                  <button
+                                    type="button"
+                                    aria-pressed={!feedbackSingleCircuitAllSchools}
+                                    disabled={feedbackPreviewLoading || feedbackOpening}
+                                    onClick={() => chooseSingleCircuitSchoolMode(false)}
+                                    className={cx(
+                                      "rounded-lg border px-2.5 py-2 text-xs font-black",
+                                      !feedbackSingleCircuitAllSchools
+                                        ? "border-amber-200/45 bg-amber-300/15 text-white"
+                                        : "border-white/10 bg-black/20 text-slate-300",
+                                    )}
+                                  >
+                                    Choose schools
+                                  </button>
+                                </div>
+
+                                {!feedbackSingleCircuitAllSchools ? (
+                                  <div className="mt-2">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <label className="min-w-0 flex-1">
+                                        <span className="sr-only">Search schools in selected circuit</span>
+                                        <input
+                                          type="search"
+                                          value={feedbackSchoolFilter}
+                                          disabled={feedbackPreviewLoading || feedbackOpening}
+                                          onChange={(event) =>
+                                            setFeedbackSchoolFilter(event.target.value)
+                                          }
+                                          placeholder="Search school name"
+                                          className="min-h-9 w-full rounded-lg border border-white/10 bg-[#0B101A] px-2.5 text-xs text-white outline-none placeholder:text-slate-500 focus:border-amber-300/50"
+                                        />
+                                      </label>
+                                      <span className="shrink-0 text-[11px] font-bold text-amber-100">
+                                        {feedbackSelectedSchoolIds.length} selected
+                                      </span>
+                                    </div>
+                                    <div className="mt-1.5 max-h-56 space-y-1 overflow-y-auto pr-1">
+                                      {filteredSingleCircuitSchools.length === 0 ? (
+                                        <p className="rounded-lg border border-white/10 bg-white/[0.03] p-2 text-xs text-slate-300">
+                                          No school matches this search.
+                                        </p>
+                                      ) : (
+                                        filteredSingleCircuitSchools.map((school) => {
+                                          const selected =
+                                            feedbackSelectedSchoolIds.includes(
+                                              school.schoolId,
+                                            );
+                                          return (
+                                            <label
+                                              key={`feedback-school:${school.schoolId}`}
+                                              className={cx(
+                                                "flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-2",
+                                                selected
+                                                  ? "border-amber-200/45 bg-amber-300/10"
+                                                  : "border-white/10 bg-white/[0.03]",
+                                              )}
+                                            >
+                                              <input
+                                                type="checkbox"
+                                                checked={selected}
+                                                disabled={
+                                                  feedbackPreviewLoading || feedbackOpening
+                                                }
+                                                onChange={() =>
+                                                  toggleFeedbackSchool(school.schoolId)
+                                                }
+                                                className="h-4 w-4 shrink-0"
+                                              />
+                                              <span className="min-w-0">
+                                                <span className="block truncate text-xs font-black text-white">
+                                                  {school.schoolName}
+                                                </span>
+                                                <span className="block truncate text-[11px] text-slate-400">
+                                                  {school.headteacherNames.join(", ")}
+                                                </span>
+                                              </span>
+                                            </label>
+                                          );
+                                        })
+                                      )}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <p className="mt-1.5 text-[11px] leading-4 text-slate-300">
+                                    All schools in this circuit will be resolved by the server.
+                                  </p>
+                                )}
+                              </div>
+                            ) : null}
+
+                            {feedbackSelectedCircuitIds.length > 1 ? (
+                              <p
+                                data-multi-circuit-school-selection="all-auto"
+                                className="mt-2 rounded-lg border border-sky-300/20 bg-sky-400/[0.07] px-2.5 py-2 text-[11px] leading-4 text-sky-100"
+                              >
+                                All schools in the selected circuits are included automatically.
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : null}
+
+                        <div className="mt-2 flex items-center justify-between gap-2">
+                          <p className="text-[11px] leading-4 text-slate-400">
+                            Selection is local. Preview makes one request.
+                          </p>
+                          <button
+                            type="button"
+                            disabled={
+                              feedbackPreviewLoading ||
+                              feedbackOpening ||
+                              !feedbackScopeReady()
+                            }
+                            onClick={() => void previewHeadteacherStaffFeedback()}
+                            className="min-h-9 shrink-0 rounded-lg border border-amber-200/25 bg-amber-300 px-3 text-xs font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            {feedbackPreviewLoading
+                              ? "Preparing…"
+                              : previewButtonLabel}
+                          </button>
+                        </div>
+                      </>
+                    )}
+
+                    {feedbackPreview ? (
+                      <section
+                        data-headteacher-feedback-bulk-preview="compact-toggle"
+                        className="mt-2 rounded-xl border border-emerald-300/25 bg-emerald-400/[0.07] p-2"
+                      >
+                        <button
+                          type="button"
+                          data-feedback-preview-toggle="compact"
+                          aria-expanded={feedbackPreviewExpanded}
+                          onClick={() =>
+                            setFeedbackPreviewExpanded((current) => !current)
+                          }
+                          className="w-full rounded-lg px-1 py-1 text-left"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-sm font-black text-white">
+                                Preview ready
+                              </p>
+                              <p className="mt-0.5 text-[11px] leading-4 text-slate-300">
+                                {feedbackPreview.summary.schools} school(s) · {feedbackPreview.summary.eligibleRespondents} Teacher(s) · {feedbackPreview.summary.willOpen} new · {feedbackPreview.summary.keepExisting} kept · {feedbackPreview.summary.willSkip} skip
+                              </p>
+                            </div>
+                            <span className="shrink-0 text-[11px] font-black text-emerald-100">
+                              {feedbackPreviewExpanded ? "Hide ↑" : "Details ↓"}
+                            </span>
+                          </div>
+                        </button>
+
+                        {feedbackPreviewExpanded ? (
+                          <div data-feedback-preview-details="collapsible" className="mt-1.5 space-y-1.5">
+                            <div className="max-h-64 space-y-1 overflow-y-auto pr-1">
+                              {feedbackPreview.rows.map((row) => (
+                                <article
+                                  key={`${row.targetTenantId}:${row.targetHeadteacherUserId}`}
+                                  className="rounded-lg border border-white/10 bg-black/20 px-2.5 py-2"
+                                >
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0">
+                                      <p className="truncate text-xs font-black text-white">
+                                        {row.schoolName}
+                                      </p>
+                                      <p className="mt-0.5 truncate text-[11px] text-slate-400">
+                                        {row.circuitName} · {row.eligibleRespondentCount} Teacher(s)
+                                      </p>
+                                    </div>
+                                    <span
+                                      className={cx(
+                                        "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-black",
+                                        row.disposition === "OPEN_NEW"
+                                          ? "border-emerald-200/30 bg-emerald-300/15 text-emerald-100"
+                                          : row.disposition === "SKIP"
+                                            ? "border-rose-200/30 bg-rose-300/10 text-rose-100"
+                                            : "border-amber-200/30 bg-amber-300/10 text-amber-100",
+                                      )}
+                                    >
+                                      {row.disposition === "OPEN_NEW"
+                                        ? "Open"
+                                        : row.disposition === "SKIP"
+                                          ? "Skip"
+                                          : "Keep"}
+                                    </span>
+                                  </div>
+                                  {row.disposition !== "OPEN_NEW" ? (
+                                    <p className="mt-1 text-[10px] leading-4 text-slate-500">
+                                      {row.reason.replaceAll("_", " ")}
+                                    </p>
+                                  ) : null}
+                                </article>
+                              ))}
+                            </div>
+                            <p className="rounded-lg border border-sky-300/15 bg-sky-400/[0.06] px-2.5 py-2 text-[10px] leading-4 text-sky-100">
+                              Frozen Teachers receive the 7-day exercise notice in-app; SMS/email follow existing contact and consent rules.
+                            </p>
+                          </div>
+                        ) : null}
+
+                        <div className="mt-1.5 flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            disabled={feedbackOpening}
+                            onClick={() => {
+                              setFeedbackPreview(null);
+                              setFeedbackPreviewExpanded(false);
+                            }}
+                            className="min-h-9 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-xs font-black text-white disabled:opacity-50"
+                          >
+                            Change
+                          </button>
+                          <button
+                            type="button"
+                            disabled={feedbackOpening}
+                            onClick={() => void confirmHeadteacherStaffFeedback()}
+                            className="min-h-9 rounded-lg border border-emerald-200/25 bg-emerald-300 px-3 text-xs font-black text-slate-950 disabled:cursor-wait disabled:opacity-50"
+                          >
+                            {feedbackOpening ? "Opening…" : "Confirm and notify"}
+                          </button>
+                        </div>
+                      </section>
+                    ) : null}
+
+                    {feedbackBulkResult ? (
+                      <section
+                        data-headteacher-feedback-bulk-result="summary-only"
+                        className="mt-2 rounded-lg border border-emerald-300/20 bg-emerald-400/[0.06] px-2.5 py-2"
+                      >
+                        <p className="text-xs font-black text-white">
+                          Staff feedback update
+                        </p>
+                        <p className="mt-0.5 text-[11px] leading-4 text-emerald-100">
+                          {staffFeedbackResultMessage(feedbackBulkResult)}
+                        </p>
+                      </section>
+                    ) : null}
+                  </section>
+                ) : null}
+
+                {directorNewWorkPath === "GOVERNANCE" ? (
+                  <section
+                    data-director-governance-direct-start="independent-v1"
+                    className="rounded-xl border border-fuchsia-300/20 bg-black/15 p-2.5"
+                  >
+                    <p className="text-xs leading-5 text-slate-300">
+                      Staff feedback is not a prerequisite and its score is never combined with this 4-section / 34-indicator Governance assessment.
+                    </p>
+
+                    {directorContinuableItems.length > 0 ? (
+                      <div className="mt-2 space-y-1.5">
+                        <p className="px-0.5 text-[11px] font-black uppercase tracking-[0.12em] text-fuchsia-200">
+                          Continue existing work
+                        </p>
+                        {directorContinuableItems.map((item) => (
+                          <article
+                            key={`director-existing-governance:${item.cycleId}:${item.supervisory.assessmentId}`}
+                            className="rounded-lg border border-white/10 bg-black/20 px-2.5 py-2"
+                          >
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="min-w-0">
+                                <p className="truncate text-xs font-black text-white">
+                                  {item.targetName || "Headteacher"}
+                                </p>
+                                <p className="mt-0.5 truncate text-[11px] text-slate-400">
+                                  {item.schoolName} · {item.circuitName} · {item.supervisory.label}
+                                </p>
+                              </div>
+                              {item.action.enabled && item.action.url ? (
+                                <a
+                                  href={item.action.url}
+                                  className="inline-flex min-h-9 w-full items-center justify-center rounded-lg bg-fuchsia-300 px-3 text-xs font-black text-slate-950 sm:w-auto"
+                                >
+                                  {item.supervisory.state === "RETURNED"
+                                    ? "Open returned work"
+                                    : "Continue"}
+                                </a>
+                              ) : (
+                                <span className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-bold text-slate-400">
+                                  {item.action.label}
+                                </span>
+                              )}
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {directOpenTargetsError ? (
+                      <div className="mt-2 rounded-lg border border-rose-300/20 bg-rose-400/[0.07] p-2.5 text-xs text-rose-100">
+                        <p>Headteacher list could not load.</p>
+                        <button
+                          type="button"
+                          onClick={() => void loadDirectOpenTargets()}
+                          className="mt-2 min-h-9 rounded-lg bg-fuchsia-300 px-3 font-black text-slate-950"
+                        >
+                          Try again
+                        </button>
+                      </div>
+                    ) : null}
+
+                    {directOpenTargetsLoading ? (
+                      <p className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2.5 text-xs text-slate-300">
+                        Loading Headteachers…
+                      </p>
+                    ) : (
+                      <>
+                        <div className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2.5">
+                          <label className="block text-xs font-black text-white" htmlFor="director-headteacher-search">
+                            Search Headteacher or school
+                            <input
+                              id="director-headteacher-search"
+                              type="search"
+                              value={directorDirectSearch}
+                              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                                setDirectorDirectSearch(event.target.value)
+                              }
+                              placeholder="Type a name or school"
+                              className="mt-1.5 min-h-10 w-full rounded-lg border border-white/10 bg-[#0B1220] px-3 text-sm text-white outline-none focus:border-fuchsia-300/50"
+                            />
+                          </label>
+
+                          {normalizedDirectSearch ? (
+                            <div className="mt-1.5 max-h-48 space-y-1 overflow-y-auto">
+                              {directorDirectSearchResults.length === 0 ? (
+                                <p className="rounded-lg border border-white/10 px-2.5 py-2 text-[11px] text-slate-400">
+                                  No matching Headteacher found in your district.
+                                </p>
+                              ) : (
+                                directorDirectSearchResults.map((target) => {
+                                  const targetKey = `${target.targetTenantId}:${target.targetHeadteacherUserId}`;
+                                  return (
+                                    <button
+                                      key={`director-direct-search:${targetKey}`}
+                                      type="button"
+                                      onClick={() => {
+                                        setDirectorDirectCircuitId(target.circuitId);
+                                        setDirectorDirectSchoolId(target.targetTenantId);
+                                        setDirectorDirectTargetKey(targetKey);
+                                        setDirectorDirectSearch("");
+                                        setError("");
+                                      }}
+                                      className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-left hover:bg-white/[0.07]"
+                                    >
+                                      <p className="truncate text-xs font-black text-white">
+                                        {target.targetHeadteacherName || "Headteacher"}
+                                      </p>
+                                      <p className="mt-0.5 truncate text-[11px] text-slate-400">
+                                        {target.schoolName} · {target.circuitName}
+                                      </p>
+                                    </button>
+                                  );
+                                })
+                              )}
+                            </div>
+                          ) : null}
+                        </div>
+
+                        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                          <label className="block text-xs font-black text-white" htmlFor="director-direct-circuit">
+                            Circuit
+                            <select
+                              id="director-direct-circuit"
+                              value={directorDirectCircuitId}
+                              onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+                                setDirectorDirectCircuitId(event.target.value);
+                                setDirectorDirectSchoolId("");
+                                setDirectorDirectTargetKey("");
+                                setError("");
+                              }}
+                              className="mt-1.5 min-h-10 w-full rounded-lg border border-white/10 bg-[#0B1220] px-3 text-sm text-white"
+                            >
+                              <option value="">Choose circuit</option>
+                              {directorDirectCircuits.map((circuit) => (
+                                <option key={circuit.circuitId} value={circuit.circuitId}>
+                                  {circuit.circuitName}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+
+                          <label className="block text-xs font-black text-white" htmlFor="director-direct-school">
+                            School
+                            <select
+                              id="director-direct-school"
+                              value={directorDirectSchoolId}
+                              disabled={!directorDirectCircuitId}
+                              onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+                                const nextSchoolId = event.target.value;
+                                setDirectorDirectSchoolId(nextSchoolId);
+                                const schoolTargets = directorDirectTargets.filter(
+                                  (target) =>
+                                    target.circuitId === directorDirectCircuitId &&
+                                    target.targetTenantId === nextSchoolId,
+                                );
+                                setDirectorDirectTargetKey(
+                                  schoolTargets.length === 1
+                                    ? `${schoolTargets[0].targetTenantId}:${schoolTargets[0].targetHeadteacherUserId}`
+                                    : "",
+                                );
+                                setError("");
+                              }}
+                              className="mt-1.5 min-h-10 w-full rounded-lg border border-white/10 bg-[#0B1220] px-3 text-sm text-white disabled:opacity-50"
+                            >
+                              <option value="">Choose school</option>
+                              {directorDirectSchools.map((school) => (
+                                <option key={school.schoolId} value={school.schoolId}>
+                                  {school.schoolName}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        </div>
+
+                        {directorDirectSchoolId && directorDirectSchoolTargets.length > 0 ? (
+                          <div className="mt-2 space-y-1">
+                            <p className="px-0.5 text-[11px] font-black text-slate-300">
+                              Headteacher
+                            </p>
+                            {directorDirectSchoolTargets.map((target) => {
+                              const targetKey = `${target.targetTenantId}:${target.targetHeadteacherUserId}`;
+                              const selected = directorDirectTargetKey === targetKey;
+                              return (
+                                <button
+                                  key={`director-direct-target:${targetKey}`}
+                                  type="button"
+                                  aria-pressed={selected}
+                                  onClick={() => {
+                                    setDirectorDirectTargetKey(targetKey);
+                                    setError("");
+                                  }}
+                                  className={cx(
+                                    "w-full rounded-lg border px-2.5 py-2 text-left",
+                                    selected
+                                      ? "border-fuchsia-200/45 bg-fuchsia-300/15"
+                                      : "border-white/10 bg-black/20",
+                                  )}
+                                >
+                                  <p className="text-xs font-black text-white">
+                                    {target.targetHeadteacherName || "Headteacher"}
+                                  </p>
+                                  <p className="mt-0.5 text-[11px] text-slate-400">
+                                    {target.schoolName} · {target.circuitName}
+                                  </p>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+
+                        {directorDirectSelectedTarget ? (
+                          <p
+                            data-director-governance-server-recheck="selected-target"
+                            className="mt-1.5 px-0.5 text-[10px] leading-4 text-slate-400"
+                          >
+                            EduLife OS will check your choice again before starting.
+                          </p>
+                        ) : null}
+
+                        <div className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2.5">
+                          <p className="text-xs font-black text-white">Visit details</p>
+                          <p className="mt-0.5 text-[11px] text-slate-400">
+                            Enter what you observed before the official form opens.
+                          </p>
+                          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                            <label className="text-[11px] font-bold text-slate-300">
+                              Date
+                              <input
+                                type="date"
+                                value={dateObserved}
+                                max={today()}
+                                onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                                  setDateObserved(event.target.value);
+                                  setError("");
+                                }}
+                                className="mt-1 min-h-10 w-full rounded-lg border border-white/10 bg-[#0B1220] px-2 text-sm text-white"
+                              />
+                            </label>
+                            <label className="text-[11px] font-bold text-slate-300">
+                              Arrival time
+                              <input
+                                type="time"
+                                value={visitDetails.arrivalTime}
+                                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                                  updateVisitDetail("arrivalTime", event.target.value)
+                                }
+                                className="mt-1 min-h-10 w-full rounded-lg border border-white/10 bg-[#0B1220] px-2 text-sm text-white"
+                              />
+                            </label>
+                            {[
+                              ["staffStrength", "Staff strength"],
+                              ["teachersPresentAtVisit", "Teachers present"],
+                              ["totalEnrolment", "Total enrolment"],
+                              ["girls", "Girls"],
+                              ["boys", "Boys"],
+                            ].map(([field, label]) => (
+                              <label key={field} className="text-[11px] font-bold text-slate-300">
+                                {label}
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="1"
+                                  inputMode="numeric"
+                                  value={visitDetails[field as keyof Omit<VisitDetailsDraft, "arrivalTime">]}
+                                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                                    updateVisitDetail(
+                                      field as keyof VisitDetailsDraft,
+                                      event.target.value,
+                                    )
+                                  }
+                                  className="mt-1 min-h-10 w-full rounded-lg border border-white/10 bg-[#0B1220] px-2 text-sm text-white"
+                                />
+                              </label>
+                            ))}
+                          </div>
+                          <p
+                            className={cx(
+                              "mt-2 rounded-lg border px-2.5 py-2 text-[11px] leading-4",
+                              directorDirectVisitValidation.ok
+                                ? "border-emerald-300/20 bg-emerald-400/[0.06] text-emerald-100"
+                                : "border-amber-300/20 bg-amber-400/[0.06] text-amber-100",
+                            )}
+                          >
+                            {directorDirectVisitValidation.ok
+                              ? "Visit details are ready."
+                              : directorDirectVisitValidation.message}
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled={
+                            directorDirectStarting ||
+                            !directorDirectSelectedTarget ||
+                            !directorDirectVisitValidation.ok
+                          }
+                          onClick={() => void startDirectorDirectAssessment()}
+                          className="mt-2 min-h-11 w-full rounded-lg border border-fuchsia-200/30 bg-fuchsia-300 px-3 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {directorDirectStarting
+                            ? "Starting assessment…"
+                            : "Start official assessment"}
+                        </button>
+                        <p className="mt-1.5 text-[10px] leading-4 text-slate-500">
+                          No Teachers are invited here. No 7-day feedback window is opened. The official 4/34 form starts directly.
+                        </p>
+                      </>
+                    )}
+                  </section>
+                ) : null}
+              </section>
+            ) : null}
+
+            <p className="text-xs leading-5 text-slate-400">
+              Explicit actions only · no background polling · no persistent browser storage · scope changes stay local until Preview.
             </p>
           </div>
         </div>
@@ -2427,6 +4204,8 @@ export default function HeadteacherSupervisoryAssessmentClient({
 
   const renderedWorkspace = workspace;
   const editable = renderedWorkspace.assessment.canEdit === true;
+  const submittedNativeView =
+    renderedWorkspace.assessment.status === "FINALIZED" && reviewMode;
   const safeSectionIndex = Math.min(
     sectionIndex,
     renderedWorkspace.sections.length - 1,
@@ -2536,7 +4315,7 @@ export default function HeadteacherSupervisoryAssessmentClient({
                           className={cx(
                             "h-11 w-11 rounded-2xl border text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60",
                             selected
-                              ? "border-fuchsia-300/40 bg-fuchsia-400/20 text-fuchsia-50"
+                              ? editableScoreTone(score)
                               : "border-white/10 bg-white/[0.03] text-slate-300 hover:bg-white/[0.08]",
                           )}
                         >
@@ -2552,7 +4331,7 @@ export default function HeadteacherSupervisoryAssessmentClient({
                       className={cx(
                         "h-11 rounded-2xl border px-3 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60",
                         answer?.notApplicable === true
-                          ? "border-amber-300/40 bg-amber-400/20 text-amber-50"
+                          ? "border-slate-300/45 bg-slate-400/20 text-slate-100"
                           : "border-white/10 bg-white/[0.03] text-slate-300 hover:bg-white/[0.08]",
                       )}
                     >
@@ -2615,9 +4394,11 @@ export default function HeadteacherSupervisoryAssessmentClient({
               <h1 className="mt-2 text-2xl font-semibold text-white md:text-3xl">{workspace.visit.targetName || "Headteacher"}</h1>
               <p className="mt-1 text-sm text-slate-300">{workspace.visit.schoolName} · {workspace.visit.circuitName}</p>
               <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-300">
-                {workspace.lifecycle.canCreateRevision
-                  ? "This returned version is locked to preserve history. Start correction below to create an editable revision."
-                  : "Complete the official 4-section, 34-indicator form. Answers autosave securely as you score."}
+                {workspace.assessment.status === "FINALIZED"
+                  ? "This submitted assessment is locked. The native white read-only form is shown below."
+                  : workspace.lifecycle.canCreateRevision
+                    ? "This returned version is locked to preserve history. Start correction below to create an editable revision."
+                    : "Complete the official 4-section, 34-indicator form. Answers autosave securely as you score."}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -2681,7 +4462,8 @@ export default function HeadteacherSupervisoryAssessmentClient({
           </div>
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-[360px_1fr] xl:gap-6">
+        {!submittedNativeView ? (
+          <section className="grid gap-4 xl:grid-cols-[360px_1fr] xl:gap-6">
           <aside className="space-y-4">
             <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">1. School and Headteacher</p>
@@ -2805,7 +4587,11 @@ export default function HeadteacherSupervisoryAssessmentClient({
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">4. Review and submit</p>
                   <h2 className="mt-1 text-lg font-semibold text-white">Secure finalization</h2>
-                  <p className="mt-1 text-sm leading-6 text-slate-300">Submitted scores are locked and sent to the Director’s review queue. The Director cannot rewrite them.</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-300">
+                    {workspace.visit.assessorRole === "DISTRICT_DIRECTOR"
+                      ? "Submitting locks this Governance assessment. Release the locked result to the Headteacher from the work list."
+                      : "Submitted scores are locked and sent to the Director’s review queue. The Director cannot rewrite them."}
+                  </p>
                 </div>
                 <div className={cx(
                   "rounded-full border px-3 py-1 text-xs font-bold",
@@ -2852,8 +4638,10 @@ export default function HeadteacherSupervisoryAssessmentClient({
             </section>
           </main>
         </section>
+        ) : null}
 
-        <section className="md:hidden">
+        {!submittedNativeView ? (
+          <section className="md:hidden">
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
@@ -2873,6 +4661,7 @@ export default function HeadteacherSupervisoryAssessmentClient({
             </button>
           </div>
         </section>
+        ) : null}
 
         {reviewMode ? (
           <section
@@ -2882,23 +4671,37 @@ export default function HeadteacherSupervisoryAssessmentClient({
             <div className="mb-4 flex flex-col gap-3 rounded-[24px] border border-emerald-300/20 bg-emerald-400/10 p-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-200">
-                  Final review · read-only preview
+                  {submittedNativeView
+                    ? "Submitted assessment · read-only"
+                    : "Final review · read-only preview"}
                 </p>
                 <h2 className="mt-1 text-xl font-bold text-white">
-                  Review Before you Submit
+                  {submittedNativeView
+                    ? "Submitted Headteacher assessment"
+                    : "Review Before you Submit"}
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-emerald-50/90">
-                  This is the complete native Monitoring and Inspection Sheet.
-                  Scroll sideways on a small screen to inspect every score column.
+                  {submittedNativeView
+                    ? "This locked assessment is shown directly in the native Monitoring and Inspection Sheet."
+                    : "This is the complete native Monitoring and Inspection Sheet. Scroll sideways on a small screen to inspect every score column."}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={returnToAssessment}
-                className="min-h-12 rounded-2xl border border-white/15 bg-black/20 px-5 text-sm font-bold text-white hover:bg-black/30"
-              >
-                Return to assessment
-              </button>
+              {submittedNativeView ? (
+                <Link
+                  href="/governance/appraisals/headteacher-supervisory"
+                  className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/15 bg-black/20 px-5 text-sm font-bold text-white hover:bg-black/30"
+                >
+                  ← Work list
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={returnToAssessment}
+                  className="min-h-12 rounded-2xl border border-white/15 bg-black/20 px-5 text-sm font-bold text-white hover:bg-black/30"
+                >
+                  Return to assessment
+                </button>
+              )}
             </div>
 
             <div className="overflow-x-auto rounded-[24px] border border-slate-300 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.28)]">
@@ -3092,27 +4895,29 @@ export default function HeadteacherSupervisoryAssessmentClient({
               </div>
             </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={returnToAssessment}
-                className="min-h-14 rounded-2xl border border-white/15 bg-white/[0.06] px-5 text-base font-bold text-white hover:bg-white/[0.1]"
-              >
-                Return to assessment
-              </button>
-              <button
-                type="button"
-                disabled={
-                  busy ||
-                  workspace.assessment.canFinalize !== true ||
-                  pendingSectionSavesRef.current.size > 0
-                }
-                onClick={() => void finalizeAssessment()}
-                className="min-h-14 rounded-2xl border border-emerald-300/25 bg-emerald-400/15 px-5 text-base font-bold text-emerald-50 hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Submit and lock assessment
-              </button>
-            </div>
+            {!submittedNativeView ? (
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={returnToAssessment}
+                  className="min-h-14 rounded-2xl border border-white/15 bg-white/[0.06] px-5 text-base font-bold text-white hover:bg-white/[0.1]"
+                >
+                  Return to assessment
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    busy ||
+                    workspace.assessment.canFinalize !== true ||
+                    pendingSectionSavesRef.current.size > 0
+                  }
+                  onClick={() => void finalizeAssessment()}
+                  className="min-h-14 rounded-2xl border border-emerald-300/25 bg-emerald-400/15 px-5 text-base font-bold text-emerald-50 hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Submit and lock assessment
+                </button>
+              </div>
+            ) : null}
           </section>
         ) : null}
       </div>
