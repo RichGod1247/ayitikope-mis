@@ -669,6 +669,13 @@ export async function readHeadteacherSupervisoryAssessmentQueue(
 
   const tenantIdSet = new Set(tenantIds);
 
+  // The database query already returns newest cycles first.
+  // Preserve that server-derived order for submitted work without exposing
+  // exact timestamps in the browser payload.
+  const cycleRecencyRank = new Map(
+    cycles.map((cycle, index) => [cycle.id, index] as const),
+  );
+
   const items: HeadteacherSupervisoryQueueItem[] = cycles.flatMap(
     (cycle) => {
       const metadata = objectValue(cycle.metadata);
@@ -823,6 +830,14 @@ export async function readHeadteacherSupervisoryAssessmentQueue(
       priority[right.supervisory.state];
 
     if (stateDifference !== 0) return stateDifference;
+
+    if (left.supervisory.state === "SUBMITTED") {
+      const recencyDifference =
+        (cycleRecencyRank.get(left.cycleId) ?? Number.MAX_SAFE_INTEGER) -
+        (cycleRecencyRank.get(right.cycleId) ?? Number.MAX_SAFE_INTEGER);
+
+      if (recencyDifference !== 0) return recencyDifference;
+    }
 
     const circuitDifference = left.circuitName.localeCompare(
       right.circuitName,
