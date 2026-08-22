@@ -40,6 +40,8 @@ export const HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY = {
   hosForwardedDirectorReviewStage: 2,
   reviewDecision: "PENDING",
   allowedDecisions: ["RETURN", "HOLD", "RELEASE"] as const,
+  directorReturnAssessorRole: "HEAD_OF_SUPERVISION",
+  hosForwardedAllowedDecisions: ["HOLD", "RELEASE"] as const,
   minimumReasonLength: 3,
   maximumNoteLength: 2_000,
   releaseMode: "DIRECTOR_REVIEWED_GOVERNANCE_RELEASE",
@@ -1917,6 +1919,27 @@ function normalizeDecisionNote(decision: HeadteacherDirectorGovernanceDecision, 
   return note;
 }
 
+function assertDirectorDecisionAuthority(input: {
+  decision: HeadteacherDirectorGovernanceDecision;
+  assessorRole: HeadteacherDirectorGovernanceAssessorRole;
+}) {
+  if (
+    input.decision === "RETURN" &&
+    input.assessorRole !==
+      HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY.directorReturnAssessorRole
+  ) {
+    fail(
+      "HEADTEACHER_DIRECTOR_GOVERNANCE_RETURN_AUTHORSHIP_FORBIDDEN",
+      409,
+      {
+        assessorRole: input.assessorRole,
+        allowedReturnAssessorRole:
+          HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY.directorReturnAssessorRole,
+      },
+    );
+  }
+}
+
 function currentPendingDirectorReview(assessment: AssessmentRecord) {
   const candidates = assessment.reviews
     .filter(isDirectorGovernanceReview)
@@ -2448,6 +2471,10 @@ export async function executeHeadteacherDirectorGovernanceDecision(
   const decision = normalizeDecision(input.decision);
   const note = normalizeDecisionNote(decision, input.note);
   const prepared = await preparePackage(input);
+  assertDirectorDecisionAuthority({
+    decision,
+    assessorRole: prepared.verified.assessorRole,
+  });
   if (!prepared.pending) {
     fail("HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_NOT_STARTED", 409);
   }
@@ -2468,6 +2495,10 @@ export async function executeHeadteacherDirectorGovernanceDecision(
     });
     if (!assessment) fail("HEADTEACHER_DIRECTOR_GOVERNANCE_ASSESSMENT_NOT_FOUND", 404);
     const verified = verifyFinalizedAssessment(assessment);
+    assertDirectorDecisionAuthority({
+      decision,
+      assessorRole: verified.assessorRole,
+    });
     const review = await tx.appraisalReview.findUnique({
       where: { id: reviewId },
       select: REVIEW_SELECT,

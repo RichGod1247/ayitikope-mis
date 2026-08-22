@@ -332,7 +332,9 @@ const DIRECTOR_REVIEW_UI_POLICY = Object.freeze({
   appraisalChannels: ["STAFF_FEEDBACK", "GOVERNANCE_SUPERVISORY"],
   directReleaseInspectionRequired: true,
   directReleaseMutationFromInspectionOnly: true,
-  governanceReviewedDecisionPath: "ASSESSMENT_KEYED_RETURN_HOLD_RELEASE",
+  governanceReviewedDecisionPath: "ASSESSMENT_KEYED_ROLE_SCOPED_RETURN_HOLD_RELEASE",
+  governanceReturnAssessorRole: "HEAD_OF_SUPERVISION",
+  governanceHosForwardedDecisionPath: "HOLD_RELEASE_ONLY",
   governanceStaffFeedbackPrerequisite: false,
   governanceNativeFormReadOnly: true,
   bbcGovernanceQueueVersion: 3,
@@ -916,21 +918,33 @@ function DecisionButtons(props: {
   disabled: boolean;
   onChoose: (mode: DecisionMode) => void;
   compact?: boolean;
+  allowReturn?: boolean;
 }) {
   const base = props.compact
     ? "min-h-11 flex-1 rounded-xl px-3 py-2 text-xs font-black"
     : "min-h-12 rounded-xl px-4 py-2.5 text-sm font-black";
+  const allowReturn = props.allowReturn !== false;
 
   return (
-    <div className={props.compact ? "flex gap-2" : "grid grid-cols-3 gap-2"}>
-      <button
-        type="button"
-        disabled={props.disabled}
-        onClick={() => props.onChoose("RETURN")}
-        className={`${base} border border-rose-300/25 bg-rose-400/10 text-rose-100 disabled:opacity-45`}
-      >
-        Return
-      </button>
+    <div
+      className={
+        props.compact
+          ? "flex gap-2"
+          : allowReturn
+            ? "grid grid-cols-3 gap-2"
+            : "grid grid-cols-2 gap-2"
+      }
+    >
+      {allowReturn ? (
+        <button
+          type="button"
+          disabled={props.disabled}
+          onClick={() => props.onChoose("RETURN")}
+          className={`${base} border border-rose-300/25 bg-rose-400/10 text-rose-100 disabled:opacity-45`}
+        >
+          Return
+        </button>
+      ) : null}
       <button
         type="button"
         disabled={props.disabled}
@@ -1554,6 +1568,12 @@ function GovernanceReviewNativeForm(props: {
   const correctionReceived =
     props.reviewPackage.lifecycleState === "READY_TO_DECIDE" &&
     props.reviewPackage.assessment.revision > 1;
+  const directorReturnAllowed =
+    props.reviewPackage.assessment.assessorRole ===
+    DIRECTOR_REVIEW_UI_POLICY.governanceReturnAssessorRole;
+  const decisionCopy = directorReturnAllowed
+    ? "Return, Hold or Release"
+    : "Hold or Release";
 
   return (
     <GovernanceNativePaper
@@ -1569,8 +1589,8 @@ function GovernanceReviewNativeForm(props: {
         readyToStart
           ? "This assessment was submitted by a governance officer. Read the locked 4-section, 34-indicator form, then scroll to the bottom and click Start Governance review."
           : correctionReceived
-            ? `${props.reviewPackage.assessment.assessorOffice} has corrected and resubmitted the appraisal for ${props.reviewPackage.cycle.targetName}. Read the locked corrected form, then choose Return, Hold or Release at the bottom.`
-            : "This governance review is already in progress. Read the locked form, then use Return, Hold or Release at the bottom."
+            ? `${props.reviewPackage.assessment.assessorOffice} has corrected and resubmitted the appraisal for ${props.reviewPackage.cycle.targetName}. Read the locked corrected form, then choose ${decisionCopy} at the bottom.`
+            : `This governance review is already in progress. Read the locked form, then use ${decisionCopy} at the bottom.`
       }
       footer={
         <div className={panel("p-4 sm:p-5")}>
@@ -1590,9 +1610,14 @@ function GovernanceReviewNativeForm(props: {
                 {readyToStart
                   ? `Review the ${props.reviewPackage.assessment.assessorOffice}'s appraisal report for ${props.reviewPackage.cycle.targetName}.`
                   : correctionReceived
-                    ? `Review the corrected appraisal for ${props.reviewPackage.cycle.targetName}, then choose Return, Hold or Release. Review stage ${props.reviewPackage.review?.stage ?? 1} is preserved.`
-                    : `Review the ${props.reviewPackage.assessment.assessorOffice}'s appraisal report for ${props.reviewPackage.cycle.targetName}, then choose Return, Hold or Release.`}
+                    ? `Review the corrected appraisal for ${props.reviewPackage.cycle.targetName}, then choose ${decisionCopy}. Review stage ${props.reviewPackage.review?.stage ?? 1} is preserved.`
+                    : `Review the ${props.reviewPackage.assessment.assessorOffice}'s appraisal report for ${props.reviewPackage.cycle.targetName}, then choose ${decisionCopy}.`}
               </p>
+              {!readyToStart && !directorReturnAllowed ? (
+                <p className="mt-2 max-w-3xl rounded-xl border border-cyan-300/20 bg-cyan-400/8 px-3 py-2 text-xs font-semibold leading-5 text-cyan-100">
+                  HOS quality review is complete. The Director may hold this report for further consideration or release it. Correction return is no longer available for SISSO/BSC-authored work.
+                </p>
+              ) : null}
             </div>
             {readyToStart ? (
               <ActionButton primary disabled={props.busy} onClick={props.onStart}>
@@ -1601,6 +1626,7 @@ function GovernanceReviewNativeForm(props: {
             ) : (
               <DecisionButtons
                 disabled={props.busy}
+                allowReturn={directorReturnAllowed}
                 onChoose={props.onChooseDecision}
               />
             )}
@@ -2594,7 +2620,14 @@ export default function HeadteacherDirectorReviewClient({
       );
       if (item) await loadGovernanceReviewPackage(item);
       await loadGovernanceQueue();
-      setNotice("Independent Governance review started. Return, Hold and Release are now available below the locked form.");
+      const returnAllowed =
+        governanceReviewPackage.assessment.assessorRole ===
+        DIRECTOR_REVIEW_UI_POLICY.governanceReturnAssessorRole;
+      setNotice(
+        returnAllowed
+          ? "Independent Governance review started. Return, Hold and Release are available below the locked form."
+          : "Independent Governance review started. HOS quality review is complete; Hold and Release are available below the locked form.",
+      );
     } catch {
       setFailure(
         "Network interrupted. Refresh the Governance queue before repeating the start action.",
@@ -2606,6 +2639,16 @@ export default function HeadteacherDirectorReviewClient({
 
   function openGovernanceDecision(mode: DecisionMode) {
     clearMessages();
+    if (
+      mode === "RETURN" &&
+      governanceReviewPackage?.assessment.assessorRole !==
+      DIRECTOR_REVIEW_UI_POLICY.governanceReturnAssessorRole
+    ) {
+      setFailure(
+        "This appraisal was authored by SISSO/BSC and has already passed HOS quality review. The Director may Hold or Release it, but cannot send it back for another correction.",
+      );
+      return;
+    }
     setGovernanceDecisionMode(mode);
     setReason("");
     setReleaseNote("");
@@ -2616,6 +2659,17 @@ export default function HeadteacherDirectorReviewClient({
     const review = governanceReviewPackage.review;
     if (!review) {
       setFailure("Start the Governance review before recording a Director decision.");
+      return;
+    }
+    if (
+      governanceDecisionMode === "RETURN" &&
+      governanceReviewPackage.assessment.assessorRole !==
+      DIRECTOR_REVIEW_UI_POLICY.governanceReturnAssessorRole
+    ) {
+      setGovernanceDecisionMode(null);
+      setFailure(
+        "Director correction return is permitted only when the Head of Supervision authored the appraisal. This HOS-reviewed SISSO/BSC report may only be Held or Released.",
+      );
       return;
     }
     if (

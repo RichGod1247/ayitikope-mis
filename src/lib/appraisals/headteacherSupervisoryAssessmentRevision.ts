@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { calculateAppraisalScores } from "@/lib/appraisals/scoring";
 import {
   HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY,
+  canonicalHeadteacherSupervisoryAssessorRole,
   decideHeadteacherSupervisoryAssessmentAuthority,
   planReturnedHeadteacherSupervisoryRevision,
   type HeadteacherSupervisoryGovernanceAssignment,
@@ -37,6 +38,8 @@ export const HEADTEACHER_SUPERVISORY_REVISION_POLICY = {
   writeTransactionFullSourceRead: false,
   writeTransactionCurrentAuthorityRevalidated: true,
   directorReturnRevisionAdmission: true,
+  directorReturnCorrectionAssessorRole: "HEAD_OF_SUPERVISION",
+  directorReturnHosAuthoredOnly: true,
   directorReturnCarrierStatusMutationRequired: false,
   directorReturnCarrierTimestampMutationRequired: false,
 } as const;
@@ -621,6 +624,34 @@ function directorGovernanceReturnAdmission(
     clean(cycleReview.state) === "RETURNED_FOR_CORRECTION";
 
   if (!hasDirectorReturnMarker) return null;
+
+  const evidenceAssessor = objectValue(
+    objectValue(record.evidenceSnapshotJson).assessor,
+  );
+  const evidenceAssessorRole = canonicalHeadteacherSupervisoryAssessorRole(
+    clean(evidenceAssessor.role) || clean(evidenceAssessor.assignmentRole),
+  );
+  const reviewAssessorRole = canonicalHeadteacherSupervisoryAssessorRole(
+    reviewMetadata.assessorRole,
+  );
+
+  if (
+    evidenceAssessorRole !==
+      HEADTEACHER_SUPERVISORY_REVISION_POLICY.directorReturnCorrectionAssessorRole ||
+    reviewAssessorRole !==
+      HEADTEACHER_SUPERVISORY_REVISION_POLICY.directorReturnCorrectionAssessorRole
+  ) {
+    fail(
+      "HEADTEACHER_SUPERVISORY_REVISION_DIRECTOR_RETURN_AUTHORSHIP_FORBIDDEN",
+      409,
+      {
+        evidenceAssessorRole,
+        reviewAssessorRole,
+        requiredAssessorRole:
+          HEADTEACHER_SUPERVISORY_REVISION_POLICY.directorReturnCorrectionAssessorRole,
+      },
+    );
+  }
 
   const reviewEvidenceHash = clean(reviewMetadata.reviewEvidenceHash).toLowerCase();
   const storedContractHash = clean(reviewMetadata.decisionContractHash).toLowerCase();

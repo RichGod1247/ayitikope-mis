@@ -270,13 +270,15 @@ function auditText(db){return JSON.stringify(db.audits);}
 async function main(){
   const sourcePath=path.join(repoRoot,"src/lib/appraisals/headteacherSupervisoryAssessmentRevision.ts");
   const source=fs.readFileSync(sourcePath,"utf8");
-  for(const marker of ["createReturnedHeadteacherSupervisoryAssessmentRevision","readHeadteacherSupervisoryAssessorState","planReturnedHeadteacherSupervisoryRevision","visitDetailsFromEvidenceSnapshot","preserveVisitDetailsMetadata: true","inheritedReturnReason","Prisma.TransactionIsolationLevel.Serializable","reviewerMayRewriteScores: false","providerCalled: false","directorReturnRevisionAdmission: true","directorReturnCarrierStatusMutationRequired: false","directorGovernanceReturnAdmission","DIRECTOR_GOVERNANCE_RETURN","HEADTEACHER_SUPERVISORY_REVISION_DIRECTOR_RETURN_PROVENANCE_DRIFT"]){assert(source.includes(marker),`Missing source marker: ${marker}`);}
+  for(const marker of ["createReturnedHeadteacherSupervisoryAssessmentRevision","readHeadteacherSupervisoryAssessorState","planReturnedHeadteacherSupervisoryRevision","visitDetailsFromEvidenceSnapshot","preserveVisitDetailsMetadata: true","inheritedReturnReason","Prisma.TransactionIsolationLevel.Serializable","reviewerMayRewriteScores: false","providerCalled: false","directorReturnRevisionAdmission: true","directorReturnCorrectionAssessorRole: \"HEAD_OF_SUPERVISION\"","directorReturnHosAuthoredOnly: true","directorReturnCarrierStatusMutationRequired: false","directorGovernanceReturnAdmission","DIRECTOR_GOVERNANCE_RETURN","HEADTEACHER_SUPERVISORY_REVISION_DIRECTOR_RETURN_AUTHORSHIP_FORBIDDEN","HEADTEACHER_SUPERVISORY_REVISION_DIRECTOR_RETURN_PROVENANCE_DRIFT"]){assert(source.includes(marker),`Missing source marker: ${marker}`);}
   for(const forbidden of ["sendSms","sendEmail","appraisalReview.create","appraisalAggregateSnapshot.create"]){assert(!source.includes(forbidden),`Forbidden source marker: ${forbidden}`);}
   const revisionModule=require(sourcePath);
   const {createReturnedHeadteacherSupervisoryAssessmentRevision,readHeadteacherSupervisoryAssessorState,HEADTEACHER_SUPERVISORY_REVISION_POLICY}=revisionModule;
   assertEqual(HEADTEACHER_SUPERVISORY_REVISION_POLICY.eligibleCycleStatus,"UNDER_REVIEW","Legacy cycle boundary must remain under review");
   assertEqual(HEADTEACHER_SUPERVISORY_REVISION_POLICY.preserveVisitDetailsMetadata,true,"Revision must preserve visit-details metadata");
   assertEqual(HEADTEACHER_SUPERVISORY_REVISION_POLICY.directorReturnRevisionAdmission,true,"Director-return revision bridge must be explicit");
+  assertEqual(HEADTEACHER_SUPERVISORY_REVISION_POLICY.directorReturnCorrectionAssessorRole,"HEAD_OF_SUPERVISION","Director return may create a correction only for HOS-authored work");
+  assertEqual(HEADTEACHER_SUPERVISORY_REVISION_POLICY.directorReturnHosAuthoredOnly,true,"Director-return revisions must remain HOS-authored only");
   assertEqual(HEADTEACHER_SUPERVISORY_REVISION_POLICY.directorReturnCarrierStatusMutationRequired,false,"Director-return bridge must not require carrier status mutation");
 
   const db=new FakeDatabase();
@@ -368,6 +370,22 @@ async function main(){
   });
   assertEqual(directorRetry.outcome,"EXISTING_MATCH","Director-return correction retry should be idempotent");
 
+  const wrongDirectorAuthor=directorReturnedHosAssessment();
+  wrongDirectorAuthor.reviews[0].metadata.assessorRole="SISSO";
+  await expectReject(
+    ()=>readHeadteacherSupervisoryAssessorState({
+      actorUserId:"hos-001",
+      assessmentId:"assessment-001",
+      database:{
+        appraisalAssessment:{
+          findUnique:async()=>structuredClone(wrongDirectorAuthor),
+        },
+      },
+    }),
+    "HEADTEACHER_SUPERVISORY_REVISION_DIRECTOR_RETURN_AUTHORSHIP_FORBIDDEN",
+    "Director return must not admit a SISSO/BSC-authored correction after HOS review",
+  );
+
   const finalizedDb=new FakeDatabase({assessment:{status:"FINALIZED",reviews:[]}});
   const finalizedState=await readHeadteacherSupervisoryAssessorState({actorUserId:"actor-001",assessmentId:"assessment-001",database:finalizedDb});
   assertEqual(finalizedState.state,"FINALIZED_READ_ONLY","Finalized state should be read only");
@@ -453,7 +471,7 @@ async function main(){
   console.log("=== D3.4F4 HEADTEACHER SUPERVISORY RETURNED REVISION + READ STATES ===\n");
   console.log("Returned source status          : RETURNED only");
   console.log("Legacy parent-cycle boundary    : UNDER_REVIEW only");
-  console.log("Director-return correction      : proof-bound, carrier mutation not required");
+  console.log("Director-return correction      : HOS-authored only + proof-bound");
   console.log("Director return hashes          : contract + request recomputed");
   console.log("Director carrier state          : RELEASED tolerated; CANCELLED rejected");
   console.log("Revision ownership              : exact original assessor");

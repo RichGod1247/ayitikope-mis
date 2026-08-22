@@ -42,6 +42,8 @@ export const HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_POLICY = {
   exactReturningAssignmentRequired: true,
   directorContinuationDelegated: true,
   directorContinuationMode: "INDEPENDENT_GOVERNANCE",
+  directorReturnCorrectionAssessorRole: "HEAD_OF_SUPERVISION",
+  directorReturnHosAuthoredOnly: true,
   staffFeedbackIncludedInHosContinuation: false,
   staffFeedbackIncludedInDirectorContinuation: false,
   respondentIdentitiesIncluded: false,
@@ -1206,17 +1208,20 @@ async function runHosContinuation(input: {
 function directorCorrectionAssessorRole(actorRoleName: unknown) {
   const role = canonicalHeadteacherSupervisoryAssessorRole(actorRoleName);
   if (
-    !HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY.eligibleAssessorRoles.includes(
-      role as "SISSO" | "BASIC_SCHOOL_COORDINATOR" | "HEAD_OF_SUPERVISION",
-    )
+    role !==
+    HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_POLICY.directorReturnCorrectionAssessorRole
   ) {
     fail(
       "HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_DIRECTOR_SOURCE_ROLE_INVALID",
       409,
-      { actorRole: normalized(actorRoleName) },
+      {
+        actorRole: normalized(actorRoleName),
+        requiredRole:
+          HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_POLICY.directorReturnCorrectionAssessorRole,
+      },
     );
   }
-  return role as "SISSO" | "BASIC_SCHOOL_COORDINATOR" | "HEAD_OF_SUPERVISION";
+  return "HEAD_OF_SUPERVISION" as const;
 }
 
 function directorGovernanceReviewEvidenceHash(input: {
@@ -1224,7 +1229,7 @@ function directorGovernanceReviewEvidenceHash(input: {
   cycle: CycleRecord;
   sourceReview: ReviewRecord;
   reviewerAssignmentId: string;
-  assessorRole: "SISSO" | "BASIC_SCHOOL_COORDINATOR" | "HEAD_OF_SUPERVISION";
+  assessorRole: "HEAD_OF_SUPERVISION";
   visitContextHash: string;
   sourceReviewEvidenceHash: string;
   sourceDecisionRequestHash: string;
@@ -1298,6 +1303,8 @@ function assertDirectorReturnProvenance(input: {
   if (
     clean(reviewMetadata.reviewType) !== "DIRECTOR_GOVERNANCE_REVIEW" ||
     normalized(reviewMetadata.reviewerRole) !== "DISTRICT_DIRECTOR" ||
+    canonicalHeadteacherSupervisoryAssessorRole(reviewMetadata.assessorRole) !==
+      HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_POLICY.directorReturnCorrectionAssessorRole ||
     Number(reviewMetadata.reviewStage) !== input.sourceReview.stage ||
     normalized(input.sourceReview.decision) !== "RETURNED" ||
     clean(reviewMetadata.decisionAction) !== "RETURN" ||
@@ -1498,7 +1505,7 @@ function directorContinuationMetadata(input: {
   source: AssessmentRecord;
   sourceReview: ReviewRecord;
   assignment: AssignmentRecord;
-  assessorRole: "SISSO" | "BASIC_SCHOOL_COORDINATOR" | "HEAD_OF_SUPERVISION";
+  assessorRole: "HEAD_OF_SUPERVISION";
   reviewEvidenceHash: string;
   returnEvidenceHash: string;
   sourceReviewEvidenceHash: string;
@@ -2018,6 +2025,7 @@ export async function ensureHeadteacherSupervisoryCorrectionReviewContinuation(
 
     if (hasDirectorReturn) {
       assertDirectorCarrierBoundary(cycle);
+      directorCorrectionAssessorRole(input.actorRoleName);
       const directorMetadata = objectValue(source.metadata);
       if (
         clean(directorMetadata.returnedByDirectorReviewId) !== sourceReview.id ||

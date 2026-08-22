@@ -40,6 +40,8 @@ for (const marker of [
   'reviewType: "HOS_SUPERVISORY_REVIEW"',
   'continuationType: "CORRECTED_ASSESSMENT"',
   'directorContinuationMode: "INDEPENDENT_GOVERNANCE"',
+  'directorReturnCorrectionAssessorRole: "HEAD_OF_SUPERVISION"',
+  "directorReturnHosAuthoredOnly: true",
   "staffFeedbackIncludedInDirectorContinuation: false",
   'reviewType: "DIRECTOR_GOVERNANCE_REVIEW"',
   "HEADTEACHER_GOVERNANCE_DIRECTOR_CORRECTION_REVIEW_CONTINUED",
@@ -63,6 +65,8 @@ for (const marker of [
   "directorCarrierGovernanceProofRequired: true",
   "assertDirectorCarrierReturnProof",
   "assertDirectorCarrierPendingProof",
+  "directorCorrectionAssessorRole(input.actorRoleName)",
+  "HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_DIRECTOR_SOURCE_ROLE_INVALID",
   "RETURNED_FOR_CORRECTION",
   "carrierCycleStatusMutationPerformed",
   "carrierCycleTimestampMutationPerformed",
@@ -360,6 +364,13 @@ function makeDirectorState() {
   const current = state.assessments[1];
   const review = state.reviews[0];
 
+  source.assessorUserId = "hos-author-user";
+  source.assessorAssignmentId = "hos-author-assignment";
+  source.finalizedByUserId = "hos-author-user";
+  current.assessorUserId = "hos-author-user";
+  current.assessorAssignmentId = "hos-author-assignment";
+  current.finalizedByUserId = "hos-author-user";
+
   review.id = "director-return-review-002";
   review.reviewerUserId = "director-user";
   review.reviewerAssignmentId = "director-assignment";
@@ -379,8 +390,8 @@ function makeDirectorState() {
     assessmentRevision: source.revision,
     assessmentHash: SOURCE_HASH,
     visitContextHash: VISIT_HASH,
-    assessorRole: "SISSO",
-    admissionType: "HOS_FORWARDED",
+    assessorRole: "HEAD_OF_SUPERVISION",
+    admissionType: "HOS_AUTHORED",
     immutableEvidenceReverified: true,
     staffFeedbackIncluded: false,
     respondentIdentitiesIncluded: false,
@@ -738,6 +749,14 @@ async function expectCode(operation, code) {
       "INDEPENDENT_GOVERNANCE",
     );
     assert.strictEqual(
+      HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_POLICY.directorReturnCorrectionAssessorRole,
+      "HEAD_OF_SUPERVISION",
+    );
+    assert.strictEqual(
+      HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_POLICY.directorReturnHosAuthoredOnly,
+      true,
+    );
+    assert.strictEqual(
       HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_POLICY.staffFeedbackIncludedInDirectorContinuation,
       false,
     );
@@ -885,13 +904,41 @@ async function expectCode(operation, code) {
       "HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_CYCLE_INVALID",
     );
 
+    const forbiddenDirectorReturnAuthor = makeDirectorState();
+    await expectCode(
+      () =>
+        ensureHeadteacherSupervisoryCorrectionReviewContinuation({
+          actorUserId: "hos-author-user",
+          actorRoleName: "SISSO",
+          assessmentId: "assessment-current",
+          reqId: "req-b4-director-sisso-author-forbidden",
+          now: NOW,
+          database: new FakeDatabase(forbiddenDirectorReturnAuthor),
+        }),
+      "HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_DIRECTOR_SOURCE_ROLE_INVALID",
+    );
+
+    const forbiddenBscDirectorReturnAuthor = makeDirectorState();
+    await expectCode(
+      () =>
+        ensureHeadteacherSupervisoryCorrectionReviewContinuation({
+          actorUserId: "hos-author-user",
+          actorRoleName: "BASIC_SCHOOL_COORDINATOR",
+          assessmentId: "assessment-current",
+          reqId: "req-b4-director-bsc-author-forbidden",
+          now: NOW,
+          database: new FakeDatabase(forbiddenBscDirectorReturnAuthor),
+        }),
+      "HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_DIRECTOR_SOURCE_ROLE_INVALID",
+    );
+
     const missingDirectorCarrierProof = makeDirectorState();
     delete missingDirectorCarrierProof.cycle.metadata.directorGovernanceReview;
     await expectCode(
       () =>
         ensureHeadteacherSupervisoryCorrectionReviewContinuation({
-          actorUserId: "sisso-user",
-          actorRoleName: "SISSO",
+          actorUserId: "hos-author-user",
+          actorRoleName: "HEAD_OF_SUPERVISION",
           assessmentId: "assessment-current",
           reqId: "req-b4-director-missing-carrier-proof",
           now: NOW,
@@ -906,8 +953,8 @@ async function expectCode(operation, code) {
     await expectCode(
       () =>
         ensureHeadteacherSupervisoryCorrectionReviewContinuation({
-          actorUserId: "sisso-user",
-          actorRoleName: "SISSO",
+          actorUserId: "hos-author-user",
+          actorRoleName: "HEAD_OF_SUPERVISION",
           assessmentId: "assessment-current",
           reqId: "req-b4-director-drifted-carrier-proof",
           now: NOW,
@@ -920,8 +967,8 @@ async function expectCode(operation, code) {
     const independentDirectorDatabase = new FakeDatabase(independentDirectorState);
     const independentDirectorCreated =
       await ensureHeadteacherSupervisoryCorrectionReviewContinuation({
-        actorUserId: "sisso-user",
-        actorRoleName: "SISSO",
+        actorUserId: "hos-author-user",
+        actorRoleName: "HEAD_OF_SUPERVISION",
         assessmentId: "assessment-current",
         reqId: "req-b4-director-independent",
         now: NOW,
@@ -985,8 +1032,8 @@ async function expectCode(operation, code) {
 
     const independentDirectorRetried =
       await ensureHeadteacherSupervisoryCorrectionReviewContinuation({
-        actorUserId: "sisso-user",
-        actorRoleName: "SISSO",
+        actorUserId: "hos-author-user",
+        actorRoleName: "HEAD_OF_SUPERVISION",
         assessmentId: "assessment-current",
         reqId: "req-b4-director-independent-retry",
         now: NOW,
@@ -999,8 +1046,8 @@ async function expectCode(operation, code) {
     const pendingProofDriftState = makeDirectorState();
     const pendingProofDriftDatabase = new FakeDatabase(pendingProofDriftState);
     await ensureHeadteacherSupervisoryCorrectionReviewContinuation({
-      actorUserId: "sisso-user",
-      actorRoleName: "SISSO",
+      actorUserId: "hos-author-user",
+      actorRoleName: "HEAD_OF_SUPERVISION",
       assessmentId: "assessment-current",
       reqId: "req-b4-director-pending-proof-create",
       now: NOW,
@@ -1011,8 +1058,8 @@ async function expectCode(operation, code) {
     await expectCode(
       () =>
         ensureHeadteacherSupervisoryCorrectionReviewContinuation({
-          actorUserId: "sisso-user",
-          actorRoleName: "SISSO",
+          actorUserId: "hos-author-user",
+          actorRoleName: "HEAD_OF_SUPERVISION",
           assessmentId: "assessment-current",
           reqId: "req-b4-director-pending-proof-drift",
           now: NOW,
@@ -1021,14 +1068,12 @@ async function expectCode(operation, code) {
       "HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_DIRECTOR_CARRIER_PENDING_PROOF_DRIFT",
     );
 
-    const directorState = makeHosState();
-    delete directorState.assessments[0].metadata.headteacherSupervisoryReturn;
-    directorState.assessments[0].metadata.returnedByDirectorReviewId =
-      directorState.reviews[0].id;
-    directorState.assessments[0].metadata.returnedByDirectorReviewStage = 1;
+    const directorState = makeDirectorState();
     let directorCalls = 0;
     const directorResult = await ensureHeadteacherSupervisoryCorrectionReviewContinuation(
       makeInput(directorState, {
+        actorUserId: "hos-author-user",
+        actorRoleName: "HEAD_OF_SUPERVISION",
         dependencies: {
           loadAssessment: async () => viewFor(directorState),
           ensureDirectorContinuation: async () => {
@@ -1043,9 +1088,9 @@ async function expectCode(operation, code) {
               assessmentStatus: "FINALIZED",
               sourceAssessmentId: "assessment-source",
               sourceReviewId: "review-source",
-              sourceReviewStage: 1,
+              sourceReviewStage: 2,
               reviewId: "director-review-current",
-              reviewStage: 1,
+              reviewStage: 2,
               reviewDecision: "PENDING",
               reviewerUserId: "director-user",
               reviewerAssignmentId: "director-assignment",
@@ -1078,9 +1123,10 @@ async function expectCode(operation, code) {
     console.log("HOS Governance proof            : assessment/review provenance required");
     console.log("Director carrier boundary       : foreign workflow + released state preserved");
     console.log("Director RETURN carrier proof   : assessment-keyed and fail-closed");
+    console.log("Director RETURN author scope    : HOS-authored only; SISSO/BSC forbidden");
     console.log("Director PENDING carrier proof  : retry state reverified");
     console.log("Corrected assessment            : remains FINALIZED and immutable");
-    console.log("Director-return correction      : independent Governance bridge executed");
+    console.log("Director-return correction      : HOS-authored only; independent bridge");
     console.log("Ambiguous return provenance     : fail closed");
     console.log("Returning HOS assignment        : revalidated active in exact district");
     console.log("Staff feedback in HOS branch    : absent");
