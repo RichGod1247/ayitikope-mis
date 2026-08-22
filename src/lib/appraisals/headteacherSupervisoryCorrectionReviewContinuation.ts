@@ -55,6 +55,8 @@ export const HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_POLICY = {
   transactionIsolation: "SERIALIZABLE",
   transactionMaxWaitMs: 10_000,
   transactionTimeoutMs: 25_000,
+  hosCarrierWorkflowIndependent: true,
+  hosCarrierGovernanceProofRequired: true,
   directorCarrierStatusMutationRequired: false,
   directorCarrierTimestampMutationRequired: false,
   directorCarrierWorkflowIndependent: true,
@@ -471,7 +473,6 @@ function sourceHasDirectorReturn(source: AssessmentRecord) {
 }
 
 function assertHosCycleBoundary(cycle: CycleRecord) {
-  const metadata = objectValue(cycle.metadata);
   if (
     normalized(cycle.status) !==
       HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_POLICY.requiredCycleStatus ||
@@ -479,9 +480,8 @@ function assertHosCycleBoundary(cycle: CycleRecord) {
     cycle.releasedAt ||
     cycle.cancelledAt ||
     normalized(cycle.targetRoleSnapshot) !== "HEADTEACHER" ||
-    clean(metadata.workflow) !==
-      HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_POLICY.workflow ||
-    !clean(cycle.targetTenantId)
+    !clean(cycle.targetTenantId) ||
+    !clean(cycle.scopeZoneId)
   ) {
     fail("HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_CYCLE_INVALID", 409);
   }

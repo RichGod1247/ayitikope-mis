@@ -55,6 +55,8 @@ for (const marker of [
   "assessmentMutationAllowed: false",
   "cycleStatusChanges: false",
   "providerCallsAllowed: false",
+  "hosCarrierWorkflowIndependent: true",
+  "hosCarrierGovernanceProofRequired: true",
   "directorCarrierStatusMutationRequired: false",
   "directorCarrierTimestampMutationRequired: false",
   "directorCarrierWorkflowIndependent: true",
@@ -88,7 +90,27 @@ for (const forbidden of [
   assert(!source.includes(forbidden), `Forbidden B4 marker found: ${forbidden}`);
 }
 
+const hosCycleBoundaryStart = source.indexOf("function assertHosCycleBoundary");
+const hosCycleBoundaryEnd = source.indexOf(
+  "function assertDirectorCarrierBoundary",
+  hosCycleBoundaryStart,
+);
+assert(
+  hosCycleBoundaryStart >= 0 && hosCycleBoundaryEnd > hosCycleBoundaryStart,
+  "HOS carrier boundary source block missing",
+);
+const hosCycleBoundarySource = source.slice(
+  hosCycleBoundaryStart,
+  hosCycleBoundaryEnd,
+);
+assert(
+  !hosCycleBoundarySource.includes("metadata.workflow"),
+  "HOS continuation must not infer Governance evidence identity from carrier workflow",
+);
+
+
 const WORKFLOW = "HEADTEACHER_APPRAISAL";
+const HOS_CARRIER_WORKFLOW = "HEADTEACHER_CONFIDENTIAL_STAFF_FEEDBACK";
 const EVIDENCE_STREAM = "GOVERNANCE_SUPERVISORY_ASSESSMENT";
 const NOW = new Date("2026-08-12T16:00:00.000Z");
 const RETURNED_AT = new Date("2026-08-12T15:00:00.000Z");
@@ -159,7 +181,7 @@ function makeHosState() {
     reviewStartedAt: new Date("2026-08-12T14:00:00.000Z"),
     releasedAt: null,
     cancelledAt: null,
-    metadata: { workflow: WORKFLOW },
+    metadata: { workflow: HOS_CARRIER_WORKFLOW },
   };
   const sourceAssessment = {
     id: "assessment-source",
@@ -728,6 +750,14 @@ async function expectCode(operation, code) {
       false,
     );
     assert.strictEqual(
+      HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_POLICY.hosCarrierWorkflowIndependent,
+      true,
+    );
+    assert.strictEqual(
+      HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_POLICY.hosCarrierGovernanceProofRequired,
+      true,
+    );
+    assert.strictEqual(
       HEADTEACHER_SUPERVISORY_CORRECTION_CONTINUATION_POLICY.directorCarrierWorkflowIndependent,
       true,
     );
@@ -767,6 +797,11 @@ async function expectCode(operation, code) {
     assert.strictEqual(
       state.cycle.metadata.headteacherSupervisoryReview.awaitingDirectorAdmission,
       false,
+    );
+    assert.strictEqual(
+      state.cycle.metadata.workflow,
+      HOS_CARRIER_WORKFLOW,
+      "HOS continuation must preserve the confidential Staff Feedback carrier workflow",
     );
     assert.strictEqual(
       state.audits[0].metadata.reasonTextRecordedInAudit,
@@ -1039,6 +1074,8 @@ async function expectCode(operation, code) {
     console.log("HOS-return correction           : same HOS reviewer + assignment + stage");
     console.log("HOS continued decision          : PENDING");
     console.log("HOS carrier boundary            : remains UNDER_REVIEW");
+    console.log("HOS carrier workflow            : foreign Staff Feedback workflow preserved");
+    console.log("HOS Governance proof            : assessment/review provenance required");
     console.log("Director carrier boundary       : foreign workflow + released state preserved");
     console.log("Director RETURN carrier proof   : assessment-keyed and fail-closed");
     console.log("Director PENDING carrier proof  : retry state reverified");
