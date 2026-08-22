@@ -215,6 +215,10 @@ const headteacherReviewClientSource = requireMarkers(
     '"START_REVIEW"',
     '"CONTINUE_REVIEW"',
     "Open report",
+    "Review correction",
+    "Returned corrections",
+    "Correction resubmitted",
+    "You previously returned an earlier revision",
     "Start review",
     "Return for correction",
     "Forward to Director",
@@ -232,6 +236,39 @@ const headteacherReviewClientSource = requireMarkers(
     "no background polling",
     "no persistent browser storage",
   ],
+);
+
+assert(
+  headteacherReviewClientSource.includes(
+    "function isReturnedCorrection(item: ReviewQueueItem)",
+  ) &&
+    headteacherReviewClientSource.includes("return item.revision > 1;") &&
+    headteacherReviewClientSource.includes(
+      "returnedCorrections: items.filter((item) => isReturnedCorrection(item))",
+    ),
+  "N7_HOS_RETURNED_CORRECTION_REVISION_SIGNAL_MISSING",
+);
+
+assert(
+  headteacherReviewClientSource.includes(
+    '(item) => item.state === "READY_TO_START" && !isReturnedCorrection(item)',
+  ) &&
+    headteacherReviewClientSource.includes(
+      '(item) => item.state === "READY_TO_REVIEW" && !isReturnedCorrection(item)',
+    ),
+  "N7_HOS_RETURNED_CORRECTION_QUEUE_GROUPING_INVALID",
+);
+
+const returnedCorrectionsIndex = headteacherReviewClientSource.indexOf(
+  'title="Returned corrections"',
+);
+const continueReviewIndex = headteacherReviewClientSource.indexOf(
+  'title="Continue review"',
+);
+assert(
+  returnedCorrectionsIndex >= 0 &&
+    continueReviewIndex > returnedCorrectionsIndex,
+  "N7_HOS_RETURNED_CORRECTION_GROUP_ORDER_INVALID",
 );
 
 for (const forbiddenClientMarker of [
@@ -546,6 +583,8 @@ console.log("BSC Teacher review            : absent");
 console.log("Headteacher assessment        : existing supervisory workspace");
 console.log("HOS Headteacher review        : active shared review workspace");
 console.log("HOS Headteacher review route  : /governance/appraisals/headteacher-supervisory/review");
+console.log("Returned correction UX       : explicit queue group + resubmission notice");
+console.log("Returned correction signal   : revision > 1 only; no backend expansion");
 console.log("BSC Headteacher review        : absent");
 console.log("Governance My Appraisal       : visible, truthfully locked");
 console.log("Director review/release       : Director-only");

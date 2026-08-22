@@ -270,11 +270,20 @@ function reviewScoreTone(score: number | null, notApplicable: boolean) {
   return "bg-slate-50 text-slate-700";
 }
 
+function isReturnedCorrection(item: ReviewQueueItem) {
+  return item.revision > 1;
+}
+
 function queueStateLabel(item: ReviewQueueItem) {
+  if (isReturnedCorrection(item)) return "Correction resubmitted";
   return item.state === "READY_TO_START" ? "New report" : "Review in progress";
 }
 
 function queueStateTone(item: ReviewQueueItem) {
+  if (isReturnedCorrection(item)) {
+    return "border-emerald-300/30 bg-emerald-400/12 text-emerald-100";
+  }
+
   return item.state === "READY_TO_START"
     ? "border-amber-300/30 bg-amber-400/12 text-amber-100"
     : "border-sky-300/30 bg-sky-400/12 text-sky-100";
@@ -330,7 +339,7 @@ function QueueCard({
           onClick={() => onOpen(item)}
           className="min-h-12 w-full rounded-2xl border border-cyan-300/25 bg-cyan-400/15 px-4 text-sm font-black text-cyan-50 hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-55"
         >
-          Open report
+          {isReturnedCorrection(item) ? "Review correction" : "Open report"}
         </button>
       </div>
     </article>
@@ -679,8 +688,13 @@ export default function HeadteacherSupervisoryReviewClient({
   const groups = useMemo(() => {
     const items = queue?.items ?? [];
     return {
-      newReports: items.filter((item) => item.state === "READY_TO_START"),
-      continueReview: items.filter((item) => item.state === "READY_TO_REVIEW"),
+      newReports: items.filter(
+        (item) => item.state === "READY_TO_START" && !isReturnedCorrection(item),
+      ),
+      returnedCorrections: items.filter((item) => isReturnedCorrection(item)),
+      continueReview: items.filter(
+        (item) => item.state === "READY_TO_REVIEW" && !isReturnedCorrection(item),
+      ),
     };
   }, [queue]);
 
@@ -986,9 +1000,10 @@ export default function HeadteacherSupervisoryReviewClient({
         {!showingReport ? (
           <>
             {queue ? (
-              <section className="grid grid-cols-3 gap-2 md:gap-4">
+              <section className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-4">
                 {[
                   ["New", groups.newReports.length],
+                  ["Corrections", groups.returnedCorrections.length],
                   ["In review", groups.continueReview.length],
                   ["Total reports", queue.summary.assessments],
                 ].map(([label, value]) => (
@@ -1027,6 +1042,14 @@ export default function HeadteacherSupervisoryReviewClient({
               title="New reports"
               copy="Open the finalized report, inspect the complete official form, then start review."
               items={groups.newReports}
+              busy={busy}
+              onOpen={(item) => void loadReviewPackage(item.assessmentId, item)}
+            />
+
+            <QueueGroup
+              title="Returned corrections"
+              copy="These reports were returned by you, corrected by the original assessor, and sent back for your review."
+              items={groups.returnedCorrections}
               busy={busy}
               onOpen={(item) => void loadReviewPackage(item.assessmentId, item)}
             />
@@ -1072,6 +1095,18 @@ export default function HeadteacherSupervisoryReviewClient({
                 </button>
               </div>
             </div>
+
+            {reviewPackage.assessment.revision > 1 ? (
+              <div className="rounded-2xl border border-emerald-300/25 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50">
+                <p className="font-black">
+                  Correction resubmitted — Revision {reviewPackage.assessment.revision}
+                </p>
+                <p className="mt-1 text-emerald-100/85">
+                  You previously returned an earlier revision. This corrected version is
+                  back with you for review before forwarding to the District Director.
+                </p>
+              </div>
+            ) : null}
 
             <section className="grid grid-cols-3 gap-2 md:gap-4">
               {[
