@@ -66,7 +66,7 @@ const primaryTiles: SuperTile[] = [
   },
   {
     title: "Governance Officers",
-    desc: "Invite, suspend, revoke, restore, and reassign SISSOs, directors, and district officers.",
+    desc: "Share the officer application link, review requests, then invite, suspend, revoke, restore, or reassign verified governance officers.",
     href: "/admin/governance/officers",
     icon: "🏛️",
     accent: "from-[#06291F] via-[#0B3D36] to-[#07111F]",
@@ -106,16 +106,6 @@ const secondaryTiles: SuperTile[] = [
     border: "border-lime-300/20",
     pill: "Public link",
     pillCls: "border-lime-300/25 bg-lime-400/14 text-lime-100",
-  },
-  {
-    title: "Governance Application",
-    desc: "Copy this link for SISSOs, directors, and officers to apply without superadmin retyping.",
-    href: "/apply/governance",
-    icon: "🪪",
-    accent: "from-[#2A1534] via-[#421E55] to-[#07111F]",
-    border: "border-purple-300/20",
-    pill: "Officer intake",
-    pillCls: "border-purple-300/25 bg-purple-400/14 text-purple-100",
   },
 ];
 

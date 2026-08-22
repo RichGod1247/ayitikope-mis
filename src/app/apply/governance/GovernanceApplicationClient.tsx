@@ -1,4 +1,3 @@
-// src/app/apply/governance/GovernanceApplicationClient.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -15,6 +14,8 @@ type Role =
   | "SISSO"
   | "CIRCUIT_SUPERVISOR"
   | "DISTRICT_DIRECTOR"
+  | "HEAD_OF_SUPERVISION"
+  | "BASIC_SCHOOL_COORDINATOR"
   | "DISTRICT_MIS_OFFICER"
   | "DISTRICT_SHEP_OFFICER"
   | "DISTRICT_ASSESSMENT_OFFICER"
@@ -49,8 +50,9 @@ const textareaClass =
 
 const roles: Array<{ value: Role; label: string }> = [
   { value: "SISSO", label: "SISSO" },
-  { value: "CIRCUIT_SUPERVISOR", label: "Circuit Supervisor" },
   { value: "DISTRICT_DIRECTOR", label: "District Director" },
+  { value: "HEAD_OF_SUPERVISION", label: "Head of Supervision" },
+  { value: "BASIC_SCHOOL_COORDINATOR", label: "Basic School Coordinator" },
   { value: "DISTRICT_MIS_OFFICER", label: "District MIS/Data Officer" },
   { value: "DISTRICT_SHEP_OFFICER", label: "District SHEP Officer" },
   { value: "DISTRICT_ASSESSMENT_OFFICER", label: "District Assessment Officer" },
@@ -61,10 +63,14 @@ function expectedLevel(role: Role) {
   if (role === "SISSO" || role === "CIRCUIT_SUPERVISOR") return 1;
   if (
     role === "DISTRICT_DIRECTOR" ||
+    role === "HEAD_OF_SUPERVISION" ||
+    role === "BASIC_SCHOOL_COORDINATOR" ||
     role === "DISTRICT_MIS_OFFICER" ||
     role === "DISTRICT_SHEP_OFFICER" ||
     role === "DISTRICT_ASSESSMENT_OFFICER"
-  ) return 2;
+  ) {
+    return 2;
+  }
   return 3;
 }
 

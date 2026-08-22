@@ -1,4 +1,3 @@
-// src/app/api/governance/invite/accept/route.ts
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -15,7 +14,7 @@ import {
   rateLimitCheck,
   rateLimitRecord,
 } from "@/lib/rateLimit";
-import { sendGovernanceOfficerWelcomeSms } from "@/lib/governance/inviteDelivery";
+import { deliverGovernanceOfficerWelcome } from "@/lib/governance/inviteDelivery";
 
 type Body = {
   token?: string;
@@ -26,13 +25,13 @@ type Body = {
 };
 
 const WINDOW_SECONDS = Number(
-  process.env.GOVERNANCE_INVITE_ACCEPT_WINDOW_SECONDS || 30 * 60
+  process.env.GOVERNANCE_INVITE_ACCEPT_WINDOW_SECONDS || 30 * 60,
 );
 const LIMIT_PER_IP = Number(
-  process.env.GOVERNANCE_INVITE_ACCEPT_LIMIT_PER_IP || 25
+  process.env.GOVERNANCE_INVITE_ACCEPT_LIMIT_PER_IP || 25,
 );
 const LIMIT_PER_TOKEN = Number(
-  process.env.GOVERNANCE_INVITE_ACCEPT_LIMIT_PER_TOKEN || 15
+  process.env.GOVERNANCE_INVITE_ACCEPT_LIMIT_PER_TOKEN || 15,
 );
 
 function json(status: number, payload: unknown) {
@@ -88,9 +87,20 @@ function metadataTitle(metadata: Prisma.JsonValue, fallback: string) {
   return fallback;
 }
 
+function metadataApplicantName(metadata: Prisma.JsonValue) {
+  if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
+    const m = metadata as Record<string, unknown>;
+    const applicantName = clean(m.applicantName);
+    if (applicantName) return applicantName;
+  }
+
+  return "";
+}
+
 function assignmentTitle(role: string, zoneName: string) {
-  if (role === "SISSO") return `SISO ${zoneName}`;
-  if (role === "CIRCUIT_SUPERVISOR") return `Circuit Supervisor ${zoneName}`;
+  if (role === "SISSO" || role === "CIRCUIT_SUPERVISOR") {
+    return `SISSO ${zoneName}`;
+  }
   if (role === "DISTRICT_DIRECTOR") return `District Director ${zoneName}`;
   if (role === "HEAD_OF_SUPERVISION") return `Head of Supervision ${zoneName}`;
   if (role === "BASIC_SCHOOL_COORDINATOR") {
@@ -106,6 +116,36 @@ function assignmentTitle(role: string, zoneName: string) {
   if (role === "REGIONAL_VIEWER") return `Regional Viewer ${zoneName}`;
 
   return `${role} ${zoneName}`;
+}
+
+function welcomeJurisdiction(input: {
+  role: string;
+  zoneName: string;
+  zoneLevel: number;
+  parentZoneName?: string | null;
+}) {
+  const role = clean(input.role);
+  const zoneName = clean(input.zoneName);
+  const parentZoneName = clean(input.parentZoneName);
+
+  if (role === "SISSO" || role === "CIRCUIT_SUPERVISOR") {
+    return {
+      districtName: parentZoneName || null,
+      circuitName: zoneName || null,
+    };
+  }
+
+  if (input.zoneLevel === 2) {
+    return {
+      districtName: zoneName || null,
+      circuitName: null,
+    };
+  }
+
+  return {
+    districtName: null,
+    circuitName: null,
+  };
 }
 
 export async function POST(req: Request) {
@@ -191,6 +231,7 @@ export async function POST(req: Request) {
           name: true,
           isActive: true,
           zoneType: { select: { name: true, level: true } },
+          parentZone: { select: { id: true, name: true } },
         },
       },
     },
@@ -250,12 +291,23 @@ export async function POST(req: Request) {
     return json(403, { ok: false, error: "EMAIL_MISMATCH" });
   }
 
+  const jurisdiction = welcomeJurisdiction({
+    role: String(invite.role),
+    zoneName: invite.zone.name,
+    zoneLevel: invite.zone.zoneType.level,
+    parentZoneName: invite.zone.parentZone?.name ?? null,
+  });
+
   let result: {
     userId: string;
     assignmentId: string;
     role: string;
     zoneName: string;
+    welcomeEmail: string;
+    welcomeName: string;
     welcomePhone: string | null;
+    districtName: string | null;
+    circuitName: string | null;
   };
 
   try {
@@ -339,7 +391,7 @@ export async function POST(req: Request) {
 
       const title = metadataTitle(
         invite.metadata,
-        assignmentTitle(String(invite.role), invite.zone.name)
+        assignmentTitle(String(invite.role), invite.zone.name),
       );
 
       const existingAssignment = await tx.governanceOfficerAssignment.findFirst({
@@ -375,6 +427,7 @@ export async function POST(req: Request) {
               zoneName: invite.zone.name,
               zoneType: invite.zone.zoneType.name,
               zoneLevel: invite.zone.zoneType.level,
+              parentZoneName: invite.zone.parentZone?.name ?? null,
             },
           },
           select: {
@@ -409,8 +462,16 @@ export async function POST(req: Request) {
         assignmentId: assignment.id,
         role: String(assignment.role),
         zoneName: assignment.zone.name,
+        welcomeEmail: emailNorm,
+        welcomeName:
+          name ||
+          existing?.name ||
+          metadataApplicantName(invite.metadata) ||
+          "",
         welcomePhone:
           assignment.phone || phone || invite.phoneNorm || invite.phone || null,
+        districtName: jurisdiction.districtName,
+        circuitName: jurisdiction.circuitName,
       };
     });
   } catch (err) {
@@ -451,10 +512,14 @@ export async function POST(req: Request) {
     });
   }
 
-  const welcomeDelivery = await sendGovernanceOfficerWelcomeSms({
+  const welcomeDelivery = await deliverGovernanceOfficerWelcome({
+    email: result.welcomeEmail,
     phone: result.welcomePhone,
+    name: result.welcomeName,
     role: result.role,
     zoneName: result.zoneName,
+    districtName: result.districtName,
+    circuitName: result.circuitName,
     actorId: result.userId,
     assignmentId: result.assignmentId,
   });
@@ -471,6 +536,8 @@ export async function POST(req: Request) {
       role: result.role,
       zoneId: invite.zoneId,
       zoneName: result.zoneName,
+      districtName: result.districtName,
+      circuitName: result.circuitName,
       emailNorm,
       welcomeDelivery,
     },
@@ -478,7 +545,7 @@ export async function POST(req: Request) {
 
   const destination = roleDefaultDestination(result.role);
   const signInUrl = `/auth/signin?mode=governance&callbackUrl=${encodeURIComponent(
-    destination
+    destination,
   )}`;
 
   return json(200, {

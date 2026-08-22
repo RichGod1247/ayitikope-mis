@@ -55,7 +55,7 @@ export default async function AdminSuperLayout({
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <nav
           aria-label="Superadmin governance shortcuts"
-          className="mb-5 flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm"
+          className="mb-5 hidden flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm lg:flex"
         >
           {governanceLinks.map((item) => (
             <Link
@@ -67,6 +67,33 @@ export default async function AdminSuperLayout({
             </Link>
           ))}
         </nav>
+
+        <details className="group mb-5 rounded-2xl border border-slate-200 bg-white shadow-sm lg:hidden">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-slate-950 [&::-webkit-details-marker]:hidden">
+            <span>Superadmin shortcuts</span>
+            <span className="text-xs font-semibold text-slate-500 group-open:hidden">
+              Open
+            </span>
+            <span className="hidden text-xs font-semibold text-slate-500 group-open:inline">
+              Close
+            </span>
+          </summary>
+
+          <nav
+            aria-label="Mobile superadmin governance shortcuts"
+            className="grid grid-cols-2 gap-2 border-t border-slate-200 p-3"
+          >
+            {governanceLinks.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        </details>
 
         {children}
       </div>

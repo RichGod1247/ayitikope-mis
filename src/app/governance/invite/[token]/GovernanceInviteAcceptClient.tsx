@@ -1,4 +1,3 @@
-// src/app/governance/invite/[token]/GovernanceInviteAcceptClient.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -35,8 +34,7 @@ function clean(v: unknown) {
 }
 
 function roleLabel(role: string) {
-  if (role === "SISSO") return "SISO";
-  if (role === "CIRCUIT_SUPERVISOR") return "Circuit Supervisor";
+  if (role === "SISSO" || role === "CIRCUIT_SUPERVISOR") return "SISSO";
   if (role === "DISTRICT_DIRECTOR") return "District Director";
   if (role === "HEAD_OF_SUPERVISION") return "Head of Supervision";
   if (role === "BASIC_SCHOOL_COORDINATOR") return "Basic School Coordinator";
@@ -111,7 +109,7 @@ export default function GovernanceInviteAcceptClient({ token }: { token: string 
       }
     }
 
-    run();
+    void run();
 
     return () => {
       cancelled = true;

@@ -20,14 +20,14 @@ export default async function GovernanceOfficersPage() {
         </p>
 
         <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-950">
-          Circuit & District Officer Invites
+          Governance Officer Administration
         </h1>
 
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Invite SISSOs, District Directors, MIS/Data Officers, SHEP Officers,
-          and Assessment Officers into verified jurisdiction-based access.
-          Officers receive authority through audited governance assignments, not
-          school tenant membership.
+          Share one public application link with prospective SISSOs, District
+          Directors, Heads of Supervision, Basic School Coordinators, and other
+          directorate officers. Review and verify each request, then issue the
+          secure jurisdiction-based invite from this workspace.
         </p>
       </section>
 

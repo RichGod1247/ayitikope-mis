@@ -1,6 +1,7 @@
 // src/app/admin/governance/officers/GovernanceOfficersClient.tsx
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 type Zone = {
@@ -72,7 +73,7 @@ const ROLE_OPTIONS = [
     value: "SISSO",
     label: "SISSO",
     level: 1,
-    titlePrefix: "SISO",
+    titlePrefix: "SISSO",
     help: "Circuit-level supervision officer.",
   },
   {
@@ -242,6 +243,8 @@ export default function GovernanceOfficersClient() {
   const [creating, setCreating] = useState(false);
   const [createdInviteUrl, setCreatedInviteUrl] = useState("");
   const [copyMsg, setCopyMsg] = useState("");
+  const [publicApplicationUrl, setPublicApplicationUrl] = useState("");
+  const [applicationShareMsg, setApplicationShareMsg] = useState("");
 
   const expectedLevel = expectedLevelForRole(role);
 
@@ -321,6 +324,10 @@ export default function GovernanceOfficersClient() {
   }, []);
 
   useEffect(() => {
+    setPublicApplicationUrl(`${window.location.origin}/apply/governance`);
+  }, []);
+
+  useEffect(() => {
     if (!filteredZones.length) {
       setZoneId("");
       setTitle("");
@@ -360,6 +367,47 @@ export default function GovernanceOfficersClient() {
     } catch {
       setCopyMsg("Copy failed. Select and copy the link manually.");
     }
+  }
+
+  async function copyApplicationLink() {
+    const link =
+      publicApplicationUrl || `${window.location.origin}/apply/governance`;
+
+    setApplicationShareMsg("");
+
+    try {
+      await navigator.clipboard.writeText(link);
+      setApplicationShareMsg("Governance application link copied.");
+    } catch {
+      setApplicationShareMsg(
+        "Copy failed. Open the public application link and share it manually.",
+      );
+    }
+  }
+
+  async function shareApplicationLink() {
+    const link =
+      publicApplicationUrl || `${window.location.origin}/apply/governance`;
+
+    setApplicationShareMsg("");
+
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: "EduLife OS governance officer application",
+          text: "Please submit your EduLife OS governance officer onboarding application using this link.",
+          url: link,
+        });
+        setApplicationShareMsg("Governance application link shared.");
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+      }
+    }
+
+    await copyApplicationLink();
   }
 
   async function createInvite() {
@@ -439,6 +487,55 @@ export default function GovernanceOfficersClient() {
 
   return (
     <div className="space-y-6">
+      <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-2xl">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-800">
+              Officer onboarding
+            </p>
+            <h2 className="mt-1 text-lg font-bold text-slate-950">
+              Share first. Invite after verification.
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-slate-700">
+              Send the public application link to new officers. Review submitted
+              applications, verify identity and jurisdiction, then issue the
+              secure officer invite below.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void shareApplicationLink()}
+              className="h-10 rounded-xl bg-black px-4 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
+            >
+              Share application link
+            </button>
+
+            <button
+              type="button"
+              onClick={() => void copyApplicationLink()}
+              className="h-10 rounded-xl border border-amber-700 bg-white px-4 text-sm font-semibold text-amber-900 hover:bg-amber-100"
+            >
+              Copy link
+            </button>
+
+            <Link
+              href="/admin/super/applications"
+              className="inline-flex h-10 items-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50"
+            >
+              Review applications
+            </Link>
+          </div>
+        </div>
+
+        {applicationShareMsg ? (
+          <p className="mt-3 text-xs font-medium text-slate-700">
+            {applicationShareMsg}
+          </p>
+        ) : null}
+      </section>
+
       <section className="grid gap-4 md:grid-cols-4">
         <SummaryCard
           label="Active Zones"
@@ -466,10 +563,11 @@ export default function GovernanceOfficersClient() {
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-lg font-bold text-slate-950">Create Officer Invite</h2>
+              <h2 className="text-lg font-bold text-slate-950">Invite verified officer</h2>
               <p className="mt-1 text-sm leading-6 text-slate-600">
-                Select the officer role and jurisdiction. The system blocks wrong pairings such as
-                assigning a SISSO to a district or a District Director to a circuit.
+                Use this after the officer is verified. Select the role and jurisdiction;
+                the system blocks wrong pairings such as assigning a SISSO to a district
+                or a District Director to a circuit.
               </p>
             </div>
 
@@ -621,7 +719,7 @@ export default function GovernanceOfficersClient() {
               disabled={creating || loading || !filteredZones.length}
               className="h-11 rounded-xl bg-black px-4 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {creating ? "Creating invite…" : "Create governance invite"}
+              {creating ? "Creating invite…" : "Create verified-officer invite"}
             </button>
 
             {createdInviteUrl ? (

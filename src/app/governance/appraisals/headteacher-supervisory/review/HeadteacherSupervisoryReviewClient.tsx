@@ -258,6 +258,18 @@ function itemScoreLabel(item: ReviewItem) {
   return item.score === null ? "—" : String(item.score);
 }
 
+function reviewScoreTone(score: number | null, notApplicable: boolean) {
+  if (notApplicable) return "bg-slate-200 text-slate-900";
+
+  if (score === 1) return "bg-rose-100 text-rose-950";
+  if (score === 2) return "bg-orange-100 text-orange-950";
+  if (score === 3) return "bg-amber-100 text-amber-950";
+  if (score === 4) return "bg-cyan-100 text-cyan-950";
+  if (score === 5) return "bg-emerald-100 text-emerald-950";
+
+  return "bg-slate-50 text-slate-700";
+}
+
 function queueStateLabel(item: ReviewQueueItem) {
   return item.state === "READY_TO_START" ? "New report" : "Review in progress";
 }
@@ -562,9 +574,10 @@ function OfficialReviewPaper({ reviewPackage }: { reviewPackage: ReviewPackage }
                             }
                             className={`border border-slate-300 px-1 py-2 text-center text-[15px] font-black ${
                               selected
-                                ? option.notApplicable
-                                  ? "bg-amber-100 text-amber-950"
-                                  : "bg-emerald-100 text-emerald-950"
+                                ? reviewScoreTone(
+                                    option.score,
+                                    option.notApplicable,
+                                  )
                                 : "text-slate-300"
                             }`}
                           >
@@ -572,7 +585,12 @@ function OfficialReviewPaper({ reviewPackage }: { reviewPackage: ReviewPackage }
                           </td>
                         );
                       })}
-                      <td className="border border-slate-300 px-2 py-2 text-center text-[12px] font-black">
+                      <td
+                        className={`border border-slate-300 px-2 py-2 text-center text-[12px] font-black ${reviewScoreTone(
+                          item.score,
+                          item.notApplicable,
+                        )}`}
+                      >
                         {itemScoreLabel(item)}
                       </td>
                     </tr>

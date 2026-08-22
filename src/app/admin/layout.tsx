@@ -60,7 +60,6 @@ const superAdminNav: NavItem[] = [
   { label: "Pending Approvals", href: "/admin/super/tenants/pending" },
   { label: "Governance Officers", href: "/admin/governance/officers" },
   { label: "School Apply Link", href: "/apply/school" },
-  { label: "Governance Apply Link", href: "/apply/governance" },
 ];
 
 const navSections: NavSection[] = [
@@ -150,7 +149,7 @@ export default async function AdminLayout({
             {isSuper ? (
               <Link
                 href="/admin/super"
-                className="rounded-full bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-3 py-1.5 text-xs font-semibold text-[#071A3D]"
+                className="hidden rounded-full bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-3 py-1.5 text-xs font-semibold text-[#071A3D] sm:inline-flex"
               >
                 Super Admin
               </Link>
@@ -158,12 +157,12 @@ export default async function AdminLayout({
 
             <Link
               href="/app"
-              className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]"
+              className="hidden rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED] sm:inline-flex"
             >
               Portal
             </Link>
 
-            <LogoutButton className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-[#F7F4ED] transition hover:bg-white/10" />
+            <LogoutButton className="hidden rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-[#F7F4ED] transition hover:bg-white/10 sm:inline-flex" />
           </div>
         </div>
       </header>
@@ -191,51 +190,56 @@ export default async function AdminLayout({
           </nav>
         </aside>
 
-        <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[rgba(5,7,11,0.95)] backdrop-blur-xl lg:hidden">
-          <div className="flex items-center gap-1 overflow-x-auto px-3 py-2 scrollbar-none">
-            <MobileNavLink href="/admin/dashboard">Dashboard</MobileNavLink>
-            <MobileNavLink href="/admin/students">Students</MobileNavLink>
-            <MobileNavLink href="/admin/attendance/badges">
-              Register Seals
-            </MobileNavLink>
-            <MobileNavLink href="/admin/fees/invoices">Invoices</MobileNavLink>
-            <MobileNavLink href="/admin/fees/receipts">Receipts</MobileNavLink>
-            <MobileNavLink href="/admin/fees/refunds">Refunds</MobileNavLink>
-            <MobileNavLink href="/admin/fees/online-payments">
-              Online Pay
-            </MobileNavLink>
-            <MobileNavLink href="/admin/fees/provider-events">
-              Provider Events
-            </MobileNavLink>
-            <MobileNavLink href="/admin/fees/outbox">SMS Outbox</MobileNavLink>
-            <MobileNavLink href="/admin/fees/structures">
-              Structures
-            </MobileNavLink>
-            <MobileNavLink href="/admin/fees/overview">Overview</MobileNavLink>
-            <MobileNavLink href="/admin/fees/ledger">Ledger</MobileNavLink>
-            <MobileNavLink href="/admin/fees/reconciliation">
-              Reconciliation
-            </MobileNavLink>
-            <MobileNavLink href="/admin/fees/disputes">Disputes</MobileNavLink>
-            <MobileNavLink href="/admin/scholarships">
-              Scholarships
-            </MobileNavLink>
-            <MobileNavLink href="/admin/teachers">Teachers</MobileNavLink>
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[rgba(5,7,11,0.97)] backdrop-blur-xl lg:hidden">
+          <div className="mx-auto flex max-w-xl items-center justify-between gap-2 px-3 py-2">
+            <MobileNavLink href="/admin/dashboard">Home</MobileNavLink>
 
             {isSuper ? (
-              <>
-                <MobileNavLink href="/admin/super">Super</MobileNavLink>
-                <MobileNavLink href="/admin/super/applications">
-                  Applications
-                </MobileNavLink>
-                <MobileNavLink href="/admin/super/support">
-                  Support
-                </MobileNavLink>
-                <MobileNavLink href="/admin/governance/officers">
-                  Officers
-                </MobileNavLink>
-              </>
-            ) : null}
+              <MobileNavLink href="/admin/super">Super</MobileNavLink>
+            ) : (
+              <MobileNavLink href="/admin/teachers">Teachers</MobileNavLink>
+            )}
+
+            <details className="group relative">
+              <summary className="list-none cursor-pointer rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-[#F7F4ED] hover:bg-white/10 [&::-webkit-details-marker]:hidden">
+                Menu
+              </summary>
+
+              <div className="absolute bottom-11 right-0 max-h-[68vh] w-[min(92vw,24rem)] overflow-y-auto rounded-2xl border border-white/10 bg-[#08111F] p-3 shadow-2xl">
+                <div className="space-y-4">
+                  {visibleNavSections.map((section) => (
+                    <div key={section.title}>
+                      <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#E8C96A]">
+                        {section.title}
+                      </p>
+
+                      <div className="grid grid-cols-2 gap-1">
+                        {section.items.map((item) => (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            className="rounded-lg px-2.5 py-2 text-xs font-medium text-[#D7DBE4] hover:bg-white/10 hover:text-white"
+                          >
+                            {item.label}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="border-t border-white/10 pt-3">
+                    <Link
+                      href="/app"
+                      className="block rounded-lg px-2.5 py-2 text-xs font-semibold text-[#D7DBE4] hover:bg-white/10 hover:text-white"
+                    >
+                      Portal
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </details>
+
+            <LogoutButton className="rounded-lg border border-rose-300/20 bg-rose-400/10 px-3 py-1.5 text-xs font-semibold text-rose-100 transition hover:bg-rose-400/20" />
           </div>
         </div>
 

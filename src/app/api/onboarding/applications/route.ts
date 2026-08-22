@@ -1,4 +1,3 @@
-// src/app/api/onboarding/applications/route.ts
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -19,13 +18,10 @@ import {
 
 type Body = {
   type?: string;
-
   applicantName?: string;
   applicantTitle?: string;
-
   email?: string;
   phone?: string;
-
   schoolName?: string;
   schoolSector?: string;
   officialId?: string;
@@ -33,11 +29,9 @@ type Body = {
   region?: string;
   district?: string;
   circuit?: string;
-
   governanceRole?: string;
   zoneId?: string;
   title?: string;
-
   notes?: string;
   source?: string;
 };
@@ -49,6 +43,8 @@ const GOVERNANCE_ROLES = new Set<string>([
   "SISSO",
   "CIRCUIT_SUPERVISOR",
   "DISTRICT_DIRECTOR",
+  "HEAD_OF_SUPERVISION",
+  "BASIC_SCHOOL_COORDINATOR",
   "DISTRICT_MIS_OFFICER",
   "DISTRICT_SHEP_OFFICER",
   "DISTRICT_ASSESSMENT_OFFICER",
@@ -83,10 +79,8 @@ function isEmailLike(value: string) {
 
 function typeFrom(value: unknown): OnboardingApplicationType | null {
   const t = clean(value).toUpperCase();
-
   if (t === "SCHOOL") return OnboardingApplicationType.SCHOOL;
   if (t === "GOVERNANCE_OFFICER") return OnboardingApplicationType.GOVERNANCE_OFFICER;
-
   return null;
 }
 
@@ -99,6 +93,8 @@ function roleZoneLevel(role: string) {
 
   if (
     role === "DISTRICT_DIRECTOR" ||
+    role === "HEAD_OF_SUPERVISION" ||
+    role === "BASIC_SCHOOL_COORDINATOR" ||
     role === "DISTRICT_MIS_OFFICER" ||
     role === "DISTRICT_SHEP_OFFICER" ||
     role === "DISTRICT_ASSESSMENT_OFFICER"
@@ -107,7 +103,6 @@ function roleZoneLevel(role: string) {
   }
 
   if (role === "REGIONAL_VIEWER") return 3;
-
   return null;
 }
 
@@ -134,7 +129,6 @@ export async function POST(req: NextRequest) {
   }
 
   const body = (await req.json().catch(() => ({}))) as Body;
-
   const type = typeFrom(body.type);
   const email = clean(body.email);
   const emailNorm = cleanEmail(body.email);
@@ -272,6 +266,7 @@ export async function POST(req: NextRequest) {
   }
 
   const expectedLevel = roleZoneLevel(role);
+
   if (!expectedLevel || zone.zoneType.level !== expectedLevel) {
     return json(400, {
       ok: false,
