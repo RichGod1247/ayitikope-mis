@@ -630,7 +630,8 @@ export default function TeacherSupervisoryAssessmentClient({
   const [observationOptionsLoading, setObservationOptionsLoading] =
     useState(false);
   const [observationOptionsError, setObservationOptionsError] = useState("");
-  const [savedAssessmentsOpen, setSavedAssessmentsOpen] = useState(false);
+  const [teacherLandingPanel, setTeacherLandingPanel] =
+    useState<"CONDUCTED" | "NEW" | null>(null);
   const [correctionNotificationsOpen, setCorrectionNotificationsOpen] = useState(false);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [answers, setAnswers] = useState<Record<string, ScoreDraft>>({});
@@ -1587,8 +1588,10 @@ export default function TeacherSupervisoryAssessmentClient({
     const actorRole = queue?.actorRole || records?.actorRole;
     const correctionRecords =
       records?.items.filter((record) => record.state === "NEEDS_CORRECTION") ?? [];
-    const savedRecords =
-      records?.items.filter((record) => record.state !== "NEEDS_CORRECTION") ?? [];
+    const inProgressRecords =
+      records?.items.filter((record) => record.state === "IN_PROGRESS") ?? [];
+    const submittedRecords =
+      records?.items.filter((record) => record.state === "SUBMITTED") ?? [];
     const selectedCircuit = queue?.circuits.find(
       (circuit) => circuit.circuitId === selectedCircuitId,
     );
@@ -1605,7 +1608,10 @@ export default function TeacherSupervisoryAssessmentClient({
     ) ?? null;
 
     return (
-      <div className="min-h-screen bg-[#070B12] px-4 py-6 text-[#F7F4ED] md:px-8">
+      <div
+        data-teacher-appraisal-landing-ui="bbc-v2"
+        className="min-h-screen bg-[#070B12] px-4 py-6 text-[#F7F4ED] md:px-8"
+      >
         <div className="mx-auto max-w-7xl space-y-6">
           <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(7,11,18,0.96),rgba(20,34,46,0.96),rgba(7,11,18,0.98))] p-5 shadow-[0_26px_90px_rgba(0,0,0,0.28)] md:p-6">
             <div className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -1617,7 +1623,7 @@ export default function TeacherSupervisoryAssessmentClient({
                   Teacher Appraisal
                 </h1>
                 <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-300">
-                  Choose the circuit, school and Teacher you are observing. Then record the official lesson-observation particulars and open the 6-section assessment form.
+                  Choose what you want to do. Only that task will open.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -1747,455 +1753,570 @@ export default function TeacherSupervisoryAssessmentClient({
             </section>
           ) : null}
 
-          <section className="rounded-[24px] border border-white/10 bg-white/[0.04] p-3 md:p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
-                  My saved assessments
+          <section
+            aria-label="Teacher appraisal tasks"
+            className="grid gap-3 sm:grid-cols-2"
+          >
+            <button
+              type="button"
+              aria-expanded={teacherLandingPanel === "CONDUCTED"}
+              aria-controls="teacher-conducted-appraisals-panel"
+              onClick={() =>
+                setTeacherLandingPanel((current) =>
+                  current === "CONDUCTED" ? null : "CONDUCTED",
+                )
+              }
+              className={cx(
+                "min-h-28 rounded-2xl border p-4 text-left transition",
+                teacherLandingPanel === "CONDUCTED"
+                  ? "border-emerald-300/45 bg-emerald-400/15"
+                  : "border-emerald-300/20 bg-emerald-400/[0.07] hover:bg-emerald-400/10",
+              )}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-base font-black text-white">
+                    ✓ Appraisals conducted
+                  </p>
+                  <p className="mt-1 text-sm leading-5 text-emerald-50/80">
+                    {submittedRecords.length === 0
+                      ? "No submitted Teacher appraisal yet."
+                      : submittedRecords.length === 1
+                        ? "1 submitted Teacher appraisal."
+                        : `${submittedRecords.length} submitted Teacher appraisals.`}
+                  </p>
+                </div>
+                <span
+                  aria-label={`${submittedRecords.length} Teacher appraisals conducted`}
+                  className="inline-flex min-h-8 min-w-8 shrink-0 items-center justify-center rounded-full border border-emerald-200/35 bg-emerald-300 px-2 text-sm font-black text-slate-950"
+                >
+                  {records?.summary.submitted ?? submittedRecords.length}
+                </span>
+              </div>
+              <p className="mt-3 text-xs font-bold text-emerald-100">
+                {teacherLandingPanel === "CONDUCTED" ? "Close" : "Open"} →
+              </p>
+            </button>
+
+            <button
+              type="button"
+              aria-expanded={teacherLandingPanel === "NEW"}
+              aria-controls="teacher-new-appraisal-panel"
+              onClick={() =>
+                setTeacherLandingPanel((current) =>
+                  current === "NEW" ? null : "NEW",
+                )
+              }
+              className={cx(
+                "min-h-28 rounded-2xl border p-4 text-left transition",
+                teacherLandingPanel === "NEW"
+                  ? "border-fuchsia-300/45 bg-fuchsia-400/15"
+                  : "border-fuchsia-300/20 bg-fuchsia-400/[0.07] hover:bg-fuchsia-400/10",
+              )}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-base font-black text-white">
+                    ＋ New Teacher appraisal
+                  </p>
+                  <p className="mt-1 text-sm leading-5 text-fuchsia-50/80">
+                    Start a new assessment or continue a draft.
+                  </p>
+                </div>
+                <span className="rounded-full border border-fuchsia-200/25 bg-fuchsia-300/10 px-2.5 py-1 text-[11px] font-black text-fuchsia-100">
+                  {inProgressRecords.length > 0
+                    ? `${records?.summary.inProgress ?? inProgressRecords.length} draft${inProgressRecords.length === 1 ? "" : "s"}`
+                    : `${queue?.summary.teachers ?? 0} Teachers`}
+                </span>
+              </div>
+              <p className="mt-3 text-xs font-bold text-fuchsia-100">
+                {teacherLandingPanel === "NEW" ? "Close" : "Open"} →
+              </p>
+            </button>
+          </section>
+
+          {teacherLandingPanel === "CONDUCTED" ? (
+            <section
+              id="teacher-conducted-appraisals-panel"
+              className="rounded-[24px] border border-emerald-300/25 bg-emerald-400/[0.06] p-3 sm:p-4"
+            >
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-200">
+                Appraisals conducted
+              </p>
+              <h2 className="mt-1 text-lg font-black text-white">
+                Submitted Teacher assessments
+              </h2>
+              <p className="mt-1 text-sm leading-5 text-slate-300">
+                Completed assessments stay listed here while new appraisal work stays separate.
+              </p>
+
+              <div className="mt-3 space-y-2">
+                {recordsLoading && !records ? (
+                  <p className="text-sm text-slate-300">Loading conducted appraisals…</p>
+                ) : submittedRecords.length ? (
+                  submittedRecords.map((record) => (
+                    <a
+                      key={`conducted:${record.assessmentId}`}
+                      href={record.workspaceUrl}
+                      className="flex flex-col gap-2 rounded-xl border border-white/10 bg-black/25 px-3 py-3 transition hover:bg-white/[0.08] sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black text-white">
+                          {record.targetName || "Teacher"}
+                        </p>
+                        <p className="mt-1 truncate text-xs text-slate-400">
+                          {record.schoolName} · {record.circuitName} · {record.dateObserved}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2 text-xs">
+                        <span className="rounded-full border border-emerald-300/25 bg-emerald-400/15 px-2 py-1 font-black text-emerald-100">
+                          {record.overallPercentage == null
+                            ? "SUBMITTED"
+                            : formatPercent(record.overallPercentage)}
+                        </span>
+                        <span className="font-black text-white">
+                          View submitted assessment →
+                        </span>
+                      </div>
+                    </a>
+                  ))
+                ) : (
+                  <p className="rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-slate-300">
+                    No submitted Teacher appraisal is available.
+                  </p>
+                )}
+              </div>
+
+              <p className="mt-3 text-xs leading-5 text-slate-400">
+                This list remains progress-only. Individual scores, General Comments, contact details and review evidence load only when you open an assessment.
+              </p>
+            </section>
+          ) : null}
+
+          {teacherLandingPanel === "NEW" ? (
+            <section
+              id="teacher-new-appraisal-panel"
+              className="space-y-4 rounded-[24px] border border-fuchsia-300/25 bg-fuchsia-400/[0.05] p-3 sm:p-4"
+            >
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-fuchsia-200">
+                  New or unfinished work
                 </p>
-                <p className="mt-1 text-sm text-slate-300">
-                  {records?.summary.inProgress ?? 0} to continue · {records?.summary.submitted ?? 0} submitted
+                <h2 className="mt-1 text-lg font-black text-white">
+                  Start Teacher appraisal
+                </h2>
+                <p className="mt-1 text-sm leading-5 text-slate-300">
+                  Continue an unfinished draft first, or choose a Teacher below to start a new observation.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setSavedAssessmentsOpen((open) => !open)}
-                aria-expanded={savedAssessmentsOpen}
-                className="min-h-11 rounded-xl border border-white/10 bg-black/20 px-4 text-sm font-bold text-white hover:bg-white/[0.08]"
-              >
-                {savedAssessmentsOpen
-                  ? "Hide saved assessments"
-                  : `Show saved assessments (${savedRecords.length})`}
-              </button>
-            </div>
 
-            {savedAssessmentsOpen ? (
-              <div className="mt-3 border-t border-white/10 pt-3">
-                {recordsLoading && !records ? (
-                  <p className="text-sm text-slate-300">Loading your saved assessments…</p>
-                ) : savedRecords.length ? (
-                  <div className="space-y-2">
-                    {savedRecords.map((record) => (
+              {inProgressRecords.length ? (
+                <div className="rounded-2xl border border-cyan-300/20 bg-cyan-400/[0.05] p-3">
+                  <p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-200">
+                    Unfinished assessments
+                  </p>
+                  <div className="mt-2 space-y-2">
+                    {inProgressRecords.map((record) => (
                       <a
-                        key={record.assessmentId}
+                        key={`unfinished:${record.assessmentId}`}
                         href={record.workspaceUrl}
-                        className="flex flex-col gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 transition hover:bg-white/[0.08] sm:flex-row sm:items-center sm:justify-between"
+                        className="flex flex-col gap-2 rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 transition hover:bg-white/[0.08] sm:flex-row sm:items-center sm:justify-between"
                       >
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-white">
+                          <p className="truncate text-sm font-black text-white">
                             {record.targetName || "Teacher"}
                           </p>
-                          <p className="truncate text-xs text-slate-400">
+                          <p className="mt-1 truncate text-xs text-slate-400">
                             {record.schoolName} · {record.dateObserved}
                           </p>
                         </div>
                         <div className="flex shrink-0 items-center gap-2 text-xs">
-                          <span
-                            className={cx(
-                              "rounded-full border px-2 py-1 font-bold",
-                              record.state === "IN_PROGRESS"
-                                ? "border-cyan-300/25 bg-cyan-400/15 text-cyan-100"
-                                : "border-emerald-300/25 bg-emerald-400/15 text-emerald-100",
-                            )}
-                          >
-                            {record.state === "IN_PROGRESS"
-                              ? `${record.answeredItems}/${record.totalItems} saved`
-                              : record.overallPercentage == null
-                                ? "SUBMITTED"
-                                : formatPercent(record.overallPercentage)}
+                          <span className="rounded-full border border-cyan-300/25 bg-cyan-400/15 px-2 py-1 font-black text-cyan-100">
+                            {record.answeredItems}/{record.totalItems} saved
                           </span>
-                          <span className="font-bold text-white">
-                            {record.state === "IN_PROGRESS" ? "Continue →" : "View →"}
-                          </span>
+                          <span className="font-black text-white">Continue →</span>
                         </div>
                       </a>
                     ))}
                   </div>
-                ) : (
-                  <p className="rounded-xl border border-dashed border-white/15 bg-black/10 p-3 text-sm text-slate-300">
-                    No saved Teacher assessment yet.
-                  </p>
-                )}
-                <p className="mt-3 text-xs leading-5 text-slate-400">
-                  This saved-work list shows progress only. Individual scores, General Comments, contact details and review evidence are not loaded here. Returned correction instructions appear only in the Needs correction section above.
-                </p>
-              </div>
-            ) : null}
-          </section>
-
-          <section className="grid grid-cols-3 gap-2 md:gap-4">
-            {[
-              ["Circuits", queue?.summary.circuits ?? 0],
-              ["Schools", queue?.summary.schools ?? 0],
-              ["Teachers", queue?.summary.teachers ?? 0],
-            ].map(([label, value]) => (
-              <div
-                key={String(label)}
-                className="rounded-[20px] border border-white/10 bg-white/[0.04] p-3 text-center md:rounded-[28px] md:p-4"
-              >
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 md:text-xs">
-                  {label}
-                </p>
-                <p className="mt-1 text-lg font-bold text-white md:text-2xl">
-                  {value}
-                </p>
-              </div>
-            ))}
-          </section>
-
-          <section className="grid gap-4 xl:grid-cols-[360px_1fr] xl:gap-6">
-            <aside className="space-y-4">
-              <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
-                  1. Choose circuit
-                </p>
-                <h2 className="mt-1 text-lg font-semibold text-white">
-                  Authorized area
-                </h2>
-                <div className="mt-4 space-y-2">
-                  {queue?.circuits.map((circuit) => {
-                    const selected = circuit.circuitId === selectedCircuitId;
-                    const fixed = queue.selection.assignedCircuitId === circuit.circuitId;
-                    return (
-                      <button
-                        key={circuit.circuitId}
-                        type="button"
-                        onClick={() => {
-                          setSelectedCircuitId(circuit.circuitId);
-                          setSelectedSchoolId("");
-                          setSelectedTeacherUserId("");
-                        }}
-                        className={cx(
-                          "w-full rounded-2xl border p-3 text-left transition",
-                          selected
-                            ? "border-cyan-300/40 bg-cyan-400/10"
-                            : "border-white/10 bg-black/20 hover:bg-white/[0.08]",
-                        )}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-semibold text-white">{circuit.circuitName}</p>
-                            <p className="mt-1 text-xs text-slate-400">
-                              {circuit.schoolCount} school{circuit.schoolCount === 1 ? "" : "s"} · {circuit.teacherCount} Teacher{circuit.teacherCount === 1 ? "" : "s"}
-                            </p>
-                          </div>
-                          {fixed ? (
-                            <span className="rounded-full border border-[#E8C96A]/25 bg-[#E8C96A]/10 px-2 py-1 text-[10px] font-bold text-[#F5D979]">
-                              Assigned
-                            </span>
-                          ) : null}
-                        </div>
-                      </button>
-                    );
-                  })}
                 </div>
-              </div>
+              ) : null}
 
-              <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
-                  2. Choose school
-                </p>
-                <h2 className="mt-1 text-lg font-semibold text-white">School</h2>
-                {!selectedCircuitId ? (
-                  <p className="mt-4 text-sm text-slate-300">Choose a circuit first.</p>
-                ) : (
-                  <div className="mt-4 space-y-2">
-                    {queueSchools.map((school) => (
-                      <button
-                        key={school.schoolId}
-                        type="button"
-                        onClick={() => {
-                          setSelectedSchoolId(school.schoolId);
-                          setSelectedTeacherUserId("");
-                        }}
-                        className={cx(
-                          "w-full rounded-2xl border p-3 text-left transition",
-                          school.schoolId === selectedSchoolId
-                            ? "border-emerald-300/40 bg-emerald-400/10"
-                            : "border-white/10 bg-black/20 hover:bg-white/[0.08]",
-                        )}
-                      >
-                        <p className="font-semibold text-white">{school.schoolName}</p>
-                        <p className="mt-1 text-xs text-slate-400">
-                          {school.teacherCount} eligible Teacher{school.teacherCount === 1 ? "" : "s"}
-                        </p>
-                      </button>
-                    ))}
+              <section className="grid grid-cols-3 gap-2 md:gap-4">
+                {[
+                  ["Circuits", queue?.summary.circuits ?? 0],
+                  ["Schools", queue?.summary.schools ?? 0],
+                  ["Teachers", queue?.summary.teachers ?? 0],
+                ].map(([label, value]) => (
+                  <div
+                    key={String(label)}
+                    className="rounded-[20px] border border-white/10 bg-white/[0.04] p-3 text-center md:rounded-[28px] md:p-4"
+                  >
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 md:text-xs">
+                      {label}
+                    </p>
+                    <p className="mt-1 text-lg font-bold text-white md:text-2xl">
+                      {value}
+                    </p>
                   </div>
-                )}
-              </div>
-
-              <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
-                  3. Choose Teacher
-                </p>
-                <h2 className="mt-1 text-lg font-semibold text-white">Teacher observed</h2>
-                {!selectedSchoolId ? (
-                  <p className="mt-4 text-sm text-slate-300">Choose a school first.</p>
-                ) : (
-                  <div className="mt-4 space-y-2">
-                    {queueTeachers.map((teacher) => (
-                      <button
-                        key={teacher.targetUserId}
-                        type="button"
-                        onClick={() => setSelectedTeacherUserId(teacher.targetUserId)}
-                        className={cx(
-                          "w-full rounded-2xl border p-3 text-left transition",
-                          teacher.targetUserId === selectedTeacherUserId
-                            ? "border-fuchsia-300/40 bg-fuchsia-400/10"
-                            : "border-white/10 bg-black/20 hover:bg-white/[0.08]",
-                        )}
-                      >
-                        <p className="font-semibold text-white">
-                          {teacher.targetName || "Teacher"}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </aside>
-
-            <main>
-              <section className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4 md:p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
-                  4. Observation particulars
-                </p>
-                <h2 className="mt-1 text-xl font-semibold text-white">
-                  {selectedTeacher?.targetName || "Choose the Teacher first"}
-                </h2>
-                <p className="mt-1 text-sm leading-6 text-slate-300">
-                  {selectedTeacher
-                    ? `${selectedTeacher.schoolName} · ${selectedTeacher.circuitName}`
-                    : selectedSchool?.schoolName || selectedCircuit?.circuitName || "The selected Teacher and school will appear here."}
-                </p>
-
-                <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  <label className="block text-sm font-semibold text-slate-200">
-                    Number of years in the service
-                    <input
-                      type="number"
-                      min="0"
-                      max="80"
-                      step="1"
-                      inputMode="numeric"
-                      required
-                      value={observationDraft.yearsInService}
-                      onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                        updateObservationField("yearsInService", event.target.value)
-                      }
-                      className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50"
-                    />
-                  </label>
-
-                  <label className="block text-sm font-semibold text-slate-200">
-                    Number of years in present school
-                    <input
-                      type="number"
-                      min="0"
-                      max="80"
-                      step="1"
-                      inputMode="numeric"
-                      required
-                      value={observationDraft.yearsInPresentSchool}
-                      onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                        updateObservationField("yearsInPresentSchool", event.target.value)
-                      }
-                      className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50"
-                    />
-                  </label>
-
-                  <label className="block text-sm font-semibold text-slate-200">
-                    Date observed
-                    <input
-                      type="date"
-                      max={today()}
-                      required
-                      value={observationDraft.dateObserved}
-                      onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                        updateObservationField("dateObserved", event.target.value)
-                      }
-                      className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50"
-                    />
-                  </label>
-
-                  <label className="block text-sm font-semibold text-slate-200">
-                    Class taught
-                    <select
-                      required
-                      disabled={!selectedTeacher || observationOptionsLoading || !observationOptions}
-                      value={observationDraft.classroomId}
-                      onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-                        updateObservationField("classroomId", event.target.value)
-                      }
-                      className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50 disabled:opacity-50"
-                    >
-                      <option value="">Choose class</option>
-                      {observationOptions?.classes.map((option) => (
-                        <option key={option.classroomId} value={option.classroomId}>
-                          {option.classTaught}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="block text-sm font-semibold text-slate-200">
-                    Subject being observed
-                    <select
-                      required
-                      disabled={!selectedObservationClass}
-                      value={observationDraft.curriculumSubjectId}
-                      onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-                        updateObservationField("curriculumSubjectId", event.target.value)
-                      }
-                      className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50 disabled:opacity-50"
-                    >
-                      <option value="">Choose subject</option>
-                      {selectedObservationClass?.subjects.map((option) => (
-                        <option
-                          key={option.curriculumSubjectId}
-                          value={option.curriculumSubjectId}
-                        >
-                          {option.subject}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="block text-sm font-semibold text-slate-200">
-                    Sub-strand
-                    <select
-                      required
-                      disabled={!selectedObservationSubject}
-                      value={observationDraft.curriculumSubStrandId}
-                      onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-                        updateObservationField("curriculumSubStrandId", event.target.value)
-                      }
-                      className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50 disabled:opacity-50"
-                    >
-                      <option value="">Choose sub-strand</option>
-                      {selectedObservationSubject?.subStrands.map((option) => (
-                        <option
-                          key={option.curriculumSubStrandId}
-                          value={option.curriculumSubStrandId}
-                        >
-                          {option.strandTitle} · {option.title}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="block text-sm font-semibold text-slate-200">
-                    Duration of lesson (minutes)
-                    <input
-                      type="number"
-                      min="0"
-                      max="80"
-                      step="1"
-                      inputMode="numeric"
-                      required
-                      value={observationDraft.durationMinutes}
-                      onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                        updateObservationField("durationMinutes", event.target.value)
-                      }
-                      className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50"
-                    />
-                  </label>
-
-                  <label className="block text-sm font-semibold text-slate-200">
-                    Total enrolment
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      inputMode="numeric"
-                      required
-                      value={observationDraft.totalEnrolment}
-                      onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                        updateObservationField("totalEnrolment", event.target.value)
-                      }
-                      className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50"
-                    />
-                  </label>
-
-                  <label className="block text-sm font-semibold text-slate-200">
-                    Girls
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      inputMode="numeric"
-                      required
-                      value={observationDraft.girls}
-                      onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                        updateObservationField("girls", event.target.value)
-                      }
-                      className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50"
-                    />
-                  </label>
-
-                  <label className="block text-sm font-semibold text-slate-200">
-                    Boys
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      inputMode="numeric"
-                      required
-                      value={observationDraft.boys}
-                      onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                        updateObservationField("boys", event.target.value)
-                      }
-                      className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50"
-                    />
-                  </label>
-                </div>
-
-                {observationOptionsLoading ? (
-                  <p className="mt-3 text-xs text-cyan-100">
-                    Loading this Teacher&apos;s verified class and curriculum options…
-                  </p>
-                ) : observationOptionsError ? (
-                  <p className="mt-3 rounded-xl border border-amber-300/25 bg-amber-400/10 p-3 text-xs leading-5 text-amber-100">
-                    {observationOptionsError}
-                  </p>
-                ) : selectedTeacher && observationOptions ? (
-                  <p className="mt-3 text-xs leading-5 text-slate-400">
-                    Class and subject authority comes from the Teacher&apos;s current assignment scope; sub-strands come from the matching curriculum. Old schemes, lesson notes and lesson deliveries do not widen this list.
-                  </p>
-                ) : null}
-
-                <div
-                  className={cx(
-                    "mt-5 rounded-2xl border p-4 text-sm",
-                    selectedTeacher && observationValidation.ok
-                      ? "border-emerald-300/25 bg-emerald-400/10 text-emerald-100"
-                      : "border-amber-300/25 bg-amber-400/10 text-amber-100",
-                  )}
-                  role="status"
-                  aria-live="polite"
-                >
-                  {!selectedTeacher
-                    ? "Choose the Teacher you are observing."
-                    : observationValidation.ok
-                      ? "Ready. Teacher, school, circuit, assignment, curriculum selection and enrolment balance have all passed the consistency gate. These particulars will be frozen when the draft is created."
-                      : observationValidation.message}
-                </div>
-
-                <button
-                  type="button"
-                  disabled={busy || observationOptionsLoading || !selectedTeacher || !observationValidation.ok}
-                  onClick={() => void createDraft()}
-                  className="mt-5 min-h-14 w-full rounded-2xl border border-cyan-300/25 bg-cyan-400/15 px-5 text-base font-bold text-cyan-50 hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {busy ? "Creating secure draft…" : "Start Teacher appraisal"}
-                </button>
-                <p className="mt-3 text-xs leading-5 text-slate-400">
-                  The same start attempt keeps one stable observation key so a weak-network retry cannot silently create a duplicate observation.
-                </p>
+                ))}
               </section>
-            </main>
-          </section>
+
+              <section className="grid gap-4 xl:grid-cols-[360px_1fr] xl:gap-6">
+                <aside className="space-y-4">
+                  <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
+                      1. Choose circuit
+                    </p>
+                    <h2 className="mt-1 text-lg font-semibold text-white">
+                      Authorized area
+                    </h2>
+                    <div className="mt-4 space-y-2">
+                      {queue?.circuits.map((circuit) => {
+                        const selected = circuit.circuitId === selectedCircuitId;
+                        const fixed = queue.selection.assignedCircuitId === circuit.circuitId;
+                        return (
+                          <button
+                            key={circuit.circuitId}
+                            type="button"
+                            onClick={() => {
+                              setSelectedCircuitId(circuit.circuitId);
+                              setSelectedSchoolId("");
+                              setSelectedTeacherUserId("");
+                            }}
+                            className={cx(
+                              "w-full rounded-2xl border p-3 text-left transition",
+                              selected
+                                ? "border-cyan-300/40 bg-cyan-400/10"
+                                : "border-white/10 bg-black/20 hover:bg-white/[0.08]",
+                            )}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="font-semibold text-white">{circuit.circuitName}</p>
+                                <p className="mt-1 text-xs text-slate-400">
+                                  {circuit.schoolCount} school{circuit.schoolCount === 1 ? "" : "s"} · {circuit.teacherCount} Teacher{circuit.teacherCount === 1 ? "" : "s"}
+                                </p>
+                              </div>
+                              {fixed ? (
+                                <span className="rounded-full border border-[#E8C96A]/25 bg-[#E8C96A]/10 px-2 py-1 text-[10px] font-bold text-[#F5D979]">
+                                  Assigned
+                                </span>
+                              ) : null}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
+                      2. Choose school
+                    </p>
+                    <h2 className="mt-1 text-lg font-semibold text-white">School</h2>
+                    {!selectedCircuitId ? (
+                      <p className="mt-4 text-sm text-slate-300">Choose a circuit first.</p>
+                    ) : (
+                      <div className="mt-4 space-y-2">
+                        {queueSchools.map((school) => (
+                          <button
+                            key={school.schoolId}
+                            type="button"
+                            onClick={() => {
+                              setSelectedSchoolId(school.schoolId);
+                              setSelectedTeacherUserId("");
+                            }}
+                            className={cx(
+                              "w-full rounded-2xl border p-3 text-left transition",
+                              school.schoolId === selectedSchoolId
+                                ? "border-emerald-300/40 bg-emerald-400/10"
+                                : "border-white/10 bg-black/20 hover:bg-white/[0.08]",
+                            )}
+                          >
+                            <p className="font-semibold text-white">{school.schoolName}</p>
+                            <p className="mt-1 text-xs text-slate-400">
+                              {school.teacherCount} eligible Teacher{school.teacherCount === 1 ? "" : "s"}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
+                      3. Choose Teacher
+                    </p>
+                    <h2 className="mt-1 text-lg font-semibold text-white">Teacher observed</h2>
+                    {!selectedSchoolId ? (
+                      <p className="mt-4 text-sm text-slate-300">Choose a school first.</p>
+                    ) : (
+                      <div className="mt-4 space-y-2">
+                        {queueTeachers.map((teacher) => (
+                          <button
+                            key={teacher.targetUserId}
+                            type="button"
+                            onClick={() => setSelectedTeacherUserId(teacher.targetUserId)}
+                            className={cx(
+                              "w-full rounded-2xl border p-3 text-left transition",
+                              teacher.targetUserId === selectedTeacherUserId
+                                ? "border-fuchsia-300/40 bg-fuchsia-400/10"
+                                : "border-white/10 bg-black/20 hover:bg-white/[0.08]",
+                            )}
+                          >
+                            <p className="font-semibold text-white">
+                              {teacher.targetName || "Teacher"}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </aside>
+
+                <main>
+                  <section className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4 md:p-5">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
+                      4. Observation particulars
+                    </p>
+                    <h2 className="mt-1 text-xl font-semibold text-white">
+                      {selectedTeacher?.targetName || "Choose the Teacher first"}
+                    </h2>
+                    <p className="mt-1 text-sm leading-6 text-slate-300">
+                      {selectedTeacher
+                        ? `${selectedTeacher.schoolName} · ${selectedTeacher.circuitName}`
+                        : selectedSchool?.schoolName || selectedCircuit?.circuitName || "The selected Teacher and school will appear here."}
+                    </p>
+
+                    <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      <label className="block text-sm font-semibold text-slate-200">
+                        Number of years in the service
+                        <input
+                          type="number"
+                          min="0"
+                          max="80"
+                          step="1"
+                          inputMode="numeric"
+                          required
+                          value={observationDraft.yearsInService}
+                          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                            updateObservationField("yearsInService", event.target.value)
+                          }
+                          className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50"
+                        />
+                      </label>
+
+                      <label className="block text-sm font-semibold text-slate-200">
+                        Number of years in present school
+                        <input
+                          type="number"
+                          min="0"
+                          max="80"
+                          step="1"
+                          inputMode="numeric"
+                          required
+                          value={observationDraft.yearsInPresentSchool}
+                          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                            updateObservationField("yearsInPresentSchool", event.target.value)
+                          }
+                          className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50"
+                        />
+                      </label>
+
+                      <label className="block text-sm font-semibold text-slate-200">
+                        Date observed
+                        <input
+                          type="date"
+                          max={today()}
+                          required
+                          value={observationDraft.dateObserved}
+                          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                            updateObservationField("dateObserved", event.target.value)
+                          }
+                          className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50"
+                        />
+                      </label>
+
+                      <label className="block text-sm font-semibold text-slate-200">
+                        Class taught
+                        <select
+                          required
+                          disabled={!selectedTeacher || observationOptionsLoading || !observationOptions}
+                          value={observationDraft.classroomId}
+                          onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                            updateObservationField("classroomId", event.target.value)
+                          }
+                          className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50 disabled:opacity-50"
+                        >
+                          <option value="">Choose class</option>
+                          {observationOptions?.classes.map((option) => (
+                            <option key={option.classroomId} value={option.classroomId}>
+                              {option.classTaught}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="block text-sm font-semibold text-slate-200">
+                        Subject being observed
+                        <select
+                          required
+                          disabled={!selectedObservationClass}
+                          value={observationDraft.curriculumSubjectId}
+                          onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                            updateObservationField("curriculumSubjectId", event.target.value)
+                          }
+                          className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50 disabled:opacity-50"
+                        >
+                          <option value="">Choose subject</option>
+                          {selectedObservationClass?.subjects.map((option) => (
+                            <option
+                              key={option.curriculumSubjectId}
+                              value={option.curriculumSubjectId}
+                            >
+                              {option.subject}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="block text-sm font-semibold text-slate-200">
+                        Sub-strand
+                        <select
+                          required
+                          disabled={!selectedObservationSubject}
+                          value={observationDraft.curriculumSubStrandId}
+                          onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                            updateObservationField("curriculumSubStrandId", event.target.value)
+                          }
+                          className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50 disabled:opacity-50"
+                        >
+                          <option value="">Choose sub-strand</option>
+                          {selectedObservationSubject?.subStrands.map((option) => (
+                            <option
+                              key={option.curriculumSubStrandId}
+                              value={option.curriculumSubStrandId}
+                            >
+                              {option.strandTitle} · {option.title}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="block text-sm font-semibold text-slate-200">
+                        Duration of lesson (minutes)
+                        <input
+                          type="number"
+                          min="0"
+                          max="80"
+                          step="1"
+                          inputMode="numeric"
+                          required
+                          value={observationDraft.durationMinutes}
+                          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                            updateObservationField("durationMinutes", event.target.value)
+                          }
+                          className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50"
+                        />
+                      </label>
+
+                      <label className="block text-sm font-semibold text-slate-200">
+                        Total enrolment
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          inputMode="numeric"
+                          required
+                          value={observationDraft.totalEnrolment}
+                          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                            updateObservationField("totalEnrolment", event.target.value)
+                          }
+                          className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50"
+                        />
+                      </label>
+
+                      <label className="block text-sm font-semibold text-slate-200">
+                        Girls
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          inputMode="numeric"
+                          required
+                          value={observationDraft.girls}
+                          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                            updateObservationField("girls", event.target.value)
+                          }
+                          className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50"
+                        />
+                      </label>
+
+                      <label className="block text-sm font-semibold text-slate-200">
+                        Boys
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          inputMode="numeric"
+                          required
+                          value={observationDraft.boys}
+                          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                            updateObservationField("boys", event.target.value)
+                          }
+                          className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0B1220] px-4 text-base text-white outline-none focus:border-cyan-300/50"
+                        />
+                      </label>
+                    </div>
+
+                    {observationOptionsLoading ? (
+                      <p className="mt-3 text-xs text-cyan-100">
+                        Loading this Teacher&apos;s verified class and curriculum options…
+                      </p>
+                    ) : observationOptionsError ? (
+                      <p className="mt-3 rounded-xl border border-amber-300/25 bg-amber-400/10 p-3 text-xs leading-5 text-amber-100">
+                        {observationOptionsError}
+                      </p>
+                    ) : selectedTeacher && observationOptions ? (
+                      <p className="mt-3 text-xs leading-5 text-slate-400">
+                        Class and subject authority comes from the Teacher&apos;s current assignment scope; sub-strands come from the matching curriculum. Old schemes, lesson notes and lesson deliveries do not widen this list.
+                      </p>
+                    ) : null}
+
+                    <div
+                      className={cx(
+                        "mt-5 rounded-2xl border p-4 text-sm",
+                        selectedTeacher && observationValidation.ok
+                          ? "border-emerald-300/25 bg-emerald-400/10 text-emerald-100"
+                          : "border-amber-300/25 bg-amber-400/10 text-amber-100",
+                      )}
+                      role="status"
+                      aria-live="polite"
+                    >
+                      {!selectedTeacher
+                        ? "Choose the Teacher you are observing."
+                        : observationValidation.ok
+                          ? "Ready. Teacher, school, circuit, assignment, curriculum selection and enrolment balance have all passed the consistency gate. These particulars will be frozen when the draft is created."
+                          : observationValidation.message}
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={busy || observationOptionsLoading || !selectedTeacher || !observationValidation.ok}
+                      onClick={() => void createDraft()}
+                      className="mt-5 min-h-14 w-full rounded-2xl border border-cyan-300/25 bg-cyan-400/15 px-5 text-base font-bold text-cyan-50 hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {busy ? "Creating secure draft…" : "Start Teacher appraisal"}
+                    </button>
+                    <p className="mt-3 text-xs leading-5 text-slate-400">
+                      The same start attempt keeps one stable observation key so a weak-network retry cannot silently create a duplicate observation.
+                    </p>
+                  </section>
+                </main>
+              </section>
+            </section>
+          ) : null}
 
           <p className="text-xs leading-5 text-slate-400">
             Teacher discovery and saved records refresh only when requested. No background polling, contact details, individual scores, General Comments or legacy Teacher Appraisal evidence is loaded into this work list.

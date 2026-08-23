@@ -115,15 +115,49 @@ assert(client.includes("observationOptionsLoading || !selectedTeacher || !observ
 
 assert(client.includes("/api/governance/appraisals/teacher-supervisory"), "Teacher supervisory API root missing");
 assert(client.includes("/teacher-supervisory/records"), "Saved-record reopenability endpoint missing");
-assert(client.includes("My saved assessments"), "Saved-assessment BBC section missing");
-assert(client.includes("savedAssessmentsOpen"), "Collapsed saved-assessment state missing");
-assert(client.includes("Show saved assessments"), "Saved-assessment reveal control missing");
-assert(client.includes("Hide saved assessments"), "Saved-assessment collapse control missing");
-assert(!client.includes("Drafts can be reopened without remembering an assessment link."), "Discarded saved-assessment sentence must remain absent");
-assert(client.includes('record.state === "IN_PROGRESS" ? "Continue →" : "View →"'), "Compact saved-record reopen action missing");
+assert(
+  client.includes('data-teacher-appraisal-landing-ui="bbc-v2"'),
+  "Compact Teacher appraisal landing marker missing",
+);
+assert(
+  client.includes('useState<"CONDUCTED" | "NEW" | null>(null)'),
+  "Teacher mutually exclusive task-panel state missing",
+);
+assert(
+  client.includes("✓ Appraisals conducted") &&
+    client.includes("＋ New Teacher appraisal"),
+  "Teacher conducted/new compact task cards missing",
+);
+assert(
+  client.includes('teacherLandingPanel === "CONDUCTED"') &&
+    client.includes('teacherLandingPanel === "NEW"'),
+  "Teacher task-card expansion contract missing",
+);
+assert(
+  client.includes('record.state === "IN_PROGRESS"') &&
+    client.includes('record.state === "SUBMITTED"'),
+  "Teacher draft/submitted record separation missing",
+);
+assert(
+  client.includes("Appraisals conducted") &&
+    client.includes("Submitted Teacher assessments") &&
+    client.includes("View submitted assessment →"),
+  "Teacher conducted-assessment history panel missing",
+);
+assert(
+  client.includes("New or unfinished work") &&
+    client.includes("Unfinished assessments") &&
+    client.includes("Continue →"),
+  "Teacher new-work panel must preserve draft continuation",
+);
 assert(client.includes("records?.summary.inProgress"), "Saved draft summary missing");
 assert(client.includes("records?.summary.submitted"), "Submitted record summary missing");
 assert(client.includes("record.answeredItems"), "Saved progress count missing");
+assert(!client.includes("savedAssessmentsOpen"), "Legacy saved-assessment disclosure state must be removed");
+assert(!client.includes("My saved assessments"), "Legacy combined saved-assessment section must be removed");
+assert(!client.includes("Show saved assessments"), "Legacy saved-assessment reveal control must be removed");
+assert(!client.includes("Hide saved assessments"), "Legacy saved-assessment collapse control must be removed");
+assert(!client.includes("Drafts can be reopened without remembering an assessment link."), "Discarded saved-assessment sentence must remain absent");
 assert(!client.includes('className="h-full rounded-full bg-cyan-300"'), "Saved work list must not restore oversized progress bars");
 assert(client.includes("/section`"), "Teacher section endpoint missing");
 assert(client.includes("/comment`"), "Teacher comment endpoint missing");
@@ -261,7 +295,10 @@ console.log("Rating controls                 : 1-5 plus N/A");
 console.log("Section autosave                : serialized + retry");
 console.log("General Comments                : separate serialized autosave");
 console.log("Database reload                 : source of truth before review");
-console.log("Saved-record reopenability      : assessor-owned, collapsed compact server list");
+console.log("Landing task cards              : Appraisals conducted / New Teacher appraisal");
+console.log("Task-panel behavior             : one open at a time; React state only");
+console.log("Conducted assessments           : submitted history listed separately");
+console.log("Unfinished drafts               : continue inside New Teacher appraisal");
 console.log("Saved list evidence             : progress only; no score/comment payload");
 console.log("Incomplete overall result       : suppressed until 34/34");
 console.log("Mobile progress/navigation      : present");
@@ -279,4 +316,4 @@ console.log("Background polling              : absent");
 console.log("Provider calls                  : absent");
 console.log("Database accessed               : false");
 console.log("");
-console.log("RESULT: N6-F1C3C GOVERNANCE TEACHER BBC-FRIENDLY CORRECTION HANDOFF GREEN");
+console.log("RESULT: N7-P2C4C2B GOVERNANCE TEACHER COMPACT LANDING GREEN");
