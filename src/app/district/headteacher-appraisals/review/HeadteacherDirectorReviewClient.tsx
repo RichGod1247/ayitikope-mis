@@ -802,7 +802,9 @@ function GovernanceQueueRecord(props: {
     item.state === "READY_TO_DECIDE" &&
     item.revision > 1;
   const waitingForCorrection = item.state === "RETURNED_FOR_CORRECTION";
-  const actionReady = item.canDirectRelease || item.canStartReview || item.canDecide;
+  const held = item.state === "HELD";
+  const actionReady =
+    item.canDirectRelease || item.canStartReview || item.canDecide || held;
   const stateLabel =
     item.state === "RELEASED"
       ? "Released"
@@ -814,7 +816,9 @@ function GovernanceQueueRecord(props: {
             ? "Correction received"
             : item.state === "READY_TO_DECIDE"
               ? "Ready for your decision"
-              : "Waiting for correction";
+              : held
+                ? "Held"
+                : "Waiting for correction";
   const actionLabel = item.canDirectRelease
     ? "Inspect & release"
     : item.canStartReview
@@ -823,7 +827,9 @@ function GovernanceQueueRecord(props: {
         ? correctionReceived
           ? "Review corrected report"
           : "Continue review"
-        : null;
+        : held
+          ? "View held report"
+          : null;
   const sourceLabel = item.directorAuthored
     ? "Your assessment"
     : `${item.assessorOffice} assessment`;
@@ -850,7 +856,9 @@ function GovernanceQueueRecord(props: {
                   ? "rounded-full border border-emerald-300/25 bg-emerald-400/10 px-2 py-0.5 text-[11px] font-black text-emerald-100"
                   : waitingForCorrection
                     ? "rounded-full border border-rose-300/25 bg-rose-400/10 px-2 py-0.5 text-[11px] font-black text-rose-100"
-                    : correctionReceived
+                    : held
+                      ? "rounded-full border border-amber-200/45 bg-amber-300/15 px-2 py-0.5 text-[11px] font-black text-amber-100"
+                      : correctionReceived
                       ? "rounded-full border border-amber-200/45 bg-amber-300/15 px-2 py-0.5 text-[11px] font-black text-amber-100"
                       : "rounded-full border border-amber-300/30 bg-amber-400/10 px-2 py-0.5 text-[11px] font-black text-amber-100"
               }
@@ -890,6 +898,12 @@ function GovernanceQueueRecord(props: {
           {waitingForCorrection ? (
             <p className="mt-1 text-xs leading-5 text-rose-200">
               Waiting for {item.assessorOffice} to correct and resubmit this appraisal.
+            </p>
+          ) : null}
+
+          {held ? (
+            <p className="mt-1 text-xs font-semibold leading-5 text-amber-100">
+              Unhold to release results.
             </p>
           ) : null}
 
@@ -1561,10 +1575,12 @@ function GovernanceReviewNativeForm(props: {
   busy: boolean;
   onBack: () => void;
   onStart: () => void;
+  onUnhold: () => void;
   onChooseDecision: (mode: DecisionMode) => void;
 }) {
   const workspace = governanceReviewWorkspace(props.reviewPackage);
   const readyToStart = props.reviewPackage.lifecycleState === "READY_TO_START";
+  const held = props.reviewPackage.lifecycleState === "HELD";
   const correctionReceived =
     props.reviewPackage.lifecycleState === "READY_TO_DECIDE" &&
     props.reviewPackage.assessment.revision > 1;
@@ -1581,16 +1597,20 @@ function GovernanceReviewNativeForm(props: {
       busy={props.busy}
       onBack={props.onBack}
       heading={
-        correctionReceived
-          ? `Correction received from ${props.reviewPackage.assessment.assessorOffice}`
-          : `${props.reviewPackage.assessment.assessorOffice} assessment — Director review`
+        held
+          ? "Governance result held"
+          : correctionReceived
+            ? `Correction received from ${props.reviewPackage.assessment.assessorOffice}`
+            : `${props.reviewPackage.assessment.assessorOffice} assessment — Director review`
       }
       copy={
         readyToStart
           ? "This assessment was submitted by a governance officer. Read the locked 4-section, 34-indicator form, then scroll to the bottom and click Start Governance review."
-          : correctionReceived
-            ? `${props.reviewPackage.assessment.assessorOffice} has corrected and resubmitted the appraisal for ${props.reviewPackage.cycle.targetName}. Read the locked corrected form, then choose ${decisionCopy} at the bottom.`
-            : `This governance review is already in progress. Read the locked form, then use ${decisionCopy} at the bottom.`
+          : held
+            ? "This result is held. Unhold to release results."
+            : correctionReceived
+              ? `${props.reviewPackage.assessment.assessorOffice} has corrected and resubmitted the appraisal for ${props.reviewPackage.cycle.targetName}. Read the locked corrected form, then choose ${decisionCopy} at the bottom.`
+              : `This governance review is already in progress. Read the locked form, then use ${decisionCopy} at the bottom.`
       }
       footer={
         <div className={panel("p-4 sm:p-5")}>
@@ -1602,18 +1622,22 @@ function GovernanceReviewNativeForm(props: {
               <h3 className="mt-1 text-lg font-black text-white">
                 {readyToStart
                   ? "Start the Director review after checking the complete form"
-                  : correctionReceived
-                    ? "Correction received · ready for your final review"
-                    : "Ready for your decision"}
+                  : held
+                    ? "Held"
+                    : correctionReceived
+                      ? "Correction received · ready for your final review"
+                      : "Ready for your decision"}
               </h3>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
                 {readyToStart
                   ? `Review the ${props.reviewPackage.assessment.assessorOffice}'s appraisal report for ${props.reviewPackage.cycle.targetName}.`
-                  : correctionReceived
-                    ? `Review the corrected appraisal for ${props.reviewPackage.cycle.targetName}, then choose ${decisionCopy}. Review stage ${props.reviewPackage.review?.stage ?? 1} is preserved.`
-                    : `Review the ${props.reviewPackage.assessment.assessorOffice}'s appraisal report for ${props.reviewPackage.cycle.targetName}, then choose ${decisionCopy}.`}
+                  : held
+                    ? "Unhold to release results."
+                    : correctionReceived
+                      ? `Review the corrected appraisal for ${props.reviewPackage.cycle.targetName}, then choose ${decisionCopy}.`
+                      : `Review the ${props.reviewPackage.assessment.assessorOffice}'s appraisal report for ${props.reviewPackage.cycle.targetName}, then choose ${decisionCopy}.`}
               </p>
-              {!readyToStart && !directorReturnAllowed ? (
+              {!readyToStart && !held && !directorReturnAllowed ? (
                 <p className="mt-2 max-w-3xl rounded-xl border border-cyan-300/20 bg-cyan-400/8 px-3 py-2 text-xs font-semibold leading-5 text-cyan-100">
                   HOS quality review is complete. The Director may hold this report for further consideration or release it. Correction return is no longer available for SISSO/BSC-authored work.
                 </p>
@@ -1623,6 +1647,24 @@ function GovernanceReviewNativeForm(props: {
               <ActionButton primary disabled={props.busy} onClick={props.onStart}>
                 Start Governance review
               </ActionButton>
+            ) : held ? (
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  disabled={props.busy}
+                  onClick={props.onUnhold}
+                  className="min-h-12 rounded-xl border border-amber-300/25 bg-amber-400/10 px-4 py-2.5 text-sm font-black text-amber-100 disabled:opacity-45"
+                >
+                  Unhold
+                </button>
+                <button
+                  type="button"
+                  disabled
+                  className="min-h-12 rounded-xl border border-emerald-300/15 bg-emerald-400/5 px-4 py-2.5 text-sm font-black text-emerald-100 opacity-40"
+                >
+                  Release
+                </button>
+              </div>
             ) : (
               <DecisionButtons
                 disabled={props.busy}
@@ -2301,6 +2343,13 @@ export default function HeadteacherDirectorReviewClient({
       ),
     [headteacherAppraisalItems],
   );
+  const headteacherHeldItems = useMemo(
+    () =>
+      headteacherAppraisalItems.filter(
+        (item) => item.state === "HELD",
+      ),
+    [headteacherAppraisalItems],
+  );
   const headteacherWaitingItems = useMemo(
     () =>
       headteacherAppraisalItems.filter(
@@ -2337,7 +2386,11 @@ export default function HeadteacherDirectorReviewClient({
     if (governanceFocus === "HEADTEACHER") {
       return governanceExpanded
         ? headteacherAppraisalItems
-        : [...headteacherReadyItems, ...headteacherWaitingItems];
+        : [
+            ...headteacherReadyItems,
+            ...headteacherHeldItems,
+            ...headteacherWaitingItems,
+          ];
     }
     if (governanceFocus === "MINE") {
       return governanceExpanded
@@ -2351,6 +2404,7 @@ export default function HeadteacherDirectorReviewClient({
     governanceExpanded,
     governanceFocus,
     headteacherAppraisalItems,
+    headteacherHeldItems,
     headteacherReadyItems,
     headteacherWaitingItems,
   ]);
@@ -2684,7 +2738,7 @@ export default function HeadteacherDirectorReviewClient({
       governanceDecisionMode === "RETURN"
         ? "Return this Governance assessment for a correction revision?"
         : governanceDecisionMode === "HOLD"
-          ? "Hold this Governance review and create the next Director review stage?"
+          ? "Hold this Governance result?"
           : "Release this Governance assessment to the Headteacher? Staff Feedback remains separate.";
     if (!window.confirm(confirmationText)) return;
 
@@ -2725,7 +2779,7 @@ export default function HeadteacherDirectorReviewClient({
         );
         await loadGovernanceQueue();
         if (item) await loadGovernanceReviewPackage(item);
-        setNotice("Governance review held. The next Director stage is ready on the same locked assessment.");
+        setNotice("Governance result held. Unhold to release results.");
       } else {
         setGovernanceReviewPackage(null);
         await loadGovernanceQueue();
@@ -2738,6 +2792,58 @@ export default function HeadteacherDirectorReviewClient({
     } catch {
       setFailure(
         "Network interrupted. Do not repeat the Governance decision blindly. Refresh the Governance queue first.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function unholdGovernanceReview() {
+    if (!governanceReviewPackage || governanceReviewPackage.lifecycleState !== "HELD") {
+      return;
+    }
+    const review = governanceReviewPackage.review;
+    if (!review) {
+      setFailure("The held Governance review could not be verified.");
+      return;
+    }
+    if (!window.confirm("Unhold this Governance result so it can be released?")) {
+      return;
+    }
+
+    const assessmentId = governanceReviewPackage.assessment.assessmentId;
+    setBusy(true);
+    clearMessages();
+    try {
+      const response = await fetch(
+        `${API_BASE}/governance-review/${encodeURIComponent(assessmentId)}`,
+        {
+          method: "POST",
+          cache: "no-store",
+          credentials: "include",
+          headers: { Accept: "application/json", "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "UNHOLD",
+            reviewId: review.id,
+            confirm: true,
+          }),
+        },
+      );
+      const payload = await readJson<ApiFailure>(response);
+      if (!response.ok) {
+        setFailure(errorText(payload, "The Governance result could not be unheld."));
+        return;
+      }
+
+      const item = governanceItems.find(
+        (candidate) => candidate.assessmentId === assessmentId,
+      );
+      await loadGovernanceQueue();
+      if (item) await loadGovernanceReviewPackage(item);
+      setNotice("Governance result unheld. Release is now available.");
+    } catch {
+      setFailure(
+        "Network interrupted. Refresh the Governance queue before repeating Unhold.",
       );
     } finally {
       setBusy(false);
@@ -3610,7 +3716,7 @@ export default function HeadteacherDirectorReviewClient({
                 />
                 <GovernanceFocusButton
                   label="Headteacher Appraisals"
-                  count={headteacherReadyItems.length}
+                  count={headteacherReadyItems.length + headteacherHeldItems.length}
                   helper="Headteacher reports from governance officers."
                   active={governanceFocus === "HEADTEACHER"}
                   onClick={() => {
@@ -3782,6 +3888,7 @@ export default function HeadteacherDirectorReviewClient({
               clearMessages();
             }}
             onStart={() => void startGovernanceReview()}
+            onUnhold={() => void unholdGovernanceReview()}
             onChooseDecision={openGovernanceDecision}
           />
         ) : null}

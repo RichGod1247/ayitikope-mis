@@ -3,6 +3,7 @@ import {
   executeHeadteacherDirectorGovernanceDecision,
   readHeadteacherDirectorGovernanceReviewPackage,
   startHeadteacherDirectorGovernanceReview,
+  unholdHeadteacherDirectorGovernanceReview,
 } from "@/lib/appraisals/headteacherDirectorGovernanceReview";
 import {
   clean,
@@ -130,7 +131,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
   }
 
   const action = normalizeAction(parsed.body.action);
-  if (!["START", "RETURN", "HOLD", "RELEASE"].includes(action)) {
+  if (!["START", "RETURN", "HOLD", "UNHOLD", "RELEASE"].includes(action)) {
     return jsonNoStore(400, {
       ok: false,
       reqId: meta.reqId,
@@ -167,6 +168,26 @@ export async function POST(req: NextRequest, context: RouteContext) {
         ok: false,
         reqId: meta.reqId,
         error: "INVALID_REVIEW_ID",
+      });
+    }
+
+    if (action === "UNHOLD") {
+      const result = await unholdHeadteacherDirectorGovernanceReview({
+        actorUserId: auth.ctx.userId,
+        actorRoleName: auth.ctx.roleName,
+        assessmentId,
+        reviewId,
+        confirm: parsed.body.confirm === true,
+        governanceScope: auth.scope,
+        reqId: meta.reqId,
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+      });
+
+      return jsonNoStore(200, {
+        ok: true,
+        reqId: meta.reqId,
+        result,
       });
     }
 

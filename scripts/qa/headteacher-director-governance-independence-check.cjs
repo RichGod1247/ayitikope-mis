@@ -13,7 +13,7 @@ const repoRoot = path.resolve(__dirname, "..", "..");
 function read(relativePath) {
   const absolutePath = path.join(repoRoot, relativePath);
   assert(fs.existsSync(absolutePath), `Required file missing: ${relativePath}`);
-  return fs.readFileSync(absolutePath, "utf8").replace(/\r\n/g, "\n");
+  return fs.readFileSync(absolutePath, "utf8").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 }
 
 function syntax(source, fileName) {
@@ -33,11 +33,20 @@ function syntax(source, fileName) {
   assert.strictEqual(errors.length, 0, `${fileName} has TypeScript syntax errors`);
 }
 
+function between(source, startMarker, endMarker, label) {
+  const start = source.indexOf(startMarker);
+  const end = source.indexOf(endMarker, start + startMarker.length);
+  assert(start >= 0 && end > start, `${label} source block missing`);
+  return source.slice(start, end);
+}
+
 const files = {
   service: "src/lib/appraisals/headteacherDirectorGovernanceReview.ts",
   queue: "src/app/api/district/headteacher-appraisals/governance-review/route.ts",
   action:
     "src/app/api/district/headteacher-appraisals/governance-review/[assessmentId]/route.ts",
+  client:
+    "src/app/district/headteacher-appraisals/review/HeadteacherDirectorReviewClient.tsx",
   continuation:
     "src/lib/appraisals/headteacherSupervisoryCorrectionReviewContinuation.ts",
 };
@@ -66,6 +75,7 @@ for (const marker of [
   "readHeadteacherDirectorGovernanceReviewPackage",
   "startHeadteacherDirectorGovernanceReview",
   "executeHeadteacherDirectorGovernanceDecision",
+  "unholdHeadteacherDirectorGovernanceReview",
   'allowedDecisions: ["RETURN", "HOLD", "RELEASE"]',
   'reviewType: "DIRECTOR_GOVERNANCE_REVIEW"',
   'reviewerRole: "DISTRICT_DIRECTOR"',
@@ -90,17 +100,21 @@ for (const marker of [
   "HEADTEACHER_GOVERNANCE_DIRECTOR_REVIEW_STARTED",
   "HEADTEACHER_GOVERNANCE_DIRECTOR_RETURNED",
   "HEADTEACHER_GOVERNANCE_DIRECTOR_HELD",
+  "HEADTEACHER_GOVERNANCE_DIRECTOR_UNHELD",
   "HEADTEACHER_GOVERNANCE_DIRECTOR_RELEASED",
   "holdContinuationProofReverified: true",
   "holdContinuationPreservesDirectorCustody: true",
+  "holdRequiresExplicitUnhold: true",
+  "releaseWhileHeldAllowed: false",
+  "unholdCreatesReviewStage: false",
   "pendingHoldContinuationAdmission",
   '"HOLD_CONTINUATION"',
-  "HEADTEACHER_DIRECTOR_GOVERNANCE_HOLD_CONTINUATION_PROOF_DRIFT",
-  'normalized(sourceReview.decision) !== "HELD"',
-  "clean(sourceMetadata.nextReviewId) !== input.pending.id",
-  "Number(sourceMetadata.nextReviewStage) !== input.pending.stage",
-  "sourceReview.reviewerUserId !== input.pending.reviewerUserId",
-  "sourceReview.reviewerAssignmentId !== input.pending.reviewerAssignmentId",
+  "pendingDirectorHoldState",
+  'holdState === "HELD"',
+  'state: "PENDING"',
+  "unheldAt",
+  "newReviewCreated: false",
+  "HEADTEACHER_DIRECTOR_GOVERNANCE_HELD_UNHOLD_REQUIRED",
 ]) {
   assert(source.service.includes(marker), `Governance service marker missing: ${marker}`);
 }
@@ -128,6 +142,43 @@ for (const forbidden of [
   );
 }
 
+const unholdBlock = between(
+  source.service,
+  "export async function unholdHeadteacherDirectorGovernanceReview(",
+  "function existingDecisionResult(",
+  "Director Unhold",
+);
+for (const marker of [
+  'prepared.holdState !== "HELD"',
+  "pendingDirectorHoldState",
+  "requireDirectorAssignment",
+  'state: "PENDING"',
+  "unheldAt",
+  'action: "HEADTEACHER_GOVERNANCE_DIRECTOR_UNHELD"',
+  "newReviewCreated: false",
+  "appraisalCycle.updateMany",
+  "auditLog.create",
+]) {
+  assert(unholdBlock.includes(marker), `Unhold marker missing: ${marker}`);
+}
+for (const forbidden of [
+  "appraisalReview.create",
+  "appraisalAssessment.updateMany",
+  "appraisalAssessmentScore",
+  "status: \"RETURNED\"",
+  "releaseProofHash:",
+]) {
+  assert(!unholdBlock.includes(forbidden), `Unhold must remain simple: ${forbidden}`);
+}
+
+assert(
+  source.service.includes('decision === "HOLD"\n              ? "HELD"'),
+  "HOLD must persist a HELD Governance state",
+);
+assert(
+  source.service.includes('return { state: "HELD" as const'),
+  "Held queue state must be visible",
+);
 assert(
   !/data\s*:\s*\{[^}]{0,240}status\s*:\s*["']RELEASED["']/s.test(source.service),
   "Governance release must not mutate the carrier cycle status to RELEASED",
@@ -159,9 +210,11 @@ for (const marker of [
   "readHeadteacherDirectorGovernanceReviewPackage",
   "startHeadteacherDirectorGovernanceReview",
   "executeHeadteacherDirectorGovernanceDecision",
+  "unholdHeadteacherDirectorGovernanceReview",
   '"START"',
   '"RETURN"',
   '"HOLD"',
+  '"UNHOLD"',
   '"RELEASE"',
   "readJsonObject",
   "ALLOWED_BODY_FIELDS",
@@ -177,6 +230,28 @@ assert(
 );
 
 for (const marker of [
+  'const held = item.state === "HELD"',
+  '? "Held"',
+  '"View held report"',
+  "Unhold to release results.",
+  'const held = props.reviewPackage.lifecycleState === "HELD"',
+  "onClick={props.onUnhold}",
+  ">\n                  Unhold\n                </button>",
+  "disabled\n                  className=\"min-h-12",
+  'action: "UNHOLD"',
+  "Governance result unheld. Release is now available.",
+  "Governance result held. Unhold to release results.",
+]) {
+  assert(source.client.includes(marker), `Director client Hold/Unhold marker missing: ${marker}`);
+}
+for (const forbidden of [
+  "Governance review held. The next Director stage is ready on the same locked assessment.",
+  "Hold this Governance review and create the next Director review stage?",
+]) {
+  assert(!source.client.includes(forbidden), `Legacy Hold copy still present: ${forbidden}`);
+}
+
+for (const marker of [
   'directorContinuationMode: "INDEPENDENT_GOVERNANCE"',
   "staffFeedbackIncludedInDirectorContinuation: false",
   'reviewType: "DIRECTOR_GOVERNANCE_REVIEW"',
@@ -186,6 +261,7 @@ for (const marker of [
 ]) {
   assert(source.continuation.includes(marker), `Continuation marker missing: ${marker}`);
 }
+
 for (const forbidden of [
   'from "@/lib/appraisals/headteacherDirectorReview"',
   "ensureHeadteacherDirectorCorrectionReviewContinuation",
@@ -201,25 +277,31 @@ for (const forbidden of [
 }
 
 console.log("");
-console.log("=== N7 GOVERNANCE INDEPENDENCE — SLICE B1 BACKEND CONTRACT ===");
+console.log("=== N7 GOVERNANCE INDEPENDENCE — SIMPLE DIRECTOR HOLD CONTRACT ===");
 console.log("");
-console.log("Director Governance discovery   : assessment-keyed, read-only");
-console.log("Director Governance package     : native 4-section / 34-item evidence");
-console.log("Initial review admission        : HOS-authored stage 1 / HOS-forwarded stage 2");
-console.log("Director decisions              : Return / Hold / Release");
-console.log("Hold continuation               : next stage proof reverified + same Director");
-console.log("Director self-review            : forbidden");
-console.log("Correction continuation         : same Director custody + stage");
-console.log("Staff Feedback prerequisite     : absent");
-console.log("Staff Feedback DB reads         : absent");
-console.log("Respondent identities           : absent");
-console.log("Reviewer score rewriting        : absent");
-console.log("Combined weighting              : absent");
-console.log("Carrier cycle status mutation   : absent");
-console.log("Carrier release timestamp       : absent");
-console.log("Independent release proof       : assessment-keyed metadata map");
-console.log("Full governance scope           : preserved through API");
-console.log("Providers / polling / storage   : absent");
-console.log("Database accessed               : false");
+console.log("Director Governance discovery  : assessment-keyed, read-only");
+console.log("Director Governance package    : native 4-section / 34-item evidence");
+console.log("Director decisions             : Return / Hold / Release by authorship policy");
+console.log("Hold visible state             : HELD");
+console.log("Held release                   : blocked until Unhold");
+console.log("Held UI                        : Hold becomes Unhold");
+console.log("Held helper                    : Unhold to release results");
+console.log("Unhold                         : reactivates existing pending Director custody");
+console.log("Unhold review creation         : none");
+console.log("Unhold assessment mutation     : none");
+console.log("Unhold carrier status mutation : none");
+console.log("Release after Unhold           : available without another user review step");
+console.log("Director self-review           : forbidden");
+console.log("Correction continuation        : same Director custody + stage");
+console.log("Staff Feedback prerequisite    : absent");
+console.log("Staff Feedback DB reads        : absent");
+console.log("Respondent identities          : absent");
+console.log("Reviewer score rewriting       : absent");
+console.log("Combined weighting             : absent");
+console.log("Carrier cycle status mutation  : absent");
+console.log("Carrier release timestamp      : absent");
+console.log("Full governance scope          : preserved through API");
+console.log("Providers / polling / storage  : absent");
+console.log("Database accessed              : false");
 console.log("");
-console.log("RESULT: N7 GOVERNANCE INDEPENDENCE SLICE B1 BACKEND GREEN");
+console.log("RESULT: N7 SIMPLE DIRECTOR HOLD / UNHOLD GREEN");

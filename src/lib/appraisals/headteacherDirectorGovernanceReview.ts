@@ -65,6 +65,9 @@ export const HEADTEACHER_DIRECTOR_GOVERNANCE_REVIEW_POLICY = {
   maximumQueueItems: 200,
   holdContinuationProofReverified: true,
   holdContinuationPreservesDirectorCustody: true,
+  holdRequiresExplicitUnhold: true,
+  releaseWhileHeldAllowed: false,
+  unholdCreatesReviewStage: false,
 } as const;
 
 export type HeadteacherDirectorGovernanceAssessorRole =
@@ -83,6 +86,7 @@ export type HeadteacherDirectorGovernanceQueueState =
   | "DIRECT_RELEASE_READY"
   | "READY_TO_START"
   | "READY_TO_DECIDE"
+  | "HELD"
   | "RETURNED_FOR_CORRECTION"
   | "RELEASED";
 
@@ -153,7 +157,7 @@ export type HeadteacherDirectorGovernanceWorkspaceSection = {
 export type HeadteacherDirectorGovernanceReviewPackage = {
   schemaVersion: 1;
   audience: "DISTRICT_DIRECTOR";
-  lifecycleState: "READY_TO_START" | "READY_TO_DECIDE";
+  lifecycleState: "READY_TO_START" | "READY_TO_DECIDE" | "HELD";
   cycle: {
     id: string;
     carrierStatus: string;
@@ -311,6 +315,27 @@ export type StartHeadteacherDirectorGovernanceReviewInput =
   ReadHeadteacherDirectorGovernanceReviewPackageInput & {
     confirm: boolean;
   };
+
+export type UnholdHeadteacherDirectorGovernanceReviewInput =
+  ReadHeadteacherDirectorGovernanceReviewPackageInput & {
+    reviewId: string;
+    confirm: boolean;
+  };
+
+export type UnholdHeadteacherDirectorGovernanceReviewResult = {
+  outcome: "UNHELD" | "EXISTING_UNHELD";
+  assessmentId: string;
+  assessmentRevision: number;
+  cycleId: string;
+  reviewId: string;
+  reviewStage: number;
+  reviewDecision: "PENDING";
+  carrierCycleStatusMutationPerformed: false;
+  carrierCycleTimestampMutationPerformed: false;
+  scoreMutationPerformed: false;
+  staffFeedbackIncluded: false;
+  providerCalled: false;
+};
 
 export type ExecuteHeadteacherDirectorGovernanceDecisionInput =
   ReadHeadteacherDirectorGovernanceReviewPackageInput & {
@@ -1951,6 +1976,28 @@ function currentPendingDirectorReview(assessment: AssessmentRecord) {
   return candidates[0] ?? null;
 }
 
+function pendingDirectorHoldState(input: {
+  assessment: AssessmentRecord;
+  pending: ReviewRecord | null;
+  assessorRole: Exclude<
+    HeadteacherDirectorGovernanceAssessorRole,
+    "DISTRICT_DIRECTOR"
+  >;
+}) {
+  if (!input.pending) return null;
+  const holdAdmission = pendingHoldContinuationAdmission({
+    assessment: input.assessment,
+    pending: input.pending,
+    assessorRole: input.assessorRole,
+  });
+  if (!holdAdmission) return null;
+
+  const cycleReview = objectValue(
+    objectValue(input.assessment.cycle.metadata).directorGovernanceReview,
+  );
+  return clean(cycleReview.unheldAt) ? "UNHELD" as const : "HELD" as const;
+}
+
 async function readMembershipForAssessment(
   database: Pick<HeadteacherDirectorGovernanceReviewDatabase, "membership">,
   assessment: AssessmentRecord,
@@ -2086,6 +2133,14 @@ async function preparePackage(input: ReadHeadteacherDirectorGovernanceReviewPack
     now,
   });
   const pending = currentPendingDirectorReview(assessment);
+  const holdState = pendingDirectorHoldState({
+    assessment,
+    pending,
+    assessorRole: verified.assessorRole as Exclude<
+      HeadteacherDirectorGovernanceAssessorRole,
+      "DISTRICT_DIRECTOR"
+    >,
+  });
   if (pending) {
     if (
       pending.reviewerUserId !== actorUserId ||
@@ -2123,19 +2178,37 @@ async function preparePackage(input: ReadHeadteacherDirectorGovernanceReviewPack
     }
   }
   const workspace = buildWorkspace(assessment, verified);
-  return { actorUserId, assessment, membership: target.membership, target, verified, assignment, admission, pending, workspace, database, now };
+  return {
+    actorUserId,
+    assessment,
+    membership: target.membership,
+    target,
+    verified,
+    assignment,
+    admission,
+    pending,
+    holdState,
+    workspace,
+    database,
+    now,
+  };
 }
 
 export async function readHeadteacherDirectorGovernanceReviewPackage(
   input: ReadHeadteacherDirectorGovernanceReviewPackageInput,
 ): Promise<HeadteacherDirectorGovernanceReviewPackage> {
   const prepared = await preparePackage(input);
-  const { assessment, target, pending, workspace } = prepared;
+  const { assessment, target, pending, holdState, workspace } = prepared;
   const context = workspace.context;
   return {
     schemaVersion: 1,
     audience: "DISTRICT_DIRECTOR",
-    lifecycleState: pending ? "READY_TO_DECIDE" : "READY_TO_START",
+    lifecycleState:
+      holdState === "HELD"
+        ? "HELD"
+        : pending
+          ? "READY_TO_DECIDE"
+          : "READY_TO_START",
     cycle: {
       id: assessment.cycleId,
       carrierStatus: normalized(assessment.cycle.status),
@@ -2376,6 +2449,177 @@ export async function startHeadteacherDirectorGovernanceReview(
   }, transactionOptions());
 }
 
+export async function unholdHeadteacherDirectorGovernanceReview(
+  input: UnholdHeadteacherDirectorGovernanceReviewInput,
+): Promise<UnholdHeadteacherDirectorGovernanceReviewResult> {
+  if (input.confirm !== true) {
+    fail("HEADTEACHER_DIRECTOR_GOVERNANCE_UNHOLD_CONFIRMATION_REQUIRED", 400);
+  }
+
+  const prepared = await preparePackage(input);
+  if (!prepared.pending) {
+    fail("HEADTEACHER_DIRECTOR_GOVERNANCE_HELD_REVIEW_NOT_FOUND", 409);
+  }
+
+  const reviewId = requireIdentifier(input.reviewId, "reviewId");
+  if (prepared.pending.id !== reviewId) {
+    fail("HEADTEACHER_DIRECTOR_GOVERNANCE_UNHOLD_REVIEW_ID_DRIFT", 409);
+  }
+
+  if (prepared.holdState === "UNHELD") {
+    return {
+      outcome: "EXISTING_UNHELD",
+      assessmentId: prepared.assessment.id,
+      assessmentRevision: prepared.assessment.revision,
+      cycleId: prepared.assessment.cycleId,
+      reviewId: prepared.pending.id,
+      reviewStage: prepared.pending.stage,
+      reviewDecision: "PENDING",
+      carrierCycleStatusMutationPerformed: false,
+      carrierCycleTimestampMutationPerformed: false,
+      scoreMutationPerformed: false,
+      staffFeedbackIncluded: false,
+      providerCalled: false,
+    };
+  }
+
+  if (prepared.holdState !== "HELD") {
+    fail("HEADTEACHER_DIRECTOR_GOVERNANCE_NOT_HELD", 409);
+  }
+
+  const reqId = requireIdentifier(clean(input.reqId) || randomUUID(), "reqId");
+
+  return prepared.database.$transaction(async (tx) => {
+    const assessment = await tx.appraisalAssessment.findUnique({
+      where: { id: prepared.assessment.id },
+      select: ASSESSMENT_SELECT,
+    });
+    if (!assessment) {
+      fail("HEADTEACHER_DIRECTOR_GOVERNANCE_ASSESSMENT_NOT_FOUND", 404);
+    }
+
+    const verified = verifyFinalizedAssessment(assessment);
+    const pending = currentPendingDirectorReview(assessment);
+    if (!pending || pending.id !== reviewId) {
+      fail("HEADTEACHER_DIRECTOR_GOVERNANCE_UNHOLD_REVIEW_STATE_DRIFT", 409);
+    }
+
+    const holdState = pendingDirectorHoldState({
+      assessment,
+      pending,
+      assessorRole: verified.assessorRole as Exclude<
+        HeadteacherDirectorGovernanceAssessorRole,
+        "DISTRICT_DIRECTOR"
+      >,
+    });
+    if (holdState === "UNHELD") {
+      return {
+        outcome: "EXISTING_UNHELD" as const,
+        assessmentId: assessment.id,
+        assessmentRevision: assessment.revision,
+        cycleId: assessment.cycleId,
+        reviewId: pending.id,
+        reviewStage: pending.stage,
+        reviewDecision: "PENDING" as const,
+        carrierCycleStatusMutationPerformed: false as const,
+        carrierCycleTimestampMutationPerformed: false as const,
+        scoreMutationPerformed: false as const,
+        staffFeedbackIncluded: false as const,
+        providerCalled: false as const,
+      };
+    }
+    if (holdState !== "HELD") {
+      fail("HEADTEACHER_DIRECTOR_GOVERNANCE_NOT_HELD", 409);
+    }
+
+    const assignments = await tx.governanceOfficerAssignment.findMany({
+      where: { userId: prepared.actorUserId },
+      select: ASSIGNMENT_SELECT,
+    });
+    requireDirectorAssignment({
+      assignments,
+      actorUserId: prepared.actorUserId,
+      districtId: assessment.cycle.scopeZoneId,
+      governanceScope: input.governanceScope,
+      now: prepared.now,
+      expectedAssignmentId: prepared.assignment.id,
+    });
+
+    const cycleReview = objectValue(
+      objectValue(assessment.cycle.metadata).directorGovernanceReview,
+    );
+    if (
+      clean(cycleReview.currentReviewId) !== pending.id ||
+      Number(cycleReview.currentReviewStage) !== pending.stage ||
+      clean(cycleReview.decision) !== "HOLD"
+    ) {
+      fail("HEADTEACHER_DIRECTOR_GOVERNANCE_UNHOLD_PROOF_DRIFT", 409);
+    }
+
+    const unheldAt = prepared.now.toISOString();
+    const cycleUpdated = await tx.appraisalCycle.updateMany({
+      where: { id: assessment.cycleId, cancelledAt: null },
+      data: {
+        metadata: {
+          ...objectValue(assessment.cycle.metadata),
+          directorGovernanceReview: {
+            ...cycleReview,
+            state: "PENDING",
+            unheldAt,
+          },
+        },
+      },
+    });
+    if (cycleUpdated.count !== 1) {
+      fail("HEADTEACHER_DIRECTOR_GOVERNANCE_UNHOLD_WRITE_RACE", 409);
+    }
+
+    await tx.auditLog.create({
+      data: {
+        tenantId: clean(assessment.cycle.targetTenantId),
+        userId: prepared.actorUserId,
+        action: "HEADTEACHER_GOVERNANCE_DIRECTOR_UNHELD",
+        resource: "AppraisalReview",
+        resourceId: pending.id,
+        ip: input.ip ?? undefined,
+        userAgent: input.userAgent ?? undefined,
+        metadata: {
+          reqId,
+          cycleId: assessment.cycleId,
+          assessmentId: assessment.id,
+          assessmentRevision: assessment.revision,
+          reviewId: pending.id,
+          reviewStage: pending.stage,
+          unheldAt,
+          newReviewCreated: false,
+          scoreValuesIncluded: false,
+          staffFeedbackIncluded: false,
+          respondentIdentitiesIncluded: false,
+          carrierCycleStatusMutationPerformed: false,
+          carrierCycleTimestampMutationPerformed: false,
+          scoreMutationPerformed: false,
+          providerCalled: false,
+        },
+      },
+    });
+
+    return {
+      outcome: "UNHELD" as const,
+      assessmentId: assessment.id,
+      assessmentRevision: assessment.revision,
+      cycleId: assessment.cycleId,
+      reviewId: pending.id,
+      reviewStage: pending.stage,
+      reviewDecision: "PENDING" as const,
+      carrierCycleStatusMutationPerformed: false as const,
+      carrierCycleTimestampMutationPerformed: false as const,
+      scoreMutationPerformed: false as const,
+      staffFeedbackIncluded: false as const,
+      providerCalled: false as const,
+    };
+  }, transactionOptions());
+}
+
 function existingDecisionResult(input: {
   assessment: AssessmentRecord;
   review: ReviewRecord;
@@ -2471,6 +2715,9 @@ export async function executeHeadteacherDirectorGovernanceDecision(
   const decision = normalizeDecision(input.decision);
   const note = normalizeDecisionNote(decision, input.note);
   const prepared = await preparePackage(input);
+  if (prepared.holdState === "HELD") {
+    fail("HEADTEACHER_DIRECTOR_GOVERNANCE_HELD_UNHOLD_REQUIRED", 409);
+  }
   assertDirectorDecisionAuthority({
     decision,
     assessorRole: prepared.verified.assessorRole,
@@ -2495,6 +2742,18 @@ export async function executeHeadteacherDirectorGovernanceDecision(
     });
     if (!assessment) fail("HEADTEACHER_DIRECTOR_GOVERNANCE_ASSESSMENT_NOT_FOUND", 404);
     const verified = verifyFinalizedAssessment(assessment);
+    const transactionPending = currentPendingDirectorReview(assessment);
+    const transactionHoldState = pendingDirectorHoldState({
+      assessment,
+      pending: transactionPending,
+      assessorRole: verified.assessorRole as Exclude<
+        HeadteacherDirectorGovernanceAssessorRole,
+        "DISTRICT_DIRECTOR"
+      >,
+    });
+    if (transactionHoldState === "HELD") {
+      fail("HEADTEACHER_DIRECTOR_GOVERNANCE_HELD_UNHOLD_REQUIRED", 409);
+    }
     assertDirectorDecisionAuthority({
       decision,
       assessorRole: verified.assessorRole,
@@ -2692,7 +2951,7 @@ export async function executeHeadteacherDirectorGovernanceDecision(
           decision === "RETURN"
             ? "RETURNED_FOR_CORRECTION"
             : decision === "HOLD"
-              ? "PENDING"
+              ? "HELD"
               : "RELEASED",
         assessmentId: assessment.id,
         assessmentRevision: assessment.revision,
@@ -2706,6 +2965,8 @@ export async function executeHeadteacherDirectorGovernanceDecision(
         revisionRequired: decision === "RETURN",
         releaseProofHash,
         releasedAt,
+        heldAt: decision === "HOLD" ? now.toISOString() : null,
+        unheldAt: null,
         staffFeedbackIncluded: false,
         respondentIdentitiesIncluded: false,
         carrierCycleStatusMutationPerformed: false,
@@ -2816,6 +3077,17 @@ function publicQueueState(assessment: AssessmentRecord, role: HeadteacherDirecto
   }
   if (normalized(assessment.status) !== "FINALIZED") return null;
   const pending = currentPendingDirectorReview(assessment);
+  const holdState = pendingDirectorHoldState({
+    assessment,
+    pending,
+    assessorRole: role as Exclude<
+      HeadteacherDirectorGovernanceAssessorRole,
+      "DISTRICT_DIRECTOR"
+    >,
+  });
+  if (pending && holdState === "HELD") {
+    return { state: "HELD" as const, review: pending, releasedAt: null };
+  }
   if (pending) return { state: "READY_TO_DECIDE" as const, review: pending, releasedAt: null };
   if (role === "HEAD_OF_SUPERVISION") {
     return { state: "READY_TO_START" as const, review: null, releasedAt: null };
