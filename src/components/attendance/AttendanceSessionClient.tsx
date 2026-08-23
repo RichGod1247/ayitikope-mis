@@ -1,7 +1,6 @@
 // src/components/attendance/AttendanceSessionClient.tsx
 "use client";
 
-import Link from "next/link";
 import QrCameraScanner from "@/components/attendance/QrCameraScanner";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -232,15 +231,80 @@ function notifyLine(j: NotifyOk) {
   );
 }
 
+
+function AttendanceStatusButtons({
+  status,
+  disabled,
+  onChange,
+  mobile = false,
+}: {
+  status: AttendanceDisplayStatus;
+  disabled: boolean;
+  onChange: (status: AttendanceStatus) => void;
+  mobile?: boolean;
+}) {
+  return (
+    <div className={mobile ? "grid grid-cols-2 gap-2" : "flex flex-wrap gap-2"}>
+      {(["PRESENT", "LATE", "ABSENT", "EXCUSED"] as AttendanceStatus[]).map(
+        (option) => (
+          <button
+            key={option}
+            type="button"
+            disabled={disabled}
+            onClick={() => onChange(option)}
+            className={[
+              "border font-semibold transition disabled:opacity-60",
+              mobile
+                ? "min-h-11 rounded-xl px-3 py-2 text-xs"
+                : "rounded-full px-3 py-1 text-[11px]",
+              statusButtonClass(status === option, option),
+            ].join(" ")}
+          >
+            {option === "PRESENT"
+              ? "Present"
+              : option === "LATE"
+                ? "Late"
+                : option === "ABSENT"
+                  ? "Absent"
+                  : "Excused"}
+          </button>
+        ),
+      )}
+    </div>
+  );
+}
+
+function GuideStep({
+  number,
+  label,
+  state,
+}: {
+  number: number;
+  label: string;
+  state: "done" | "current" | "pending";
+}) {
+  const cls =
+    state === "done"
+      ? "border-emerald-300/20 bg-emerald-400/12 text-emerald-100"
+      : state === "current"
+        ? "border-[#E8C96A]/35 bg-[#D4AF37]/14 text-[#F6E5A6]"
+        : "border-white/10 bg-white/5 text-[#AEB6C4]";
+
+  return (
+    <div className={`flex min-w-0 items-center gap-2 rounded-xl border px-3 py-2 ${cls}`}>
+      <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-current/20 text-[11px] font-bold">
+        {state === "done" ? "✓" : number}
+      </span>
+      <span className="text-xs font-semibold">{label}</span>
+    </div>
+  );
+}
+
 export default function AttendanceSessionClient(props: {
-  tenantId: string;
-  teacherUserId: string;
   sessionId: string;
   initialClassName: string;
-  initialDate: string;
-  initialBrand: string;
 }) {
-  const { tenantId, teacherUserId, sessionId } = props;
+  const { sessionId } = props;
 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -250,10 +314,6 @@ export default function AttendanceSessionClient(props: {
     props.initialClassName || "Class",
   );
   const [students, setStudents] = useState<StudentRowDTO[]>([]);
-  const [brand, setBrand] = useState<string>(
-    (props.initialBrand || "EDULIFEOS").trim() || "EDULIFEOS",
-  );
-
   const [marks, setMarks] = useState<Record<string, MarkState>>({});
   const baselineMarksRef = useRef<Record<string, MarkState>>({});
 
@@ -274,6 +334,7 @@ export default function AttendanceSessionClient(props: {
   const [qrBusy, setQrBusy] = useState(false);
   const [qrMsg, setQrMsg] = useState<string | null>(null);
   const [qrErr, setQrErr] = useState<string | null>(null);
+  const [showBadgeScanner, setShowBadgeScanner] = useState(false);
 
   const isCertified = !!session?.certifiedAt;
   const isClosed = !!session?.isClosed;
@@ -683,12 +744,10 @@ export default function AttendanceSessionClient(props: {
       if (alertPreview.total === 0)
         throw new Error("No absent learners to notify.");
 
-      const sender = (brand || "EDULIFEOS").trim() || "EDULIFEOS";
-
       const r = await fetch("/api/teacher/attendance/notify-parents", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ sessionId: session.id, brand: sender }),
+        body: JSON.stringify({ sessionId: session.id }),
       });
 
       const j: NotifyResponse = await r.json().catch(() => ({
@@ -710,40 +769,6 @@ export default function AttendanceSessionClient(props: {
     } finally {
       setNotifying(false);
     }
-  }
-
-  async function closeThenNotify() {
-    if (!session) return;
-
-    setMutErr(null);
-    setNotifyErr(null);
-    setNotifyMsg(null);
-    setSaveErr(null);
-
-    if (locked) {
-      setMutErr("Session is locked (closed/certified).");
-      return;
-    }
-
-    if (counts.unmarked > 0) {
-      setMutErr(
-        `${counts.unmarked} learner(s) are still unmarked. Mark all learners before closing.`,
-      );
-      return;
-    }
-
-    let ok = true;
-
-    if (dirty) {
-      ok = await saveAll();
-    }
-
-    if (!ok) return;
-
-    ok = await mutate("close");
-    if (!ok) return;
-
-    await notifyParents();
   }
 
   async function submitQrPayload(rawPayload: string) {
@@ -808,153 +833,80 @@ export default function AttendanceSessionClient(props: {
     return `${base} border-amber-300/20 bg-amber-400/12 text-amber-100`;
   }
 
-  const backHref = `/teacher/attendance?brand=${encodeURIComponent((brand || "EDULIFEOS").trim() || "EDULIFEOS")}`;
+
+  const allLearnersMarked = counts.total > 0 && counts.unmarked === 0;
+  const marksSaved = allLearnersMarked && !dirty && !saveErr;
+  const registerClosed = isClosed || isCertified;
+
+  const guideCurrentStep = isCertified
+    ? 4
+    : registerClosed
+      ? 4
+      : !allLearnersMarked
+        ? 1
+        : !marksSaved
+          ? 2
+          : 3;
+
+  const guideMessage = isCertified
+    ? "Attendance is certified. Notify parents of absentees if needed."
+    : registerClosed
+      ? "The register is closed. Certify it next, or reopen only when a correction is necessary."
+      : !allLearnersMarked
+        ? `Mark every learner first. ${counts.unmarked} still need a status.`
+        : dirty
+          ? "All learners are marked. Save your changes next."
+          : "All learners are marked and saved. Close the register next.";
 
   return (
-    <section className="space-y-6">
-      <section className={`${shellCard} p-5 md:p-6`}>
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-2">
+    <section className="space-y-4">
+      <section className={`${shellCard} p-4 md:p-5`}>
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div className="min-w-0">
             <div className="inline-flex items-center rounded-full border border-[#E8C96A]/25 bg-[#D4AF37]/10 px-3 py-1 text-[11px] font-medium text-[#E8C96A]">
               EduLife OS · Manual Attendance
             </div>
 
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight text-[#F7F4ED]">
-                Attendance Session
-              </h1>
-              <p className="mt-1 text-sm text-[#C9CDD6]">
-                Mark every learner. Save changes. Close only when no learner
-                remains unmarked.
-              </p>
-            </div>
+            <h1 className="mt-2 text-xl font-semibold tracking-tight text-[#F7F4ED] md:text-2xl">
+              Attendance Session
+            </h1>
 
             {session ? (
-              <p className="text-sm text-[#D7DCE5]">
-                <span className="font-semibold text-[#F7F4ED]">
-                  {classLabel}
-                </span>{" "}
-                • {session.date}{" "}
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-[#D7DCE5]">
+                <span className="font-semibold text-[#F7F4ED]">{classLabel}</span>
+                <span>•</span>
+                <span>{session.date}</span>
                 <span className={statusPill()}>
                   {isCertified ? "CERTIFIED" : isClosed ? "CLOSED" : "OPEN"}
                 </span>
                 {dirty ? (
-                  <span className="ml-2 text-[11px] text-amber-200">
-                    • Unsaved changes
+                  <span className="text-[11px] font-semibold text-amber-200">
+                    Unsaved changes
                   </span>
                 ) : null}
                 {lastSaveAt ? (
-                  <span className="ml-2 text-[11px] text-[#8F98A8]">
-                    • Last save: {lastSaveAt}
+                  <span className="text-[11px] text-[#8F98A8]">
+                    Saved {lastSaveAt}
                   </span>
                 ) : null}
-              </p>
-            ) : null}
-
-            <p className="text-[11px] font-mono text-[#8F98A8]">
-              Session: {sessionId} • Teacher: {teacherUserId.slice(0, 8)}… •
-              Tenant: {tenantId.slice(0, 8)}…
-            </p>
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-[#AEB6C4]">Loading session…</p>
+            )}
           </div>
 
-          <div className="flex flex-wrap gap-2 md:justify-end">
-            <Link href={backHref} className={ghostBtn}>
-              Back
-            </Link>
-
-            <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2 py-1">
-              <span className="text-[11px] text-[#C9CDD6]">Sender</span>
-              <input
-                value={brand}
-                onChange={(e) => setBrand(e.target.value)}
-                disabled={loading}
-                className="w-32 rounded-lg border border-white/10 bg-[#07111F] px-2 py-1 text-[11px] text-[#F7F4ED]"
-                placeholder="EDULIFEOS"
-              />
-            </div>
-
+          {!locked ? (
             <button
               type="button"
-              onClick={markRemainingPresent}
-              disabled={
-                locked || loading || saving || mutating || counts.unmarked === 0
-              }
+              onClick={() => setShowBadgeScanner((current) => !current)}
+              disabled={!session || loading}
               className={ghostBtn}
-              title="Marks only UNMARKED learners as PRESENT. Existing ABSENT, LATE, and EXCUSED marks are not changed."
+              aria-expanded={showBadgeScanner}
+              aria-controls="attendance-badge-scanner"
             >
-              Mark remaining PRESENT
-              {counts.unmarked > 0 ? ` (${counts.unmarked})` : ""}
+              {showBadgeScanner ? "Hide badge scanner" : "Scan learner badge"}
             </button>
-
-            <button
-              type="button"
-              onClick={() => void saveAll()}
-              disabled={!canSave}
-              className={primaryBtn}
-            >
-              {saving ? "Saving…" : "Save"}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => void mutate("close")}
-              disabled={!canClose}
-              className={ghostBtn}
-              title={closeDisabledReason() ?? "Close session"}
-            >
-              Close
-            </button>
-
-            <button
-              type="button"
-              onClick={() => void mutate("certify")}
-              disabled={!canCertify}
-              className={ghostBtn}
-              title={
-                isCertified
-                  ? "Already certified."
-                  : !isClosed
-                    ? "Close first."
-                    : counts.unmarked > 0
-                      ? "Mark all learners first."
-                      : "Certify session"
-              }
-            >
-              Certify
-            </button>
-
-            <button
-              type="button"
-              onClick={() => void mutate("reopen")}
-              disabled={!canReopen}
-              className={ghostBtn}
-              title={
-                isCertified
-                  ? "Cannot reopen a certified session."
-                  : "Reopen with reason"
-              }
-            >
-              Reopen
-            </button>
-
-            <button
-              type="button"
-              onClick={() => void closeThenNotify()}
-              disabled={
-                loading ||
-                !session ||
-                saving ||
-                mutating ||
-                notifying ||
-                isCertified ||
-                isClosed
-              }
-              className={ghostBtn}
-              title="Save, close, and notify eligible parents"
-            >
-              Close + Notify
-            </button>
-          </div>
+          ) : null}
         </div>
       </section>
 
@@ -962,9 +914,8 @@ export default function AttendanceSessionClient(props: {
 
       {counts.unmarked > 0 && !locked ? (
         <Banner tone="warn">
-          <b>{counts.unmarked} learner(s) are still unmarked.</b> You may save
-          partial marks, but you cannot close or certify until every learner is
-          marked.
+          <b>{counts.unmarked} learner(s) are still unmarked.</b> Mark every learner
+          before closing the register.
         </Banner>
       ) : null}
 
@@ -972,8 +923,7 @@ export default function AttendanceSessionClient(props: {
         <Banner tone="error">
           <b>Save failed:</b> {saveErr}
           <div className="mt-1 text-[11px] text-rose-200">
-            Fix this before closing or certifying. Otherwise the server will not
-            have your latest marks.
+            Fix this before closing or certifying.
           </div>
         </Banner>
       ) : null}
@@ -986,115 +936,275 @@ export default function AttendanceSessionClient(props: {
       {qrErr ? <Banner tone="error">{qrErr}</Banner> : null}
       {qrMsg ? <Banner tone="ok">{qrMsg}</Banner> : null}
 
-      <section className={`${shellCard} p-5 md:p-6`}>
-        <div className="flex flex-wrap gap-2 text-[11px]">
-          <CountChip label="Total" value={counts.total} />
-          <CountChip label="Marked" value={counts.marked} />
-          <CountChip
-            label="Unmarked"
-            value={counts.unmarked}
-            tone={counts.unmarked ? "warn" : "good"}
-          />
-          <CountChip label="Present" value={counts.present} tone="good" />
-          <CountChip label="Late" value={counts.late} tone="warn" />
-          <CountChip label="Absent" value={counts.absent} tone="bad" />
-          <CountChip label="Excused" value={counts.excused} />
-        </div>
-      </section>
-
-      <section className={`${shellCard} p-5 md:p-6`}>
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold text-[#F7F4ED]">
-              Register seal attendance backup
-            </div>
-            <div className="mt-1 text-[11px] text-[#C9CDD6]">
-              Scan or paste a learner register seal. Register seal scans mark
-              PRESENT only, write to the same attendance register, and manual
-              edits remain available for corrections.
-            </div>
-
-            <input
-              type="text"
-              value={qrToken}
-              onChange={(e) => setQrToken(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && canScanQr) void scanQrBadge();
-              }}
-              disabled={locked || loading || qrBusy}
-              className={`${tinyFieldClass} mt-3 font-mono`}
-              placeholder="Scan register seal or paste EDULIFEOS-ATT-V1:..."
-              autoComplete="off"
-            />
-
-            <QrCameraScanner
-              disabled={!canUseQrCamera}
-              disabledReason={qrBaseBlockReason}
-              scanBusy={qrBusy}
-              onPayload={(payload) => submitQrPayload(payload)}
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={() => void scanQrBadge()}
-            disabled={!canScanQr}
-            className={primaryBtn}
-            title={
-              qrDisabledReason() ?? "Mark learner PRESENT by register seal"
-            }
-          >
-            {qrBusy ? "Scanning…" : "Scan seal"}
-          </button>
-        </div>
-
-        {!canScanQr ? (
-          <div className="mt-3 text-[11px] text-[#AEB6C4]">
-            <span className="font-semibold text-[#F7F4ED]">Why disabled:</span>{" "}
-            {qrDisabledReason() || "—"}
-          </div>
-        ) : null}
-      </section>
-
-      <section className={`${shellCard} p-5 md:p-6`}>
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <section
+        data-attendance-bbc-guide="v1"
+        className={`${shellCard} p-4 md:p-5`}
+      >
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="text-sm font-semibold text-[#F7F4ED]">
-              Notification preview
+              What to do
             </div>
-            <div className="text-[11px] text-[#C9CDD6]">
-              Absent: <b>{alertPreview.absentees.length}</b> • SMS eligible:{" "}
-              <b>{alertPreview.eligible.length}</b> • Skipped no opt-in:{" "}
-              <b>{alertPreview.skippedNoOptIn}</b> • Skipped no phone:{" "}
-              <b>{alertPreview.skippedNoPhone}</b>
-            </div>
+            <p className="mt-1 text-xs leading-5 text-[#C9CDD6]">{guideMessage}</p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => void notifyParents()}
-            disabled={!canNotify}
-            className={primaryBtn}
-            title={notifyDisabledReason() ?? "Notify eligible parents"}
-          >
-            {notifying ? "Processing…" : "Notify parents"}
-          </button>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <GuideStep
+              number={1}
+              label="Mark learners"
+              state={
+                allLearnersMarked
+                  ? "done"
+                  : guideCurrentStep === 1
+                    ? "current"
+                    : "pending"
+              }
+            />
+            <GuideStep
+              number={2}
+              label="Save marks"
+              state={
+                marksSaved
+                  ? "done"
+                  : guideCurrentStep === 2
+                    ? "current"
+                    : "pending"
+              }
+            />
+            <GuideStep
+              number={3}
+              label="Close register"
+              state={
+                registerClosed
+                  ? "done"
+                  : guideCurrentStep === 3
+                    ? "current"
+                    : "pending"
+              }
+            />
+            <GuideStep
+              number={4}
+              label="Certify"
+              state={
+                isCertified
+                  ? "done"
+                  : guideCurrentStep === 4
+                    ? "current"
+                    : "pending"
+              }
+            />
+          </div>
         </div>
 
-        {!canNotify ? (
-          <div className="mt-3 text-[11px] text-[#AEB6C4]">
-            <span className="font-semibold text-[#F7F4ED]">Why disabled:</span>{" "}
-            {notifyDisabledReason() || "—"}
-          </div>
-        ) : null}
+        <div className="mt-4 flex flex-wrap gap-2">
+          {!locked ? (
+            <>
+              <button
+                type="button"
+                onClick={markRemainingPresent}
+                disabled={
+                  loading || saving || mutating || counts.unmarked === 0
+                }
+                className={ghostBtn}
+                title="Only unmarked learners are changed to PRESENT. Existing Late, Absent and Excused marks stay unchanged."
+              >
+                Mark unmarked Present
+                {counts.unmarked > 0 ? ` (${counts.unmarked})` : ""}
+              </button>
 
-        <div className="mt-3 text-[11px] text-[#AEB6C4]">
-          Notifications require guardian phone and SMS opt-in. Learners without
-          opt-in are skipped and reported.
+              <button
+                type="button"
+                onClick={() => void saveAll()}
+                disabled={!canSave}
+                className={primaryBtn}
+              >
+                {saving ? "Saving…" : "Save marks"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void mutate("close")}
+                disabled={!canClose}
+                className={canClose ? primaryBtn : ghostBtn}
+                title={closeDisabledReason() ?? "Close register"}
+              >
+                Close register
+              </button>
+            </>
+          ) : null}
+
+          {isClosed && !isCertified ? (
+            <>
+              <button
+                type="button"
+                onClick={() => void mutate("certify")}
+                disabled={!canCertify}
+                className={primaryBtn}
+                title={
+                  counts.unmarked > 0
+                    ? "Mark all learners first."
+                    : "Certify attendance"
+                }
+              >
+                Certify attendance
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void mutate("reopen")}
+                disabled={!canReopen}
+                className={ghostBtn}
+                title="Reopen only when you need to correct a mark"
+              >
+                Reopen to correct
+              </button>
+            </>
+          ) : null}
+
+          {isCertified ? (
+            <span className="inline-flex items-center rounded-xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-2 text-sm font-semibold text-emerald-100">
+              ✓ Attendance certified
+            </span>
+          ) : null}
         </div>
       </section>
 
-      <section className={`${shellCard} overflow-hidden`}>
+      <section
+        data-attendance-summary-ui="notify-inline-v1"
+        className={`${shellCard} p-4 md:p-5`}
+      >
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-[#F7F4ED]">
+              Attendance summary
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+              <CountChip label="Total" value={counts.total} />
+              <CountChip label="Marked" value={counts.marked} />
+              <CountChip
+                label="Unmarked"
+                value={counts.unmarked}
+                tone={counts.unmarked ? "warn" : "good"}
+              />
+              <CountChip label="Present" value={counts.present} tone="good" />
+              <CountChip label="Late" value={counts.late} tone="warn" />
+              <CountChip label="Absent" value={counts.absent} tone="bad" />
+              <CountChip label="Excused" value={counts.excused} />
+            </div>
+
+            <p className="mt-3 text-[11px] leading-5 text-[#AEB6C4]">
+              Parent alerts: <b>{alertPreview.absentees.length}</b> absent •{" "}
+              <b>{alertPreview.eligible.length}</b> SMS eligible •{" "}
+              <b>{alertPreview.skippedNoOptIn}</b> no opt-in •{" "}
+              <b>{alertPreview.skippedNoPhone}</b> no phone
+            </p>
+          </div>
+
+          <div className="shrink-0">
+            <button
+              type="button"
+              onClick={() => void notifyParents()}
+              disabled={!canNotify}
+              className={`${primaryBtn} w-full sm:w-auto`}
+              title={notifyDisabledReason() ?? "Notify eligible parents"}
+            >
+              {notifying ? "Notifying…" : "Notify parents"}
+            </button>
+
+            {!canNotify ? (
+              <p className="mt-2 max-w-xs text-[10px] leading-4 text-[#8F98A8]">
+                {notifyDisabledReason() || "Parent notifications are not ready yet."}
+              </p>
+            ) : (
+              <p className="mt-2 max-w-xs text-[10px] leading-4 text-[#8F98A8]">
+                EduLife OS sends only to eligible opted-in guardian numbers.
+              </p>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {showBadgeScanner && !locked ? (
+        <section
+          id="attendance-badge-scanner"
+          data-attendance-scanner-ui="collapsed-v1"
+          className={`${shellCard} p-4 md:p-5`}
+        >
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-semibold text-[#F7F4ED]">
+                Scan learner badge
+              </div>
+              <p className="mt-1 text-[11px] leading-5 text-[#C9CDD6]">
+                Scan an EduLife attendance badge with the camera, a keyboard scanner,
+                or paste its seal. A valid badge marks that learner Present. Manual
+                corrections remain available below.
+              </p>
+
+              <input
+                type="text"
+                value={qrToken}
+                onChange={(e) => setQrToken(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && canScanQr) void scanQrBadge();
+                }}
+                disabled={locked || loading || qrBusy}
+                className={`${tinyFieldClass} mt-3 font-mono`}
+                placeholder="Scan or paste learner badge"
+                autoComplete="off"
+              />
+
+              <QrCameraScanner
+                disabled={!canUseQrCamera}
+                disabledReason={qrBaseBlockReason}
+                scanBusy={qrBusy}
+                onPayload={(payload) => submitQrPayload(payload)}
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void scanQrBadge()}
+              disabled={!canScanQr}
+              className={primaryBtn}
+              title={qrDisabledReason() ?? "Mark learner Present by badge"}
+            >
+              {qrBusy ? "Scanning…" : "Use scanned badge"}
+            </button>
+          </div>
+
+          {!canScanQr ? (
+            <p className="mt-3 text-[11px] text-[#AEB6C4]">
+              {qrDisabledReason() || "Badge scanning is ready."}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
+      <section
+        data-attendance-register-ui="primary-v1"
+        className={`${shellCard} overflow-hidden`}
+      >
+        <div className="border-b border-white/10 px-4 py-4 md:px-5">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h2 className="text-base font-semibold text-[#F7F4ED]">
+                Learner register
+              </h2>
+              <p className="mt-1 text-[11px] text-[#AEB6C4]">
+                Tap one status for every learner. Notes are optional.
+              </p>
+            </div>
+
+            {!locked && counts.unmarked > 0 ? (
+              <span className="rounded-full border border-amber-300/20 bg-amber-400/12 px-3 py-1 text-[11px] font-semibold text-amber-100">
+                {counts.unmarked} still unmarked
+              </span>
+            ) : null}
+          </div>
+        </div>
+
         {loading ? (
           <div className="p-4 text-sm text-[#C9CDD6]">Loading learners…</div>
         ) : students.length === 0 ? (
@@ -1102,106 +1212,149 @@ export default function AttendanceSessionClient(props: {
             No learners found for this classroom.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-[920px] w-full text-sm">
-              <thead className="bg-white/5">
-                <tr className="[&>th]:px-3 [&>th]:py-3 [&>th]:text-left [&>th]:text-[11px] [&>th]:font-semibold text-[#C9CDD6]">
-                  <th>Learner</th>
-                  <th>Status</th>
-                  <th>Mark note</th>
-                </tr>
-              </thead>
+          <>
+            <div className="divide-y divide-white/10 md:hidden">
+              {students.map((student) => {
+                const mark = marks[student.id] ?? {
+                  status: "UNMARKED",
+                  note: null,
+                };
+                const unmarked = mark.status === "UNMARKED";
 
-              <tbody className="divide-y divide-white/10">
-                {students.map((student) => {
-                  const mark = marks[student.id] ?? {
-                    status: "UNMARKED",
-                    note: null,
-                  };
-                  const unmarked = mark.status === "UNMARKED";
-
-                  return (
-                    <tr
-                      key={student.id}
-                      className="[&>td]:px-3 [&>td]:py-3 align-top odd:bg-transparent even:bg-white/[0.02]"
-                    >
-                      <td>
-                        <div className="font-medium text-[#F7F4ED]">
+                return (
+                  <article key={student.id} className="space-y-3 p-4">
+                    <div>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="font-semibold text-[#F7F4ED]">
                           {fullName(student)}
                         </div>
-                        <div className="text-[11px] text-[#8F98A8]">
-                          {student.guardianName || "—"} •{" "}
-                          {student.guardianPhone || "—"}
-                          {student.guardianSmsOptIn ? "" : " • (no SMS opt-in)"}
-                        </div>
-
                         {unmarked ? (
-                          <div className="mt-1 inline-flex rounded-lg border border-amber-300/20 bg-amber-400/12 px-2 py-0.5 text-[11px] text-amber-100">
+                          <span className="shrink-0 rounded-lg border border-amber-300/20 bg-amber-400/12 px-2 py-1 text-[10px] font-semibold text-amber-100">
                             UNMARKED
-                          </div>
+                          </span>
                         ) : null}
-                      </td>
+                      </div>
 
-                      <td className="min-w-[360px]">
-                        <div className="flex flex-wrap gap-2">
-                          {(
-                            [
-                              "PRESENT",
-                              "LATE",
-                              "ABSENT",
-                              "EXCUSED",
-                            ] as AttendanceStatus[]
-                          ).map((option) => (
-                            <button
-                              key={option}
-                              type="button"
-                              disabled={locked}
-                              onClick={() =>
-                                setMarks((prev) => ({
-                                  ...prev,
-                                  [student.id]: { ...mark, status: option },
-                                }))
-                              }
-                              className={[
-                                "rounded-full border px-3 py-1 text-[11px] font-semibold transition disabled:opacity-60",
-                                statusButtonClass(
-                                  mark.status === option,
-                                  option,
-                                ),
-                              ].join(" ")}
-                            >
-                              {option}
-                            </button>
-                          ))}
-                        </div>
-                      </td>
+                      <div className="mt-1 text-[11px] leading-5 text-[#8F98A8]">
+                        {student.guardianName || "No guardian name"} •{" "}
+                        {student.guardianPhone || "No phone"}
+                        {student.guardianSmsOptIn ? "" : " • no SMS opt-in"}
+                      </div>
+                    </div>
 
-                      <td className="min-w-[260px]">
-                        <input
-                          type="text"
-                          disabled={locked}
-                          className={tinyFieldClass}
-                          value={mark.note ?? ""}
-                          onChange={(e) =>
-                            setMarks((prev) => ({
-                              ...prev,
-                              [student.id]: {
-                                ...mark,
-                                note: e.target.value || null,
-                              },
-                            }))
-                          }
-                          placeholder={
-                            locked ? "Locked" : "Optional attendance note"
-                          }
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                    <AttendanceStatusButtons
+                      status={mark.status}
+                      disabled={locked}
+                      mobile
+                      onChange={(status) =>
+                        setMarks((prev) => ({
+                          ...prev,
+                          [student.id]: { ...mark, status },
+                        }))
+                      }
+                    />
+
+                    <input
+                      type="text"
+                      disabled={locked}
+                      className={tinyFieldClass}
+                      value={mark.note ?? ""}
+                      onChange={(e) =>
+                        setMarks((prev) => ({
+                          ...prev,
+                          [student.id]: {
+                            ...mark,
+                            note: e.target.value || null,
+                          },
+                        }))
+                      }
+                      placeholder={locked ? "Locked" : "Optional note"}
+                    />
+                  </article>
+                );
+              })}
+            </div>
+
+            <div className="hidden overflow-x-auto md:block">
+              <table className="min-w-[860px] w-full text-sm">
+                <thead className="bg-white/5">
+                  <tr className="[&>th]:px-3 [&>th]:py-3 [&>th]:text-left [&>th]:text-[11px] [&>th]:font-semibold text-[#C9CDD6]">
+                    <th>Learner</th>
+                    <th>Status</th>
+                    <th>Mark note</th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-white/10">
+                  {students.map((student) => {
+                    const mark = marks[student.id] ?? {
+                      status: "UNMARKED",
+                      note: null,
+                    };
+                    const unmarked = mark.status === "UNMARKED";
+
+                    return (
+                      <tr
+                        key={student.id}
+                        className="[&>td]:px-3 [&>td]:py-3 align-top odd:bg-transparent even:bg-white/[0.02]"
+                      >
+                        <td>
+                          <div className="font-medium text-[#F7F4ED]">
+                            {fullName(student)}
+                          </div>
+                          <div className="text-[11px] text-[#8F98A8]">
+                            {student.guardianName || "—"} •{" "}
+                            {student.guardianPhone || "—"}
+                            {student.guardianSmsOptIn ? "" : " • (no SMS opt-in)"}
+                          </div>
+
+                          {unmarked ? (
+                            <div className="mt-1 inline-flex rounded-lg border border-amber-300/20 bg-amber-400/12 px-2 py-0.5 text-[11px] text-amber-100">
+                              UNMARKED
+                            </div>
+                          ) : null}
+                        </td>
+
+                        <td className="min-w-[330px]">
+                          <AttendanceStatusButtons
+                            status={mark.status}
+                            disabled={locked}
+                            onChange={(status) =>
+                              setMarks((prev) => ({
+                                ...prev,
+                                [student.id]: { ...mark, status },
+                              }))
+                            }
+                          />
+                        </td>
+
+                        <td className="min-w-[240px]">
+                          <input
+                            type="text"
+                            disabled={locked}
+                            className={tinyFieldClass}
+                            value={mark.note ?? ""}
+                            onChange={(e) =>
+                              setMarks((prev) => ({
+                                ...prev,
+                                [student.id]: {
+                                  ...mark,
+                                  note: e.target.value || null,
+                                },
+                              }))
+                            }
+                            placeholder={
+                              locked ? "Locked" : "Optional attendance note"
+                            }
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </section>
     </section>

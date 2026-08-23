@@ -12,10 +12,10 @@ export const dynamic = "force-dynamic";
 
 const LOCK_TTL_MINUTES = 8;
 const MAX_NOTIFICATIONS_PER_REQUEST = 120;
+const ATTENDANCE_SMS_SENDER = "EDULIFEOS";
 
 type Body = {
   sessionId?: string;
-  brand?: string;
 };
 
 type NotifyResult = {
@@ -205,7 +205,7 @@ export async function POST(req: Request) {
     return json(200, {
       ok: true,
       alreadyNotified: false,
-      brand: "EDULIFEOS",
+      brand: ATTENDANCE_SMS_SENDER,
       testMode: process.env.SMS_TEST_MODE === "true",
       sessionId: session.id,
       absentCount: 0,
@@ -265,7 +265,7 @@ export async function POST(req: Request) {
       ok: true,
       alreadyNotified: true,
       notifiedAt: session.notifiedAt.toISOString(),
-      brand: "EDULIFEOS",
+      brand: ATTENDANCE_SMS_SENDER,
       testMode: process.env.SMS_TEST_MODE === "true",
       sessionId: session.id,
       absentCount: sortedAbsentMarks.length,
@@ -312,7 +312,7 @@ export async function POST(req: Request) {
         ok: true,
         alreadyNotified: true,
         notifiedAt: current.notifiedAt.toISOString(),
-        brand: "EDULIFEOS",
+        brand: ATTENDANCE_SMS_SENDER,
         testMode: process.env.SMS_TEST_MODE === "true",
         sessionId: session.id,
         absentCount: sortedAbsentMarks.length,
@@ -410,7 +410,7 @@ export async function POST(req: Request) {
           classLabel: label,
           dateISO,
         }),
-        from: "EDULIFEOS",
+        from: ATTENDANCE_SMS_SENDER,
         template: "ATTENDANCE_ABSENCE_ALERT",
         payload: {
           purpose: "attendance_absence_alert",
@@ -488,7 +488,7 @@ export async function POST(req: Request) {
 
     return json(200, {
       ok: failedCount === 0,
-      brand: "EDULIFEOS",
+      brand: ATTENDANCE_SMS_SENDER,
       testMode: process.env.SMS_TEST_MODE === "true",
       sessionId: session.id,
       absentCount: sortedAbsentMarks.length,

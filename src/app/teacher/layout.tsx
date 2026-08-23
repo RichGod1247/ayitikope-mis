@@ -48,18 +48,28 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
   if (!tenant || tenant.status !== "ACTIVE") redirect("/pending");
 
   const isTeacherOnly = role === "TEACHER";
-  const showAdmin = role === "SCHOOL_ADMIN" || role === "SCHOOLADMIN" || role === "HEADTEACHER";
+  const showAdmin =
+    role === "SCHOOL_ADMIN" || role === "SCHOOLADMIN" || role === "HEADTEACHER";
+
+  const navItems = [
+    { href: "/teacher/dashboard", label: "Dashboard", show: true },
+    { href: "/teacher/notices", label: "Notices", show: isTeacherOnly },
+    { href: "/teacher/attendance", label: "Attendance", show: true },
+    { href: "/teacher/health", label: "Health", show: true },
+    { href: "/teacher/lesson-notes", label: "Lesson Notes", show: true },
+    { href: "/admin/dashboard", label: "Admin", show: showAdmin },
+  ].filter((item) => item.show);
 
   return (
     <div className="min-h-screen bg-[#05070B] text-[#F7F4ED]">
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-[rgba(5,7,11,0.88)] backdrop-blur-xl">
-        <div className="relative mx-auto max-w-6xl overflow-hidden px-4 py-4">
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-[rgba(5,7,11,0.94)] backdrop-blur-xl">
+        <div className="relative mx-auto max-w-6xl px-4 py-3 xl:py-4">
           <div className="pointer-events-none absolute -left-12 top-0 h-28 w-28 rounded-full bg-[#1B66D1]/20 blur-3xl" />
           <div className="pointer-events-none absolute right-0 top-0 h-24 w-24 rounded-full bg-[#D4AF37]/14 blur-3xl" />
 
-          <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="relative flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-xs uppercase tracking-[0.18em] text-[#E8C96A]">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-[#E8C96A] xl:text-xs">
                 EduLife OS · Teacher
               </p>
               <p className="mt-1 truncate text-sm font-semibold text-[#F7F4ED]">
@@ -70,44 +80,50 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
               </p>
             </div>
 
-            <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+            <div className="hidden items-center gap-3 xl:flex">
               <nav className="flex flex-wrap items-center gap-2">
-                <Link className={navLinkClass()} href="/teacher/dashboard">
-                  Dashboard
-                </Link>
-
-                {isTeacherOnly ? (
-                  <Link className={navLinkClass()} href="/teacher/notices">
-                    Notices
+                {navItems.map((item) => (
+                  <Link key={item.href} className={navLinkClass()} href={item.href}>
+                    {item.label}
                   </Link>
-                ) : null}
-
-                <Link className={navLinkClass()} href="/teacher/attendance">
-                  Attendance
-                </Link>
-
-                <Link className={navLinkClass()} href="/teacher/health">
-                  Health
-                </Link>
-
-                <Link className={navLinkClass()} href="/teacher/lesson-notes">
-                  Lesson Notes
-                </Link>
-
-                {showAdmin ? (
-                  <Link className={navLinkClass()} href="/admin/dashboard">
-                    Admin
-                  </Link>
-                ) : null}
+                ))}
               </nav>
 
               <LogoutButton className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-[#F7F4ED] transition hover:bg-white/10" />
             </div>
+
+            <details
+              data-teacher-mobile-nav="collapsed-v1"
+              className="group relative shrink-0 xl:hidden"
+            >
+              <summary className="list-none cursor-pointer rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-[#F7F4ED] transition hover:bg-white/10 [&::-webkit-details-marker]:hidden">
+                <span className="group-open:hidden">☰ Menu</span>
+                <span className="hidden group-open:inline">Close</span>
+              </summary>
+
+              <div className="absolute right-0 top-[calc(100%+0.65rem)] z-50 w-[min(82vw,19rem)] rounded-2xl border border-white/10 bg-[#080C13] p-3 shadow-[0_22px_70px_rgba(0,0,0,0.48)]">
+                <nav className="grid grid-cols-2 gap-2">
+                  {navItems.map((item) => (
+                    <Link
+                      key={item.href}
+                      className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-center text-sm font-medium text-[#E5E8EF] transition hover:bg-white/10"
+                      href={item.href}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </nav>
+
+                <div className="mt-3 border-t border-white/10 pt-3">
+                  <LogoutButton className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-[#F7F4ED] transition hover:bg-white/10" />
+                </div>
+              </div>
+            </details>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+      <main className="mx-auto max-w-6xl px-4 py-5 md:py-8">{children}</main>
     </div>
   );
 }

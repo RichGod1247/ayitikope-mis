@@ -298,7 +298,7 @@ export default async function TeacherDashboardPage() {
   const quickAttendanceLabel = todaysSession ? "Continue Attendance" : "Take Attendance";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(5,7,11,0.92),rgba(7,26,61,0.94),rgba(5,7,11,0.96))] p-5 shadow-[0_26px_90px_rgba(0,0,0,0.28)] md:p-6">
         <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:64px_64px]" />
         <div className="absolute -left-16 top-0 h-48 w-48 rounded-full bg-[#1B66D1]/20 blur-3xl" />
@@ -341,72 +341,69 @@ export default async function TeacherDashboardPage() {
         </div>
       </div>
 
-      <section className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
-          Today at a glance
-        </h2>
+      <section
+        data-teacher-glance-ui="bbc-compact-v1"
+        className="rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025))] p-4 shadow-[0_14px_44px_rgba(0,0,0,0.14)] backdrop-blur-xl"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#E8C96A]">
+            Today at a glance
+          </h2>
 
-        <div className="mt-4 grid grid-cols-1 gap-3 text-sm md:grid-cols-4">
-          <div className="rounded-2xl border border-white/10 bg-[#0C1730] p-4">
-            <p className="text-xs text-[#8F98A8]">Role</p>
-            <p className="mt-2 font-medium text-[#F7F4ED]">{safe.roleName ?? "TEACHER"}</p>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-[#0C1730] p-4">
-            <p className="text-xs text-[#8F98A8]">Primary Class</p>
-            <p className="mt-2 font-medium text-[#F7F4ED]">{primaryLabel}</p>
-            {!hasPrimary ? (
-              <p className="mt-1 text-xs text-[#C9CDD6]">
-                Ask admin to assign you in <span className="font-medium text-[#F7F4ED]">Admin → Teachers</span>.
-              </p>
-            ) : (
-              <p className="mt-1 text-xs text-[#C9CDD6]">{studentCount} student(s)</p>
-            )}
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-[#0C1730] p-4">
-            <p className="text-xs text-[#8F98A8]">Academic Context</p>
-            <p className="mt-2 font-medium text-[#F7F4ED]">{term}</p>
-            <p className="mt-1 text-xs text-[#C9CDD6]">{year}</p>
-          </div>
-
-          <div className={cx("rounded-2xl border p-4", toneClass)}>
-            <p className="text-xs opacity-80">Attendance</p>
-            <p className="mt-2 font-medium">{attendanceState.label}</p>
-            {hasPrimary ? (
-              <p className="mt-1 text-xs opacity-80">
-                {todaysSession?.isClosed ? "Session closed for today." : "Ready when you are."}
-              </p>
-            ) : (
-              <p className="mt-1 text-xs opacity-80">No class assigned yet.</p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-3 pt-4">
           <Link
             href="/teacher/attendance"
             className={cx(
-              "rounded-full px-5 py-2.5 text-sm font-semibold transition",
+              "shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition",
               hasPrimary
-                ? "bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)]"
-                : "pointer-events-none bg-white/10 text-[#7D8796]"
+                ? "bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] text-[#071A3D] shadow-[0_12px_34px_rgba(212,175,55,0.18)]"
+                : "pointer-events-none bg-white/10 text-[#7D8796]",
             )}
           >
             {quickAttendanceLabel}
           </Link>
-
-          <span className="inline-flex cursor-not-allowed items-center rounded-full border border-white/8 bg-white/[0.04] px-5 py-2.5 text-sm font-medium text-[#7D8796]">
-            Health coming soon
-          </span>
         </div>
 
-        <p className="mt-4 text-xs text-[#8F98A8]">
-          Teachers can record attendance and health only for their assigned primary class.
-        </p>
+        <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
+          <div className="rounded-xl border border-white/10 bg-[#0C1730]/85 p-3">
+            <p className="text-[10px] uppercase tracking-[0.08em] text-[#8F98A8]">Role</p>
+            <p className="mt-1 truncate font-semibold text-[#F7F4ED]">
+              {safe.roleName ?? "TEACHER"}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-[#0C1730]/85 p-3">
+            <p className="text-[10px] uppercase tracking-[0.08em] text-[#8F98A8]">
+              Primary class
+            </p>
+            <p className="mt-1 truncate font-semibold text-[#F7F4ED]">{primaryLabel}</p>
+            <p className="mt-0.5 text-[10px] text-[#AEB6C4]">
+              {hasPrimary ? `${studentCount} learner(s)` : "Assignment needed"}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-[#0C1730]/85 p-3">
+            <p className="text-[10px] uppercase tracking-[0.08em] text-[#8F98A8]">
+              Term
+            </p>
+            <p className="mt-1 font-semibold text-[#F7F4ED]">{term}</p>
+            <p className="mt-0.5 text-[10px] text-[#AEB6C4]">{year}</p>
+          </div>
+
+          <div className={cx("rounded-xl border p-3", toneClass)}>
+            <p className="text-[10px] uppercase tracking-[0.08em] opacity-80">Attendance</p>
+            <p className="mt-1 font-semibold">{attendanceState.label}</p>
+            <p className="mt-0.5 text-[10px] opacity-80">
+              {hasPrimary
+                ? todaysSession?.isClosed
+                  ? "Done for today"
+                  : "Ready"
+                : "No class assigned"}
+            </p>
+          </div>
+        </div>
       </section>
 
-      <section className="rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.20)] md:p-6">
+      <section data-teacher-workspace-ui="primary-v1" className="rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.09),rgba(255,255,255,0.035))] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.20)] md:p-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 className="text-base font-semibold text-[#F7F4ED] md:text-lg">Your workspace</h2>

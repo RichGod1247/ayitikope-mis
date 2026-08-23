@@ -130,17 +130,14 @@ function StatChip(props: { label: string; value: number; tone?: "neutral" | "goo
 
 export default function TeacherAttendanceClient({
   teacherUserId,
-  initialBrand,
 }: {
   teacherUserId?: string;
-  initialBrand?: string;
 }) {
   const router = useRouter();
 
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [classroomId, setClassroomId] = useState<string>("");
   const [dateISO, setDateISO] = useState<string>(todayISO());
-  const [brand, setBrand] = useState<string>((initialBrand || "EDULIFEOS").trim() || "EDULIFEOS");
 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -232,8 +229,7 @@ export default function TeacherAttendanceClient({
   function sessionHref(sessionId: string) {
     const qp =
       `?className=${encodeURIComponent(classLabel || "Class")}` +
-      `&date=${encodeURIComponent(dateISO)}` +
-      `&brand=${encodeURIComponent(brand || "EDULIFEOS")}`;
+      `&date=${encodeURIComponent(dateISO)}`;
     return `/teacher/attendance/${encodeURIComponent(sessionId)}${qp}`;
   }
 
@@ -283,7 +279,7 @@ export default function TeacherAttendanceClient({
       const r = await fetch("/api/teacher/attendance/notify-parents", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ sessionId, brand }),
+        body: JSON.stringify({ sessionId }),
       });
 
       const j: NotifyResponse = await r.json().catch(() => ({
@@ -334,7 +330,7 @@ export default function TeacherAttendanceClient({
       const r2 = await fetch("/api/teacher/attendance/notify-parents", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ sessionId, brand }),
+        body: JSON.stringify({ sessionId }),
       });
 
       const j2: NotifyResponse = await r2.json().catch(() => ({
@@ -421,7 +417,7 @@ export default function TeacherAttendanceClient({
       ) : null}
 
       <section className={`${shellCard} p-5 md:p-6 space-y-5`}>
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-3">
           <div className="space-y-1">
             <label className={labelClass}>Date</label>
             <input
@@ -457,18 +453,6 @@ export default function TeacherAttendanceClient({
             ) : null}
           </div>
 
-          <div className="space-y-1">
-            <label className={labelClass}>Brand/Sender ID</label>
-            <input
-              type="text"
-              className={fieldClass}
-              value={brand}
-              onChange={(e) => setBrand(e.target.value)}
-              placeholder="EDULIFEOS"
-              disabled={loading}
-            />
-          </div>
-
           <div className="flex items-end">
             <button
               type="button"
@@ -480,6 +464,10 @@ export default function TeacherAttendanceClient({
             </button>
           </div>
         </div>
+
+        <p className="text-[11px] text-[#8F98A8]">
+          Parent SMS sender is secured by EduLife OS on the server.
+        </p>
 
         {openErr ? (
           <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-sm text-rose-100">
