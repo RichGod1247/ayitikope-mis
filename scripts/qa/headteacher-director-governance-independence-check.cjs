@@ -241,9 +241,25 @@ for (const marker of [
   'action: "UNHOLD"',
   "Governance result unheld. Release is now available.",
   "Governance result held. Unhold to release results.",
+  'type GovernanceScrollTarget = "FORM" | "DECISION"',
+  'scrollTarget: GovernanceScrollTarget = "FORM"',
+  'id="governance-decision-actions"',
+  '? "governance-decision-actions"',
+  'block: scrollTarget === "DECISION" ? "center" : "start"',
 ]) {
   assert(source.client.includes(marker), `Director client Hold/Unhold marker missing: ${marker}`);
 }
+
+assert.strictEqual(
+  source.client.split('loadGovernanceReviewPackage(item, "DECISION")').length - 1,
+  3,
+  "Start, Hold and Unhold must return focus to the Governance decision controls",
+);
+assert(
+  source.client.includes('void loadGovernanceReviewPackage(item)'),
+  "Opening a Governance report from the queue must still begin at the native form",
+);
+
 for (const forbidden of [
   "Governance review held. The next Director stage is ready on the same locked assessment.",
   "Hold this Governance review and create the next Director review stage?",
@@ -291,6 +307,8 @@ console.log("Unhold review creation         : none");
 console.log("Unhold assessment mutation     : none");
 console.log("Unhold carrier status mutation : none");
 console.log("Release after Unhold           : available without another user review step");
+console.log("Start/Hold/Unhold viewport     : decision controls retained in focus");
+console.log("Initial report viewport        : native form start preserved");
 console.log("Director self-review           : forbidden");
 console.log("Correction continuation        : same Director custody + stage");
 console.log("Staff Feedback prerequisite    : absent");

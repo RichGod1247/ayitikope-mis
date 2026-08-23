@@ -20,6 +20,7 @@ type DecisionMode = "RETURN" | "HOLD" | "RELEASE";
 type QueuePanel = "ALL" | "APPROVAL" | "COMPLETE" | "READY" | "OPEN";
 type ReviewMode = "HOME" | "STAFF";
 type GovernanceFocus = "TEACHER" | "HEADTEACHER" | "MINE";
+type GovernanceScrollTarget = "FORM" | "DECISION";
 type StaffLevel = "CIRCUIT" | "SCHOOL" | "RESPONDENTS" | "FORM";
 
 type DirectorQueueItem = {
@@ -1613,7 +1614,10 @@ function GovernanceReviewNativeForm(props: {
               : `This governance review is already in progress. Read the locked form, then use ${decisionCopy} at the bottom.`
       }
       footer={
-        <div className={panel("p-4 sm:p-5")}>
+        <div
+          id="governance-decision-actions"
+          className={panel("scroll-mt-24 p-4 sm:p-5")}
+        >
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-300">
@@ -2549,6 +2553,7 @@ export default function HeadteacherDirectorReviewClient({
 
   async function loadGovernanceReviewPackage(
     item: HeadteacherDirectorGovernanceQueueItem,
+    scrollTarget: GovernanceScrollTarget = "FORM",
   ) {
     const assessmentId = clean(item.assessmentId);
     clearMessages();
@@ -2619,11 +2624,19 @@ export default function HeadteacherDirectorReviewClient({
         "Governance assessment loaded read-only. Staff Feedback was not loaded or compared.",
       );
 
+      const scrollTargetId =
+        scrollTarget === "DECISION"
+          ? "governance-decision-actions"
+          : "governance-final-inspection";
+
       window.requestAnimationFrame(() => {
         window.requestAnimationFrame(() => {
           document
-            .getElementById("governance-final-inspection")
-            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+            .getElementById(scrollTargetId)
+            ?.scrollIntoView({
+              behavior: "smooth",
+              block: scrollTarget === "DECISION" ? "center" : "start",
+            });
         });
       });
     } catch {
@@ -2672,7 +2685,7 @@ export default function HeadteacherDirectorReviewClient({
       const item = governanceItems.find(
         (candidate) => candidate.assessmentId === assessmentId,
       );
-      if (item) await loadGovernanceReviewPackage(item);
+      if (item) await loadGovernanceReviewPackage(item, "DECISION");
       await loadGovernanceQueue();
       const returnAllowed =
         governanceReviewPackage.assessment.assessorRole ===
@@ -2778,7 +2791,7 @@ export default function HeadteacherDirectorReviewClient({
           (candidate) => candidate.assessmentId === assessmentId,
         );
         await loadGovernanceQueue();
-        if (item) await loadGovernanceReviewPackage(item);
+        if (item) await loadGovernanceReviewPackage(item, "DECISION");
         setNotice("Governance result held. Unhold to release results.");
       } else {
         setGovernanceReviewPackage(null);
@@ -2839,7 +2852,7 @@ export default function HeadteacherDirectorReviewClient({
         (candidate) => candidate.assessmentId === assessmentId,
       );
       await loadGovernanceQueue();
-      if (item) await loadGovernanceReviewPackage(item);
+      if (item) await loadGovernanceReviewPackage(item, "DECISION");
       setNotice("Governance result unheld. Release is now available.");
     } catch {
       setFailure(
