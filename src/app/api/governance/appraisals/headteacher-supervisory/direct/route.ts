@@ -3,6 +3,11 @@ import {
   createHeadteacherSupervisoryDirectorAssessmentDraft,
 } from "@/lib/appraisals/headteacherSupervisoryDirectorDraft";
 import {
+  HEADTEACHER_SUPERVISORY_OFFICER_DRAFT_POLICY,
+  createHeadteacherSupervisoryOfficerAssessmentDraft,
+  type HeadteacherSupervisoryOfficerRole,
+} from "@/lib/appraisals/headteacherSupervisoryOfficerDraft";
+import {
   canonicalHeadteacherSupervisoryAssessorRole,
 } from "@/lib/appraisals/headteacherSupervisoryAssessment";
 import {
@@ -52,6 +57,12 @@ function submittedServerResolvedField(
   return null;
 }
 
+function officerRoleAllowed(role: string): role is HeadteacherSupervisoryOfficerRole {
+  return HEADTEACHER_SUPERVISORY_OFFICER_DRAFT_POLICY.allowedActorRoles.includes(
+    role as HeadteacherSupervisoryOfficerRole,
+  );
+}
+
 export async function POST(req: NextRequest) {
   const meta = requestMeta(req);
 
@@ -65,14 +76,14 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (
-      canonicalHeadteacherSupervisoryAssessorRole(auth.ctx.roleName) !==
-      "DISTRICT_DIRECTOR"
-    ) {
+    const actorRole = canonicalHeadteacherSupervisoryAssessorRole(
+      auth.ctx.roleName,
+    );
+    if (actorRole !== "DISTRICT_DIRECTOR" && !officerRoleAllowed(actorRole)) {
       return jsonNoStore(403, {
         ok: false,
         reqId: meta.reqId,
-        error: "HEADTEACHER_SUPERVISORY_DIRECT_DRAFT_DIRECTOR_ONLY",
+        error: "HEADTEACHER_SUPERVISORY_DIRECT_DRAFT_ROLE_FORBIDDEN",
       });
     }
 
@@ -164,7 +175,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const result = await createHeadteacherSupervisoryDirectorAssessmentDraft({
+    const commonInput = {
       actorUserId: auth.ctx.userId,
       actorRoleName: auth.ctx.roleName,
       governanceScope: auth.scope,
@@ -181,7 +192,12 @@ export async function POST(req: NextRequest) {
       reqId: meta.reqId,
       ip: meta.ip,
       userAgent: meta.userAgent,
-    });
+    };
+
+    const result =
+      actorRole === "DISTRICT_DIRECTOR"
+        ? await createHeadteacherSupervisoryDirectorAssessmentDraft(commonInput)
+        : await createHeadteacherSupervisoryOfficerAssessmentDraft(commonInput);
 
     return jsonNoStore(result.outcome === "CREATED" ? 201 : 200, {
       ok: true,

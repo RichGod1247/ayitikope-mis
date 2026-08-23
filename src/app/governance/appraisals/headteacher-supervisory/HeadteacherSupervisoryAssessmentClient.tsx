@@ -155,6 +155,17 @@ type SupervisoryQueueItem = {
   };
 };
 
+type SupervisoryDirectTarget = {
+  targetUserId: string;
+  targetName: string | null;
+  schoolId: string;
+  schoolName: string;
+  circuitId: string;
+  circuitName: string;
+  districtId: string;
+  districtName: string;
+};
+
 type SupervisoryQueue = {
   actorRole: string;
   officeLabel: string;
@@ -177,6 +188,7 @@ type SupervisoryQueue = {
   };
   circuits: SupervisoryQueueCircuit[];
   items: SupervisoryQueueItem[];
+  directTargets: SupervisoryDirectTarget[];
   noBackgroundPolling: true;
   respondentIdentitiesIncluded: false;
   individualStaffResponsesIncluded: false;
@@ -293,6 +305,22 @@ type HeadteacherSupervisoryDirectorDraftResult = {
     dateObserved: string;
     evidenceStream: "GOVERNANCE_SUPERVISORY_ASSESSMENT";
     carrierKind: "DIRECTOR_GOVERNANCE_ONLY";
+  };
+};
+
+type HeadteacherSupervisoryOfficerDraftResult = {
+  outcome: "CREATED" | "EXISTING_MATCH";
+  draft: {
+    cycleId: string;
+    cycleStatus: "CLOSED";
+    assessmentId: string;
+    assessmentStatus: string;
+    revision: number;
+    targetUserId: string;
+    targetTenantId: string;
+    dateObserved: string;
+    evidenceStream: "GOVERNANCE_SUPERVISORY_ASSESSMENT";
+    carrierKind: "OFFICER_GOVERNANCE_ONLY";
   };
 };
 
@@ -728,6 +756,8 @@ export default function HeadteacherSupervisoryAssessmentClient({
   const [directorDirectSchoolId, setDirectorDirectSchoolId] = useState("");
   const [directorDirectTargetKey, setDirectorDirectTargetKey] = useState("");
   const [directorDirectStarting, setDirectorDirectStarting] = useState(false);
+  const [officerDirectTargetKey, setOfficerDirectTargetKey] = useState("");
+  const [officerDirectStarting, setOfficerDirectStarting] = useState(false);
   const [directorReleasingAssessmentId, setDirectorReleasingAssessmentId] =
     useState("");
   const [autosaveState, setAutosaveState] =
@@ -747,6 +777,7 @@ export default function HeadteacherSupervisoryAssessmentClient({
   const directOpenKeysRef = useRef(new Map<string, string>());
   const feedbackBulkOpenKeysRef = useRef(new Map<string, string>());
   const directorDirectAssessmentKeysRef = useRef(new Map<string, string>());
+  const officerDirectAssessmentKeysRef = useRef(new Map<string, string>());
 
   const clearWorkspaceForAssessmentChange = useCallback(() => {
     if (autosaveTimerRef.current !== null) {
@@ -1048,6 +1079,18 @@ export default function HeadteacherSupervisoryAssessmentClient({
       circuits.set(circuit.circuitId, circuit);
     }
 
+    for (const target of queue?.directTargets ?? []) {
+      const current = circuits.get(target.circuitId);
+      circuits.set(target.circuitId, {
+        circuitId: target.circuitId,
+        circuitName: target.circuitName,
+        districtId: target.districtId,
+        districtName: target.districtName,
+        schoolCount: current?.schoolCount ?? 0,
+        appraisalCount: current?.appraisalCount ?? 0,
+      });
+    }
+
     for (const circuit of directOpenTargets?.circuits ?? []) {
       const current = circuits.get(circuit.circuitId);
       circuits.set(circuit.circuitId, {
@@ -1068,6 +1111,9 @@ export default function HeadteacherSupervisoryAssessmentClient({
   const availableSchoolCount = useMemo(() => {
     const schoolIds = new Set<string>();
     for (const item of queue?.items ?? []) schoolIds.add(item.schoolId);
+    for (const target of queue?.directTargets ?? []) {
+      schoolIds.add(target.schoolId);
+    }
     for (const target of directOpenTargets?.targets ?? []) {
       schoolIds.add(target.targetTenantId);
     }
@@ -1099,6 +1145,20 @@ export default function HeadteacherSupervisoryAssessmentClient({
       current.appraisalCount += 1;
       current.canDirectOpen = false;
       schools.set(item.schoolId, current);
+    }
+
+    for (const target of queue?.directTargets ?? []) {
+      if (target.circuitId !== selectedCircuitId) continue;
+      const current = schools.get(target.schoolId);
+      if (current) continue;
+
+      schools.set(target.schoolId, {
+        schoolId: target.schoolId,
+        schoolName: target.schoolName,
+        headteacherName: target.targetName || "Headteacher",
+        appraisalCount: 0,
+        canDirectOpen: true,
+      });
     }
 
     for (const target of directOpenTargets?.targets ?? []) {
@@ -1792,6 +1852,120 @@ export default function HeadteacherSupervisoryAssessmentClient({
     }
   }
 
+  function officerDirectTargetFromKey() {
+    if (!officerDirectTargetKey) return null;
+    return (
+      queue?.directTargets.find(
+        (target) =>
+          `${target.schoolId}:${target.targetUserId}` === officerDirectTargetKey,
+      ) ?? null
+    );
+  }
+
+  function officerDirectCommandSignature(
+    target: SupervisoryDirectTarget,
+    values: ValidatedVisitDetails,
+  ) {
+    return JSON.stringify({
+      actorRole: queue?.actorRole ?? "",
+      targetTenantId: target.schoolId,
+      targetUserId: target.targetUserId,
+      dateObserved,
+      ...values,
+    });
+  }
+
+  function officerDirectAssessmentKeyFor(
+    target: SupervisoryDirectTarget,
+    values: ValidatedVisitDetails,
+  ) {
+    const signature = officerDirectCommandSignature(target, values);
+    const existing = officerDirectAssessmentKeysRef.current.get(signature);
+    if (existing) return { key: existing, signature };
+
+    const key = `HEADTEACHER-GOVERNANCE-OFFICER:${window.crypto.randomUUID()}`;
+    officerDirectAssessmentKeysRef.current.set(signature, key);
+    return { key, signature };
+  }
+
+  async function startOfficerDirectAssessment() {
+    const actorRole = queue?.actorRole;
+    if (
+      actorRole !== "SISSO" &&
+      actorRole !== "BASIC_SCHOOL_COORDINATOR" &&
+      actorRole !== "HEAD_OF_SUPERVISION"
+    ) {
+      return;
+    }
+
+    const target = officerDirectTargetFromKey();
+    if (!target) {
+      setError("Choose the Headteacher you want to assess.");
+      return;
+    }
+
+    const validation = validateVisitDetails(dateObserved, visitDetails);
+    if (!validation.ok) {
+      setError(validation.message);
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Start the official Headteacher assessment for ${target.targetName || "this Headteacher"} at ${target.schoolName}?`,
+    );
+    if (!confirmed) return;
+
+    const command = officerDirectAssessmentKeyFor(target, validation.values);
+    setOfficerDirectStarting(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await fetch(
+        "/api/governance/appraisals/headteacher-supervisory/direct",
+        {
+          method: "POST",
+          cache: "no-store",
+          credentials: "include",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            targetUserId: target.targetUserId,
+            targetTenantId: target.schoolId,
+            directAssessmentKey: command.key,
+            dateObserved,
+            ...validation.values,
+          }),
+        },
+      );
+      const body = (await readApiBody(response)) as
+        | { ok: true; result: HeadteacherSupervisoryOfficerDraftResult }
+        | ApiFailure;
+
+      if (!response.ok || body.ok !== true) {
+        throw new Error(messageFromFailure(body, response.status));
+      }
+
+      officerDirectAssessmentKeysRef.current.delete(command.signature);
+      const nextId = body.result.draft.assessmentId;
+      clearWorkspaceForAssessmentChange();
+      setAssessmentId(nextId);
+      router.replace(
+        `/governance/appraisals/headteacher-supervisory?assessmentId=${encodeURIComponent(nextId)}`,
+      );
+    } catch (startError) {
+      setError(
+        startError instanceof Error
+          ? startError.message
+          : "The Headteacher assessment could not be started.",
+      );
+    } finally {
+      setOfficerDirectStarting(false);
+    }
+  }
+
   async function releaseDirectorSubmittedAssessment(
     item: SupervisoryQueueItem,
   ) {
@@ -2088,12 +2262,15 @@ export default function HeadteacherSupervisoryAssessmentClient({
   if (!assessmentId && !cycleId) {
     const actorRole = queue?.actorRole;
     const usesCompactOwnHeadteacherLanding =
+      actorRole === "SISSO" ||
       actorRole === "HEAD_OF_SUPERVISION" ||
       actorRole === "BASIC_SCHOOL_COORDINATOR";
     const compactOfficerLabel =
-      actorRole === "BASIC_SCHOOL_COORDINATOR"
-        ? "Basic School Coordinator"
-        : "Head of Supervision";
+      actorRole === "SISSO"
+        ? "SISSO"
+        : actorRole === "BASIC_SCHOOL_COORDINATOR"
+          ? "Basic School Coordinator"
+          : "Head of Supervision";
     const selectedCircuit = selectableCircuits.find(
       (circuit) => circuit.circuitId === selectedCircuitId,
     );
@@ -2113,26 +2290,35 @@ export default function HeadteacherSupervisoryAssessmentClient({
     const hosNewOrActiveItems =
       usesCompactOwnHeadteacherLanding
         ? (queue?.items.filter(
-            (item) =>
-              item.supervisory.state === "NOT_STARTED" ||
-              item.supervisory.state === "IN_PROGRESS",
+            (item) => item.supervisory.state === "IN_PROGRESS",
           ) ?? [])
         : [];
+    const officerNewTargets =
+      usesCompactOwnHeadteacherLanding ? (queue?.directTargets ?? []) : [];
+    const hosNewAvailableCount =
+      hosNewOrActiveItems.length + officerNewTargets.length;
 
-    const hosNewCircuitIds = new Set(
-      hosNewOrActiveItems.map((item) => item.circuitId),
-    );
+    const hosNewCircuitIds = new Set([
+      ...hosNewOrActiveItems.map((item) => item.circuitId),
+      ...officerNewTargets.map((target) => target.circuitId),
+    ]);
     const hosNewCircuits = selectableCircuits.filter((circuit) =>
       hosNewCircuitIds.has(circuit.circuitId),
     );
-    const hosNewSchoolIds = new Set(
-      hosNewOrActiveItems
+    const hosNewSchoolIds = new Set([
+      ...hosNewOrActiveItems
         .filter(
           (item) =>
             !selectedCircuitId || item.circuitId === selectedCircuitId,
         )
         .map((item) => item.schoolId),
-    );
+      ...officerNewTargets
+        .filter(
+          (target) =>
+            !selectedCircuitId || target.circuitId === selectedCircuitId,
+        )
+        .map((target) => target.schoolId),
+    ]);
     const hosNewSchools = queueSchools.filter((school) =>
       hosNewSchoolIds.has(school.schoolId),
     );
@@ -2141,6 +2327,16 @@ export default function HeadteacherSupervisoryAssessmentClient({
         (!selectedCircuitId || item.circuitId === selectedCircuitId) &&
         (!selectedSchoolId || item.schoolId === selectedSchoolId),
     );
+    const hosSelectedDirectTargets = officerNewTargets.filter(
+      (target) =>
+        (!selectedCircuitId || target.circuitId === selectedCircuitId) &&
+        (!selectedSchoolId || target.schoolId === selectedSchoolId),
+    );
+    const officerDirectSelectedTarget = officerDirectTargetFromKey();
+    const officerDirectVisitValidation = validateVisitDetails(
+      dateObserved,
+      visitDetails,
+    );
 
     if (usesCompactOwnHeadteacherLanding) {
       return (
@@ -2148,6 +2344,9 @@ export default function HeadteacherSupervisoryAssessmentClient({
           data-hos-own-headteacher-appraisal-ui="bbc-v2"
           data-bsc-own-headteacher-appraisal-ui={
             actorRole === "BASIC_SCHOOL_COORDINATOR" ? "bbc-v1" : undefined
+          }
+          data-sisso-own-headteacher-appraisal-ui={
+            actorRole === "SISSO" ? "bbc-v1" : undefined
           }
           data-compact-headteacher-appraisal-role={actorRole}
           className="min-h-screen bg-[#070B12] px-4 py-5 text-[#F7F4ED] sm:px-6"
@@ -2274,7 +2473,7 @@ export default function HeadteacherSupervisoryAssessmentClient({
                     </p>
                   </div>
                   <span className="rounded-full border border-fuchsia-200/25 bg-fuchsia-300/10 px-2.5 py-1 text-[11px] font-black text-fuchsia-100">
-                    {hosNewOrActiveItems.length} available
+                    {hosNewAvailableCount} available
                   </span>
                 </div>
                 <p className="mt-3 text-xs font-bold text-fuchsia-100">
@@ -2356,7 +2555,7 @@ export default function HeadteacherSupervisoryAssessmentClient({
                   </p>
                 </div>
 
-                {hosNewOrActiveItems.length === 0 ? (
+                {hosNewAvailableCount === 0 ? (
                   <p className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-slate-300">
                     No new or unfinished Headteacher appraisal is available.
                   </p>
@@ -2374,6 +2573,7 @@ export default function HeadteacherSupervisoryAssessmentClient({
                             onClick={() => {
                               setSelectedCircuitId(circuit.circuitId);
                               setSelectedSchoolId("");
+                              setOfficerDirectTargetKey("");
                             }}
                             className={cx(
                               "w-full rounded-xl border p-3 text-left text-sm font-bold",
@@ -2406,7 +2606,19 @@ export default function HeadteacherSupervisoryAssessmentClient({
                             <button
                               key={`hos-new-school:${school.schoolId}`}
                               type="button"
-                              onClick={() => setSelectedSchoolId(school.schoolId)}
+                              onClick={() => {
+                                setSelectedSchoolId(school.schoolId);
+                                const directMatches = officerNewTargets.filter(
+                                  (target) =>
+                                    target.circuitId === selectedCircuitId &&
+                                    target.schoolId === school.schoolId,
+                                );
+                                setOfficerDirectTargetKey(
+                                  directMatches.length === 1
+                                    ? `${directMatches[0].schoolId}:${directMatches[0].targetUserId}`
+                                    : "",
+                                );
+                              }}
                               className={cx(
                                 "w-full rounded-xl border p-3 text-left",
                                 school.schoolId === selectedSchoolId
@@ -2430,48 +2642,192 @@ export default function HeadteacherSupervisoryAssessmentClient({
 
                 {selectedSchoolId ? (
                   <div className="mt-3 space-y-2">
-                    {hosSelectedNewItems.length === 0 ? (
+                    {hosSelectedNewItems.length === 0 &&
+                    hosSelectedDirectTargets.length === 0 ? (
                       <p className="rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-slate-300">
                         Choose a school with new or unfinished work.
                       </p>
                     ) : (
-                      hosSelectedNewItems.map((item) => (
-                        <article
-                          key={`hos-new-item:${item.cycleId}:${item.supervisory.assessmentId ?? "none"}`}
-                          className="rounded-xl border border-white/10 bg-black/25 p-3"
-                        >
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <div>
+                      <>
+                        {hosSelectedNewItems.map((item) => (
+                          <article
+                            key={`hos-new-item:${item.cycleId}:${item.supervisory.assessmentId ?? "none"}`}
+                            className="rounded-xl border border-sky-300/20 bg-sky-400/[0.07] p-3"
+                          >
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
+                                <p className="font-black text-white">
+                                  {item.targetName || "Headteacher"}
+                                </p>
+                                <p className="mt-1 text-sm text-slate-300">
+                                  {item.schoolName}
+                                </p>
+                                <p className="mt-1 text-xs font-semibold text-sky-200">
+                                  Draft {item.supervisory.completionPercentage}% complete
+                                </p>
+                              </div>
+                              {item.action.enabled && item.action.url ? (
+                                <a
+                                  href={item.action.url}
+                                  className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-sky-300 px-4 text-sm font-black text-slate-950 sm:w-auto"
+                                >
+                                  Continue assessment
+                                </a>
+                              ) : (
+                                <span className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-bold text-slate-400">
+                                  {item.action.label}
+                                </span>
+                              )}
+                            </div>
+                          </article>
+                        ))}
+
+                        {hosSelectedDirectTargets.map((target) => {
+                          const targetKey = `${target.schoolId}:${target.targetUserId}`;
+                          const selected =
+                            officerDirectTargetKey === targetKey;
+                          return (
+                            <button
+                              key={`officer-direct-target:${targetKey}`}
+                              type="button"
+                              onClick={() => {
+                                setOfficerDirectTargetKey(targetKey);
+                                setError("");
+                              }}
+                              className={cx(
+                                "w-full rounded-xl border p-3 text-left",
+                                selected
+                                  ? "border-fuchsia-200/45 bg-fuchsia-300/15"
+                                  : "border-white/10 bg-black/25",
+                              )}
+                            >
                               <p className="font-black text-white">
-                                {item.targetName || "Headteacher"}
+                                {target.targetName || "Headteacher"}
                               </p>
                               <p className="mt-1 text-sm text-slate-300">
-                                {item.schoolName}
+                                {target.schoolName} · {target.circuitName}
                               </p>
                               <p className="mt-1 text-xs font-semibold text-fuchsia-200">
-                                {item.supervisory.state === "IN_PROGRESS"
-                                  ? `Draft ${item.supervisory.completionPercentage}% complete`
-                                  : "Ready to start"}
+                                {selected
+                                  ? "Selected for a new Governance appraisal"
+                                  : "Ready for a new Governance appraisal"}
                               </p>
-                            </div>
-                            {item.action.enabled && item.action.url ? (
-                              <a
-                                href={item.action.url}
-                                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-fuchsia-300 px-4 text-sm font-black text-slate-950 sm:w-auto"
-                              >
-                                {item.supervisory.state === "IN_PROGRESS"
-                                  ? "Continue assessment"
-                                  : "Start assessment"}
-                              </a>
-                            ) : (
-                              <span className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-bold text-slate-400">
-                                {item.action.label}
-                              </span>
-                            )}
-                          </div>
-                        </article>
-                      ))
+                            </button>
+                          );
+                        })}
+                      </>
                     )}
+
+                    {officerDirectSelectedTarget ? (
+                      <div
+                        data-officer-governance-direct-start="independent-v1"
+                        className="rounded-xl border border-fuchsia-300/20 bg-black/25 p-3"
+                      >
+                        <p className="text-xs font-black uppercase tracking-[0.12em] text-fuchsia-200">
+                          Visit details
+                        </p>
+                        <p
+                          data-officer-governance-server-recheck="selected-target"
+                          className="mt-1 text-xs leading-5 text-slate-400"
+                        >
+                          EduLife OS will check your current assignment, circuit or district, school and Headteacher again before starting.
+                        </p>
+
+                        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                          <label className="text-[11px] font-bold text-slate-300">
+                            Date
+                            <input
+                              type="date"
+                              value={dateObserved}
+                              max={today()}
+                              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                                setDateObserved(event.target.value);
+                                setError("");
+                              }}
+                              className="mt-1 min-h-10 w-full rounded-lg border border-white/10 bg-[#0B1220] px-2 text-sm text-white"
+                            />
+                          </label>
+
+                          <label className="text-[11px] font-bold text-slate-300">
+                            Arrival time
+                            <input
+                              type="time"
+                              value={visitDetails.arrivalTime}
+                              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                                updateVisitDetail("arrivalTime", event.target.value)
+                              }
+                              className="mt-1 min-h-10 w-full rounded-lg border border-white/10 bg-[#0B1220] px-2 text-sm text-white"
+                            />
+                          </label>
+
+                          {[
+                            ["staffStrength", "Staff strength"],
+                            ["teachersPresentAtVisit", "Teachers present"],
+                            ["totalEnrolment", "Total enrolment"],
+                            ["girls", "Girls"],
+                            ["boys", "Boys"],
+                          ].map(([field, label]) => (
+                            <label
+                              key={`officer-visit:${field}`}
+                              className="text-[11px] font-bold text-slate-300"
+                            >
+                              {label}
+                              <input
+                                type="number"
+                                min="0"
+                                step="1"
+                                inputMode="numeric"
+                                value={
+                                  visitDetails[
+                                    field as keyof Omit<
+                                      VisitDetailsDraft,
+                                      "arrivalTime"
+                                    >
+                                  ]
+                                }
+                                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                                  updateVisitDetail(
+                                    field as keyof VisitDetailsDraft,
+                                    event.target.value,
+                                  )
+                                }
+                                className="mt-1 min-h-10 w-full rounded-lg border border-white/10 bg-[#0B1220] px-2 text-sm text-white"
+                              />
+                            </label>
+                          ))}
+                        </div>
+
+                        <p
+                          className={cx(
+                            "mt-2 rounded-lg border px-2.5 py-2 text-[11px] leading-4",
+                            officerDirectVisitValidation.ok
+                              ? "border-emerald-300/20 bg-emerald-400/[0.06] text-emerald-100"
+                              : "border-amber-300/20 bg-amber-400/[0.06] text-amber-100",
+                          )}
+                        >
+                          {officerDirectVisitValidation.ok
+                            ? "Visit details are ready."
+                            : officerDirectVisitValidation.message}
+                        </p>
+
+                        <button
+                          type="button"
+                          disabled={
+                            officerDirectStarting ||
+                            !officerDirectVisitValidation.ok
+                          }
+                          onClick={() => void startOfficerDirectAssessment()}
+                          className="mt-2 min-h-11 w-full rounded-lg border border-fuchsia-200/30 bg-fuchsia-300 px-3 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {officerDirectStarting
+                            ? "Starting assessment…"
+                            : "Start official assessment"}
+                        </button>
+                        <p className="mt-1.5 text-[10px] leading-4 text-slate-500">
+                          No staff-feedback exercise is opened. No respondents are invited. This starts only your official Governance assessment.
+                        </p>
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
               </section>
@@ -2791,7 +3147,7 @@ export default function HeadteacherSupervisoryAssessmentClient({
                   Review and release locked assessments
                 </h2>
                 <p className="mt-1 text-sm leading-5 text-slate-300">
-                  View the locked native form, then release a Director-authored Governance result to the Headteacher.
+                  Opening a submitted assessment shows the native white read-only form, not the questionnaire.
                 </p>
 
                 <div className="mt-3 space-y-2">
@@ -2830,7 +3186,7 @@ export default function HeadteacherSupervisoryAssessmentClient({
                               )}`}
                               className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-emerald-200/25 bg-emerald-300 px-4 text-sm font-black text-slate-950 hover:bg-emerald-200 sm:w-auto"
                             >
-                              View
+                              View submitted assessment
                             </a>
                             {item.release.canDirectRelease ? (
                               <button

@@ -17,6 +17,7 @@ export const HEADTEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY = {
   reviewerRole: "HEAD_OF_SUPERVISION",
   requiredCapability: "REVIEW_HEADTEACHER_APPRAISAL",
   eligibleAssessorRoles: ["SISSO", "BASIC_SCHOOL_COORDINATOR"] as const,
+  officerGovernanceCarrierKind: "OFFICER_GOVERNANCE_ONLY",
   requiredAssessmentStatus: "FINALIZED",
   requiredCycleStatus: "CLOSED",
   requiredReviewCount: 0,
@@ -147,6 +148,7 @@ type CandidateAssessmentRecord = {
   };
   cycle: {
     id: string;
+    instrumentVersionId: string;
     scopeZoneId: string;
     targetUserId: string;
     targetTenantId: string | null;
@@ -156,12 +158,17 @@ type CandidateAssessmentRecord = {
     targetZoneNameSnapshot: string | null;
     targetRoleSnapshot: string | null;
     status: string;
+    responseWindowDays: number;
+    minimumResponses: number;
+    requestedByUserId: string;
     openedAt: Date | null;
+    deadlineAt: Date | null;
     closedAt: Date | null;
     reviewStartedAt: Date | null;
     releasedAt: Date | null;
     cancelledAt: Date | null;
     metadata: unknown;
+    _count: { participants: number };
     scopeZone: {
       id: string;
       name: string;
@@ -370,8 +377,49 @@ function parseVisitContext(record: CandidateAssessmentRecord): VisitContext | nu
   return context;
 }
 
+function validReviewCarrier(record: CandidateAssessmentRecord) {
+  const metadata = objectValue(record.cycle.metadata);
+  const context = objectValue(record.evidenceSnapshotJson) as VisitContext;
+  const assessorRole = canonicalHeadteacherSupervisoryAssessorRole(
+    context.assessor?.role,
+  );
+
+  const legacyStaffFeedbackCarrier =
+    clean(metadata.workflow) === HEADTEACHER_FEEDBACK_POLICY.workflow;
+
+  const officerGovernanceCarrier =
+    clean(metadata.workflow) ===
+      HEADTEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY.workflow &&
+    clean(metadata.evidenceStream) ===
+      HEADTEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY.evidenceStream &&
+    clean(metadata.carrierKind) ===
+      HEADTEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY.officerGovernanceCarrierKind &&
+    clean(metadata.assessorUserId) === record.assessorUserId &&
+    clean(metadata.assessorAssignmentId) === clean(record.assessorAssignmentId) &&
+    canonicalHeadteacherSupervisoryAssessorRole(metadata.assessorRole) ===
+      assessorRole &&
+    HEADTEACHER_SUPERVISORY_REVIEW_QUEUE_POLICY.eligibleAssessorRoles.includes(
+      assessorRole as HeadteacherSupervisoryReviewOriginRole,
+    ) &&
+    record.cycle.instrumentVersionId === record.instrumentVersion.id &&
+    record.cycle.requestedByUserId === record.assessorUserId &&
+    record.cycle.responseWindowDays === 0 &&
+    record.cycle.minimumResponses === 0 &&
+    record.cycle.deadlineAt === null &&
+    record.cycle._count.participants === 0 &&
+    metadata.respondentWorkflow === false &&
+    clean(metadata.participantSelection) === "NONE" &&
+    metadata.closedWithoutRespondents === true &&
+    metadata.staffFeedbackRequired === false &&
+    metadata.staffFeedbackAccessed === false &&
+    metadata.separateFromStaffFeedback === true &&
+    metadata.combinedWeightingDefined === false &&
+    metadata.providerCalled === false;
+
+  return legacyStaffFeedbackCarrier || officerGovernanceCarrier;
+}
+
 function commonAssessmentContract(record: CandidateAssessmentRecord) {
-  const cycleMetadata = objectValue(record.cycle.metadata);
   const assessmentMetadata = objectValue(record.metadata);
 
   return Boolean(
@@ -399,7 +447,7 @@ function commonAssessmentContract(record: CandidateAssessmentRecord) {
       !record.cycle.releasedAt &&
       !record.cycle.cancelledAt &&
       normalized(record.cycle.targetRoleSnapshot) === "HEADTEACHER" &&
-      clean(cycleMetadata.workflow) === HEADTEACHER_FEEDBACK_POLICY.workflow &&
+      validReviewCarrier(record) &&
       record._count.reviews === 0 &&
       record.reviews.length === 0 &&
       record.instrumentVersion.version ===
@@ -430,6 +478,7 @@ function activeReviewForActor(
     !record.cycle.reviewStartedAt ||
     record.cycle.releasedAt ||
     record.cycle.cancelledAt ||
+    !validReviewCarrier(record) ||
     record.reviews.length !== 1 ||
     record._count.reviews !== 1
   ) {
@@ -669,6 +718,7 @@ export async function readHeadteacherSupervisoryReviewQueue(
       cycle: {
         select: {
           id: true,
+          instrumentVersionId: true,
           scopeZoneId: true,
           targetUserId: true,
           targetTenantId: true,
@@ -678,12 +728,17 @@ export async function readHeadteacherSupervisoryReviewQueue(
           targetZoneNameSnapshot: true,
           targetRoleSnapshot: true,
           status: true,
+          responseWindowDays: true,
+          minimumResponses: true,
+          requestedByUserId: true,
           openedAt: true,
+          deadlineAt: true,
           closedAt: true,
           reviewStartedAt: true,
           releasedAt: true,
           cancelledAt: true,
           metadata: true,
+          _count: { select: { participants: true } },
           scopeZone: {
             select: {
               id: true,
@@ -779,6 +834,7 @@ export async function readHeadteacherSupervisoryReviewQueue(
       cycle: {
         select: {
           id: true,
+          instrumentVersionId: true,
           scopeZoneId: true,
           targetUserId: true,
           targetTenantId: true,
@@ -788,12 +844,17 @@ export async function readHeadteacherSupervisoryReviewQueue(
           targetZoneNameSnapshot: true,
           targetRoleSnapshot: true,
           status: true,
+          responseWindowDays: true,
+          minimumResponses: true,
+          requestedByUserId: true,
           openedAt: true,
+          deadlineAt: true,
           closedAt: true,
           reviewStartedAt: true,
           releasedAt: true,
           cancelledAt: true,
           metadata: true,
+          _count: { select: { participants: true } },
           scopeZone: {
             select: {
               id: true,

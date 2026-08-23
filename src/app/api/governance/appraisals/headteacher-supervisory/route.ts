@@ -1,6 +1,9 @@
 // src/app/api/governance/appraisals/headteacher-supervisory/route.ts
 import { NextRequest } from "next/server";
 import { createHeadteacherSupervisoryAssessmentDraft } from "@/lib/appraisals/headteacherSupervisoryAssessmentDraft";
+import {
+  canonicalHeadteacherSupervisoryAssessorRole,
+} from "@/lib/appraisals/headteacherSupervisoryAssessment";
 import { readHeadteacherSupervisoryAssessmentQueue } from "@/lib/appraisals/headteacherSupervisoryAssessmentQueue";
 import { normalizeHeadteacherSupervisoryVisitDetails } from "@/lib/appraisals/headteacherSupervisoryVisitDetails";
 import {
@@ -39,6 +42,15 @@ function submittedServerResolvedTargetField(
     }
   }
   return null;
+}
+
+function requiresIndependentOfficerStart(roleName: unknown) {
+  const actorRole = canonicalHeadteacherSupervisoryAssessorRole(roleName);
+  return (
+    actorRole === "SISSO" ||
+    actorRole === "BASIC_SCHOOL_COORDINATOR" ||
+    actorRole === "HEAD_OF_SUPERVISION"
+  );
 }
 
 export async function GET(req: NextRequest) {
@@ -84,6 +96,26 @@ export async function POST(req: NextRequest) {
         ok: false,
         reqId: meta.reqId,
         error: auth.res.status === 401 ? "UNAUTHORIZED" : "FORBIDDEN",
+      });
+    }
+
+    // SISSO/BSC/HOS Headteacher Governance appraisal is now independent from
+    // the confidential Staff Feedback carrier. Keep this legacy cycle-backed
+    // POST only for untouched compatibility paths; current officers must use
+    // the server-resolved /direct start path.
+    if (requiresIndependentOfficerStart(auth.ctx.roleName)) {
+      const actorRole = canonicalHeadteacherSupervisoryAssessorRole(
+        auth.ctx.roleName,
+      );
+      return jsonNoStore(409, {
+        ok: false,
+        reqId: meta.reqId,
+        error: "HEADTEACHER_SUPERVISORY_OFFICER_INDEPENDENT_START_REQUIRED",
+        details: {
+          actorRole,
+          reason:
+            "SISSO_BSC_AND_HOS_GOVERNANCE_ASSESSMENTS_MUST_NOT_DEPEND_ON_A_STAFF_FEEDBACK_CYCLE",
+        },
       });
     }
 

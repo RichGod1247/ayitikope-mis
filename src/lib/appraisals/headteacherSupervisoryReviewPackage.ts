@@ -20,6 +20,7 @@ export const HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY = {
   evidenceStream: "GOVERNANCE_SUPERVISORY_ASSESSMENT",
   requiredCapability: "REVIEW_HEADTEACHER_APPRAISAL",
   eligibleAssessorRoles: ["SISSO", "BASIC_SCHOOL_COORDINATOR"] as const,
+  officerGovernanceCarrierKind: "OFFICER_GOVERNANCE_ONLY",
   requiredAssessmentStatus: "FINALIZED",
   requiredCycleStatus: "CLOSED",
   requiredReviewCount: 0,
@@ -223,12 +224,17 @@ type AssessmentRecord = {
     targetZoneId: string | null;
     targetRoleSnapshot: string | null;
     status: string;
+    responseWindowDays: number;
+    minimumResponses: number;
+    requestedByUserId: string;
     openedAt: Date | null;
+    deadlineAt: Date | null;
     closedAt: Date | null;
     reviewStartedAt: Date | null;
     releasedAt: Date | null;
     cancelledAt: Date | null;
     metadata: unknown;
+    _count: { participants: number };
     instrumentVersion: {
       id: string;
       version: number;
@@ -547,8 +553,63 @@ function resolveReviewerAssignment(input: {
 function resolveLifecycle(record: AssessmentRecord) {
   const cycle = record.cycle;
   const metadata = objectValue(cycle.metadata);
-  const staffVersion = cycle.instrumentVersion;
+  const carrierVersion = cycle.instrumentVersion;
   const cycleStatus = normalized(cycle.status);
+  const carrierInstrument = carrierVersion.instrument;
+  const evidenceContext = objectValue(record.evidenceSnapshotJson) as VisitContext;
+  const assessorRole = canonicalHeadteacherSupervisoryAssessorRole(
+    evidenceContext.assessor?.role,
+  );
+
+  const legacyStaffFeedbackCarrier =
+    clean(metadata.workflow) === HEADTEACHER_FEEDBACK_POLICY.workflow &&
+    cycle.instrumentVersionId === carrierVersion.id &&
+    carrierVersion.version === HEADTEACHER_FEEDBACK_POLICY.instrumentVersion &&
+    normalized(carrierVersion.status) === "ACTIVE" &&
+    carrierInstrument.code === HEADTEACHER_FEEDBACK_POLICY.instrumentCode &&
+    carrierInstrument.purpose === "HEADTEACHER_STAFF_FEEDBACK" &&
+    carrierInstrument.subjectType === "HEADTEACHER" &&
+    carrierInstrument.isActive === true &&
+    isSha256(carrierVersion.contentHash);
+
+  const officerGovernanceCarrier =
+    clean(metadata.workflow) ===
+      HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.workflow &&
+    clean(metadata.evidenceStream) ===
+      HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.evidenceStream &&
+    clean(metadata.carrierKind) ===
+      HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.officerGovernanceCarrierKind &&
+    clean(metadata.assessorUserId) === record.assessorUserId &&
+    clean(metadata.assessorAssignmentId) === clean(record.assessorAssignmentId) &&
+    canonicalHeadteacherSupervisoryAssessorRole(metadata.assessorRole) ===
+      assessorRole &&
+    HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_POLICY.eligibleAssessorRoles.includes(
+      assessorRole as "SISSO" | "BASIC_SCHOOL_COORDINATOR",
+    ) &&
+    cycle.requestedByUserId === record.assessorUserId &&
+    cycle.instrumentVersionId === record.instrumentVersionId &&
+    carrierVersion.id === record.instrumentVersionId &&
+    carrierVersion.version ===
+      HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.instrumentVersion &&
+    normalized(carrierVersion.status) === "ACTIVE" &&
+    carrierInstrument.code ===
+      HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.instrumentCode &&
+    carrierInstrument.purpose === "HEADTEACHER_SUPERVISORY_ASSESSMENT" &&
+    carrierInstrument.subjectType === "HEADTEACHER" &&
+    carrierInstrument.isActive === true &&
+    isSha256(carrierVersion.contentHash) &&
+    cycle.responseWindowDays === 0 &&
+    cycle.minimumResponses === 0 &&
+    cycle.deadlineAt === null &&
+    cycle._count.participants === 0 &&
+    metadata.respondentWorkflow === false &&
+    clean(metadata.participantSelection) === "NONE" &&
+    metadata.closedWithoutRespondents === true &&
+    metadata.staffFeedbackRequired === false &&
+    metadata.staffFeedbackAccessed === false &&
+    metadata.separateFromStaffFeedback === true &&
+    metadata.combinedWeightingDefined === false &&
+    metadata.providerCalled === false;
 
   const commonValid =
     cycle.id === record.cycleId &&
@@ -557,18 +618,10 @@ function resolveLifecycle(record: AssessmentRecord) {
     !cycle.releasedAt &&
     !cycle.cancelledAt &&
     normalized(cycle.targetRoleSnapshot) === "HEADTEACHER" &&
-    clean(metadata.workflow) === HEADTEACHER_FEEDBACK_POLICY.workflow &&
     Boolean(clean(cycle.targetTenantId)) &&
     Boolean(clean(cycle.targetZoneId)) &&
     Boolean(clean(cycle.scopeZoneId)) &&
-    cycle.instrumentVersionId === staffVersion.id &&
-    staffVersion.version === HEADTEACHER_FEEDBACK_POLICY.instrumentVersion &&
-    normalized(staffVersion.status) === "ACTIVE" &&
-    staffVersion.instrument.code === HEADTEACHER_FEEDBACK_POLICY.instrumentCode &&
-    staffVersion.instrument.purpose === "HEADTEACHER_STAFF_FEEDBACK" &&
-    staffVersion.instrument.subjectType === "HEADTEACHER" &&
-    staffVersion.instrument.isActive === true &&
-    isSha256(staffVersion.contentHash);
+    (legacyStaffFeedbackCarrier || officerGovernanceCarrier);
 
   if (!commonValid) {
     fail("HEADTEACHER_SUPERVISORY_REVIEW_PACKAGE_CYCLE_CONTRACT_INVALID", 409, {
@@ -1295,12 +1348,17 @@ export async function readHeadteacherSupervisoryReviewPackage(
           targetZoneId: true,
           targetRoleSnapshot: true,
           status: true,
+          responseWindowDays: true,
+          minimumResponses: true,
+          requestedByUserId: true,
           openedAt: true,
+          deadlineAt: true,
           closedAt: true,
           reviewStartedAt: true,
           releasedAt: true,
           cancelledAt: true,
           metadata: true,
+          _count: { select: { participants: true } },
           instrumentVersion: {
             select: {
               id: true,

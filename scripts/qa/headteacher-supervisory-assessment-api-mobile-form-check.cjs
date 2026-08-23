@@ -400,9 +400,27 @@ assert(
   "BSC BBC own-assessment landing must reuse the compact HOS task pattern",
 );
 assert(
+  source.client.includes('actorRole === "SISSO"') &&
+    source.client.includes('data-sisso-own-headteacher-appraisal-ui={') &&
+    source.client.includes('? "SISSO"'),
+  "SISSO compact Headteacher appraisal landing missing",
+);
+assert(
   source.client.includes('"Basic School Coordinator"') &&
     source.client.includes("if (usesCompactOwnHeadteacherLanding)"),
   "BSC compact Headteacher appraisal role label or branch missing",
+);
+assert(
+  source.client.includes("queue?.directTargets ?? []") &&
+    source.client.includes(
+      'data-officer-governance-direct-start="independent-v1"',
+    ) &&
+    source.client.includes(
+      '"/api/governance/appraisals/headteacher-supervisory/direct"',
+    ) &&
+    source.client.includes("startOfficerDirectAssessment") &&
+    source.client.includes("No staff-feedback exercise is opened."),
+  "SISSO/BSC/HOS independent Governance start UI missing",
 );
 assert(
   source.client.includes('useState<"RETURNED" | "NEW" | null>(null)'),
@@ -672,8 +690,8 @@ console.log("Finalization                   : explicit confirmation + F3");
 console.log("Correction continuation        : post-finalization return-provenance dispatcher");
 console.log("Continuation retry             : finalization-committed and retry-safe");
 console.log("Returned revision              : explicit confirmation + F4");
-console.log("HOS/BSC returned-work badge    : compact notification count");
-console.log("HOS/BSC task panels            : Returned / New, one open at a time");
+console.log("SISSO/HOS/BSC returned badge  : compact notification count");
+console.log("SISSO/HOS/BSC task panels      : Returned / New, one open at a time");
 console.log("Returned entry                 : Start correction → editable revision");
 console.log("Returned original              : immutable + reason preserved");
 console.log("Revision workspace switch      : stale prior revision cleared");

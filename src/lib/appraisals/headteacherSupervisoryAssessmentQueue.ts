@@ -17,6 +17,12 @@ export const HEADTEACHER_SUPERVISORY_QUEUE_POLICY = {
   parentInstrumentCode: HEADTEACHER_FEEDBACK_POLICY.instrumentCode,
   parentInstrumentVersion: HEADTEACHER_FEEDBACK_POLICY.instrumentVersion,
   directorGovernanceCarrierKind: "DIRECTOR_GOVERNANCE_ONLY",
+  officerGovernanceCarrierKind: "OFFICER_GOVERNANCE_ONLY",
+  officerGovernanceRoles: [
+    "SISSO",
+    "BASIC_SCHOOL_COORDINATOR",
+    "HEAD_OF_SUPERVISION",
+  ] as const,
   directorGovernanceInstrumentCode:
     HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.instrumentCode,
   directorGovernanceInstrumentVersion:
@@ -89,6 +95,17 @@ export type HeadteacherSupervisoryQueueItem = {
   };
 };
 
+export type HeadteacherSupervisoryDirectTarget = {
+  targetUserId: string;
+  targetName: string | null;
+  schoolId: string;
+  schoolName: string;
+  circuitId: string;
+  circuitName: string;
+  districtId: string;
+  districtName: string;
+};
+
 export type HeadteacherSupervisoryQueue = {
   actorRole: string;
   officeLabel: string;
@@ -111,6 +128,7 @@ export type HeadteacherSupervisoryQueue = {
   };
   circuits: HeadteacherSupervisoryQueueCircuit[];
   items: HeadteacherSupervisoryQueueItem[];
+  directTargets: HeadteacherSupervisoryDirectTarget[];
   noBackgroundPolling: true;
   respondentIdentitiesIncluded: false;
   individualStaffResponsesIncluded: false;
@@ -233,6 +251,18 @@ function officeLabel(role: string) {
   }
 }
 
+function displayName(user: {
+  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
+}) {
+  return (
+    clean(user.name) ||
+    [clean(user.firstName), clean(user.lastName)].filter(Boolean).join(" ") ||
+    null
+  );
+}
+
 function canonicalAssignmentRole(assignment: ScopeAssignment) {
   return canonicalHeadteacherSupervisoryAssessorRole(assignment.role);
 }
@@ -284,6 +314,65 @@ function selectionContract(input: {
     assignedCircuitId: assignedCircuit?.zoneId ?? null,
     assignedCircuitName: assignedCircuit?.zoneName ?? null,
   };
+}
+
+function officerGovernanceActorRole(role: string) {
+  return HEADTEACHER_SUPERVISORY_QUEUE_POLICY.officerGovernanceRoles.includes(
+    role as (typeof HEADTEACHER_SUPERVISORY_QUEUE_POLICY.officerGovernanceRoles)[number],
+  );
+}
+
+function actorAssignmentCoversTarget(input: {
+  actorRole: string;
+  assignments: readonly ScopeAssignment[];
+  circuitId: string;
+  districtId: string;
+}) {
+  const expectedLevel =
+    input.actorRole === "SISSO"
+      ? HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.circuitZoneLevel
+      : HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.districtZoneLevel;
+  const expectedZoneId =
+    input.actorRole === "SISSO" ? input.circuitId : input.districtId;
+
+  return input.assignments.some(
+    (assignment) =>
+      canonicalAssignmentRole(assignment) === input.actorRole &&
+      assignment.zoneLevel === expectedLevel &&
+      clean(assignment.zoneId) === expectedZoneId &&
+      clean(assignment.id).length > 0,
+  );
+}
+
+function officerReleaseRecorded(input: {
+  cycleMetadata: unknown;
+  assessment:
+    | {
+        id: string;
+        status: string;
+      }
+    | null;
+}) {
+  if (!input.assessment) return false;
+
+  const releases = objectValue(
+    objectValue(input.cycleMetadata).headteacherSupervisoryReleases,
+  );
+  const release = objectValue(releases[input.assessment.id]);
+
+  return Boolean(
+    normalized(input.assessment.status) === "FINALIZED" &&
+      clean(release.releaseMode) === "DIRECTOR_REVIEWED_GOVERNANCE_RELEASE" &&
+      clean(release.workflow) ===
+        HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.workflow &&
+      clean(release.evidenceStream) ===
+        "GOVERNANCE_SUPERVISORY_ASSESSMENT" &&
+      clean(release.assessmentId) === input.assessment.id &&
+      release.staffFeedbackRequired === false &&
+      release.staffFeedbackAccessed === false &&
+      release.carrierCycleStatusMutationPerformed === false &&
+      /^[a-f0-9]{64}$/i.test(clean(release.releaseProofHash)),
+  );
 }
 
 function staffFeedbackLabel(input: {
@@ -572,6 +661,7 @@ export async function readHeadteacherSupervisoryAssessmentQueue(
     summary: emptySummary(),
     circuits: [],
     items: [],
+    directTargets: [],
     noBackgroundPolling: true,
     respondentIdentitiesIncluded: false,
     individualStaffResponsesIncluded: false,
@@ -604,6 +694,7 @@ export async function readHeadteacherSupervisoryAssessmentQueue(
       deadlineAt: true,
       responseWindowDays: true,
       minimumResponses: true,
+      requestedByUserId: true,
       closedAt: true,
       reviewStartedAt: true,
       releasedAt: true,
@@ -732,8 +823,46 @@ export async function readHeadteacherSupervisoryAssessmentQueue(
         metadata.combinedWeightingDefined === false &&
         metadata.providerCalled === false;
 
+      const officerGovernanceCarrierValid =
+        officerGovernanceActorRole(actorRole) &&
+        clean(metadata.workflow) ===
+          HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.workflow &&
+        clean(metadata.evidenceStream) ===
+          "GOVERNANCE_SUPERVISORY_ASSESSMENT" &&
+        clean(metadata.carrierKind) ===
+          HEADTEACHER_SUPERVISORY_QUEUE_POLICY.officerGovernanceCarrierKind &&
+        clean(metadata.assessorUserId) === actorUserId &&
+        canonicalHeadteacherSupervisoryAssessorRole(metadata.assessorRole) ===
+          actorRole &&
+        clean(metadata.assessorAssignmentId).length > 0 &&
+        cycle.requestedByUserId === actorUserId &&
+        cycle.instrumentVersion.version ===
+          HEADTEACHER_SUPERVISORY_QUEUE_POLICY.directorGovernanceInstrumentVersion &&
+        normalized(cycle.instrumentVersion.status) === "ACTIVE" &&
+        instrument.code ===
+          HEADTEACHER_SUPERVISORY_QUEUE_POLICY.directorGovernanceInstrumentCode &&
+        instrument.purpose === "HEADTEACHER_SUPERVISORY_ASSESSMENT" &&
+        instrument.subjectType === "HEADTEACHER" &&
+        instrument.isActive === true &&
+        cycle.responseWindowDays === 0 &&
+        cycle.minimumResponses === 0 &&
+        cycle.deadlineAt === null &&
+        Boolean(cycle.openedAt) &&
+        Boolean(cycle.closedAt) &&
+        cycle._count.participants === 0 &&
+        metadata.respondentWorkflow === false &&
+        clean(metadata.participantSelection) === "NONE" &&
+        metadata.closedWithoutRespondents === true &&
+        metadata.staffFeedbackRequired === false &&
+        metadata.staffFeedbackAccessed === false &&
+        metadata.separateFromStaffFeedback === true &&
+        metadata.combinedWeightingDefined === false &&
+        metadata.providerCalled === false;
+
       const contractValid =
-        staffCarrierValid || directorGovernanceCarrierValid;
+        staffCarrierValid ||
+        directorGovernanceCarrierValid ||
+        officerGovernanceCarrierValid;
 
       const hierarchyValid =
         Boolean(
@@ -766,7 +895,18 @@ export async function readHeadteacherSupervisoryAssessmentQueue(
         cycle.assessments[0] ??
         null;
 
-      if (directorGovernanceCarrierValid && !assessment) {
+      if (
+        (directorGovernanceCarrierValid || officerGovernanceCarrierValid) &&
+        !assessment
+      ) {
+        return [];
+      }
+
+      if (
+        officerGovernanceActorRole(actorRole) &&
+        staffCarrierValid &&
+        !assessment
+      ) {
         return [];
       }
 
@@ -803,9 +943,10 @@ export async function readHeadteacherSupervisoryAssessmentQueue(
           circuitName,
           districtId,
           districtName,
-          staffFeedbackLabel: directorGovernanceCarrierValid
-            ? "Independent Governance assessment"
-            : staffFeedbackLabel({
+          staffFeedbackLabel:
+            directorGovernanceCarrierValid || officerGovernanceCarrierValid
+              ? "Independent Governance assessment"
+              : staffFeedbackLabel({
                 cycleStatus,
                 aggregateReady: cycle.aggregates.length === 1,
               }),
@@ -815,6 +956,191 @@ export async function readHeadteacherSupervisoryAssessmentQueue(
       ];
     },
   );
+
+  const directTargets: HeadteacherSupervisoryDirectTarget[] = [];
+
+  if (officerGovernanceActorRole(actorRole)) {
+    const blockedTargetKeys = new Set<string>();
+
+    for (const cycle of cycles) {
+      const metadata = objectValue(cycle.metadata);
+      const instrument = cycle.instrumentVersion.instrument;
+      const assessment =
+        cycle.assessments.find(
+          (row) => normalized(row.status) !== "SUPERSEDED",
+        ) ??
+        cycle.assessments[0] ??
+        null;
+
+      const officerCarrier =
+        clean(metadata.workflow) ===
+          HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.workflow &&
+        clean(metadata.evidenceStream) ===
+          "GOVERNANCE_SUPERVISORY_ASSESSMENT" &&
+        clean(metadata.carrierKind) ===
+          HEADTEACHER_SUPERVISORY_QUEUE_POLICY.officerGovernanceCarrierKind &&
+        clean(metadata.assessorUserId) === actorUserId &&
+        canonicalHeadteacherSupervisoryAssessorRole(metadata.assessorRole) ===
+          actorRole &&
+        clean(metadata.assessorAssignmentId).length > 0 &&
+        cycle.requestedByUserId === actorUserId &&
+        cycle.instrumentVersion.version ===
+          HEADTEACHER_SUPERVISORY_QUEUE_POLICY.directorGovernanceInstrumentVersion &&
+        normalized(cycle.instrumentVersion.status) === "ACTIVE" &&
+        instrument.code ===
+          HEADTEACHER_SUPERVISORY_QUEUE_POLICY.directorGovernanceInstrumentCode &&
+        instrument.purpose === "HEADTEACHER_SUPERVISORY_ASSESSMENT" &&
+        instrument.subjectType === "HEADTEACHER" &&
+        instrument.isActive === true &&
+        cycle.responseWindowDays === 0 &&
+        cycle.minimumResponses === 0 &&
+        cycle.deadlineAt === null &&
+        Boolean(cycle.openedAt) &&
+        Boolean(cycle.closedAt) &&
+        cycle._count.participants === 0 &&
+        metadata.respondentWorkflow === false &&
+        clean(metadata.participantSelection) === "NONE" &&
+        metadata.closedWithoutRespondents === true &&
+        metadata.staffFeedbackRequired === false &&
+        metadata.staffFeedbackAccessed === false &&
+        metadata.separateFromStaffFeedback === true &&
+        metadata.combinedWeightingDefined === false &&
+        metadata.providerCalled === false;
+
+      const legacyAssessmentCarrier =
+        clean(metadata.workflow) === HEADTEACHER_FEEDBACK_POLICY.workflow &&
+        assessment != null;
+      const assessmentStatus = normalized(assessment?.status);
+      const unresolvedAssessment =
+        assessment != null &&
+        ["DRAFT", "RETURNED", "FINALIZED"].includes(assessmentStatus);
+      const releasedGovernanceAssessment = officerReleaseRecorded({
+        cycleMetadata: cycle.metadata,
+        assessment,
+      });
+
+      if (
+        (officerCarrier || legacyAssessmentCarrier) &&
+        unresolvedAssessment &&
+        !releasedGovernanceAssessment
+      ) {
+        blockedTargetKeys.add(
+          `${clean(cycle.targetTenantId)}:${clean(cycle.targetUserId)}`,
+        );
+      }
+    }
+
+    const memberships = await prisma.membership.findMany({
+      where: {
+        tenantId: { in: tenantIds },
+        status: "ACTIVE",
+        role: {
+          name: {
+            equals: "HEADTEACHER",
+            mode: "insensitive",
+          },
+        },
+        tenant: { status: "ACTIVE" },
+      },
+      select: {
+        id: true,
+        userId: true,
+        tenantId: true,
+        status: true,
+        role: { select: { name: true } },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        tenant: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+            zone: {
+              select: {
+                id: true,
+                name: true,
+                isActive: true,
+                parentZoneId: true,
+                zoneType: { select: { level: true } },
+                parentZone: {
+                  select: {
+                    id: true,
+                    name: true,
+                    isActive: true,
+                    zoneType: { select: { level: true } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      take: 200,
+    });
+
+    const seen = new Set<string>();
+
+    for (const membership of memberships) {
+      const circuit = membership.tenant.zone;
+      const district = circuit?.parentZone;
+      const targetKey = `${membership.tenantId}:${membership.userId}`;
+
+      if (
+        membership.user.id !== membership.userId ||
+        membership.tenant.id !== membership.tenantId ||
+        normalized(membership.status) !== "ACTIVE" ||
+        normalized(membership.role.name) !== "HEADTEACHER" ||
+        normalized(membership.tenant.status) !== "ACTIVE" ||
+        !circuit ||
+        circuit.isActive !== true ||
+        circuit.zoneType.level !==
+          HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.circuitZoneLevel ||
+        !district ||
+        district.isActive !== true ||
+        district.zoneType.level !==
+          HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.districtZoneLevel ||
+        circuit.parentZoneId !== district.id ||
+        blockedTargetKeys.has(targetKey) ||
+        seen.has(targetKey) ||
+        (!input.governanceScope.isSuperAdmin &&
+          !scopedZoneIds.has(circuit.id) &&
+          !scopedZoneIds.has(district.id)) ||
+        !actorAssignmentCoversTarget({
+          actorRole,
+          assignments: input.governanceScope.assignments,
+          circuitId: circuit.id,
+          districtId: district.id,
+        })
+      ) {
+        continue;
+      }
+
+      seen.add(targetKey);
+      directTargets.push({
+        targetUserId: membership.userId,
+        targetName: displayName(membership.user),
+        schoolId: membership.tenantId,
+        schoolName: membership.tenant.name,
+        circuitId: circuit.id,
+        circuitName: circuit.name,
+        districtId: district.id,
+        districtName: district.name,
+      });
+    }
+
+    directTargets.sort(
+      (left, right) =>
+        left.circuitName.localeCompare(right.circuitName) ||
+        left.schoolName.localeCompare(right.schoolName) ||
+        (left.targetName ?? "").localeCompare(right.targetName ?? ""),
+    );
+  }
 
   const priority: Record<HeadteacherSupervisoryQueueState, number> = {
     RETURNED: 0,
@@ -859,6 +1185,7 @@ export async function readHeadteacherSupervisoryAssessmentQueue(
     summary: buildSummary(items),
     circuits: buildCircuits(items),
     items,
+    directTargets,
     noBackgroundPolling: true,
     respondentIdentitiesIncluded: false,
     individualStaffResponsesIncluded: false,
