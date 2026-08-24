@@ -1,575 +1,260 @@
-// src/app/headteacher/consent/page.tsx
-'use client'
+"use client";
 
-import React, { useEffect, useState } from 'react'
-import Link from 'next/link'
+import { useEffect, useMemo, useState } from "react";
+
+const STATUS_LABEL: Record<string, string> = {
+  NOT_ENROLLED: "Not enrolled",
+  INVITED: "Invitation sent",
+  ENROLLED: "Enabled",
+  OPTED_OUT: "Stopped by recipient",
+};
+
+type Enrollment = {
+  status: "NOT_ENROLLED" | "INVITED" | "ENROLLED" | "OPTED_OUT";
+  policyVersion: number | null;
+  consentedAt: string | null;
+  optedOutAt: string | null;
+  lastInvitationSentAt: string | null;
+  invitationCount: number;
+};
 
 type StudentRow = {
-  id: string
-  firstName: string
-  lastName: string
-  guardianName: string | null
-  guardianPhone: string | null
-  healthConsentAt: string | null
-  smsOptIn: boolean
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  guardianName: string | null;
+  guardianPhone: string | null;
+  phoneAvailable: boolean;
+  classroom: { name: string | null; grade: string | null; arm: string | null } | null;
+  essentialAlerts: Enrollment;
+};
+
+type StaffRow = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  role: string;
+  phoneAvailable: boolean;
+  essentialAlerts: Enrollment;
+};
+
+type Audience = "GUARDIANS" | "STAFF";
+
+function statusClasses(status: Enrollment["status"]) {
+  if (status === "ENROLLED") return "border-emerald-200 bg-emerald-50 text-emerald-800";
+  if (status === "OPTED_OUT") return "border-zinc-200 bg-zinc-50 text-zinc-700";
+  if (status === "INVITED") return "border-amber-200 bg-amber-50 text-amber-800";
+  return "border-slate-200 bg-slate-50 text-slate-700";
 }
 
-type TeacherRow = {
-  id: string
-  name: string | null
-  email: string | null
-  smsOptIn: boolean
-}
 
-type Me = {
-  ok: boolean
-  userId: string | null
-  email: string | null
-  name: string | null
-  tenantId?: string | null
-  activeTenantId?: string | null
-  tenant?: { id?: string; name?: string; slug?: string | null } | null
-  user?: { tenantId?: string | null; activeTenantId?: string | null } | null
-  membership?: { tenantId?: string | null; tenant?: { id?: string; name?: string; slug?: string | null } | null } | null
-  memberships?: Array<{ tenantId?: string | null; tenant?: { id?: string; name?: string; slug?: string | null } | null }> | null
-}
-
-type BrandName = 'EDULIFEOS' | 'AYITIKOPJHS' | 'AYITIKPRIM'
-
-type Toast = { id: number; text: string; tone?: 'default' | 'success' | 'error' }
-
-function cx(...classes: (string | undefined | false)[]) {
-  return classes.filter(Boolean).join(' ')
-}
-
-function pickTenantFromMe(me: Me | null): { id: string; name?: string; slug?: string | null } | null {
-  if (!me) return null
-
-  const tid =
-    me.tenantId ??
-    me.activeTenantId ??
-    me.tenant?.id ??
-    me.user?.tenantId ??
-    me.user?.activeTenantId ??
-    me.membership?.tenantId ??
-    me.membership?.tenant?.id ??
-    (Array.isArray(me.memberships) ? me.memberships[0]?.tenantId || me.memberships[0]?.tenant?.id : null)
-
-  if (!tid || typeof tid !== 'string' || !tid.trim()) return null
-
-  const name =
-    me.tenant?.name ??
-    me.membership?.tenant?.name ??
-    (Array.isArray(me.memberships) ? me.memberships[0]?.tenant?.name : null) ??
-    undefined
-
-  const slug =
-    me.tenant?.slug ??
-    me.membership?.tenant?.slug ??
-    (Array.isArray(me.memberships) ? me.memberships[0]?.tenant?.slug : null) ??
-    null
-
-  return { id: tid.trim(), name, slug }
-}
-
-function normalizeConsentBrand(raw: unknown): BrandName {
-  const v = String(raw ?? '').trim().toUpperCase().replace(/\s+/g, '')
-  if (v === 'AYITIKOPJHS') return 'AYITIKOPJHS'
-  if (v === 'AYITIKPRIM') return 'AYITIKPRIM'
-  return 'EDULIFEOS'
-}
-
-function ToastHost({ items, remove }: { items: Toast[]; remove: (id: number) => void }) {
-  return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
-      {items.map((t) => (
-        <div
-          key={t.id}
-          className={cx(
-            'rounded-xl px-4 py-3 shadow-md border text-sm bg-white',
-            t.tone === 'success' && 'border-green-300 text-green-800',
-            t.tone === 'error' && 'border-red-300 text-red-800',
-            (!t.tone || t.tone === 'default') && 'border-gray-200 text-gray-800',
-          )}
-          onClick={() => remove(t.id)}
-          role="button"
-          tabIndex={0}
-        >
-          {t.text}
-        </div>
-      ))}
-    </div>
-  )
-}
-
-export default function ConsentPage() {
-  const [tenantName, setTenantName] = useState<string>('')
-  const [tenantDisplayId, setTenantDisplayId] = useState<string>('')
-  const [activeTab, setActiveTab] = useState<'students' | 'teachers'>('students')
-  const [brand, setBrand] = useState<BrandName>('EDULIFEOS')
-  const [me, setMe] = useState<Me | null>(null)
-
-  const [students, setStudents] = useState<StudentRow[]>([])
-  const [loadingStudents, setLoadingStudents] = useState(false)
-  const [savingStudentId, setSavingStudentId] = useState<string | null>(null)
-  const [studentError, setStudentError] = useState<string | null>(null)
-
-  const [teachers, setTeachers] = useState<TeacherRow[]>([])
-  const [loadingTeachers, setLoadingTeachers] = useState(false)
-  const [savingTeacherId, setSavingTeacherId] = useState<string | null>(null)
-  const [teacherError, setTeacherError] = useState<string | null>(null)
-
-  const [toasts, setToasts] = useState<Toast[]>([])
-  const pushToast = (text: string, tone?: Toast['tone']) => {
-    const id = Date.now() + Math.floor(Math.random() * 1000)
-    setToasts((prev) => [...prev, { id, text, tone }])
-    window.setTimeout(() => removeToast(id), 3500)
+function enrollmentLabel(enrollment: Enrollment) {
+  if (enrollment.status === "INVITED" && !enrollment.lastInvitationSentAt) {
+    return "Needs resend";
   }
-  const removeToast = (id: number) => setToasts((prev) => prev.filter((t) => t.id !== id))
+  return STATUS_LABEL[enrollment.status];
+}
 
-  useEffect(() => {
+function fullName(first: string | null, last: string | null) {
+  return [first, last].filter(Boolean).join(" ").trim() || "Learner";
+}
+
+export default function EssentialAlertsPage() {
+  const [tab, setTab] = useState<"parents" | "staff">("parents");
+  const [students, setStudents] = useState<StudentRow[]>([]);
+  const [staff, setStaff] = useState<StaffRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState<Audience | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    setError(null);
     try {
-      const saved = localStorage.getItem('consent.brand')
-      setBrand(normalizeConsentBrand(saved))
-    } catch {
-      setBrand('EDULIFEOS')
-    }
-  }, [])
+      const [studentsRes, staffRes] = await Promise.all([
+        fetch("/api/consent/students/list", { cache: "no-store" }),
+        fetch("/api/consent/teachers/list", { cache: "no-store" }),
+      ]);
+      const [studentsJson, staffJson] = await Promise.all([
+        studentsRes.json().catch(() => ({})),
+        staffRes.json().catch(() => ({})),
+      ]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('consent.brand', brand)
-    } catch {}
-  }, [brand])
-
-  useEffect(() => {
-    ;(async () => {
-      try {
-        const meRes = await fetch('/api/me', { cache: 'no-store' })
-        const meData = (await meRes.json().catch(() => null)) as Me | null
-        setMe(meData)
-
-        const t = pickTenantFromMe(meData)
-        if (!t?.id) {
-          setTenantDisplayId('')
-          setTenantName('')
-          pushToast('No active tenant found for this account. Please sign in as a staff member of a school.', 'error')
-          return
-        }
-
-        setTenantDisplayId(t.id)
-        setTenantName(t.name || '')
-      } catch {
-        pushToast('Failed to load session', 'error')
+      if (!studentsRes.ok || studentsJson?.ok === false) {
+        throw new Error(studentsJson?.error || "Could not load parent alert status.");
       }
-    })()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+      if (!staffRes.ok || staffJson?.ok === false) {
+        throw new Error(staffJson?.error || "Could not load staff alert status.");
+      }
+
+      setStudents(Array.isArray(studentsJson?.items) ? studentsJson.items : []);
+      setStaff(Array.isArray(staffJson?.items) ? staffJson.items : []);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not load Essential Alerts.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    if (activeTab === 'students') loadStudents()
-    else loadTeachers()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab])
+    void load();
+  }, []);
 
-  async function loadStudents() {
-    setLoadingStudents(true)
-    setStudentError(null)
+  const parentCounts = useMemo(() => {
+    const enrolled = students.filter((row) => row.essentialAlerts.status === "ENROLLED").length;
+    const invited = students.filter((row) => row.essentialAlerts.status === "INVITED").length;
+    const optedOut = students.filter((row) => row.essentialAlerts.status === "OPTED_OUT").length;
+    const withoutPhone = students.filter((row) => !row.phoneAvailable).length;
+    return { enrolled, invited, optedOut, withoutPhone };
+  }, [students]);
+
+  const staffCounts = useMemo(() => {
+    const enrolled = staff.filter((row) => row.essentialAlerts.status === "ENROLLED").length;
+    const invited = staff.filter((row) => row.essentialAlerts.status === "INVITED").length;
+    const optedOut = staff.filter((row) => row.essentialAlerts.status === "OPTED_OUT").length;
+    const withoutPhone = staff.filter((row) => !row.phoneAvailable).length;
+    return { enrolled, invited, optedOut, withoutPhone };
+  }, [staff]);
+
+  async function sendInvitations(audience: Audience) {
+    const label = audience === "GUARDIANS" ? "parents/guardians" : "teachers and headteachers";
+    if (!window.confirm(`Send Essential School Alerts invitations to eligible ${label}?\n\nPeople who already enabled alerts, opted out, or were invited in the last 24 hours will be skipped.`)) {
+      return;
+    }
+
+    setSending(audience);
+    setMessage(null);
+    setError(null);
     try {
-      const res = await fetch(`/api/consent/students/list`, { cache: 'no-store' })
-      const data = await res.json().catch(() => ({} as any))
-      if (!res.ok || data?.ok === false) throw new Error(data?.error || 'Failed to load students')
+      const res = await fetch("/api/consent/campaign/send", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ audience, limit: 300 }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Invitation send failed.");
 
-      const raw = Array.isArray(data?.items) ? data.items : []
-      const rows: StudentRow[] = raw.map((s: any) => ({
-        id: String(s.id),
-        firstName: String(s.firstName ?? ''),
-        lastName: String(s.lastName ?? ''),
-        guardianName: s.guardianName ?? null,
-        guardianPhone: s.guardianPhone ?? null,
-        healthConsentAt: s.healthConsentAt ?? null,
-        smsOptIn: Boolean(typeof s.smsOptIn === 'boolean' ? s.smsOptIn : (s.guardianSmsOptIn ?? false)),
-      }))
-      setStudents(rows)
-    } catch (e: any) {
-      setStudentError(e?.message || 'Failed to load students')
+      setMessage(
+        `Processed ${data?.count ?? 0}. Sent ${data?.sent ?? 0}; skipped ${data?.skipped ?? 0}; failed ${data?.failed ?? 0}.`,
+      );
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Invitation send failed.");
     } finally {
-      setLoadingStudents(false)
+      setSending(null);
     }
   }
 
-  async function loadTeachers() {
-    setLoadingTeachers(true)
-    setTeacherError(null)
-    try {
-      const res = await fetch(`/api/consent/teachers/list`, {
-        cache: 'no-store',
-      })
-      const data = await res.json().catch(() => ({} as any))
-      if (!res.ok || data?.ok === false) throw new Error(data?.error || 'Failed to load teachers')
-
-      const rows: TeacherRow[] = (Array.isArray(data?.items) ? data.items : []).map((u: any) => ({
-        id: String(u.id),
-        name: u.name ?? null,
-        email: u.email ?? null,
-        smsOptIn: Boolean(u.smsOptIn),
-      }))
-      setTeachers(rows)
-    } catch (e: any) {
-      setTeacherError(e?.message || 'Failed to load teachers')
-    } finally {
-      setLoadingTeachers(false)
-    }
-  }
-
-  async function saveStudent(row: StudentRow) {
-    try {
-      setSavingStudentId(row.id)
-      setStudentError(null)
-      const payload = {
-        studentId: row.id,
-        smsOptIn: row.smsOptIn,
-        healthConsentAt: row.healthConsentAt,
-      }
-      const res = await fetch('/api/consent/students/update', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      const data = await res.json().catch(() => ({} as any))
-      if (!res.ok || data?.ok === false) throw new Error(data?.error || 'Failed to update student consent')
-
-      pushToast('Student saved', 'success')
-      await loadStudents()
-    } catch (e: any) {
-      setStudentError(e?.message || 'Failed to save student')
-      pushToast('Save failed', 'error')
-    } finally {
-      setSavingStudentId(null)
-    }
-  }
-
-  async function setStudentConsentNow(id: string) {
-    const target = students.find((s) => s.id === id)
-    if (!target) return
-    await saveStudent({ ...target, healthConsentAt: new Date().toISOString() })
-  }
-
-  async function saveTeacher(row: TeacherRow) {
-    try {
-      setSavingTeacherId(row.id)
-      setTeacherError(null)
-      const payload = { userId: row.id, smsOptIn: row.smsOptIn }
-      const res = await fetch('/api/consent/teachers/update', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      const data = await res.json().catch(() => ({} as any))
-      if (!res.ok || data?.ok === false) throw new Error(data?.error || 'Failed to update teacher consent')
-
-      pushToast('Teacher saved', 'success')
-      await loadTeachers()
-    } catch (e: any) {
-      setTeacherError(e?.message || 'Failed to save teacher')
-      pushToast('Save failed', 'error')
-    } finally {
-      setSavingTeacherId(null)
-    }
-  }
-
-  async function sendCampaign() {
-    try {
-      pushToast('Sending campaign…')
-      const res = await fetch('/api/consent/campaign/send', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          brand,
-          mode: 'initial',
-        }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok || data?.ok === false) {
-        pushToast(`Campaign failed: ${data?.error || res.statusText}`, 'error')
-        return
-      }
-      const cnt = data?.count ?? 0
-      pushToast(`Campaign sent (${cnt} recipients processed)`, 'success')
-    } catch {
-      pushToast('Campaign error', 'error')
-    }
-  }
-
-  const studentsCsvHref = `/api/consent/students/export/csv`
-  const teachersCsvHref = `/api/consent/teachers/csv`
+  const activeCounts = tab === "parents" ? parentCounts : staffCounts;
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold">Consent Center</h1>
-            <p className="text-sm text-gray-500">
-              Privacy-first controls for guardians and staff (opt-in, consent, audit, exports, campaigns).
-            </p>
-            {tenantDisplayId && (
-              <p className="text-xs text-gray-400 mt-1">
-                Tenant: <span className="font-medium">{tenantName || tenantDisplayId}</span>
-              </p>
-            )}
-          </div>
+    <div className="mx-auto max-w-5xl space-y-5 p-4 sm:p-6">
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
+          EduLife OS · Essential School Alerts
+        </p>
+        <h1 className="mt-2 text-2xl font-bold text-slate-950">Useful SMS, chosen by the recipient</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+          Parents can enable attendance, fees/payment and released-result alerts. Teachers and Headteachers can enable lesson-note and official appraisal alerts. No advertising.
+        </p>
 
-          <div className="flex items-center gap-2">
-            <select
-              className="border rounded-lg px-3 py-2 text-sm"
-              value={brand}
-              onChange={(e) => setBrand(normalizeConsentBrand(e.target.value))}
-              title="SMS Brand / Sender ID"
-            >
-              <option value="EDULIFEOS">EduLifeOS</option>
-              <option value="AYITIKOPJHS">AyitikopJHS</option>
-              <option value="AYITIKPRIM">AyitikPRIM</option>
-            </select>
-
-            <Link href="/headteacher/consent/audit" className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50">
-              View Audit
-            </Link>
-
-            <a
-              href={studentsCsvHref}
-              className={cx('rounded-xl border px-3 py-2 text-sm hover:bg-gray-50')}
-              target="_blank"
-              rel="noreferrer"
-              title="Download Students CSV"
-            >
-              Export Students CSV
-            </a>
-
-            <a
-              href={teachersCsvHref}
-              className={cx('rounded-xl border px-3 py-2 text-sm hover:bg-gray-50')}
-              target="_blank"
-              rel="noreferrer"
-              title="Download Teachers CSV"
-            >
-              Export Teachers CSV
-            </a>
-
-            <button
-              onClick={sendCampaign}
-              className="rounded-xl bg-blue-600 text-white px-3 py-2 text-sm hover:bg-blue-700"
-              title="Send consent campaign SMS to a small batch"
-            >
-              Send Campaign
-            </button>
-          </div>
+        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm leading-6 text-emerald-900">
+          <strong>Parent offer:</strong> first school term free. Any future paid continuation requires at least 14 days&apos; notice and is never charged automatically. Health consent is separate.
         </div>
+      </section>
 
-        <div className="flex gap-2 border-b">
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap gap-2">
           <button
-            className={cx(
-              'px-3 py-2 text-sm',
-              activeTab === 'students' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-gray-800',
-            )}
-            onClick={() => setActiveTab('students')}
+            type="button"
+            onClick={() => setTab("parents")}
+            className={`rounded-xl px-4 py-2 text-sm font-semibold ${tab === "parents" ? "bg-slate-950 text-white" : "border border-slate-200 bg-white text-slate-700"}`}
           >
-            Students
+            Parents
           </button>
           <button
-            className={cx(
-              'px-3 py-2 text-sm',
-              activeTab === 'teachers' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-gray-800',
-            )}
-            onClick={() => setActiveTab('teachers')}
+            type="button"
+            onClick={() => setTab("staff")}
+            className={`rounded-xl px-4 py-2 text-sm font-semibold ${tab === "staff" ? "bg-slate-950 text-white" : "border border-slate-200 bg-white text-slate-700"}`}
           >
-            Teachers
+            Teachers & Headteachers
           </button>
         </div>
-      </div>
 
-      {activeTab === 'students' ? (
-        <div className="space-y-3">
-          {studentError && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{studentError}</div>
-          )}
-
-          <div className="rounded-2xl border p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-medium">Guardian Consent &amp; SMS</h2>
-              <button
-                onClick={loadStudents}
-                className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50"
-                disabled={loadingStudents}
-              >
-                {loadingStudents ? 'Loading…' : 'Refresh'}
-              </button>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="min-w-[980px] w-full text-sm">
-                <thead className="text-left">
-                  <tr className="border-b bg-gray-50">
-                    <th className="p-2">Student</th>
-                    <th className="p-2">Guardian</th>
-                    <th className="p-2">Phone</th>
-                    <th className="p-2">Consent Date</th>
-                    <th className="p-2">SMS Opt-in</th>
-                    <th className="p-2 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {students.map((s) => (
-                    <tr key={s.id} className="border-b">
-                      <td className="p-2 wrap-break-word">
-                        {s.lastName} {s.firstName}
-                      </td>
-                      <td className="p-2">{s.guardianName || '—'}</td>
-                      <td className="p-2">{s.guardianPhone || '—'}</td>
-                      <td className="p-2">{s.healthConsentAt ? new Date(s.healthConsentAt).toLocaleDateString() : '—'}</td>
-                      <td className="p-2">
-                        <label className="inline-flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={s.smsOptIn}
-                            onChange={(e) => {
-                              const next = students.map((r) => (r.id === s.id ? { ...r, smsOptIn: e.target.checked } : r))
-                              setStudents(next)
-                            }}
-                          />
-                          <span>{s.smsOptIn ? 'Yes' : 'No'}</span>
-                        </label>
-                      </td>
-                      <td className="p-2">
-                        <div className="flex flex-wrap gap-2 justify-end">
-                          <Link
-                            href={`/headteacher/consent/letters/student/${encodeURIComponent(s.id)}`}
-                            className="rounded-lg border px-3 py-1.5 hover:bg-gray-50"
-                            target="_blank"
-                          >
-                            View Letter
-                          </Link>
-                          <a
-                            href={`/api/consent/letters/student/${encodeURIComponent(s.id)}/pdf`}
-                            className="rounded-lg border px-3 py-1.5 hover:bg-gray-50"
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            Print PDF
-                          </a>
-                          <button
-                            onClick={() => setStudentConsentNow(s.id)}
-                            className="rounded-lg border px-3 py-1.5 hover:bg-gray-50"
-                            disabled={savingStudentId === s.id}
-                          >
-                            Set Consent Now
-                          </button>
-                          <button
-                            onClick={() => saveStudent(s)}
-                            className="rounded-lg bg-blue-600 text-white px-3 py-1.5 hover:bg-blue-700 disabled:opacity-50"
-                            disabled={savingStudentId === s.id}
-                          >
-                            {savingStudentId === s.id ? 'Saving…' : 'Save'}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-
-                  {!loadingStudents && students.length === 0 && (
-                    <tr>
-                      <td className="p-4 text-center text-gray-500" colSpan={6}>
-                        No students found for this tenant.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="rounded-xl bg-emerald-50 p-3"><div className="text-xl font-bold text-emerald-800">{activeCounts.enrolled}</div><div className="text-xs text-emerald-700">Enabled</div></div>
+          <div className="rounded-xl bg-amber-50 p-3"><div className="text-xl font-bold text-amber-800">{activeCounts.invited}</div><div className="text-xs text-amber-700">Invited</div></div>
+          <div className="rounded-xl bg-zinc-50 p-3"><div className="text-xl font-bold text-zinc-800">{activeCounts.optedOut}</div><div className="text-xs text-zinc-600">Stopped</div></div>
+          <div className="rounded-xl bg-rose-50 p-3"><div className="text-xl font-bold text-rose-800">{activeCounts.withoutPhone}</div><div className="text-xs text-rose-700">Phone needed</div></div>
         </div>
-      ) : (
-        <div className="space-y-3">
-          {teacherError && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{teacherError}</div>
-          )}
 
-          <div className="rounded-2xl border p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-medium">Teacher SMS Opt-in</h2>
-              <button
-                onClick={loadTeachers}
-                className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50"
-                disabled={loadingTeachers}
-              >
-                {loadingTeachers ? 'Loading…' : 'Refresh'}
-              </button>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="min-w-[900px] w-full text-sm">
-                <thead className="text-left">
-                  <tr className="border-b bg-gray-50">
-                    <th className="p-2">Name</th>
-                    <th className="p-2">Email</th>
-                    <th className="p-2">SMS Opt-in</th>
-                    <th className="p-2 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {teachers.map((t) => (
-                    <tr key={t.id} className="border-b">
-                      <td className="p-2 wrap-break-word">{t.name || '—'}</td>
-                      <td className="p-2 wrap-break-word">{t.email || '—'}</td>
-                      <td className="p-2">
-                        <label className="inline-flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={t.smsOptIn}
-                            onChange={(e) => {
-                              const next = teachers.map((r) => (r.id === t.id ? { ...r, smsOptIn: e.target.checked } : r))
-                              setTeachers(next)
-                            }}
-                          />
-                          <span>{t.smsOptIn ? 'Yes' : 'No'}</span>
-                        </label>
-                      </td>
-                      <td className="p-2">
-                        <div className="flex flex-wrap gap-2 justify-end">
-                          <Link
-                            href={`/headteacher/consent/letters/teacher/${encodeURIComponent(t.id)}`}
-                            className="rounded-lg border px-3 py-1.5 hover:bg-gray-50"
-                            target="_blank"
-                          >
-                            View Letter
-                          </Link>
-                          <button
-                            onClick={() => saveTeacher(t)}
-                            className="rounded-lg bg-blue-600 text-white px-3 py-1.5 hover:bg-blue-700 disabled:opacity-50"
-                            disabled={savingTeacherId === t.id}
-                          >
-                            {savingTeacherId === t.id ? 'Saving…' : 'Save'}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-
-                  {!loadingTeachers && teachers.length === 0 && (
-                    <tr>
-                      <td className="p-4 text-center text-gray-500" colSpan={4}>
-                        No teachers found for this tenant.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => void sendInvitations(tab === "parents" ? "GUARDIANS" : "STAFF")}
+            disabled={sending !== null}
+            className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {sending ? "Sending invitations…" : tab === "parents" ? "Invite parents" : "Invite staff"}
+          </button>
+          <button
+            type="button"
+            onClick={() => void load()}
+            disabled={loading}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 disabled:opacity-60"
+          >
+            {loading ? "Refreshing…" : "Refresh"}
+          </button>
         </div>
-      )}
 
-      <ToastHost items={toasts} remove={removeToast} />
+        <p className="mt-3 text-xs leading-5 text-slate-500">
+          You send invitations; the parent or staff member makes the choice. EduLife OS does not let school staff silently manufacture Essential Alerts consent.
+        </p>
+      </section>
+
+      {message ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{message}</div> : null}
+      {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{error}</div> : null}
+
+      <section className="space-y-2">
+        {loading ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-600">Loading…</div>
+        ) : tab === "parents" ? (
+          students.length ? students.map((row) => (
+            <article key={row.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <div className="font-bold text-slate-950">{fullName(row.firstName, row.lastName)}</div>
+                  <div className="mt-1 text-sm text-slate-600">Guardian: {row.guardianName || "—"}</div>
+                  <div className="text-xs text-slate-500">{row.guardianPhone || "No guardian phone on record"}</div>
+                </div>
+                <span className={`w-fit rounded-full border px-3 py-1 text-xs font-bold ${statusClasses(row.essentialAlerts.status)}`}>
+                  {enrollmentLabel(row.essentialAlerts)}
+                </span>
+              </div>
+              {row.essentialAlerts.lastInvitationSentAt ? (
+                <div className="mt-2 text-xs text-slate-500">Last invitation: {new Date(row.essentialAlerts.lastInvitationSentAt).toLocaleString()}</div>
+              ) : null}
+            </article>
+          )) : <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-600">No active learners found.</div>
+        ) : staff.length ? staff.map((row) => (
+          <article key={row.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <div className="font-bold text-slate-950">{row.name || row.email || "Staff member"}</div>
+                <div className="mt-1 text-sm text-slate-600">{row.role.replace(/_/g, " ")}</div>
+                <div className="text-xs text-slate-500">{row.phoneAvailable ? "SMS contact available" : "Phone needed"}</div>
+              </div>
+              <span className={`w-fit rounded-full border px-3 py-1 text-xs font-bold ${statusClasses(row.essentialAlerts.status)}`}>
+                {enrollmentLabel(row.essentialAlerts)}
+              </span>
+            </div>
+            {row.essentialAlerts.lastInvitationSentAt ? (
+              <div className="mt-2 text-xs text-slate-500">Last invitation: {new Date(row.essentialAlerts.lastInvitationSentAt).toLocaleString()}</div>
+            ) : null}
+          </article>
+        )) : <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-600">No eligible Teacher/Headteacher accounts found.</div>}
+      </section>
     </div>
-  )
+  );
 }

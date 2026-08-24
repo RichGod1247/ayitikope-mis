@@ -166,6 +166,9 @@ model User {
   governanceNoticeAttachmentsUploaded GovernanceOfficialNoticeAttachment[]       @relation("GovernanceNoticeAttachmentUploader")
   governanceNoticeAttachmentAccesses  GovernanceOfficialNoticeAttachmentAccess[] @relation("GovernanceNoticeAttachmentAccessActor")
 
+  /// ✅ A16A1 — explicit Essential School Alerts enrollment evidence.
+  essentialAlertEnrollments EssentialAlertEnrollment[]
+
   @@index([twoFactorEnabled])
   @@index([lastActiveTenantId])
 }
@@ -279,6 +282,9 @@ model Tenant {
   governanceOfficialNotices   GovernanceOfficialNotice[]
   governanceNoticeRecipients  GovernanceOfficialNoticeRecipient[]
   governanceNoticeAttachments GovernanceOfficialNoticeAttachment[]
+
+  /// ✅ A16A1 — tenant-scoped Essential School Alerts enrollment evidence.
+  essentialAlertEnrollments EssentialAlertEnrollment[]
 
   @@index([status])
   @@index([schoolSector])
@@ -568,6 +574,56 @@ model AuditLog {
   @@index([tenantId])
   @@index([userId])
   @@index([action])
+}
+
+/// *
+/// * =======================
+/// * Essential School Alerts — A16A1
+/// * =======================
+/// Explicit enrollment is separate from legacy smsOptIn fields and from future paid/sponsored entitlement.
+model EssentialAlertEnrollment {
+  id String @id @default(cuid())
+
+  tenantId String
+  subjectKey String @db.VarChar(180)
+
+  recipientKind EssentialAlertRecipientKind
+  studentId String?
+  userId String?
+
+  /// Current destination snapshot used when the invitation/decision was made.
+  phoneNormSnapshot String @db.VarChar(16)
+
+  /// HMAC fingerprint of tenant + recipient + current phone. Raw phone is never placed in a token.
+  phoneFingerprint String @db.VarChar(64)
+
+  status EssentialAlertEnrollmentStatus @default(INVITED)
+  policyVersion Int @default(1)
+
+  consentSource String? @db.VarChar(80)
+  consentedAt DateTime? @db.Timestamptz(6)
+  optedOutAt DateTime? @db.Timestamptz(6)
+
+  firstInvitedAt DateTime? @db.Timestamptz(6)
+  lastInvitationAttemptAt DateTime? @db.Timestamptz(6)
+  lastInvitationSentAt DateTime? @db.Timestamptz(6)
+  invitationCount Int @default(0)
+
+  consentEvidenceJson Json @default("{}")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  student Student? @relation(fields: [studentId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  user User? @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@unique([tenantId, subjectKey], map: "EssentialAlertEnrollment_tenant_subject_unique")
+  @@index([tenantId, recipientKind, status], map: "EssentialAlertEnrollment_tenant_kind_status_idx")
+  @@index([studentId], map: "EssentialAlertEnrollment_student_idx")
+  @@index([userId], map: "EssentialAlertEnrollment_user_idx")
+  @@index([tenantId, phoneFingerprint], map: "EssentialAlertEnrollment_tenant_phone_fp_idx")
+  @@map("essential_alert_enrollment")
 }
 
 /// *
@@ -989,6 +1045,9 @@ model Student {
   classroom          Classroom?           @relation(fields: [classroomId], references: [id], onUpdate: NoAction)
   tenant             Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   StudentHealthDaily StudentHealthDaily[]
+
+  /// ✅ A16A1 — guardian Essential School Alerts enrollment evidence.
+  essentialAlertEnrollments EssentialAlertEnrollment[]
 
   @@index([tenantId])
   @@index([classroomId])
@@ -4317,6 +4376,17 @@ enum AppraisalNotificationStatus {
   SKIPPED
   CANCELLED
   DEAD
+}
+
+enum EssentialAlertRecipientKind {
+  GUARDIAN
+  STAFF
+}
+
+enum EssentialAlertEnrollmentStatus {
+  INVITED
+  ENROLLED
+  OPTED_OUT
 }
 
 enum SchoolSector {

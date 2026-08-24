@@ -1,56 +1,79 @@
-// src/app/api/consent/campaign/send/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sendSms } from "@/lib/sms";
 import { requireApiUserContext } from "@/lib/serverAuth";
 import { effectiveRole } from "@/lib/roleRouting";
+import { sendSms } from "@/lib/sms";
 import {
-  getSmsRecipients,
-  type SmsRecipient,
-  type SmsRecipientMode,
-} from "@/lib/notifications";
+  buildGuardianEssentialAlertInvitation,
+  buildStaffEssentialAlertInvitation,
+  invitationMayBeSent,
+  recordEssentialAlertInvitationAttempt,
+  recordEssentialAlertInvitationSent,
+} from "@/lib/essentialAlerts/enrollment";
+import { ESSENTIAL_ALERT_POLICY } from "@/lib/essentialAlerts/policy";
+import { requestIp } from "@/lib/essentialAlerts/publicPage";
 
-export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 const ALLOWED_ROLES = new Set(["HEADTEACHER", "SCHOOL_ADMIN", "SUPERADMIN"]);
 const MAX_RECIPIENTS_PER_REQUEST = 300;
 
-type RequestBody = {
-  message?: string;
-  mode?: SmsRecipientMode;
-  tenantId?: string; // legacy: ignored, session tenant wins
-  brand?: string; // legacy: ignored, EDULIFEOS wins
-  actorId?: string; // legacy: ignored, session user wins
+type Audience = "GUARDIANS" | "STAFF";
+
+type Body = {
+  audience?: Audience;
+  limit?: number;
 };
 
 function json(status: number, payload: unknown) {
   return NextResponse.json(payload, {
     status,
     headers: {
-      "Cache-Control": "no-store",
+      "Cache-Control": "no-store, max-age=0",
       "X-Content-Type-Options": "nosniff",
     },
   });
 }
 
-function cleanStr(v: unknown) {
-  return String(v ?? "").trim();
+function role(value: unknown) {
+  return effectiveRole(value).trim().toUpperCase();
 }
 
-function roleUpper(v: unknown): string {
-  return effectiveRole(v).trim().toUpperCase();
+function selectedAudience(value: unknown): Audience {
+  return String(value ?? "").trim().toUpperCase() === "STAFF"
+    ? "STAFF"
+    : "GUARDIANS";
 }
 
-function resolveMode(v: unknown): SmsRecipientMode {
-  const raw = cleanStr(v).toLowerCase();
+function baseUrl(req: NextRequest) {
+  const env =
+    process.env.NEXTAUTH_URL ||
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.APP_BASE_URL;
+  if (env) return env.replace(/\/+$/, "");
 
-  if (raw === "all") return "all" as SmsRecipientMode;
-  if (raw === "initial") return "initial" as SmsRecipientMode;
-  if (raw === "pending") return "pending" as SmsRecipientMode;
-  if (raw === "reminder") return "reminder" as SmsRecipientMode;
+  const proto = req.headers.get("x-forwarded-proto") ?? "https";
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  if (!host) throw new Error("ESSENTIAL_ALERT_BASE_URL_UNAVAILABLE");
+  return `${proto}://${host}`;
+}
 
-  return "initial" as SmsRecipientMode;
+function guardianMessage(input: {
+  schoolName: string;
+  childName: string;
+  link: string;
+}) {
+  return `${input.schoolName}: Free first-term EduLife alerts for ${input.childName}: attendance, fees/payments & released results. No ads. Enable: ${input.link}`;
+}
+
+function staffMessage(input: {
+  schoolName: string;
+  link: string;
+}) {
+  return `${input.schoolName}: EduLife work alerts cover lesson-note workflow & official appraisal activity. School-funded, no ads. Enable: ${input.link}`;
 }
 
 export async function POST(req: NextRequest) {
@@ -58,167 +81,306 @@ export async function POST(req: NextRequest) {
     requireTenant: true,
     requireRoleNames: ["HEADTEACHER", "SCHOOL_ADMIN", "SUPERADMIN"],
   });
-
   if (!auth.ok) return auth.res;
-
-  const ctx = auth.ctx;
 
   const membership = await prisma.membership.findUnique({
     where: {
       userId_tenantId: {
-        userId: ctx.userId,
-        tenantId: ctx.tenantId,
+        userId: auth.ctx.userId,
+        tenantId: auth.ctx.tenantId,
       },
     },
-    select: {
-      status: true,
-      role: { select: { name: true } },
-    },
+    select: { status: true, role: { select: { name: true } } },
   });
-
-  if (!membership || membership.status !== "ACTIVE") {
+  if (
+    !membership ||
+    membership.status !== "ACTIVE" ||
+    !ALLOWED_ROLES.has(role(membership.role?.name ?? auth.ctx.roleName))
+  ) {
     return json(403, { ok: false, error: "FORBIDDEN" });
-  }
-
-  const roleName = roleUpper(membership.role?.name ?? ctx.roleName);
-
-  if (!ALLOWED_ROLES.has(roleName)) {
-    return json(403, { ok: false, error: "FORBIDDEN_ROLE" });
   }
 
   const contentType = req.headers.get("content-type") ?? "";
   if (!contentType.toLowerCase().includes("application/json")) {
-    return json(415, {
-      ok: false,
-      error: "CONTENT_TYPE_MUST_BE_JSON",
-    });
+    return json(415, { ok: false, error: "CONTENT_TYPE_MUST_BE_JSON" });
   }
 
-  try {
-    const body = (await req.json().catch(() => ({}))) as RequestBody;
+  const body = (await req.json().catch(() => ({}))) as Body;
+  const audience = selectedAudience(body.audience);
+  const requestedLimit = Number(body.limit ?? MAX_RECIPIENTS_PER_REQUEST);
+  const limit = Math.min(
+    Math.max(Number.isFinite(requestedLimit) ? Math.trunc(requestedLimit) : 50, 1),
+    MAX_RECIPIENTS_PER_REQUEST,
+  );
+  const origin = baseUrl(req);
+  const now = new Date();
+  const ip = requestIp(req);
+  const userAgent = req.headers.get("user-agent");
 
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: ctx.tenantId },
-      select: { name: true },
+  const results: Array<{
+    id: string;
+    name: string;
+    ok: boolean;
+    skipped: boolean;
+    reason?: string;
+  }> = [];
+
+  if (audience === "GUARDIANS") {
+    const students = await prisma.student.findMany({
+      where: {
+        tenantId: auth.ctx.tenantId,
+        status: "ACTIVE",
+        OR: [
+          { guardianPhoneNorm: { not: null } },
+          { guardianPhone: { not: null } },
+        ],
+      },
+      select: { id: true },
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      take: Math.min(limit * 3, 1000),
     });
 
-    const mode = resolveMode(body.mode);
-    const actorId = ctx.userId;
-
-    const message =
-      cleanStr(body.message) ||
-      `${tenant?.name ?? "School"}: EduLife OS consent campaign. Please reply OK when you receive this message.`;
-
-    if (message.length < 5) {
-      return json(400, {
-        ok: false,
-        error: "Message is too short.",
-      });
-    }
-
-    const recipients: SmsRecipient[] = await (
-  getSmsRecipients as unknown as (
-    mode: SmsRecipientMode,
-    tenantId: string
-  ) => Promise<SmsRecipient[]>
-)(mode, ctx.tenantId);
-
-    if (!recipients.length) {
-      return json(200, {
-        ok: true,
-        brand: "EDULIFEOS",
-        mode,
-        count: 0,
-        successCount: 0,
-        failedCount: 0,
-        results: [],
-        note: "No SMS recipients found for this tenant/mode.",
-      });
-    }
-
-    if (recipients.length > MAX_RECIPIENTS_PER_REQUEST) {
-      return json(400, {
-        ok: false,
-        error: `Too many recipients in one request. Maximum is ${MAX_RECIPIENTS_PER_REQUEST}.`,
-        count: recipients.length,
-      });
-    }
-
-    const results: {
-      recipient: string;
-      recipientId?: string;
-      to: string;
-      ok: boolean;
-      error?: string;
-    }[] = [];
-
-    for (const recipient of recipients) {
-      if (!recipient.phone) {
-        results.push({
-          recipient: recipient.name,
-          recipientId: recipient.id,
-          to: "",
-          ok: false,
-          error: "Recipient has no phone number.",
-        });
-        continue;
-      }
+    for (const student of students) {
+      if (results.length >= limit) break;
 
       try {
-        const smsResult = await sendSms({
-          tenantId: ctx.tenantId,
-          actorId,
-          to: recipient.phone,
-          message,
-          template: "CONSENT_CAMPAIGN",
+        const invite = await buildGuardianEssentialAlertInvitation({
+          tenantId: auth.ctx.tenantId,
+          studentId: student.id,
+          now,
+        });
+
+        if (
+          !invitationMayBeSent({
+            existingStatus: invite.existingStatus,
+            lastInvitationSentAt: invite.lastInvitationSentAt,
+            now,
+          })
+        ) {
+          results.push({
+            id: student.id,
+            name: invite.childName,
+            ok: true,
+            skipped: true,
+            reason:
+              invite.existingStatus === "ENROLLED"
+                ? "ALREADY_ENROLLED"
+                : invite.existingStatus === "OPTED_OUT"
+                  ? "OPTED_OUT"
+                  : "RECENTLY_INVITED",
+          });
+          continue;
+        }
+
+        const attempt = await recordEssentialAlertInvitationAttempt({
+          tenantId: auth.ctx.tenantId,
+          kind: "GUARDIAN",
+          subjectId: student.id,
+          subjectKey: invite.subjectKey,
+          phoneNorm: invite.to,
+          phoneFingerprint: invite.phoneFingerprint,
+          actorUserId: auth.ctx.userId,
+          now,
+          ip,
+          userAgent,
+        });
+
+        if (!attempt.allowed) {
+          results.push({
+            id: student.id,
+            name: invite.childName,
+            ok: true,
+            skipped: true,
+            reason: "NO_LONGER_INVITEABLE",
+          });
+          continue;
+        }
+
+        const link = `${origin}/api/consent/optin/student/link?token=${encodeURIComponent(invite.token)}`;
+        const sms = await sendSms({
+          tenantId: auth.ctx.tenantId,
+          actorId: auth.ctx.userId,
+          to: invite.to,
+          message: guardianMessage({
+            schoolName: invite.schoolName,
+            childName: invite.childName,
+            link,
+          }),
+          from: ESSENTIAL_ALERT_POLICY.senderId,
+          template: "ESSENTIAL_ALERT_GUARDIAN_INVITATION",
           payload: {
-            purpose: "consent-campaign",
-            recipientId: recipient.id,
-            recipientName: recipient.name,
-            mode,
-            brand: "EDULIFEOS",
+            purpose: "essential-alert-enrollment-invitation",
+            recipientKind: "GUARDIAN",
+            studentId: student.id,
+            policyId: ESSENTIAL_ALERT_POLICY.policyId,
+            policyVersion: ESSENTIAL_ALERT_POLICY.version,
           },
         });
 
+        if (sms.ok) {
+          await recordEssentialAlertInvitationSent({
+            enrollmentId: attempt.row.id,
+            tenantId: auth.ctx.tenantId,
+            actorUserId: auth.ctx.userId,
+            now: new Date(),
+            ip,
+            userAgent,
+          });
+        }
+
         results.push({
-          recipient: recipient.name,
-          recipientId: recipient.id,
-          to: smsResult.to ?? recipient.phone,
-          ok: smsResult.ok,
-          ...(smsResult.ok ? {} : { error: smsResult.error ?? "SMS was not accepted." }),
+          id: student.id,
+          name: invite.childName,
+          ok: Boolean(sms.ok),
+          skipped: false,
+          ...(sms.ok ? {} : { reason: sms.error ?? "SMS_NOT_ACCEPTED" }),
         });
-      } catch (err) {
+      } catch (error) {
         results.push({
-          recipient: recipient.name,
-          recipientId: recipient.id,
-          to: recipient.phone,
+          id: student.id,
+          name: "Learner",
           ok: false,
-          error: err instanceof Error ? err.message : "Unknown send error",
+          skipped: false,
+          reason: error instanceof Error ? error.message : "INVITATION_FAILED",
         });
       }
     }
-
-    const successCount = results.filter((r) => r.ok).length;
-    const failedCount = results.length - successCount;
-
-    return json(200, {
-      ok: failedCount === 0,
-      brand: "EDULIFEOS",
-      mode,
-      count: results.length,
-      successCount,
-      failedCount,
-      results,
+  } else {
+    const memberships = await prisma.membership.findMany({
+      where: { tenantId: auth.ctx.tenantId, status: "ACTIVE" },
+      select: { userId: true, role: { select: { name: true } } },
+      take: 2000,
     });
-  } catch (err) {
-    console.error("[CONSENT_CAMPAIGN_SMS_ERROR]", err);
 
-    return json(500, {
-      ok: false,
-      error:
-        err instanceof Error
-          ? err.message
-          : "Failed to send consent campaign SMS.",
-    });
+    const eligibleRoles = new Set(["TEACHER", "HEADTEACHER", "HEADMASTER"]);
+    const seen = new Set<string>();
+
+    for (const row of memberships) {
+      if (results.length >= limit) break;
+      const roleName = String(row.role?.name ?? "")
+        .trim()
+        .toUpperCase()
+        .replace(/[\s-]+/g, "_");
+      if (!eligibleRoles.has(roleName) || seen.has(row.userId)) continue;
+      seen.add(row.userId);
+
+      try {
+        const invite = await buildStaffEssentialAlertInvitation({
+          tenantId: auth.ctx.tenantId,
+          userId: row.userId,
+          now,
+        });
+
+        if (
+          !invitationMayBeSent({
+            existingStatus: invite.existingStatus,
+            lastInvitationSentAt: invite.lastInvitationSentAt,
+            now,
+          })
+        ) {
+          results.push({
+            id: row.userId,
+            name: invite.staffName,
+            ok: true,
+            skipped: true,
+            reason:
+              invite.existingStatus === "ENROLLED"
+                ? "ALREADY_ENROLLED"
+                : invite.existingStatus === "OPTED_OUT"
+                  ? "OPTED_OUT"
+                  : "RECENTLY_INVITED",
+          });
+          continue;
+        }
+
+        const attempt = await recordEssentialAlertInvitationAttempt({
+          tenantId: auth.ctx.tenantId,
+          kind: "STAFF",
+          subjectId: row.userId,
+          subjectKey: invite.subjectKey,
+          phoneNorm: invite.to,
+          phoneFingerprint: invite.phoneFingerprint,
+          actorUserId: auth.ctx.userId,
+          now,
+          ip,
+          userAgent,
+        });
+
+        if (!attempt.allowed) {
+          results.push({
+            id: row.userId,
+            name: invite.staffName,
+            ok: true,
+            skipped: true,
+            reason: "NO_LONGER_INVITEABLE",
+          });
+          continue;
+        }
+
+        const link = `${origin}/api/consent/optin/teacher/link?token=${encodeURIComponent(invite.token)}`;
+        const sms = await sendSms({
+          tenantId: auth.ctx.tenantId,
+          actorId: auth.ctx.userId,
+          to: invite.to,
+          message: staffMessage({
+            schoolName: invite.schoolName,
+            link,
+          }),
+          from: ESSENTIAL_ALERT_POLICY.senderId,
+          template: "ESSENTIAL_ALERT_STAFF_INVITATION",
+          payload: {
+            purpose: "essential-alert-enrollment-invitation",
+            recipientKind: "STAFF",
+            userId: row.userId,
+            policyId: ESSENTIAL_ALERT_POLICY.policyId,
+            policyVersion: ESSENTIAL_ALERT_POLICY.version,
+          },
+        });
+
+        if (sms.ok) {
+          await recordEssentialAlertInvitationSent({
+            enrollmentId: attempt.row.id,
+            tenantId: auth.ctx.tenantId,
+            actorUserId: auth.ctx.userId,
+            now: new Date(),
+            ip,
+            userAgent,
+          });
+        }
+
+        results.push({
+          id: row.userId,
+          name: invite.staffName,
+          ok: Boolean(sms.ok),
+          skipped: false,
+          ...(sms.ok ? {} : { reason: sms.error ?? "SMS_NOT_ACCEPTED" }),
+        });
+      } catch (error) {
+        results.push({
+          id: row.userId,
+          name: "Staff member",
+          ok: false,
+          skipped: false,
+          reason: error instanceof Error ? error.message : "INVITATION_FAILED",
+        });
+      }
+    }
   }
+
+  const sent = results.filter((item) => item.ok && !item.skipped).length;
+  const skipped = results.filter((item) => item.skipped).length;
+  const failed = results.filter((item) => !item.ok && !item.skipped).length;
+
+  return json(200, {
+    ok: failed === 0,
+    audience,
+    brand: ESSENTIAL_ALERT_POLICY.senderId,
+    policyId: ESSENTIAL_ALERT_POLICY.policyId,
+    policyVersion: ESSENTIAL_ALERT_POLICY.version,
+    count: results.length,
+    sent,
+    skipped,
+    failed,
+    results,
+  });
 }

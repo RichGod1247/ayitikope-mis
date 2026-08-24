@@ -1,83 +1,81 @@
-//src/app/api/consent/optin/teacher/route.ts
-import type { NextRequest } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import { requireApiUserContext } from "@/lib/serverAuth";
+import { setAuthenticatedStaffEssentialAlerts } from "@/lib/essentialAlerts/enrollment";
+import { requestIp } from "@/lib/essentialAlerts/publicPage";
 
-/**
- * POST /api/consent/optin/teacher
- * Body:
- * {
- *   tenantId: string,
- *   userId: string,                 // teacher's user id
- *   actorId?: string                // who performed the opt-in (optional)
- * }
- *
- * Behavior:
- * - Sets User.smsOptIn = true
- * - (Optional) Verifies membership exists for (userId, tenantId) — non-blocking
- * - Writes AuditLog with action="CONSENT_TEACHER_OPTIN" and before/after snapshot
- */
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function json(status: number, payload: unknown) {
+  return NextResponse.json(payload, {
+    status,
+    headers: {
+      "Cache-Control": "no-store, max-age=0",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
+
 export async function POST(req: NextRequest) {
+  const auth = await requireApiUserContext(req, { requireTenant: true });
+  if (!auth.ok) return auth.res;
+
+  const contentType = req.headers.get("content-type") ?? "";
+  if (!contentType.toLowerCase().includes("application/json")) {
+    return json(415, { ok: false, error: "CONTENT_TYPE_MUST_BE_JSON" });
+  }
+
+  const body = (await req.json().catch(() => ({}))) as {
+    enabled?: boolean;
+    userId?: string;
+    tenantId?: string;
+    actorId?: string;
+  };
+
+  // Legacy client identity fields are rejected rather than trusted.
+  if (body.userId && body.userId !== auth.ctx.userId) {
+    return json(403, { ok: false, error: "STAFF_SELF_SERVICE_ONLY" });
+  }
+  if (body.tenantId && body.tenantId !== auth.ctx.tenantId) {
+    return json(403, { ok: false, error: "FORBIDDEN_TENANT_MISMATCH" });
+  }
+  if (body.actorId && body.actorId !== auth.ctx.userId) {
+    return json(403, { ok: false, error: "ACTOR_OVERRIDE_FORBIDDEN" });
+  }
+  if (typeof body.enabled !== "boolean") {
+    return json(400, { ok: false, error: "enabled (boolean) is required" });
+  }
+
   try {
-    const body = await req.json().catch(() => ({}))
-    const tenantId: string | undefined = typeof body?.tenantId === 'string' ? body.tenantId.trim() : undefined
-    const userId: string | undefined = typeof body?.userId === 'string' ? body.userId.trim() : undefined
-    const actorId: string | undefined = typeof body?.actorId === 'string' ? body.actorId.trim() : undefined
+    const row = await setAuthenticatedStaffEssentialAlerts({
+      tenantId: auth.ctx.tenantId,
+      userId: auth.ctx.userId,
+      actorUserId: auth.ctx.userId,
+      enabled: body.enabled,
+      ip: requestIp(req),
+      userAgent: req.headers.get("user-agent"),
+    });
 
-    if (!tenantId || !userId) {
-      return new Response(JSON.stringify({ error: 'tenantId and userId are required' }), {
-        status: 400, headers: { 'content-type': 'application/json' },
-      })
-    }
-
-    // Load current state (for audit "before")
-    const before = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, name: true, email: true, smsOptIn: true },
-    })
-
-    if (!before) {
-      return new Response(JSON.stringify({ error: 'User not found' }), {
-        status: 404, headers: { 'content-type': 'application/json' },
-      })
-    }
-
-    // Non-blocking sanity check: membership for tenant (if any)
-    // We won't fail the request if missing; just continue.
-    await prisma.membership.findFirst({
-      where: { userId, tenantId, status: 'ACTIVE' },
-      select: { id: true },
-    }).catch(() => null)
-
-    // Update user smsOptIn
-    const updated = await prisma.user.update({
-      where: { id: userId },
-      data: { smsOptIn: true },
-      select: { id: true, name: true, email: true, smsOptIn: true },
-    })
-
-    // Audit
-    await prisma.auditLog.create({
-      data: {
-        tenantId,
-        userId: actorId || null,
-        action: 'CONSENT_TEACHER_OPTIN',
-        resource: 'USER',           // teachers are Users
-        resourceId: userId,
-        metadata: {
-          before: { smsOptIn: before.smsOptIn },
-          after:  { smsOptIn: updated.smsOptIn },
-          target: { id: updated.id, name: updated.name, email: updated.email },
-        },
+    return json(200, {
+      ok: true,
+      essentialAlerts: {
+        status: row.status,
+        policyVersion: row.policyVersion,
+        consentedAt: row.consentedAt?.toISOString() ?? null,
+        optedOutAt: row.optedOutAt?.toISOString() ?? null,
       },
-    })
-
-    return new Response(JSON.stringify({ ok: true, user: updated }), {
-      status: 200, headers: { 'content-type': 'application/json' },
-    })
-  } catch (err) {
-    console.error('optin/teacher error:', err)
-    return new Response(JSON.stringify({ error: 'Failed to opt-in teacher' }), {
-      status: 500, headers: { 'content-type': 'application/json' },
-    })
+      legacySmsOptInChanged: false,
+    });
+  } catch (error) {
+    const status =
+      error && typeof error === "object" && "status" in error
+        ? Number((error as { status?: unknown }).status) || 500
+        : 500;
+    const code =
+      error && typeof error === "object" && "code" in error
+        ? String((error as { code?: unknown }).code ?? "ESSENTIAL_ALERT_UPDATE_FAILED")
+        : "ESSENTIAL_ALERT_UPDATE_FAILED";
+    return json(status, { ok: false, error: code });
   }
 }

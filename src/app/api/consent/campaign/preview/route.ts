@@ -1,96 +1,180 @@
-// src/app/api/consent/campaign/preview/route.ts
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
-import { assertNoTenantOverride } from "@/lib/tenantGuard";
+import { effectiveRole } from "@/lib/roleRouting";
+import {
+  buildGuardianEssentialAlertInvitation,
+  buildStaffEssentialAlertInvitation,
+  invitationMayBeSent,
+} from "@/lib/essentialAlerts/enrollment";
+import { ESSENTIAL_ALERT_POLICY } from "@/lib/essentialAlerts/policy";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-// ---- RBAC helper ----
-async function hasPermission(tenantId: string, userId: string, permName: string): Promise<boolean> {
-  const membership = await prisma.membership.findFirst({
-    where: { tenantId, userId, status: "ACTIVE" },
-    select: {
-      role: {
-        select: {
-          rolePerms: {
-            select: { permission: { select: { name: true } } },
-          },
-        },
-      },
+const ALLOWED_ROLES = new Set(["HEADTEACHER", "SCHOOL_ADMIN", "SUPERADMIN"]);
+
+type Audience = "GUARDIANS" | "STAFF";
+
+function json(status: number, payload: unknown) {
+  return NextResponse.json(payload, {
+    status,
+    headers: {
+      "Cache-Control": "no-store, max-age=0",
+      "X-Content-Type-Options": "nosniff",
     },
   });
-  if (!membership?.role) return false;
-  return membership.role.rolePerms.some((rp) => rp.permission?.name === permName);
 }
 
-function baseUrl() {
-  const raw = process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
-  return String(raw).replace(/\/$/, "");
+function audience(value: unknown): Audience {
+  return String(value ?? "").trim().toUpperCase() === "STAFF"
+    ? "STAFF"
+    : "GUARDIANS";
+}
+
+function role(value: unknown) {
+  return effectiveRole(value).trim().toUpperCase();
 }
 
 export async function GET(req: NextRequest) {
-  const auth = await requireApiUserContext(req, { requireTenant: true });
+  const auth = await requireApiUserContext(req, {
+    requireTenant: true,
+    requireRoleNames: ["HEADTEACHER", "SCHOOL_ADMIN", "SUPERADMIN"],
+  });
   if (!auth.ok) return auth.res;
 
-  const { searchParams } = new URL(req.url);
+  const membership = await prisma.membership.findUnique({
+    where: {
+      userId_tenantId: {
+        userId: auth.ctx.userId,
+        tenantId: auth.ctx.tenantId,
+      },
+    },
+    select: { status: true, role: { select: { name: true } } },
+  });
 
-  // Backward compat only: allow tenantId param ONLY if it matches session tenant
-  const suppliedTenantId = searchParams.get("tenantId");
-  if (suppliedTenantId) {
-    const guard = assertNoTenantOverride(suppliedTenantId, auth.ctx.tenantId);
-    if (!guard.ok) {
-      return new Response(JSON.stringify({ error: guard.error }), {
-        status: guard.status,
-        headers: { "content-type": "application/json" },
-      });
+  if (
+    !membership ||
+    membership.status !== "ACTIVE" ||
+    !ALLOWED_ROLES.has(role(membership.role?.name ?? auth.ctx.roleName))
+  ) {
+    return json(403, { ok: false, error: "FORBIDDEN" });
+  }
+
+  const url = new URL(req.url);
+  const selectedAudience = audience(url.searchParams.get("audience"));
+  const limit = Math.min(
+    Math.max(Number(url.searchParams.get("limit") ?? 50) || 50, 1),
+    200,
+  );
+
+  const items: Array<{
+    id: string;
+    name: string;
+    currentStatus: string;
+    canInvite: boolean;
+  }> = [];
+
+  if (selectedAudience === "GUARDIANS") {
+    const students = await prisma.student.findMany({
+      where: {
+        tenantId: auth.ctx.tenantId,
+        status: "ACTIVE",
+        OR: [
+          { guardianPhoneNorm: { not: null } },
+          { guardianPhone: { not: null } },
+        ],
+      },
+      select: { id: true },
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      take: limit,
+    });
+
+    for (const student of students) {
+      try {
+        const invite = await buildGuardianEssentialAlertInvitation({
+          tenantId: auth.ctx.tenantId,
+          studentId: student.id,
+        });
+        items.push({
+          id: student.id,
+          name: invite.childName,
+          currentStatus: invite.existingStatus ?? "NOT_ENROLLED",
+          canInvite: invitationMayBeSent({
+            existingStatus: invite.existingStatus,
+            lastInvitationSentAt: invite.lastInvitationSentAt,
+          }),
+        });
+      } catch {
+        // A missing/invalid phone is intentionally omitted from the invite preview.
+      }
+    }
+  } else {
+    const memberships = await prisma.membership.findMany({
+      where: {
+        tenantId: auth.ctx.tenantId,
+        status: "ACTIVE",
+      },
+      select: { userId: true, role: { select: { name: true } } },
+      take: 2000,
+    });
+
+    const seen = new Set<string>();
+    for (const row of memberships) {
+      const roleName = String(row.role?.name ?? "")
+        .trim()
+        .toUpperCase()
+        .replace(/[\s-]+/g, "_");
+      if (!new Set(["TEACHER", "HEADTEACHER", "HEADMASTER"]).has(roleName)) {
+        continue;
+      }
+      if (seen.has(row.userId)) continue;
+      seen.add(row.userId);
+
+      try {
+        const invite = await buildStaffEssentialAlertInvitation({
+          tenantId: auth.ctx.tenantId,
+          userId: row.userId,
+        });
+        items.push({
+          id: row.userId,
+          name: invite.staffName,
+          currentStatus: invite.existingStatus ?? "NOT_ENROLLED",
+          canInvite: invitationMayBeSent({
+            existingStatus: invite.existingStatus,
+            lastInvitationSentAt: invite.lastInvitationSentAt,
+          }),
+        });
+        if (items.length >= limit) break;
+      } catch {
+        // A missing/invalid phone is intentionally omitted from the invite preview.
+      }
     }
   }
 
-  const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "50", 10) || 50, 1), 500);
+  const inviteable = items.filter((item) => item.canInvite).length;
 
-  // RBAC: Preview needs CONSENT_EXPORT
-  const ok = await hasPermission(auth.ctx.tenantId, auth.ctx.userId, "CONSENT_EXPORT");
-  if (!ok) {
-    return new Response(JSON.stringify({ error: "forbidden" }), {
-      status: 403,
-      headers: { "content-type": "application/json" },
-    });
-  }
-
-  const students = await prisma.student.findMany({
-    where: { tenantId: auth.ctx.tenantId, guardianPhone: { not: null }, guardianSmsOptIn: false },
-    select: { id: true, firstName: true, lastName: true, guardianName: true, guardianPhone: true },
-    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-    take: limit,
-  });
-
-  const tenant = await prisma.tenant.findUnique({
-    where: { id: auth.ctx.tenantId },
-    select: { name: true },
-  });
-
-  const origin = baseUrl();
-
-  // NOTE: your repo doesn’t yet include the real opt-in link endpoint.
-  // For now we keep the legacy shape but session-safe; we’ll replace with secure token links next.
-  const items = students.map((s) => {
-    const name = `${s.lastName ?? ""} ${s.firstName ?? ""}`.trim();
-    const link = `${origin}/api/consent/optin/student/link?studentId=${encodeURIComponent(s.id)}`; // tenant from token/session later
-    const sms = `${tenant?.name ?? "School"}: SMS updates for ${name}. Tap to confirm: ${link}`;
-    return {
-      studentId: s.id,
-      studentName: name,
-      guardianName: s.guardianName ?? "",
-      phone: s.guardianPhone ?? "",
-      optinUrl: link,
-      smsBody: sms,
-    };
-  });
-
-  return new Response(JSON.stringify({ items }), {
-    status: 200,
-    headers: { "content-type": "application/json" },
+  return json(200, {
+    ok: true,
+    audience: selectedAudience,
+    policy: {
+      id: ESSENTIAL_ALERT_POLICY.policyId,
+      version: ESSENTIAL_ALERT_POLICY.version,
+      firstSchoolTermFree: ESSENTIAL_ALERT_POLICY.firstSchoolTermFree,
+      advertisingAllowed: false,
+      paidContinuationNoticeDays:
+        ESSENTIAL_ALERT_POLICY.paidContinuationNoticeDays,
+    },
+    count: items.length,
+    inviteable,
+    enrolled: items.filter((item) => item.currentStatus === "ENROLLED").length,
+    optedOut: items.filter((item) => item.currentStatus === "OPTED_OUT").length,
+    recentlyInvited: items.filter(
+      (item) => item.currentStatus === "INVITED" && !item.canInvite,
+    ).length,
+    items,
+    databaseWrites: 0,
+    providerCalled: false,
   });
 }

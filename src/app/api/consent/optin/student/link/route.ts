@@ -1,331 +1,182 @@
-// src/app/api/consent/optin/student/link/route.ts
 import type { NextRequest } from "next/server";
+import { EssentialAlertEnrollmentStatus, StudentStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { verifyStudentConsentToken } from "@/lib/consentTokens";
-import { StudentStatus } from "@prisma/client";
+import {
+  ESSENTIAL_ALERT_POLICY,
+  guardianSubjectKey,
+  normalizeGhanaPhone,
+} from "@/lib/essentialAlerts/policy";
+import {
+  essentialAlertPhoneFingerprint,
+  verifyEssentialAlertToken,
+} from "@/lib/essentialAlerts/tokens";
+import { applyEssentialAlertTokenDecision } from "@/lib/essentialAlerts/enrollment";
+import {
+  escapeHtml,
+  essentialAlertPage,
+  requestIp,
+} from "@/lib/essentialAlerts/publicPage";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-function cleanId(v: unknown) {
-  return String(v ?? "").trim();
-}
-
-function esc(s: unknown) {
-  return String(s ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function getIp(req: NextRequest) {
-  const xff = req.headers.get("x-forwarded-for");
-  if (xff) return xff.split(",")[0]?.trim() || null;
-  return req.headers.get("x-real-ip") || null;
-}
-
-function getUa(req: NextRequest) {
-  return req.headers.get("user-agent") || null;
-}
-
-function pageHtml(opts: {
-  title: string;
-  bodyHtml: string;
-}) {
-  return `<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${esc(opts.title)}</title>
-  <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;line-height:1.5;margin:0;background:#fafafa;}
-    .wrap{max-width:640px;margin:32px auto;padding:0 16px;}
-    .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:18px 16px;}
-    h1{font-size:18px;margin:0 0 8px}
-    p{margin:8px 0;color:#111827}
-    .muted{color:#6b7280;font-size:13px}
-    .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-    button{cursor:pointer;border-radius:12px;border:1px solid #111827;padding:10px 14px;font-weight:600}
-    .primary{background:#111827;color:#fff}
-    .outline{background:#fff;color:#111827}
-    .danger{background:#fff;color:#991b1b;border-color:#fecaca}
-    .kv{margin:10px 0;padding:10px 12px;border-radius:12px;background:#f9fafb;border:1px solid #eee}
-    .kv b{display:inline-block;min-width:120px}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="card">
-      ${opts.bodyHtml}
-    </div>
-    <p class="muted" style="margin-top:12px">
-      If you have questions, contact the school office.
-    </p>
-  </div>
-</body>
-</html>`;
-}
-
-async function resolveStudentIdFromRequest(req: NextRequest): Promise<{ studentId: string } | { error: string; status: number }> {
-  const { searchParams } = new URL(req.url);
-
-  const token = cleanId(searchParams.get("token"));
-  const tenantIdLegacy = cleanId(searchParams.get("tenantId")); // legacy/back-compat
-  const studentIdLegacy = cleanId(searchParams.get("studentId")); // legacy/back-compat
-
-  if (token) {
-    const payload = verifyStudentConsentToken(token);
-    if (!payload) return { error: "INVALID_OR_EXPIRED_TOKEN", status: 400 };
-    return { studentId: payload.sid };
+async function contextForToken(token: string) {
+  const payload = verifyEssentialAlertToken(token);
+  if (!payload || payload.kind !== "GUARDIAN" || !payload.sid) {
+    return { error: "INVALID_OR_EXPIRED_LINK" as const };
   }
 
-  // Legacy mode (discouraged): require both and enforce match
-  if (!tenantIdLegacy || !studentIdLegacy) {
-    return { error: "token is required (legacy tenantId+studentId not provided)", status: 400 };
-  }
-
-  const student = await prisma.student.findUnique({
-    where: { id: studentIdLegacy },
-    select: { tenantId: true },
-  });
-
-  if (!student) return { error: "Student not found", status: 404 };
-  if (student.tenantId !== tenantIdLegacy) return { error: "FORBIDDEN_TENANT_MISMATCH", status: 403 };
-
-  return { studentId: studentIdLegacy };
-}
-
-export async function GET(req: NextRequest) {
-  const resolved = await resolveStudentIdFromRequest(req);
-  if ("error" in resolved) {
-    const html = pageHtml({
-      title: "Consent link error",
-      bodyHtml: `
-        <h1>Consent link error</h1>
-        <p class="muted">Error: <b>${esc(resolved.error)}</b></p>
-      `,
-    });
-    return new Response(html, {
-      status: resolved.status,
-      headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
-    });
-  }
-
-  const student = await prisma.student.findUnique({
-    where: { id: resolved.studentId },
+  const student = await prisma.student.findFirst({
+    where: {
+      id: payload.sid,
+      tenantId: payload.tid,
+      status: StudentStatus.ACTIVE,
+    },
     select: {
       id: true,
-      tenantId: true,
-      status: true,
       firstName: true,
       lastName: true,
       guardianName: true,
-      guardianSmsOptIn: true,
-      healthConsentAt: true,
-      classroom: { select: { name: true } },
+      guardianPhone: true,
+      guardianPhoneNorm: true,
+      tenant: { select: { name: true, status: true } },
     },
   });
 
-  if (!student) {
-    const html = pageHtml({
-      title: "Not found",
-      bodyHtml: `<h1>Not found</h1><p class="muted">Student not found.</p>`,
-    });
-    return new Response(html, {
-      status: 404,
-      headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
-    });
+  if (!student || student.tenant.status !== "ACTIVE") {
+    return { error: "LEARNER_OR_SCHOOL_UNAVAILABLE" as const };
   }
 
-  if (student.status === StudentStatus.ARCHIVED) {
-    const html = pageHtml({
-      title: "Unavailable",
-      bodyHtml: `<h1>Unavailable</h1><p class="muted">This learner record is archived.</p>`,
-    });
-    return new Response(html, {
-      status: 409,
-      headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
-    });
-  }
+  const phoneNorm =
+    normalizeGhanaPhone(student.guardianPhoneNorm) ??
+    normalizeGhanaPhone(student.guardianPhone);
+  if (!phoneNorm) return { error: "GUARDIAN_PHONE_UNAVAILABLE" as const };
 
-  const tenant = await prisma.tenant.findUnique({
-    where: { id: student.tenantId },
-    select: { name: true },
+  const fingerprint = essentialAlertPhoneFingerprint({
+    tenantId: payload.tid,
+    kind: "GUARDIAN",
+    subjectId: student.id,
+    phoneNorm,
   });
 
-  const schoolName = tenant?.name ?? "Your School";
-  const childName = `${student.lastName ?? ""} ${student.firstName ?? ""}`.trim() || "the learner";
-  const guardian = student.guardianName ?? "Parent/Guardian";
+  if (fingerprint !== payload.pf) {
+    return { error: "GUARDIAN_PHONE_CHANGED" as const };
+  }
 
-  const already = student.guardianSmsOptIn && !!student.healthConsentAt;
+  const subjectKey = guardianSubjectKey(student.id, fingerprint);
+  const enrollment = await prisma.essentialAlertEnrollment.findUnique({
+    where: {
+      tenantId_subjectKey: {
+        tenantId: payload.tid,
+        subjectKey,
+      },
+    },
+    select: { status: true, consentedAt: true, optedOutAt: true },
+  });
 
-  const { searchParams } = new URL(req.url);
-  const token = cleanId(searchParams.get("token"));
+  return { payload, student, enrollment };
+}
 
-  const html = pageHtml({
-    title: "Confirm consent",
+function errorPage(code: string, status = 400) {
+  return essentialAlertPage({
+    title: "Essential Alerts link",
+    status,
     bodyHtml: `
-      <h1>Parent/Guardian consent</h1>
-      <p>Dear <b>${esc(guardian)}</b>,</p>
-      <p>
-        ${esc(schoolName)} is requesting your consent to:
-        <br/>• send important SMS updates about <b>${esc(childName)}</b>
-        <br/>• record and use basic daily health checks (temperature/symptoms) for school safety
-      </p>
-
-      <div class="kv">
-        <div><b>Learner:</b> ${esc(childName)}</div>
-        <div><b>Class:</b> ${esc(student.classroom?.name ?? "—")}</div>
-        <div><b>Status:</b> ${already ? "Already confirmed" : "Not yet confirmed"}</div>
-      </div>
-
-      ${
-        already
-          ? `<p class="muted">Consent is already confirmed. You may close this page.</p>`
-          : `
-        <form method="post" action="">
-          ${token ? `<input type="hidden" name="token" value="${esc(token)}" />` : ""}
-          <div class="row">
-            <button class="primary" type="submit">I Agree — Confirm</button>
-          </div>
-        </form>
-        <p class="muted" style="margin-top:10px">
-          By confirming, you allow the school to send SMS updates and to record basic health checks for safety.
-        </p>
-      `
-      }
+      <h1>This link cannot be used</h1>
+      <p>The link may have expired, the school record may have changed, or the guardian phone may have been updated.</p>
+      <div class="notice"><span class="strong">What to do:</span> ask the school for a fresh Essential School Alerts invitation.</div>
+      <p class="muted">Reference: ${escapeHtml(code)}</p>
     `,
   });
+}
 
-  return new Response(html, {
-    status: 200,
-    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+export async function GET(req: NextRequest) {
+  const token = String(new URL(req.url).searchParams.get("token") ?? "").trim();
+  if (!token) return errorPage("MISSING_TOKEN");
+
+  const resolved = await contextForToken(token);
+  if ("error" in resolved) {
+    return errorPage(resolved.error ?? "INVALID_OR_EXPIRED_LINK");
+  }
+
+  const childName =
+    [resolved.student.firstName, resolved.student.lastName]
+      .map((value) => String(value ?? "").trim())
+      .filter(Boolean)
+      .join(" ") || "your child";
+  const guardian = resolved.student.guardianName || "Parent/Guardian";
+  const status = resolved.enrollment?.status ?? null;
+
+  const stateHtml =
+    status === EssentialAlertEnrollmentStatus.ENROLLED
+      ? `<div class="good"><span class="strong">Alerts are enabled.</span> You can change this preference below.</div>`
+      : status === EssentialAlertEnrollmentStatus.OPTED_OUT
+        ? `<div class="notice"><span class="strong">Alerts are currently off.</span> You may enable them again below.</div>`
+        : "";
+
+  return essentialAlertPage({
+    title: "Stay informed by SMS",
+    bodyHtml: `
+      <h1>Stay informed by SMS</h1>
+      <p>Dear <span class="strong">${escapeHtml(guardian)}</span>, ${escapeHtml(resolved.student.tenant.name)} can send useful EduLife OS alerts about <span class="strong">${escapeHtml(childName)}</span>.</p>
+      <ul>
+        <li>Attendance alerts</li>
+        <li>Fees and payment information</li>
+        <li>Released results</li>
+      </ul>
+      <div class="good"><span class="strong">Your first school term is free.</span> No advertising.</div>
+      <p>If a paid continuation is introduced later, EduLife OS will give at least ${ESSENTIAL_ALERT_POLICY.paidContinuationNoticeDays} days' notice. Nothing will be charged automatically.</p>
+      <p class="muted">Health information and health consent are separate and are not changed by this choice.</p>
+      ${stateHtml}
+      <form method="post" action="">
+        <input type="hidden" name="token" value="${escapeHtml(token)}" />
+        <div class="row">
+          <button class="primary" type="submit" name="decision" value="ENABLE">Enable important school alerts</button>
+          <button class="outline" type="submit" name="decision" value="DECLINE">No thanks / Stop SMS alerts</button>
+        </div>
+      </form>
+    `,
   });
 }
 
 export async function POST(req: NextRequest) {
-  // Support token in either query (?token=) or form body (hidden input)
-  const url = new URL(req.url);
-  let token = cleanId(url.searchParams.get("token"));
-
-  if (!token) {
-    const ct = req.headers.get("content-type") || "";
-    if (ct.includes("application/x-www-form-urlencoded") || ct.includes("multipart/form-data")) {
-      const form = await req.formData().catch(() => null);
-      token = cleanId(form?.get("token"));
-    }
+  const contentType = req.headers.get("content-type") || "";
+  if (!contentType.includes("application/x-www-form-urlencoded") && !contentType.includes("multipart/form-data")) {
+    return errorPage("FORM_REQUIRED", 415);
   }
 
-  if (!token) {
-    const html = pageHtml({
-      title: "Consent link error",
-      bodyHtml: `<h1>Consent link error</h1><p class="muted">Missing token.</p>`,
-    });
-    return new Response(html, {
-      status: 400,
-      headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
-    });
+  const form = await req.formData().catch(() => null);
+  const token = String(form?.get("token") ?? "").trim();
+  const decision = String(form?.get("decision") ?? "").trim();
+
+  const payload = verifyEssentialAlertToken(token);
+  if (!payload || payload.kind !== "GUARDIAN") {
+    return errorPage("INVALID_OR_EXPIRED_LINK");
+  }
+  if (decision !== "ENABLE" && decision !== "DECLINE") {
+    return errorPage("INVALID_DECISION");
   }
 
-  const payload = verifyStudentConsentToken(token);
-  if (!payload) {
-    const html = pageHtml({
-      title: "Consent link error",
-      bodyHtml: `<h1>Consent link error</h1><p class="muted">Invalid or expired token.</p>`,
-    });
-    return new Response(html, {
-      status: 400,
-      headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
-    });
-  }
-
-  const student = await prisma.student.findUnique({
-    where: { id: payload.sid },
-    select: {
-      id: true,
-      tenantId: true,
-      status: true,
-      firstName: true,
-      lastName: true,
-      guardianSmsOptIn: true,
-      healthConsentAt: true,
-    },
-  });
-
-  if (!student) {
-    const html = pageHtml({
-      title: "Not found",
-      bodyHtml: `<h1>Not found</h1><p class="muted">Student not found.</p>`,
-    });
-    return new Response(html, {
-      status: 404,
-      headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
-    });
-  }
-
-  if (student.status === StudentStatus.ARCHIVED) {
-    const html = pageHtml({
-      title: "Unavailable",
-      bodyHtml: `<h1>Unavailable</h1><p class="muted">This learner record is archived.</p>`,
-    });
-    return new Response(html, {
-      status: 409,
-      headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
-    });
-  }
-
-  const before = { guardianSmsOptIn: student.guardianSmsOptIn, healthConsentAt: student.healthConsentAt };
-
-  const updated = await prisma.student.update({
-    where: { id: student.id },
-    data: {
-      guardianSmsOptIn: true,
-      healthConsentAt: student.healthConsentAt ?? new Date(),
-    },
-    select: { id: true, tenantId: true, guardianSmsOptIn: true, healthConsentAt: true, firstName: true, lastName: true },
-  });
-
-  // Best-effort audit (public: no userId)
   try {
-    await prisma.auditLog.create({
-      data: {
-        tenantId: updated.tenantId,
-        userId: null,
-        action: "CONSENT_STUDENT_OPTIN_PUBLIC",
-        resource: "STUDENT",
-        resourceId: updated.id,
-        metadata: {
-          via: "public_link_confirm",
-          ip: getIp(req),
-          ua: getUa(req),
-          before: {
-            guardianSmsOptIn: before.guardianSmsOptIn,
-            healthConsentAt: before.healthConsentAt ? new Date(before.healthConsentAt).toISOString() : null,
-          },
-          after: {
-            guardianSmsOptIn: updated.guardianSmsOptIn,
-            healthConsentAt: updated.healthConsentAt ? updated.healthConsentAt.toISOString() : null,
-          },
-        } as any,
-      },
+    await applyEssentialAlertTokenDecision({
+      token: payload,
+      decision,
+      ip: requestIp(req),
+      userAgent: req.headers.get("user-agent"),
     });
-  } catch {}
+  } catch (error) {
+    const code =
+      error && typeof error === "object" && "code" in error
+        ? String((error as { code?: unknown }).code ?? "ESSENTIAL_ALERT_UPDATE_FAILED")
+        : "ESSENTIAL_ALERT_UPDATE_FAILED";
+    return errorPage(code, 409);
+  }
 
-  const childName = `${updated.lastName ?? ""} ${updated.firstName ?? ""}`.trim();
-
-  const html = pageHtml({
-    title: "Consent confirmed",
-    bodyHtml: `
-      <h1>Thank you!</h1>
-      <p>Consent & SMS updates are now enabled for <b>${esc(childName)}</b>.</p>
-      <p class="muted">You may close this page.</p>
-    `,
-  });
-
-  return new Response(html, {
-    status: 200,
-    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+  return essentialAlertPage({
+    title: decision === "ENABLE" ? "Alerts enabled" : "Alerts stopped",
+    bodyHtml:
+      decision === "ENABLE"
+        ? `<h1>You're all set</h1><div class="good"><span class="strong">Important school alerts are enabled.</span></div><p>You can now receive EduLife OS attendance, fees/payment and released-result alerts for this child. No advertising.</p><p class="muted">Health consent was not changed.</p>`
+        : `<h1>Preference saved</h1><div class="notice"><span class="strong">SMS alerts are stopped for this child.</span></div><p>The school can continue to provide information through EduLife OS and its normal channels.</p><p class="muted">You may ask the school for a fresh link if you later choose to enable alerts again.</p>`,
   });
 }

@@ -1,163 +1,129 @@
-// src/app/api/consent/students/list/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { EssentialAlertRecipientKind } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { requireServerUserContext } from "@/lib/serverAuth";
+import { requireApiUserContext } from "@/lib/serverAuth";
+import { effectiveRole } from "@/lib/roleRouting";
+import {
+  guardianSubjectKey,
+  normalizeGhanaPhone,
+} from "@/lib/essentialAlerts/policy";
+import { essentialAlertPhoneFingerprint } from "@/lib/essentialAlerts/tokens";
+import { essentialAlertStatusLabel } from "@/lib/essentialAlerts/enrollment";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function jsonNoStore(body: any, status = 200) {
-  return new NextResponse(JSON.stringify(body), {
+const ALLOWED_ROLES = new Set(["HEADTEACHER", "SCHOOL_ADMIN", "SUPERADMIN"]);
+
+function json(status: number, payload: unknown) {
+  return NextResponse.json(payload, {
     status,
     headers: {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store",
-      "x-content-type-options": "nosniff",
+      "Cache-Control": "no-store, max-age=0",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }
 
-function isNextRedirectError(err: any) {
-  return typeof err?.digest === "string" && err.digest.startsWith("NEXT_REDIRECT");
-}
-
-function normRole(name: any) {
-  return String(name ?? "")
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, "_")
-    .replace(/-+/g, "_");
-}
-
-function looksLikeHeadOrAdmin(roleName: string) {
-  if (!roleName) return false;
-  if (roleName.includes("ADMIN")) return true;
-  if (roleName.includes("HEAD")) return true;
-  if (roleName === "HT") return true; // common shorthand
-  if (roleName === "HEADTEACHER") return true;
-  if (roleName === "SCHOOL_ADMIN") return true;
-  return false;
-}
-
-function pickTenantId(ctx: any): string | null {
-  const tid =
-    ctx?.tenantId ??
-    ctx?.activeTenantId ??
-    ctx?.membership?.tenantId ??
-    ctx?.membership?.tenant?.id ??
-    ctx?.tenant?.id ??
-    null;
-  return typeof tid === "string" && tid.trim() ? tid.trim() : null;
-}
-
-function pickUserId(ctx: any): string | null {
-  const uid = ctx?.userId ?? ctx?.user?.id ?? null;
-  return typeof uid === "string" && uid.trim() ? uid.trim() : null;
-}
-
-function extractCtxRoleNames(ctx: any): string[] {
-  const roles: any[] = [];
-  if (Array.isArray(ctx?.roleNames)) roles.push(...ctx.roleNames);
-  if (Array.isArray(ctx?.roles)) roles.push(...ctx.roles);
-  if (ctx?.role?.name) roles.push(ctx.role.name);
-  if (ctx?.membership?.role?.name) roles.push(ctx.membership.role.name);
-  return roles.map(normRole).filter(Boolean);
-}
-
-async function requireApiCtx() {
-  try {
-    const r: any = await requireServerUserContext({ requireTenant: true } as any);
-
-    // Support both shapes:
-    // 1) ctx directly
-    // 2) { ok:false,res } or { ok:true, ctx }
-    if (r && typeof r === "object" && "ok" in r) {
-      if (r.ok === false) return { res: r.res as Response };
-      return { ctx: r.ctx ?? r };
-    }
-
-    return { ctx: r };
-  } catch (err: any) {
-    if (isNextRedirectError(err)) return { res: jsonNoStore({ ok: false, error: "UNAUTHORIZED" }, 401) };
-    console.error("consent/students/list auth error:", err);
-    return { res: jsonNoStore({ ok: false, error: "UNAUTHORIZED" }, 401) };
-  }
-}
-
-async function ensureConsentView(userId: string, tenantId: string, ctx: any) {
-  // 1) If ctx already indicates head/admin, allow
-  const ctxRoles = extractCtxRoleNames(ctx);
-  if (ctxRoles.some(looksLikeHeadOrAdmin)) return true;
-
-  // 2) DB permission-first
-  const m = await prisma.membership.findFirst({
-    where: { tenantId, userId, status: "ACTIVE" },
-    select: {
-      role: {
-        select: {
-          name: true,
-          rolePerms: { select: { permission: { select: { name: true } } } },
-        },
-      },
-    },
-  });
-
-  const roleName = normRole(m?.role?.name);
-  if (looksLikeHeadOrAdmin(roleName)) return true;
-
-  const perms = new Set((m?.role?.rolePerms ?? []).map((rp) => normRole(rp.permission?.name)));
-  return perms.has("CONSENT_VIEW") || perms.has("CONSENT_EDIT") || perms.has("CONSENT_EXPORT");
+function role(value: unknown) {
+  return effectiveRole(value).trim().toUpperCase();
 }
 
 export async function GET(req: NextRequest) {
-  const auth = await requireApiCtx();
-  if ("res" in auth) return auth.res;
+  const auth = await requireApiUserContext(req, {
+    requireTenant: true,
+    requireRoleNames: ["HEADTEACHER", "SCHOOL_ADMIN", "SUPERADMIN"],
+  });
+  if (!auth.ok) return auth.res;
 
-  const ctx = auth.ctx;
-  const tenantId = pickTenantId(ctx);
-  const userId = pickUserId(ctx);
-
-  if (!tenantId || !userId) return jsonNoStore({ ok: false, error: "UNAUTHORIZED" }, 401);
-
-  // Back-compat: if someone still passes tenantId, it MUST match session tenant.
-  const { searchParams } = new URL(req.url);
-  const tenantIdParam = searchParams.get("tenantId")?.trim() || null;
-  if (tenantIdParam && tenantIdParam !== tenantId) {
-    return jsonNoStore({ ok: false, error: "FORBIDDEN_TENANT_MISMATCH" }, 403);
+  const membership = await prisma.membership.findUnique({
+    where: {
+      userId_tenantId: {
+        userId: auth.ctx.userId,
+        tenantId: auth.ctx.tenantId,
+      },
+    },
+    select: { status: true, role: { select: { name: true } } },
+  });
+  if (
+    !membership ||
+    membership.status !== "ACTIVE" ||
+    !ALLOWED_ROLES.has(role(membership.role?.name ?? auth.ctx.roleName))
+  ) {
+    return json(403, { ok: false, error: "FORBIDDEN" });
   }
 
-  const allowed = await ensureConsentView(userId, tenantId, ctx);
-  if (!allowed) return jsonNoStore({ ok: false, error: "FORBIDDEN" }, 403);
-
-  try {
-    const rows = await prisma.student.findMany({
-      where: { tenantId },
+  const [students, enrollments] = await Promise.all([
+    prisma.student.findMany({
+      where: { tenantId: auth.ctx.tenantId, status: "ACTIVE" },
       select: {
         id: true,
         firstName: true,
         lastName: true,
         guardianName: true,
         guardianPhone: true,
-        healthConsentAt: true,
-        guardianSmsOptIn: true,
+        guardianPhoneNorm: true,
+        classroom: { select: { name: true, grade: true, arm: true } },
       },
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
       take: 2000,
-    });
+    }),
+    prisma.essentialAlertEnrollment.findMany({
+      where: {
+        tenantId: auth.ctx.tenantId,
+        recipientKind: EssentialAlertRecipientKind.GUARDIAN,
+      },
+      select: {
+        subjectKey: true,
+        status: true,
+        consentedAt: true,
+        optedOutAt: true,
+        lastInvitationSentAt: true,
+        invitationCount: true,
+        policyVersion: true,
+      },
+    }),
+  ]);
 
-    const items = rows.map((r) => ({
-      id: r.id,
-      firstName: r.firstName,
-      lastName: r.lastName,
-      guardianName: r.guardianName,
-      guardianPhone: r.guardianPhone,
-      healthConsentAt: r.healthConsentAt ? r.healthConsentAt.toISOString() : null,
-      smsOptIn: !!r.guardianSmsOptIn,
-    }));
+  const enrollmentMap = new Map(enrollments.map((row) => [row.subjectKey, row]));
 
-    return jsonNoStore({ ok: true, items }, 200);
-  } catch (err) {
-    console.error("consent/students/list error:", err);
-    return jsonNoStore({ ok: false, error: "FAILED_TO_LOAD" }, 500);
-  }
+  const items = students.map((student) => {
+    const phoneNorm =
+      normalizeGhanaPhone(student.guardianPhoneNorm) ??
+      normalizeGhanaPhone(student.guardianPhone);
+
+    const phoneFingerprint = phoneNorm
+      ? essentialAlertPhoneFingerprint({
+          tenantId: auth.ctx.tenantId,
+          kind: "GUARDIAN",
+          subjectId: student.id,
+          phoneNorm,
+        })
+      : null;
+    const subjectKey = phoneFingerprint
+      ? guardianSubjectKey(student.id, phoneFingerprint)
+      : null;
+    const enrollment = subjectKey ? enrollmentMap.get(subjectKey) : null;
+
+    return {
+      id: student.id,
+      firstName: student.firstName,
+      lastName: student.lastName,
+      guardianName: student.guardianName,
+      guardianPhone: student.guardianPhoneNorm ?? student.guardianPhone,
+      phoneAvailable: Boolean(phoneNorm),
+      classroom: student.classroom,
+      essentialAlerts: {
+        status: essentialAlertStatusLabel(enrollment?.status),
+        policyVersion: enrollment?.policyVersion ?? null,
+        consentedAt: enrollment?.consentedAt?.toISOString() ?? null,
+        optedOutAt: enrollment?.optedOutAt?.toISOString() ?? null,
+        lastInvitationSentAt:
+          enrollment?.lastInvitationSentAt?.toISOString() ?? null,
+        invitationCount: enrollment?.invitationCount ?? 0,
+      },
+    };
+  });
+
+  return json(200, { ok: true, items });
 }

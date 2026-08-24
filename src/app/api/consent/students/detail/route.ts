@@ -1,99 +1,64 @@
-// src/app/api/consent/students/detail/route.ts
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { requireServerUserContext } from '@/lib/serverAuth'
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireApiUserContext } from "@/lib/serverAuth";
+import { effectiveRole } from "@/lib/roleRouting";
 
-function jsonNoStore(body: any, status = 200) {
-  return new NextResponse(JSON.stringify(body), {
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const ALLOWED_ROLES = new Set(["HEADTEACHER", "SCHOOL_ADMIN", "SUPERADMIN"]);
+
+function json(status: number, payload: unknown) {
+  return NextResponse.json(payload, {
     status,
     headers: {
-      'content-type': 'application/json; charset=utf-8',
-      'cache-control': 'no-store',
+      "Cache-Control": "no-store, max-age=0",
+      "X-Content-Type-Options": "nosniff",
     },
-  })
-}
-
-function isNextRedirectError(err: any) {
-  return typeof err?.digest === 'string' && err.digest.startsWith('NEXT_REDIRECT')
-}
-
-function pickTenantIdFromCtx(ctx: any): string | null {
-  const tid =
-    ctx?.tenantId ??
-    ctx?.activeTenantId ??
-    ctx?.membership?.tenantId ??
-    ctx?.membership?.tenant?.id ??
-    ctx?.tenant?.id ??
-    null
-  return typeof tid === 'string' && tid.trim() ? tid.trim() : null
-}
-
-async function tryGetStaffTenantId(): Promise<string | null> {
-  try {
-    const r: any = await requireServerUserContext({ requireTenant: true } as any)
-    const ctx = r?.ctx ?? r
-    return pickTenantIdFromCtx(ctx)
-  } catch (err: any) {
-    if (isNextRedirectError(err)) return null
-    return null
-  }
+  });
 }
 
 export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url)
-    const studentId = String(searchParams.get('studentId') || '').trim()
-    const tenantIdParam = String(searchParams.get('tenantId') || '').trim() || null
+  const auth = await requireApiUserContext(req, {
+    requireTenant: true,
+    requireRoleNames: ["HEADTEACHER", "SCHOOL_ADMIN", "SUPERADMIN"],
+  });
+  if (!auth.ok) return auth.res;
 
-    if (!studentId) return jsonNoStore({ ok: false, error: 'studentId is required' }, 400)
-
-    // If staff is logged in, enforce session tenant.
-    const staffTenantId = await tryGetStaffTenantId()
-
-    // Public mode: require tenantId in query to prevent cross-tenant guessing.
-    const effectiveTenantId = staffTenantId || tenantIdParam
-    if (!effectiveTenantId) {
-      return jsonNoStore({ ok: false, error: 'tenantId is required for public access' }, 400)
-    }
-
-    const student = await prisma.student.findUnique({
-      where: { id: studentId },
-      select: {
-        id: true,
-        tenantId: true,
-        firstName: true,
-        lastName: true,
-        guardianName: true,
-        guardianPhone: true,
-        healthConsentAt: true,
-        guardianSmsOptIn: true,
-        classroom: { select: { grade: true, arm: true, name: true } },
+  const membership = await prisma.membership.findUnique({
+    where: {
+      userId_tenantId: {
+        userId: auth.ctx.userId,
+        tenantId: auth.ctx.tenantId,
       },
-    })
-
-    if (!student) return jsonNoStore({ ok: false, error: 'Student not found' }, 404)
-    if (student.tenantId !== effectiveTenantId) {
-      return jsonNoStore({ ok: false, error: 'Forbidden: tenant mismatch' }, 403)
-    }
-
-    return jsonNoStore(
-      {
-        ok: true,
-        student: {
-          id: student.id,
-          firstName: student.firstName,
-          lastName: student.lastName,
-          guardianName: student.guardianName,
-          guardianPhone: student.guardianPhone,
-          healthConsentAt: student.healthConsentAt ? student.healthConsentAt.toISOString() : null,
-          smsOptIn: !!student.guardianSmsOptIn,
-          classroom: student.classroom,
-        },
-      },
-      200,
-    )
-  } catch (e) {
-    console.error('consent/students/detail error:', e)
-    return jsonNoStore({ ok: false, error: 'Failed to load student' }, 500)
+    },
+    select: { status: true, role: { select: { name: true } } },
+  });
+  const role = effectiveRole(membership?.role?.name ?? auth.ctx.roleName)
+    .trim()
+    .toUpperCase();
+  if (!membership || membership.status !== "ACTIVE" || !ALLOWED_ROLES.has(role)) {
+    return json(403, { ok: false, error: "FORBIDDEN" });
   }
+
+  const studentId = String(new URL(req.url).searchParams.get("studentId") ?? "").trim();
+  if (!studentId) return json(400, { ok: false, error: "studentId is required" });
+
+  const student = await prisma.student.findFirst({
+    where: { id: studentId, tenantId: auth.ctx.tenantId },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      guardianName: true,
+      guardianPhone: true,
+      guardianPhoneNorm: true,
+      status: true,
+      classroom: { select: { name: true, grade: true, arm: true } },
+    },
+  });
+
+  if (!student) return json(404, { ok: false, error: "Student not found" });
+
+  return json(200, { ok: true, student });
 }

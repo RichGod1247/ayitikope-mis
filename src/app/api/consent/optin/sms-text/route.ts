@@ -1,91 +1,88 @@
-// src/app/api/consent/optin/sms-text/route.ts
-import { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { requireApiUserContext } from "@/lib/serverAuth";
+import { prisma } from "@/lib/prisma";
 import { effectiveRole } from "@/lib/roleRouting";
-import { signStudentConsentToken } from "@/lib/consentTokens";
-import { assertNoTenantOverride } from "@/lib/tenantGuard";
+import { buildGuardianEssentialAlertInvitation } from "@/lib/essentialAlerts/enrollment";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function originFromEnv() {
-  const o = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "");
-  return o || `http://localhost:${process.env.PORT || 3000}`;
+const ALLOWED_ROLES = new Set(["HEADTEACHER", "SCHOOL_ADMIN", "SUPERADMIN"]);
+
+function json(status: number, payload: unknown) {
+  return NextResponse.json(payload, {
+    status,
+    headers: {
+      "Cache-Control": "no-store, max-age=0",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
 }
 
-function isAdminLike(roleName: unknown) {
-  const r = effectiveRole(roleName);
-  return r === "SUPERADMIN" || r === "SCHOOL_ADMIN" || r === "HEADTEACHER";
+function baseUrl(req: NextRequest) {
+  const env =
+    process.env.NEXTAUTH_URL ||
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.APP_BASE_URL;
+  if (env) return env.replace(/\/+$/, "");
+  const proto = req.headers.get("x-forwarded-proto") ?? "https";
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  if (!host) throw new Error("ESSENTIAL_ALERT_BASE_URL_UNAVAILABLE");
+  return `${proto}://${host}`;
 }
 
 export async function GET(req: NextRequest) {
-  const auth = await requireApiUserContext(req, { requireTenant: true });
+  const auth = await requireApiUserContext(req, {
+    requireTenant: true,
+    requireRoleNames: ["HEADTEACHER", "SCHOOL_ADMIN", "SUPERADMIN"],
+  });
   if (!auth.ok) return auth.res;
-  if (!isAdminLike(auth.ctx.roleName)) {
-    return new Response(JSON.stringify({ ok: false, error: "FORBIDDEN" }), {
-      status: 403,
-      headers: { "content-type": "application/json", "cache-control": "no-store" },
+
+  const membership = await prisma.membership.findUnique({
+    where: {
+      userId_tenantId: {
+        userId: auth.ctx.userId,
+        tenantId: auth.ctx.tenantId,
+      },
+    },
+    select: { status: true, role: { select: { name: true } } },
+  });
+  const role = effectiveRole(membership?.role?.name ?? auth.ctx.roleName)
+    .trim()
+    .toUpperCase();
+  if (!membership || membership.status !== "ACTIVE" || !ALLOWED_ROLES.has(role)) {
+    return json(403, { ok: false, error: "FORBIDDEN" });
+  }
+
+  const studentId = String(new URL(req.url).searchParams.get("studentId") ?? "").trim();
+  if (!studentId) return json(400, { ok: false, error: "studentId is required" });
+
+  try {
+    const invite = await buildGuardianEssentialAlertInvitation({
+      tenantId: auth.ctx.tenantId,
+      studentId,
+    });
+    const link = `${baseUrl(req)}/api/consent/optin/student/link?token=${encodeURIComponent(invite.token)}`;
+    const text = `${invite.schoolName}: Free first-term EduLife alerts for ${invite.childName}: attendance, fees/payments & released results. No ads. Enable: ${link}`;
+
+    return json(200, {
+      ok: true,
+      text,
+      link,
+      policy: "EDULIFE_ESSENTIAL_SCHOOL_ALERTS_V1",
+      databaseWrites: 0,
+      healthConsentChanged: false,
+    });
+  } catch (error) {
+    const status =
+      error && typeof error === "object" && "status" in error
+        ? Number((error as { status?: unknown }).status) || 500
+        : 500;
+    return json(status, {
+      ok: false,
+      error: error instanceof Error ? error.message : "INVITATION_PREVIEW_FAILED",
     });
   }
-
-  const { searchParams } = new URL(req.url);
-
-  // Back-compat tenantId param (allowed only if matches session tenant)
-  const suppliedTenantId = (searchParams.get("tenantId") ?? "").trim();
-  if (suppliedTenantId) {
-    const guard = assertNoTenantOverride(suppliedTenantId, auth.ctx.tenantId);
-    if (!guard.ok) {
-      return new Response(JSON.stringify({ ok: false, error: guard.error }), {
-        status: guard.status,
-        headers: { "content-type": "application/json", "cache-control": "no-store" },
-      });
-    }
-  }
-
-  const studentId = (searchParams.get("studentId") ?? "").trim();
-  if (!studentId) {
-    return new Response(JSON.stringify({ ok: false, error: "studentId is required" }), {
-      status: 400,
-      headers: { "content-type": "application/json", "cache-control": "no-store" },
-    });
-  }
-
-  const student = await prisma.student.findFirst({
-    where: { id: studentId, tenantId: auth.ctx.tenantId },
-    select: { id: true, tenantId: true, firstName: true, lastName: true, guardianName: true },
-  });
-
-  if (!student) {
-    return new Response(JSON.stringify({ ok: false, error: "Student not found" }), {
-      status: 404,
-      headers: { "content-type": "application/json", "cache-control": "no-store" },
-    });
-  }
-
-  const tenant = await prisma.tenant.findUnique({
-    where: { id: student.tenantId },
-    select: { name: true },
-  });
-
-  const schoolName = (tenant?.name || "Your School").trim();
-  const origin = originFromEnv();
-
-  const ttlDays = Math.min(Math.max(parseInt(process.env.CONSENT_TOKEN_TTL_DAYS || "14", 10) || 14, 1), 90);
-  const token = signStudentConsentToken(student.id, ttlDays);
-
-  // Use the existing confirm endpoint (guaranteed to exist in your repo)
-  const link = `${origin}/api/consent/optin/student/link?token=${encodeURIComponent(token)}`;
-
-  const child = [student.firstName, student.lastName].filter(Boolean).join(" ").trim() || "your child";
-  const guardian = (student.guardianName || "Dear Parent/Guardian").trim();
-
-  const text = `${guardian}, ${schoolName}:
-Please confirm health & SMS consent for ${child}.
-Open: ${link}`;
-
-  return new Response(JSON.stringify({ ok: true, text, link }), {
-    status: 200,
-    headers: { "content-type": "application/json", "cache-control": "no-store" },
-  });
 }
