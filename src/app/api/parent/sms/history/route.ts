@@ -120,6 +120,29 @@ function inferGenericTitle(message: string) {
   return "School SMS";
 }
 
+function termResultsHistoryMessage(
+  status: string,
+  term: string,
+  academicYear: string,
+) {
+  const s = cleanStr(status).toUpperCase();
+  const label = `${term} ${academicYear} term report notification`;
+
+  if (s === "SENT") {
+    return `The ${label} was sent to this parent phone.`;
+  }
+
+  if (s === "SKIPPED") {
+    return `The ${label} was not sent because released-result Essential School Alerts were not currently enabled for this phone.`;
+  }
+
+  if (s === "FAILED") {
+    return `The ${label} could not be sent successfully.`;
+  }
+
+  return `The ${label} is still pending.`;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const gate = requireParentSession(req as any);
@@ -315,7 +338,11 @@ export async function GET(req: NextRequest) {
         source: "ResultsReleaseNotifyRecipient",
         phone: recipient.guardianPhoneNorm,
         title: "Term report notification",
-        message: `The ${recipient.job.term} ${recipient.job.academicYear} term report notification was sent to this parent phone.`,
+        message: termResultsHistoryMessage(
+          recipient.status,
+          recipient.job.term,
+          recipient.job.academicYear,
+        ),
         status: recipient.status || recipient.job.status || "SENT",
         channel: "SMS",
         createdAt:

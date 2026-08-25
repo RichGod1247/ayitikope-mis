@@ -122,7 +122,7 @@ type NotifyStatus = {
   error?: string;
   job?: unknown;
   remaining?: number;
-  batch?: { sent: number; failed: number };
+  batch?: { sent: number; skipped: number; failed: number };
   done?: boolean;
 };
 
@@ -909,9 +909,11 @@ export default function HeadteacherResultsReleaseClient({
             Notify parents by SMS (batched)
           </p>
           <p className="max-w-2xl text-[11px] text-[#C9CDD6]">
-            Sends to guardians with{" "}
-            <span className="font-semibold text-[#F7F4ED]">SMS consent = true</span>.
-            One batch per click keeps delivery safer.
+            Sends only to guardians currently enabled for{" "}
+            <span className="font-semibold text-[#F7F4ED]">
+              Essential School Alerts · released results
+            </span>.
+            The server rechecks current consent and phone eligibility before each batch.
           </p>
         </div>
 
@@ -932,7 +934,7 @@ export default function HeadteacherResultsReleaseClient({
             disabled={busy === "notify" || !isReleased}
             className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[11px] font-semibold text-[#F7F4ED] hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-45"
           >
-            {busy === "notify" ? "Sending…" : "Send next batch"}
+            {busy === "notify" ? "Sending…" : "Send next eligible batch"}
           </button>
 
           {!isReleased ? (
@@ -947,6 +949,8 @@ export default function HeadteacherResultsReleaseClient({
             <div className="font-semibold">Batch result</div>
             <div className="mt-1">
               Sent: <span className="font-semibold">{notify.batch?.sent ?? 0}</span> ·
+              Skipped:{" "}
+              <span className="font-semibold"> {notify.batch?.skipped ?? 0}</span> ·
               Failed: <span className="font-semibold"> {notify.batch?.failed ?? 0}</span>{" "}
               · Remaining:{" "}
               <span className="font-semibold"> {notify.remaining ?? "—"}</span>
