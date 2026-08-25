@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
 import { effectiveRole } from "@/lib/roleRouting";
 import {
-  buildGuardianEssentialAlertInvitation,
+  buildGuardianFamilyEssentialAlertInvitationBatch,
   buildStaffEssentialAlertInvitation,
   invitationMayBeSent,
 } from "@/lib/essentialAlerts/enrollment";
@@ -74,41 +74,34 @@ export async function GET(req: NextRequest) {
     name: string;
     currentStatus: string;
     canInvite: boolean;
+    coveredLearners?: number;
+    childNames?: string[];
   }> = [];
 
   if (selectedAudience === "GUARDIANS") {
-    const students = await prisma.student.findMany({
-      where: {
-        tenantId: auth.ctx.tenantId,
-        status: "ACTIVE",
-        OR: [
-          { guardianPhoneNorm: { not: null } },
-          { guardianPhone: { not: null } },
-        ],
-      },
-      select: { id: true },
-      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-      take: limit,
+    const families = await buildGuardianFamilyEssentialAlertInvitationBatch({
+      tenantId: auth.ctx.tenantId,
+      limit,
     });
 
-    for (const student of students) {
-      try {
-        const invite = await buildGuardianEssentialAlertInvitation({
-          tenantId: auth.ctx.tenantId,
-          studentId: student.id,
-        });
-        items.push({
-          id: student.id,
-          name: invite.childName,
-          currentStatus: invite.existingStatus ?? "NOT_ENROLLED",
-          canInvite: invitationMayBeSent({
-            existingStatus: invite.existingStatus,
-            lastInvitationSentAt: invite.lastInvitationSentAt,
-          }),
-        });
-      } catch {
-        // A missing/invalid phone is intentionally omitted from the invite preview.
-      }
+    for (const family of families) {
+      const statuses = family.members.map((member) => member.existingStatus);
+      const currentStatus = statuses.every((status) => status === "ENROLLED")
+        ? "ENROLLED"
+        : statuses.every((status) => status === "OPTED_OUT")
+          ? "OPTED_OUT"
+          : statuses.some((status) => status === "INVITED")
+            ? "INVITED"
+            : "NOT_ENROLLED";
+
+      items.push({
+        id: family.seedStudentId,
+        name: family.guardianName,
+        currentStatus,
+        canInvite: family.inviteableChildren > 0,
+        coveredLearners: family.totalChildren,
+        childNames: family.childNames,
+      });
     }
   } else {
     const memberships = await prisma.membership.findMany({
@@ -143,12 +136,13 @@ export async function GET(req: NextRequest) {
           currentStatus: invite.existingStatus ?? "NOT_ENROLLED",
           canInvite: invitationMayBeSent({
             existingStatus: invite.existingStatus,
+            lastInvitationAttemptAt: invite.lastInvitationAttemptAt,
             lastInvitationSentAt: invite.lastInvitationSentAt,
           }),
         });
         if (items.length >= limit) break;
       } catch {
-        // A missing/invalid phone is intentionally omitted from the invite preview.
+        // Missing/invalid staff contact is intentionally omitted.
       }
     }
   }
@@ -173,6 +167,14 @@ export async function GET(req: NextRequest) {
     recentlyInvited: items.filter(
       (item) => item.currentStatus === "INVITED" && !item.canInvite,
     ).length,
+    ...(selectedAudience === "GUARDIANS"
+      ? {
+          learnersCovered: items.reduce(
+            (sum, item) => sum + (item.coveredLearners ?? 0),
+            0,
+          ),
+        }
+      : {}),
     items,
     databaseWrites: 0,
     providerCalled: false,

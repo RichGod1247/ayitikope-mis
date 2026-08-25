@@ -36,7 +36,15 @@ type StudentRowDTO = {
   name?: string;
   guardianName: string | null;
   guardianPhone: string | null;
-  guardianSmsOptIn: boolean;
+  essentialAlertSmsEligible: boolean;
+  essentialAlertEligibility:
+    | "ELIGIBLE"
+    | "NO_PHONE"
+    | "NOT_ENROLLED"
+    | "PHONE_CHANGED"
+    | "POLICY_VERSION_MISMATCH"
+    | "CONSENT_EVIDENCE_MISMATCH"
+    | "PURPOSE_NOT_ALLOWED";
   healthConsentAt?: string | null;
   attendance: {
     markId?: string | null;
@@ -472,22 +480,24 @@ export default function AttendanceSessionClient(props: {
       (student) => marks[student.id]?.status === "ABSENT",
     );
     const eligible = absentees.filter(
-      (student) =>
-        student.guardianSmsOptIn && !!(student.guardianPhone || "").trim(),
+      (student) => student.essentialAlertSmsEligible,
     );
-    const skippedNoOptIn = absentees.filter(
-      (student) => !student.guardianSmsOptIn,
-    ).length;
     const skippedNoPhone = absentees.filter(
       (student) =>
-        student.guardianSmsOptIn && !(student.guardianPhone || "").trim(),
+        !student.essentialAlertSmsEligible &&
+        student.essentialAlertEligibility === "NO_PHONE",
+    ).length;
+    const skippedNotEnabled = absentees.filter(
+      (student) =>
+        !student.essentialAlertSmsEligible &&
+        student.essentialAlertEligibility !== "NO_PHONE",
     ).length;
 
     return {
       absentees,
       eligible,
       total: absentees.length,
-      skippedNoOptIn,
+      skippedNotEnabled,
       skippedNoPhone,
     };
   }, [students, marks]);
@@ -1095,8 +1105,8 @@ export default function AttendanceSessionClient(props: {
 
             <p className="mt-3 text-[11px] leading-5 text-[#AEB6C4]">
               Parent alerts: <b>{alertPreview.absentees.length}</b> absent •{" "}
-              <b>{alertPreview.eligible.length}</b> SMS eligible •{" "}
-              <b>{alertPreview.skippedNoOptIn}</b> no opt-in •{" "}
+              <b>{alertPreview.eligible.length}</b> Essential Alerts eligible •{" "}
+              <b>{alertPreview.skippedNotEnabled}</b> not enabled •{" "}
               <b>{alertPreview.skippedNoPhone}</b> no phone
             </p>
           </div>
@@ -1118,7 +1128,7 @@ export default function AttendanceSessionClient(props: {
               </p>
             ) : (
               <p className="mt-2 max-w-xs text-[10px] leading-4 text-[#8F98A8]">
-                EduLife OS sends only to eligible opted-in guardian numbers.
+                EduLife OS sends attendance SMS only to guardians who enabled Essential School Alerts.
               </p>
             )}
           </div>
@@ -1238,7 +1248,11 @@ export default function AttendanceSessionClient(props: {
                       <div className="mt-1 text-[11px] leading-5 text-[#8F98A8]">
                         {student.guardianName || "No guardian name"} •{" "}
                         {student.guardianPhone || "No phone"}
-                        {student.guardianSmsOptIn ? "" : " • no SMS opt-in"}
+                        {student.essentialAlertSmsEligible
+                          ? ""
+                          : student.essentialAlertEligibility === "NO_PHONE"
+                            ? " • no phone"
+                            : " • Essential Alerts not enabled"}
                       </div>
                     </div>
 
@@ -1305,7 +1319,11 @@ export default function AttendanceSessionClient(props: {
                           <div className="text-[11px] text-[#8F98A8]">
                             {student.guardianName || "—"} •{" "}
                             {student.guardianPhone || "—"}
-                            {student.guardianSmsOptIn ? "" : " • (no SMS opt-in)"}
+                            {student.essentialAlertSmsEligible
+                              ? ""
+                              : student.essentialAlertEligibility === "NO_PHONE"
+                                ? " • (no phone)"
+                                : " • (Essential Alerts not enabled)"}
                           </div>
 
                           {unmarked ? (

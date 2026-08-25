@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { EssentialAlertEnrollmentStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
+  ESSENTIAL_ALERT_POLICY,
   normalizeGhanaPhone,
   staffSubjectKey,
 } from "@/lib/essentialAlerts/policy";
@@ -20,6 +21,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const STAFF_ROLES = new Set(["TEACHER", "HEADTEACHER", "HEADMASTER"]);
+const ATTEMPT_TOLERANCE_MS = 5_000;
 
 function role(value: unknown) {
   return String(value ?? "").trim().toUpperCase().replace(/[\s-]+/g, "_");
@@ -93,8 +95,28 @@ async function contextForToken(token: string) {
         subjectKey,
       },
     },
-    select: { status: true },
+    select: {
+      status: true,
+      policyVersion: true,
+      lastInvitationAttemptAt: true,
+      lastInvitationSentAt: true,
+    },
   });
+
+  if (!enrollment) return { error: "INVITATION_NOT_FOUND" as const };
+  if (enrollment.policyVersion !== ESSENTIAL_ALERT_POLICY.version) {
+    return { error: "POLICY_VERSION_CHANGED" as const };
+  }
+  if (!enrollment.lastInvitationSentAt) {
+    return { error: "INVITATION_NOT_SENT" as const };
+  }
+  if (
+    !enrollment.lastInvitationAttemptAt ||
+    Math.abs(enrollment.lastInvitationAttemptAt.getTime() - payload.iat * 1000) >
+      ATTEMPT_TOLERANCE_MS
+  ) {
+    return { error: "INVITATION_SUPERSEDED" as const };
+  }
 
   return { payload, membership, enrollment };
 }
@@ -103,7 +125,17 @@ function errorPage(code: string, status = 400) {
   return essentialAlertPage({
     title: "Essential work alerts",
     status,
-    bodyHtml: `<h1>This link cannot be used</h1><p>The invitation may have expired or your contact details may have changed.</p><div class="notice">Ask your school for a fresh Essential School Alerts invitation.</div><p class="muted">Reference: ${escapeHtml(code)}</p>`,
+    bodyHtml: `<h1>This link cannot be used</h1><p>The invitation may have expired, been replaced by a newer invitation, or your contact details may have changed.</p><div class="notice">Ask your school for a fresh Essential School Alerts invitation.</div><p class="muted">Reference: ${escapeHtml(code)}</p>`,
+  });
+}
+
+function usedPage(status: EssentialAlertEnrollmentStatus) {
+  const enabled = status === EssentialAlertEnrollmentStatus.ENROLLED;
+  return essentialAlertPage({
+    title: enabled ? "Work alerts already enabled" : "Work alerts already stopped",
+    bodyHtml: enabled
+      ? `<h1>Work alerts are already enabled</h1><div class="good"><span class="strong">Important work alerts are already enabled.</span></div>`
+      : `<h1>SMS work alerts are already stopped</h1><div class="notice"><span class="strong">SMS work alerts are currently stopped.</span></div>`,
   });
 }
 
@@ -116,14 +148,14 @@ export async function GET(req: NextRequest) {
     return errorPage(resolved.error ?? "INVALID_OR_EXPIRED_LINK");
   }
 
-  const name = resolved.membership.user.name || resolved.membership.user.email || "Staff member";
-  const state = resolved.enrollment?.status ?? null;
-  const stateHtml =
-    state === EssentialAlertEnrollmentStatus.ENROLLED
-      ? `<div class="good"><span class="strong">Work alerts are enabled.</span></div>`
-      : state === EssentialAlertEnrollmentStatus.OPTED_OUT
-        ? `<div class="notice"><span class="strong">Work alerts are currently off.</span></div>`
-        : "";
+  if (resolved.enrollment.status !== EssentialAlertEnrollmentStatus.INVITED) {
+    return usedPage(resolved.enrollment.status);
+  }
+
+  const name =
+    resolved.membership.user.name ||
+    resolved.membership.user.email ||
+    "Staff member";
 
   return essentialAlertPage({
     title: "Important work alerts",
@@ -133,8 +165,6 @@ export async function GET(req: NextRequest) {
       <ul><li>Lesson-note workflow</li><li>Official appraisal activity</li></ul>
       <div class="good"><span class="strong">These work alerts are provided through your institution.</span> You are not personally charged for them.</div>
       <p>No advertising. You can stop SMS alerts anytime.</p>
-      <p class="muted">This choice does not include health or wellbeing consent.</p>
-      ${stateHtml}
       <form method="post" action="">
         <input type="hidden" name="token" value="${escapeHtml(token)}" />
         <div class="row">
@@ -148,7 +178,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const contentType = req.headers.get("content-type") || "";
-  if (!contentType.includes("application/x-www-form-urlencoded") && !contentType.includes("multipart/form-data")) {
+  if (
+    !contentType.includes("application/x-www-form-urlencoded") &&
+    !contentType.includes("multipart/form-data")
+  ) {
     return errorPage("FORM_REQUIRED", 415);
   }
 
@@ -157,8 +190,20 @@ export async function POST(req: NextRequest) {
   const decision = String(form?.get("decision") ?? "").trim();
   const payload = verifyEssentialAlertToken(token);
 
-  if (!payload || payload.kind !== "STAFF") return errorPage("INVALID_OR_EXPIRED_LINK");
-  if (decision !== "ENABLE" && decision !== "DECLINE") return errorPage("INVALID_DECISION");
+  if (!payload || payload.kind !== "STAFF") {
+    return errorPage("INVALID_OR_EXPIRED_LINK");
+  }
+  if (decision !== "ENABLE" && decision !== "DECLINE") {
+    return errorPage("INVALID_DECISION");
+  }
+
+  const before = await contextForToken(token);
+  if ("error" in before) {
+    return errorPage(before.error ?? "INVALID_OR_EXPIRED_LINK", 409);
+  }
+  if (before.enrollment.status !== EssentialAlertEnrollmentStatus.INVITED) {
+    return usedPage(before.enrollment.status);
+  }
 
   try {
     await applyEssentialAlertTokenDecision({
@@ -170,7 +215,10 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     const code =
       error && typeof error === "object" && "code" in error
-        ? String((error as { code?: unknown }).code ?? "ESSENTIAL_ALERT_UPDATE_FAILED")
+        ? String(
+            (error as { code?: unknown }).code ??
+              "ESSENTIAL_ALERT_UPDATE_FAILED",
+          )
         : "ESSENTIAL_ALERT_UPDATE_FAILED";
     return errorPage(code, 409);
   }
@@ -179,7 +227,7 @@ export async function POST(req: NextRequest) {
     title: decision === "ENABLE" ? "Work alerts enabled" : "Work alerts stopped",
     bodyHtml:
       decision === "ENABLE"
-        ? `<h1>You're all set</h1><div class="good"><span class="strong">Important work alerts are enabled.</span></div><p>EduLife OS can now send lesson-note workflow and official appraisal SMS alerts to your current school contact number.</p>`
-        : `<h1>Preference saved</h1><div class="notice"><span class="strong">SMS work alerts are stopped.</span></div><p>In-app workflow remains available. Ask your school for a fresh invitation if you later choose to re-enable SMS alerts.</p>`,
+        ? `<h1>You&apos;re all set</h1><div class="good"><span class="strong">Important work alerts are enabled.</span></div><p>EduLife OS can now send lesson-note workflow and official appraisal SMS alerts to your current school contact number.</p>`
+        : `<h1>Preference saved</h1><div class="notice"><span class="strong">SMS work alerts are stopped.</span></div><p>In-app workflow remains available.</p>`,
   });
 }

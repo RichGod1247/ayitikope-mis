@@ -6,6 +6,10 @@ import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
 import { assertCanAccessClassroom } from "@/lib/teacherClassroomAccess";
 import { sendSms } from "@/lib/sms";
+import {
+  getGuardianEssentialAlertEligibilityMap,
+  type GuardianEssentialAlertEligibilityReason,
+} from "@/lib/essentialAlerts/enrollment";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,6 +28,7 @@ type NotifyResult = {
   ok: boolean;
   skipped: boolean;
   skipReason?: "NO_SMS_OPT_IN" | "NO_PHONE" | "NOT_ACTIVE_OR_NOT_FOUND";
+  essentialAlertEligibility?: GuardianEssentialAlertEligibilityReason;
   to?: string;
   error?: string;
 };
@@ -55,16 +60,6 @@ function isAdminLike(roleName: string | null | undefined) {
   return r.includes("ADMIN") || r.includes("HEAD") || r.includes("OWNER") || r === "SUPERADMIN";
 }
 
-function normalizePhone(input: string | null | undefined): string | null {
-  const raw = clean(input).replace(/\s+/g, "").replace(/-/g, "");
-  if (!raw) return null;
-
-  if (raw.startsWith("+") && raw.length >= 9) return raw;
-  if (raw.startsWith("233") && raw.length >= 12) return `+${raw}`;
-  if (raw.startsWith("0") && raw.length === 10) return `+233${raw.slice(1)}`;
-
-  return raw.length >= 8 ? raw : null;
-}
 
 function studentName(student: { firstName?: string | null; lastName?: string | null }) {
   return [student.firstName, student.lastName].map(clean).filter(Boolean).join(" ") || "Your child";
@@ -191,7 +186,6 @@ export async function POST(req: Request) {
           guardianName: true,
           guardianPhone: true,
           guardianPhoneNorm: true,
-          guardianSmsOptIn: true,
         },
       },
     },
@@ -215,8 +209,11 @@ export async function POST(req: Request) {
       skippedCount: 0,
       failedCount: 0,
       skippedNoOptIn: 0,
+      skippedNotEnrolled: 0,
       skippedNoPhone: 0,
       skippedNotActive: 0,
+      eligibilityAuthority: "ESSENTIAL_ALERT_ENROLLMENT",
+      essentialAlertPurpose: "STUDENT_ATTENDANCE",
       results: [],
       summaryText: "No absent learners found for this session.",
     });
@@ -231,36 +228,6 @@ export async function POST(req: Request) {
   }
 
   if (session.notifiedAt) {
-    let skippedNoOptIn = 0;
-    let skippedNoPhone = 0;
-    let skippedNotActive = 0;
-    let eligibleCount = 0;
-
-    for (const mark of sortedAbsentMarks) {
-      const student = mark.student;
-
-      if (!student || student.status !== StudentStatus.ACTIVE) {
-        skippedNotActive += 1;
-        continue;
-      }
-
-      if (!student.guardianSmsOptIn) {
-        skippedNoOptIn += 1;
-        continue;
-      }
-
-      const phone = normalizePhone(student.guardianPhoneNorm) || normalizePhone(student.guardianPhone);
-
-      if (!phone) {
-        skippedNoPhone += 1;
-        continue;
-      }
-
-      eligibleCount += 1;
-    }
-
-    const skippedCount = skippedNoOptIn + skippedNoPhone + skippedNotActive;
-
     return json(200, {
       ok: true,
       alreadyNotified: true,
@@ -269,16 +236,19 @@ export async function POST(req: Request) {
       testMode: process.env.SMS_TEST_MODE === "true",
       sessionId: session.id,
       absentCount: sortedAbsentMarks.length,
-      eligibleCount,
+      eligibleCount: 0,
       successCount: 0,
       sentCount: 0,
-      skippedCount,
+      skippedCount: 0,
       failedCount: 0,
-      skippedNoOptIn,
-      skippedNoPhone,
-      skippedNotActive,
+      skippedNoOptIn: 0,
+      skippedNotEnrolled: 0,
+      skippedNoPhone: 0,
+      skippedNotActive: 0,
+      eligibilityAuthority: "ESSENTIAL_ALERT_ENROLLMENT",
+      essentialAlertPurpose: "STUDENT_ATTENDANCE",
       results: [],
-      summaryText: `Parents were already notified. Absent: ${sortedAbsentMarks.length}. Eligible at that time should be checked in SMS log if needed.`,
+      summaryText: "Parents were already notified for this session.",
     });
   }
 
@@ -322,8 +292,11 @@ export async function POST(req: Request) {
         skippedCount: 0,
         failedCount: 0,
         skippedNoOptIn: 0,
+        skippedNotEnrolled: 0,
         skippedNoPhone: 0,
         skippedNotActive: 0,
+        eligibilityAuthority: "ESSENTIAL_ALERT_ENROLLMENT",
+        essentialAlertPurpose: "STUDENT_ATTENDANCE",
         results: [],
         summaryText: "Parents were already notified for this session.",
       });
@@ -353,6 +326,17 @@ export async function POST(req: Request) {
   let skippedNotActive = 0;
 
   try {
+    const guardianEligibilityByStudent =
+      await getGuardianEssentialAlertEligibilityMap({
+        tenantId: safe.tenantId,
+        purpose: "STUDENT_ATTENDANCE",
+        students: sortedAbsentMarks.map((mark) => ({
+          id: mark.student.id,
+          guardianPhone: mark.student.guardianPhone,
+          guardianPhoneNorm: mark.student.guardianPhoneNorm,
+        })),
+      });
+
     for (const mark of sortedAbsentMarks) {
       const student = mark.student;
       const name = studentName(student);
@@ -370,20 +354,45 @@ export async function POST(req: Request) {
         continue;
       }
 
-      if (!student.guardianSmsOptIn) {
-        skippedNoOptIn += 1;
-        results.push({
-          studentId: student.id,
-          studentName: name,
-          ok: false,
-          skipped: true,
-          skipReason: "NO_SMS_OPT_IN",
-          error: "Guardian has not opted in for SMS alerts.",
-        });
+      const essentialAlertEligibility =
+        guardianEligibilityByStudent.get(student.id) ?? {
+          eligible: false,
+          reason: "NOT_ENROLLED" as const,
+          phoneNorm: null,
+          enrollmentStatus: null,
+        };
+
+      if (!essentialAlertEligibility.eligible) {
+        if (essentialAlertEligibility.reason === "NO_PHONE") {
+          skippedNoPhone += 1;
+          results.push({
+            studentId: student.id,
+            studentName: name,
+            ok: false,
+            skipped: true,
+            skipReason: "NO_PHONE",
+            essentialAlertEligibility: essentialAlertEligibility.reason,
+            error: "Guardian phone is missing.",
+          });
+        } else {
+          skippedNoOptIn += 1;
+          results.push({
+            studentId: student.id,
+            studentName: name,
+            ok: false,
+            skipped: true,
+            skipReason: "NO_SMS_OPT_IN",
+            essentialAlertEligibility: essentialAlertEligibility.reason,
+            error:
+              essentialAlertEligibility.reason === "PHONE_CHANGED"
+                ? "Guardian phone changed after enrollment. Essential School Alerts must be enabled again for the current phone."
+                : "Guardian has not enabled Essential School Alerts for attendance.",
+          });
+        }
         continue;
       }
 
-      const to = normalizePhone(student.guardianPhoneNorm) || normalizePhone(student.guardianPhone);
+      const to = essentialAlertEligibility.phoneNorm;
 
       if (!to) {
         skippedNoPhone += 1;
@@ -393,6 +402,7 @@ export async function POST(req: Request) {
           ok: false,
           skipped: true,
           skipReason: "NO_PHONE",
+          essentialAlertEligibility: "NO_PHONE",
           error: "Guardian phone is missing.",
         });
         continue;
@@ -434,21 +444,27 @@ export async function POST(req: Request) {
         studentName: name,
         ok: sms.ok,
         skipped: false,
+        essentialAlertEligibility: "ELIGIBLE",
         to: sms.to ?? to,
         ...(sms.ok ? {} : { error: sms.error ?? "SMS was not accepted." }),
       });
     }
 
     const skippedCount = skippedNoOptIn + skippedNoPhone + skippedNotActive;
+    const sealedAt = successCount > 0 ? new Date() : null;
 
-    await prisma.attendanceSession.update({
-      where: { id: session.id },
+    const seal = await prisma.attendanceSession.updateMany({
+      where: { id: session.id, tenantId: safe.tenantId },
       data: {
-        notifiedAt: successCount > 0 ? new Date() : null,
+        notifiedAt: sealedAt,
         notifyingAt: null,
         notifiedByUserId: safe.userId,
       },
     });
+
+    if (seal.count !== 1) {
+      throw new Error("ATTENDANCE_NOTIFICATION_SEAL_FAILED");
+    }
 
     try {
       await prisma.auditLog.create({
@@ -470,6 +486,10 @@ export async function POST(req: Request) {
             skippedNoOptIn,
             skippedNoPhone,
             skippedNotActive,
+            eligibilityAuthority: "ESSENTIAL_ALERT_ENROLLMENT",
+            essentialAlertPurpose: "STUDENT_ATTENDANCE",
+            notificationClaim: "SESSION_NOTIFYING_AT",
+            notificationSealed: sealedAt !== null,
             smsTestMode: process.env.SMS_TEST_MODE === "true",
             results: results.map((r) => ({
               studentId: r.studentId,
@@ -477,6 +497,7 @@ export async function POST(req: Request) {
               ok: r.ok,
               skipped: r.skipped,
               skipReason: r.skipReason ?? null,
+              essentialAlertEligibility: r.essentialAlertEligibility ?? null,
               error: r.error ?? null,
             })),
           } satisfies Prisma.JsonObject,
@@ -488,6 +509,8 @@ export async function POST(req: Request) {
 
     return json(200, {
       ok: failedCount === 0,
+      alreadyNotified: false,
+      notifiedAt: sealedAt?.toISOString() ?? null,
       brand: ATTENDANCE_SMS_SENDER,
       testMode: process.env.SMS_TEST_MODE === "true",
       sessionId: session.id,
@@ -498,20 +521,46 @@ export async function POST(req: Request) {
       skippedCount,
       failedCount,
       skippedNoOptIn,
+      skippedNotEnrolled: skippedNoOptIn,
       skippedNoPhone,
       skippedNotActive,
+      eligibilityAuthority: "ESSENTIAL_ALERT_ENROLLMENT",
+      essentialAlertPurpose: "STUDENT_ATTENDANCE",
       results,
       summaryText: `Absent: ${sortedAbsentMarks.length}. SMS eligible: ${eligibleCount}. Sent: ${successCount}. Skipped: ${skippedCount}. Failed: ${failedCount}.`,
     });
   } catch (e) {
-    await prisma.attendanceSession.update({
-      where: { id: session.id },
-      data: { notifyingAt: null },
-    });
+    const sealedAt = successCount > 0 ? new Date() : null;
+
+    try {
+      await prisma.attendanceSession.updateMany({
+        where: { id: session.id, tenantId: safe.tenantId },
+        data: {
+          notifiedAt: sealedAt,
+          notifyingAt: null,
+          notifiedByUserId: safe.userId,
+        },
+      });
+    } catch {
+      // Best effort: preserve partial-success replay protection or release a zero-success claim.
+    }
 
     return json(500, {
       ok: false,
+      alreadyNotified: sealedAt !== null,
+      notifiedAt: sealedAt?.toISOString() ?? null,
       error: e instanceof Error ? e.message : "Failed to notify parents. Please try again.",
+      sessionId: session.id,
+      eligibleCount,
+      successCount,
+      sentCount: successCount,
+      failedCount,
+      skippedNoOptIn,
+      skippedNotEnrolled: skippedNoOptIn,
+      skippedNoPhone,
+      skippedNotActive,
+      eligibilityAuthority: "ESSENTIAL_ALERT_ENROLLMENT",
+      essentialAlertPurpose: "STUDENT_ATTENDANCE",
     });
   }
 }

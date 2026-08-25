@@ -5,6 +5,7 @@ import type { AttendanceStatus } from "@prisma/client";
 import { StudentStatus } from "@prisma/client";
 import { z } from "zod";
 import { assertCanAccessClassroom } from "@/lib/teacherClassroomAccess";
+import { getGuardianEssentialAlertEligibilityMap } from "@/lib/essentialAlerts/enrollment";
 import {
   requireTenantContext,
   assertTenantParamMatches,
@@ -89,7 +90,10 @@ export async function GET(req: Request) {
     });
 
     if (!session) {
-      return noStoreJson(404, { ok: false, error: "Attendance session not found." });
+      return noStoreJson(404, {
+        ok: false,
+        error: "Attendance session not found.",
+      });
     }
 
     await assertCanAccessClassroom({
@@ -111,7 +115,7 @@ export async function GET(req: Request) {
           lastName: true,
           guardianName: true,
           guardianPhone: true,
-          guardianSmsOptIn: true,
+          guardianPhoneNorm: true,
           healthConsentAt: true,
         },
       }),
@@ -128,6 +132,17 @@ export async function GET(req: Request) {
       }),
     ]);
 
+    const guardianEligibilityByStudent =
+      await getGuardianEssentialAlertEligibilityMap({
+        tenantId: safe.tenantId,
+        purpose: "STUDENT_ATTENDANCE",
+        students: students.map((student) => ({
+          id: student.id,
+          guardianPhone: student.guardianPhone,
+          guardianPhoneNorm: student.guardianPhoneNorm,
+        })),
+      });
+
     const marksByStudent = new Map(
       marks.map((mark) => [
         mark.studentId,
@@ -138,7 +153,7 @@ export async function GET(req: Request) {
           createdAt: mark.createdAt.toISOString(),
           updatedAt: mark.updatedAt.toISOString(),
         },
-      ])
+      ]),
     );
 
     const dateISO = toISODateOnly(session.date);
@@ -170,6 +185,13 @@ export async function GET(req: Request) {
     const studentRows = students.map((student) => {
       const mark = marksByStudent.get(student.id) ?? null;
       const status: AttendanceDisplayStatus = mark?.status ?? "UNMARKED";
+      const essentialAlertEligibility =
+        guardianEligibilityByStudent.get(student.id) ?? {
+          eligible: false,
+          reason: "NOT_ENROLLED" as const,
+          phoneNorm: null,
+          enrollmentStatus: null,
+        };
 
       if (status === "PRESENT") present += 1;
       else if (status === "ABSENT") absent += 1;
@@ -181,11 +203,17 @@ export async function GET(req: Request) {
         id: student.id,
         firstName: student.firstName ?? "",
         lastName: student.lastName ?? "",
-        name: compactName(student.firstName, student.lastName) || "Unnamed learner",
+        name:
+          compactName(student.firstName, student.lastName) || "Unnamed learner",
         guardianName: student.guardianName ?? null,
         guardianPhone: student.guardianPhone ?? null,
-        guardianSmsOptIn: !!student.guardianSmsOptIn,
-        healthConsentAt: student.healthConsentAt ? student.healthConsentAt.toISOString() : null,
+        essentialAlertSmsEligible: essentialAlertEligibility.eligible,
+        essentialAlertEligibility: essentialAlertEligibility.reason,
+        eligibilityAuthority: "ESSENTIAL_ALERT_ENROLLMENT" as const,
+        essentialAlertPurpose: "STUDENT_ATTENDANCE" as const,
+        healthConsentAt: student.healthConsentAt
+          ? student.healthConsentAt.toISOString()
+          : null,
 
         attendance: {
           markId: mark?.id ?? null,
@@ -212,6 +240,8 @@ export async function GET(req: Request) {
       ok: true,
       mode: "ATTENDANCE_ONLY",
       healthCaptureEnabled: false,
+      eligibilityAuthority: "ESSENTIAL_ALERT_ENROLLMENT",
+      essentialAlertPurpose: "STUDENT_ATTENDANCE",
       session: {
         id: session.id,
         tenantId: session.tenantId,
@@ -220,7 +250,9 @@ export async function GET(req: Request) {
         dateISO,
         isClosed: session.isClosed,
         closedAt: session.closedAt ? session.closedAt.toISOString() : null,
-        certifiedAt: session.certifiedAt ? session.certifiedAt.toISOString() : null,
+        certifiedAt: session.certifiedAt
+          ? session.certifiedAt.toISOString()
+          : null,
         certifiedByUserId: session.certifiedByUserId ?? null,
         takenByUserId: session.takenByUserId ?? null,
       },

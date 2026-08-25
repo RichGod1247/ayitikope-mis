@@ -18,6 +18,15 @@ type EssentialAlertTokenPayload = {
   exp: number;
 };
 
+export type EssentialAlertCompactInviteReference = {
+  v: 1;
+  kind: EssentialAlertRecipientKind;
+  enrollmentId: string;
+  invitationCount: number;
+};
+
+const COMPACT_SIGNATURE_BYTES = 16;
+
 function secret() {
   const value = clean(
     process.env.CONSENT_TOKEN_SECRET || process.env.NEXTAUTH_SECRET,
@@ -49,6 +58,23 @@ function signPayload(payloadB64: string) {
   );
 }
 
+function compactKindCode(kind: EssentialAlertRecipientKind) {
+  return kind === "GUARDIAN" ? "g" : "s";
+}
+
+function compactKindFromCode(code: string): EssentialAlertRecipientKind | null {
+  if (code === "g") return "GUARDIAN";
+  if (code === "s") return "STAFF";
+  return null;
+}
+
+function compactSignature(body: string) {
+  return createHmac("sha256", secret())
+    .update(`ESSENTIAL_ALERT_SHORT_V1|${body}`, "utf8")
+    .digest()
+    .subarray(0, COMPACT_SIGNATURE_BYTES);
+}
+
 export function essentialAlertPhoneFingerprint(input: {
   tenantId: string;
   kind: EssentialAlertRecipientKind;
@@ -67,6 +93,69 @@ export function essentialAlertPhoneFingerprint(input: {
       "utf8",
     )
     .digest("hex");
+}
+
+export function signEssentialAlertCompactInvite(input: {
+  kind: EssentialAlertRecipientKind;
+  enrollmentId: string;
+  invitationCount: number;
+}) {
+  const enrollmentId = clean(input.enrollmentId);
+  const invitationCount = Number(input.invitationCount);
+
+  if (
+    !/^[A-Za-z0-9_-]{8,120}$/.test(enrollmentId) ||
+    !Number.isSafeInteger(invitationCount) ||
+    invitationCount < 1
+  ) {
+    throw new Error("ESSENTIAL_ALERT_SHORT_LINK_INPUT_INVALID");
+  }
+
+  const kindCode = compactKindCode(input.kind);
+  const countCode = invitationCount.toString(36);
+  const body = `1.${kindCode}.${enrollmentId}.${countCode}`;
+  const signature = base64urlEncode(compactSignature(body));
+
+  return `${body}.${signature}`;
+}
+
+export function verifyEssentialAlertCompactInvite(
+  code: unknown,
+): EssentialAlertCompactInviteReference | null {
+  const raw = clean(code);
+  const parts = raw.split(".");
+  if (parts.length !== 5) return null;
+
+  const [version, kindCode, enrollmentId, countCode, signature] = parts;
+  if (version !== "1" || !kindCode || !enrollmentId || !countCode || !signature) {
+    return null;
+  }
+
+  const kind = compactKindFromCode(kindCode);
+  if (!kind || !/^[A-Za-z0-9_-]{8,120}$/.test(enrollmentId)) return null;
+
+  const invitationCount = Number.parseInt(countCode, 36);
+  if (!Number.isSafeInteger(invitationCount) || invitationCount < 1) return null;
+
+  let actualSignature: Buffer;
+  try {
+    actualSignature = base64urlDecode(signature);
+  } catch {
+    return null;
+  }
+
+  const body = `${version}.${kindCode}.${enrollmentId}.${countCode}`;
+  const expectedSignature = compactSignature(body);
+
+  if (actualSignature.length !== expectedSignature.length) return null;
+  if (!timingSafeEqual(actualSignature, expectedSignature)) return null;
+
+  return {
+    v: 1,
+    kind,
+    enrollmentId,
+    invitationCount,
+  };
 }
 
 export function signEssentialAlertToken(input: {

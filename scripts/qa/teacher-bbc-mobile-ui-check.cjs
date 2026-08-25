@@ -12,6 +12,14 @@ function assert(condition, message, details) {
   throw new Error(`${message}${suffix}`);
 }
 
+function indexBefore(text, first, second, message) {
+  const a = text.indexOf(first);
+  const b = text.indexOf(second);
+  assert(a >= 0, `${message}_FIRST_MARKER_MISSING`, first);
+  assert(b >= 0, `${message}_SECOND_MARKER_MISSING`, second);
+  assert(a < b, `${message}_ORDER_INVALID`, { first, second, a, b });
+}
+
 const dashboard = read("src/app/teacher/dashboard/page.tsx");
 const layout = read("src/app/teacher/layout.tsx");
 const attendancePage = read("src/app/teacher/attendance/[sessionId]/page.tsx");
@@ -19,6 +27,7 @@ const attendanceList = read("src/components/teacher/TeacherAttendanceClient.tsx"
 const session = read("src/components/attendance/AttendanceSessionClient.tsx");
 const scanner = read("src/components/attendance/QrCameraScanner.tsx");
 const notifyRoute = read("src/app/api/teacher/attendance/notify-parents/route.ts");
+const sessionGetRoute = read("src/app/api/teacher/attendance/sessions/get/route.ts");
 
 for (const marker of [
   'data-teacher-glance-ui="bbc-compact-v1"',
@@ -156,7 +165,11 @@ for (const marker of [
   "from: ATTENDANCE_SMS_SENDER",
   'body?.sessionId',
 ]) {
-  assert(notifyRoute.includes(marker), "Server-authoritative SMS sender marker missing", marker);
+  assert(
+    notifyRoute.includes(marker),
+    "Server-authoritative SMS sender marker missing",
+    marker,
+  );
 }
 
 for (const forbidden of ["brand?: string", "body?.brand"]) {
@@ -166,6 +179,76 @@ for (const forbidden of ["brand?: string", "body?.brand"]) {
     forbidden,
   );
 }
+
+for (const marker of [
+  "getGuardianEssentialAlertEligibilityMap",
+  'purpose: "STUDENT_ATTENDANCE"',
+  'eligibilityAuthority: "ESSENTIAL_ALERT_ENROLLMENT"',
+  'essentialAlertPurpose: "STUDENT_ATTENDANCE"',
+  'notificationClaim: "SESSION_NOTIFYING_AT"',
+  "notificationSealed: sealedAt !== null",
+]) {
+  assert(
+    notifyRoute.includes(marker),
+    "Teacher attendance Essential Alerts marker missing",
+    marker,
+  );
+}
+
+assert(
+  !notifyRoute.includes("guardianSmsOptIn"),
+  "Teacher notify route must not use legacy guardianSmsOptIn authority",
+);
+
+indexBefore(
+  notifyRoute,
+  "const claim = await prisma.attendanceSession.updateMany",
+  "await getGuardianEssentialAlertEligibilityMap",
+  "Teacher notification claim must precede eligibility evaluation",
+);
+
+indexBefore(
+  notifyRoute,
+  "await getGuardianEssentialAlertEligibilityMap",
+  "await sendSms({",
+  "Teacher Essential Alerts eligibility must precede SMS provider dispatch",
+);
+
+for (const marker of [
+  "getGuardianEssentialAlertEligibilityMap",
+  'purpose: "STUDENT_ATTENDANCE"',
+  "essentialAlertSmsEligible",
+  'eligibilityAuthority: "ESSENTIAL_ALERT_ENROLLMENT"',
+]) {
+  assert(
+    sessionGetRoute.includes(marker),
+    "Teacher attendance session Essential Alerts marker missing",
+    marker,
+  );
+}
+
+assert(
+  !sessionGetRoute.includes("guardianSmsOptIn"),
+  "Teacher session GET must not publish legacy guardianSmsOptIn as attendance authority",
+);
+
+for (const marker of [
+  "essentialAlertSmsEligible",
+  "essentialAlertEligibility",
+  "Essential Alerts eligible",
+  "Essential Alerts not enabled",
+]) {
+  assert(
+    session.includes(marker),
+    "Attendance session Essential Alerts UX marker missing",
+    marker,
+  );
+}
+
+assert(
+  !session.includes("guardianSmsOptIn"),
+  "Attendance session UI must not derive SMS eligibility from legacy guardianSmsOptIn",
+);
 
 for (const marker of [
   'await import("@zxing/browser")',
@@ -203,6 +286,9 @@ console.log("Badge scanner                  : explicit reveal only");
 console.log("Camera cleanup/lazy loading    : preserved");
 console.log("Editable SMS sender            : removed");
 console.log("Server SMS sender              : EDULIFEOS");
+console.log("Attendance eligibility source  : ESSENTIAL_ALERT_ENROLLMENT");
+console.log("Attendance purpose             : STUDENT_ATTENDANCE");
+console.log("Legacy guardianSmsOptIn        : NOT AUTHORITATIVE");
 console.log("Attendance lifecycle semantics : preserved");
 console.log("Browser persistence/polling    : absent");
 console.log("Database accessed              : false");

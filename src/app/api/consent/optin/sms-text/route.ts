@@ -1,9 +1,12 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { requireApiUserContext } from "@/lib/serverAuth";
 import { prisma } from "@/lib/prisma";
+import { requireApiUserContext } from "@/lib/serverAuth";
 import { effectiveRole } from "@/lib/roleRouting";
-import { buildGuardianEssentialAlertInvitation } from "@/lib/essentialAlerts/enrollment";
+import { ESSENTIAL_ALERT_POLICY } from "@/lib/essentialAlerts/policy";
+import { buildGuardianFamilyEssentialAlertInvitation } from "@/lib/essentialAlerts/enrollment";
+import { signEssentialAlertCompactInvite } from "@/lib/essentialAlerts/tokens";
+import { essentialAlertPublicOrigin } from "@/lib/essentialAlerts/publicPage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,17 +23,8 @@ function json(status: number, payload: unknown) {
   });
 }
 
-function baseUrl(req: NextRequest) {
-  const env =
-    process.env.NEXTAUTH_URL ||
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.APP_BASE_URL;
-  if (env) return env.replace(/\/+$/, "");
-  const proto = req.headers.get("x-forwarded-proto") ?? "https";
-  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
-  if (!host) throw new Error("ESSENTIAL_ALERT_BASE_URL_UNAVAILABLE");
-  return `${proto}://${host}`;
+function role(value: unknown) {
+  return effectiveRole(value).trim().toUpperCase();
 }
 
 export async function GET(req: NextRequest) {
@@ -49,40 +43,86 @@ export async function GET(req: NextRequest) {
     },
     select: { status: true, role: { select: { name: true } } },
   });
-  const role = effectiveRole(membership?.role?.name ?? auth.ctx.roleName)
-    .trim()
-    .toUpperCase();
-  if (!membership || membership.status !== "ACTIVE" || !ALLOWED_ROLES.has(role)) {
+
+  if (
+    !membership ||
+    membership.status !== "ACTIVE" ||
+    !ALLOWED_ROLES.has(role(membership.role?.name ?? auth.ctx.roleName))
+  ) {
     return json(403, { ok: false, error: "FORBIDDEN" });
   }
 
-  const studentId = String(new URL(req.url).searchParams.get("studentId") ?? "").trim();
-  if (!studentId) return json(400, { ok: false, error: "studentId is required" });
+  const studentId = String(
+    new URL(req.url).searchParams.get("studentId") ?? "",
+  ).trim();
+  if (!studentId) {
+    return json(400, { ok: false, error: "studentId is required" });
+  }
 
   try {
-    const invite = await buildGuardianEssentialAlertInvitation({
+    const family = await buildGuardianFamilyEssentialAlertInvitation({
       tenantId: auth.ctx.tenantId,
       studentId,
     });
-    const link = `${baseUrl(req)}/api/consent/optin/student/link?token=${encodeURIComponent(invite.token)}`;
-    const text = `${invite.schoolName}: Free first-term EduLife alerts for ${invite.childName}: attendance, fees/payments & released results. No ads. Enable: ${link}`;
+
+    const now = Date.now();
+    const activeReference = family.members.find((member) => {
+      if (
+        member.existingStatus !== "INVITED" ||
+        !member.enrollmentId ||
+        !member.lastInvitationSentAt ||
+        member.invitationCount < 1
+      ) {
+        return false;
+      }
+
+      const expiresAt =
+        member.lastInvitationSentAt.getTime() + ESSENTIAL_ALERT_POLICY.invitationTtlDays * 86_400_000;
+      return expiresAt >= now;
+    });
+
+    const origin = essentialAlertPublicOrigin(req);
+    const link = activeReference
+      ? `${origin}/a/${encodeURIComponent(
+          signEssentialAlertCompactInvite({
+            kind: "GUARDIAN",
+            enrollmentId: activeReference.enrollmentId as string,
+            invitationCount: activeReference.invitationCount,
+          }),
+        )}`
+      : null;
+
+    const who =
+      family.totalChildren === 1
+        ? family.childNames[0] ?? "your child"
+        : `${family.totalChildren} children`;
+
+    const text = link
+      ? `${family.schoolName}: Free first-term EduLife alerts for ${who}: attendance, fees/payments & released results. No ads. Confirm: ${link}`
+      : `${family.schoolName}: Free first-term EduLife alerts for ${who}: attendance, fees/payments & released results. No ads. Send a fresh invitation from the Essential Alerts center to create a usable link.`;
 
     return json(200, {
       ok: true,
       text,
       link,
+      activeInvitation: Boolean(link),
+      familyLearnerCount: family.totalChildren,
+      childNames: family.childNames,
       policy: "EDULIFE_ESSENTIAL_SCHOOL_ALERTS_V1",
       databaseWrites: 0,
       healthConsentChanged: false,
+      legacySmsOptInChanged: false,
     });
   } catch (error) {
     const status =
       error && typeof error === "object" && "status" in error
         ? Number((error as { status?: unknown }).status) || 500
         : 500;
+
     return json(status, {
       ok: false,
-      error: error instanceof Error ? error.message : "INVITATION_PREVIEW_FAILED",
+      error:
+        error instanceof Error ? error.message : "INVITATION_PREVIEW_FAILED",
     });
   }
 }

@@ -135,8 +135,12 @@ export default function EssentialAlertsPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Invitation send failed.");
 
+      const coverage =
+        audience === "GUARDIANS" && Number(data?.learnersCovered ?? 0) > 0
+          ? ` Learners covered ${data.learnersCovered}.`
+          : "";
       setMessage(
-        `Processed ${data?.count ?? 0}. Sent ${data?.sent ?? 0}; skipped ${data?.skipped ?? 0}; failed ${data?.failed ?? 0}.`,
+        `Processed ${data?.count ?? 0}. Sent ${data?.sent ?? 0}; skipped ${data?.skipped ?? 0}; failed ${data?.failed ?? 0}.${coverage}`,
       );
       await load();
     } catch (e) {
@@ -160,7 +164,7 @@ export default function EssentialAlertsPage() {
         </p>
 
         <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm leading-6 text-emerald-900">
-          <strong>Parent offer:</strong> first school term free. Any future paid continuation requires at least 14 days&apos; notice and is never charged automatically. Health consent is separate.
+          <strong>Parent offer:</strong> first school term free. Any future paid continuation requires at least 14 days&apos; notice and is never charged automatically.
         </div>
       </section>
 
@@ -210,6 +214,7 @@ export default function EssentialAlertsPage() {
 
         <p className="mt-3 text-xs leading-5 text-slate-500">
           You send invitations; the parent or staff member makes the choice. EduLife OS does not let school staff silently manufacture Essential Alerts consent.
+          {tab === "parents" ? " Learners with the same guardian name and phone are grouped into one family invitation." : ""}
         </p>
       </section>
 

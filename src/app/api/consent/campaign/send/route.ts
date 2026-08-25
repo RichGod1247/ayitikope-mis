@@ -5,27 +5,30 @@ import { requireApiUserContext } from "@/lib/serverAuth";
 import { effectiveRole } from "@/lib/roleRouting";
 import { sendSms } from "@/lib/sms";
 import {
-  buildGuardianEssentialAlertInvitation,
+  buildGuardianFamilyEssentialAlertInvitationBatch,
   buildStaffEssentialAlertInvitation,
   invitationMayBeSent,
   recordEssentialAlertInvitationAttempt,
   recordEssentialAlertInvitationSent,
+  recordGuardianFamilyInvitationAttempt,
+  recordGuardianFamilyInvitationSent,
 } from "@/lib/essentialAlerts/enrollment";
 import { ESSENTIAL_ALERT_POLICY } from "@/lib/essentialAlerts/policy";
-import { requestIp } from "@/lib/essentialAlerts/publicPage";
+import { signEssentialAlertCompactInvite } from "@/lib/essentialAlerts/tokens";
+import {
+  essentialAlertPublicOrigin,
+  requestIp,
+} from "@/lib/essentialAlerts/publicPage";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const ALLOWED_ROLES = new Set(["HEADTEACHER", "SCHOOL_ADMIN", "SUPERADMIN"]);
 const MAX_RECIPIENTS_PER_REQUEST = 300;
+const STAFF_NO_PHONE_ERROR = "ESSENTIAL_ALERT_STAFF_PHONE_MISSING";
 
 type Audience = "GUARDIANS" | "STAFF";
-
-type Body = {
-  audience?: Audience;
-  limit?: number;
-};
+type Body = { audience?: Audience; limit?: number };
 
 function json(status: number, payload: unknown) {
   return NextResponse.json(payload, {
@@ -47,33 +50,24 @@ function selectedAudience(value: unknown): Audience {
     : "GUARDIANS";
 }
 
-function baseUrl(req: NextRequest) {
-  const env =
-    process.env.NEXTAUTH_URL ||
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.APP_BASE_URL;
-  if (env) return env.replace(/\/+$/, "");
-
-  const proto = req.headers.get("x-forwarded-proto") ?? "https";
-  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
-  if (!host) throw new Error("ESSENTIAL_ALERT_BASE_URL_UNAVAILABLE");
-  return `${proto}://${host}`;
+function staffInvitationSkipReason(error: unknown) {
+  if (error instanceof Error && error.message === STAFF_NO_PHONE_ERROR) {
+    return "PHONE_MISSING" as const;
+  }
+  return null;
 }
 
 function guardianMessage(input: {
   schoolName: string;
-  childName: string;
+  learnerCount: number;
   link: string;
 }) {
-  return `${input.schoolName}: Free first-term EduLife alerts for ${input.childName}: attendance, fees/payments & released results. No ads. Enable: ${input.link}`;
+  const who = input.learnerCount === 1 ? "your child" : `your ${input.learnerCount} children`;
+  return `${input.schoolName}: Free first-term EduLife alerts for ${who}: attendance, fees/payments & released results. No ads. Confirm: ${input.link}`;
 }
 
-function staffMessage(input: {
-  schoolName: string;
-  link: string;
-}) {
-  return `${input.schoolName}: EduLife work alerts cover lesson-note workflow & official appraisal activity. School-funded, no ads. Enable: ${input.link}`;
+function staffMessage(input: { schoolName: string; link: string }) {
+  return `${input.schoolName}: EduLife work alerts cover lesson-note workflow & official appraisal activity. School-funded, no ads. Confirm: ${input.link}`;
 }
 
 export async function POST(req: NextRequest) {
@@ -112,7 +106,7 @@ export async function POST(req: NextRequest) {
     Math.max(Number.isFinite(requestedLimit) ? Math.trunc(requestedLimit) : 50, 1),
     MAX_RECIPIENTS_PER_REQUEST,
   );
-  const origin = baseUrl(req);
+  const origin = essentialAlertPublicOrigin(req);
   const now = new Date();
   const ip = requestIp(req);
   const userAgent = req.headers.get("user-agent");
@@ -122,88 +116,72 @@ export async function POST(req: NextRequest) {
     name: string;
     ok: boolean;
     skipped: boolean;
+    coveredLearners?: number;
     reason?: string;
   }> = [];
 
   if (audience === "GUARDIANS") {
-    const students = await prisma.student.findMany({
-      where: {
-        tenantId: auth.ctx.tenantId,
-        status: "ACTIVE",
-        OR: [
-          { guardianPhoneNorm: { not: null } },
-          { guardianPhone: { not: null } },
-        ],
-      },
-      select: { id: true },
-      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-      take: Math.min(limit * 3, 1000),
+    const families = await buildGuardianFamilyEssentialAlertInvitationBatch({
+      tenantId: auth.ctx.tenantId,
+      limit,
+      now,
     });
 
-    for (const student of students) {
-      if (results.length >= limit) break;
-
+    for (const family of families) {
       try {
-        const invite = await buildGuardianEssentialAlertInvitation({
-          tenantId: auth.ctx.tenantId,
-          studentId: student.id,
-          now,
-        });
-
-        if (
-          !invitationMayBeSent({
-            existingStatus: invite.existingStatus,
-            lastInvitationSentAt: invite.lastInvitationSentAt,
-            now,
-          })
-        ) {
+        if (family.inviteableChildren === 0) {
+          const statuses = family.members.map((member) => member.existingStatus);
           results.push({
-            id: student.id,
-            name: invite.childName,
+            id: family.seedStudentId,
+            name: family.guardianName,
             ok: true,
             skipped: true,
-            reason:
-              invite.existingStatus === "ENROLLED"
-                ? "ALREADY_ENROLLED"
-                : invite.existingStatus === "OPTED_OUT"
-                  ? "OPTED_OUT"
-                  : "RECENTLY_INVITED",
+            coveredLearners: family.totalChildren,
+            reason: statuses.every((status) => status === "ENROLLED")
+              ? "ALREADY_ENROLLED"
+              : statuses.every((status) => status === "OPTED_OUT")
+                ? "OPTED_OUT"
+                : "RECENTLY_INVITED",
           });
           continue;
         }
 
-        const attempt = await recordEssentialAlertInvitationAttempt({
+        const attempt = await recordGuardianFamilyInvitationAttempt({
           tenantId: auth.ctx.tenantId,
-          kind: "GUARDIAN",
-          subjectId: student.id,
-          subjectKey: invite.subjectKey,
-          phoneNorm: invite.to,
-          phoneFingerprint: invite.phoneFingerprint,
+          seedStudentId: family.seedStudentId,
           actorUserId: auth.ctx.userId,
+          preparedFamily: family,
           now,
           ip,
           userAgent,
         });
 
-        if (!attempt.allowed) {
+        if (!attempt.allowed || !attempt.anchorRow) {
           results.push({
-            id: student.id,
-            name: invite.childName,
+            id: family.seedStudentId,
+            name: family.guardianName,
             ok: true,
             skipped: true,
+            coveredLearners: family.totalChildren,
             reason: "NO_LONGER_INVITEABLE",
           });
           continue;
         }
 
-        const link = `${origin}/api/consent/optin/student/link?token=${encodeURIComponent(invite.token)}`;
+        const code = signEssentialAlertCompactInvite({
+          kind: "GUARDIAN",
+          enrollmentId: attempt.anchorRow.id,
+          invitationCount: attempt.anchorRow.invitationCount,
+        });
+        const link = `${origin}/a/${encodeURIComponent(code)}`;
+
         const sms = await sendSms({
           tenantId: auth.ctx.tenantId,
           actorId: auth.ctx.userId,
-          to: invite.to,
+          to: attempt.family.to,
           message: guardianMessage({
-            schoolName: invite.schoolName,
-            childName: invite.childName,
+            schoolName: family.schoolName,
+            learnerCount: attempt.rows.length,
             link,
           }),
           from: ESSENTIAL_ALERT_POLICY.senderId,
@@ -211,15 +189,23 @@ export async function POST(req: NextRequest) {
           payload: {
             purpose: "essential-alert-enrollment-invitation",
             recipientKind: "GUARDIAN",
-            studentId: student.id,
+            anchorStudentId: attempt.family.seedStudentId,
+            coveredStudentIds: attempt.rows
+              .map((row) => row.studentId)
+              .filter((value): value is string => Boolean(value)),
+            familyInvitation: true,
+            shortLink: true,
             policyId: ESSENTIAL_ALERT_POLICY.policyId,
             policyVersion: ESSENTIAL_ALERT_POLICY.version,
           },
         });
 
         if (sms.ok) {
-          await recordEssentialAlertInvitationSent({
-            enrollmentId: attempt.row.id,
+          await recordGuardianFamilyInvitationSent({
+            attempts: attempt.rows.map((row) => ({
+              enrollmentId: row.id,
+              invitationCount: row.invitationCount,
+            })),
             tenantId: auth.ctx.tenantId,
             actorUserId: auth.ctx.userId,
             now: new Date(),
@@ -229,16 +215,17 @@ export async function POST(req: NextRequest) {
         }
 
         results.push({
-          id: student.id,
-          name: invite.childName,
+          id: family.seedStudentId,
+          name: family.guardianName,
           ok: Boolean(sms.ok),
           skipped: false,
+          coveredLearners: attempt.rows.length,
           ...(sms.ok ? {} : { reason: sms.error ?? "SMS_NOT_ACCEPTED" }),
         });
       } catch (error) {
         results.push({
-          id: student.id,
-          name: "Learner",
+          id: family.seedStudentId,
+          name: family.guardianName,
           ok: false,
           skipped: false,
           reason: error instanceof Error ? error.message : "INVITATION_FAILED",
@@ -274,6 +261,7 @@ export async function POST(req: NextRequest) {
         if (
           !invitationMayBeSent({
             existingStatus: invite.existingStatus,
+            lastInvitationAttemptAt: invite.lastInvitationAttemptAt,
             lastInvitationSentAt: invite.lastInvitationSentAt,
             now,
           })
@@ -306,7 +294,7 @@ export async function POST(req: NextRequest) {
           userAgent,
         });
 
-        if (!attempt.allowed) {
+        if (!attempt.allowed || !attempt.row) {
           results.push({
             id: row.userId,
             name: invite.staffName,
@@ -317,21 +305,25 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
-        const link = `${origin}/api/consent/optin/teacher/link?token=${encodeURIComponent(invite.token)}`;
+        const code = signEssentialAlertCompactInvite({
+          kind: "STAFF",
+          enrollmentId: attempt.row.id,
+          invitationCount: attempt.row.invitationCount,
+        });
+        const link = `${origin}/a/${encodeURIComponent(code)}`;
+
         const sms = await sendSms({
           tenantId: auth.ctx.tenantId,
           actorId: auth.ctx.userId,
           to: invite.to,
-          message: staffMessage({
-            schoolName: invite.schoolName,
-            link,
-          }),
+          message: staffMessage({ schoolName: invite.schoolName, link }),
           from: ESSENTIAL_ALERT_POLICY.senderId,
           template: "ESSENTIAL_ALERT_STAFF_INVITATION",
           payload: {
             purpose: "essential-alert-enrollment-invitation",
             recipientKind: "STAFF",
             userId: row.userId,
+            shortLink: true,
             policyId: ESSENTIAL_ALERT_POLICY.policyId,
             policyVersion: ESSENTIAL_ALERT_POLICY.version,
           },
@@ -342,6 +334,7 @@ export async function POST(req: NextRequest) {
             enrollmentId: attempt.row.id,
             tenantId: auth.ctx.tenantId,
             actorUserId: auth.ctx.userId,
+            expectedInvitationCount: attempt.row.invitationCount,
             now: new Date(),
             ip,
             userAgent,
@@ -356,6 +349,18 @@ export async function POST(req: NextRequest) {
           ...(sms.ok ? {} : { reason: sms.error ?? "SMS_NOT_ACCEPTED" }),
         });
       } catch (error) {
+        const skipReason = staffInvitationSkipReason(error);
+        if (skipReason) {
+          results.push({
+            id: row.userId,
+            name: "Staff member",
+            ok: true,
+            skipped: true,
+            reason: skipReason,
+          });
+          continue;
+        }
+
         results.push({
           id: row.userId,
           name: "Staff member",
@@ -370,6 +375,10 @@ export async function POST(req: NextRequest) {
   const sent = results.filter((item) => item.ok && !item.skipped).length;
   const skipped = results.filter((item) => item.skipped).length;
   const failed = results.filter((item) => !item.ok && !item.skipped).length;
+  const learnersCovered = results.reduce(
+    (sum, item) => sum + (item.coveredLearners ?? 0),
+    0,
+  );
 
   return json(200, {
     ok: failed === 0,
@@ -381,6 +390,7 @@ export async function POST(req: NextRequest) {
     sent,
     skipped,
     failed,
+    ...(audience === "GUARDIANS" ? { learnersCovered } : {}),
     results,
   });
 }

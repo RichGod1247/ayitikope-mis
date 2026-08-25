@@ -4,6 +4,7 @@ import { AttendanceStatus, StudentStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
 import { assertNoTenantOverride } from "@/lib/tenantGuard";
+import { getGuardianEssentialAlertEligibilityMap } from "@/lib/essentialAlerts/enrollment";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -84,16 +85,6 @@ function studentName(s: { firstName?: string | null; lastName?: string | null })
   return [clean(s.firstName), clean(s.lastName)].filter(Boolean).join(" ") || "Unnamed learner";
 }
 
-function smsEligibility(student: {
-  guardianSmsOptIn: boolean | null;
-  guardianPhone?: string | null;
-  guardianPhoneNorm?: string | null;
-}): SmsEligibility {
-  if (!student.guardianSmsOptIn) return "NO_SMS_OPT_IN";
-  if (!clean(student.guardianPhoneNorm) && !clean(student.guardianPhone)) return "NO_PHONE";
-  return "SMS_ELIGIBLE";
-}
-
 export async function GET(req: NextRequest) {
   let ctx: { tenantId: string; userId: string; roleName?: string | null };
 
@@ -167,7 +158,10 @@ export async function GET(req: NextRequest) {
             absentCount: 0,
             smsEligible: 0,
             skippedNoOptIn: 0,
+            skippedNotEnrolled: 0,
             skippedNoPhone: 0,
+            eligibilityAuthority: "ESSENTIAL_ALERT_ENROLLMENT",
+            essentialAlertPurpose: "STUDENT_ATTENDANCE",
           },
         },
         200
@@ -223,12 +217,37 @@ export async function GET(req: NextRequest) {
       take: 2000,
     });
 
+    const guardianEligibilityByStudent =
+      await getGuardianEssentialAlertEligibilityMap({
+        tenantId: ctx.tenantId,
+        purpose: "STUDENT_ATTENDANCE",
+        students: sessions.flatMap((session) =>
+          session.marks.map((mark) => ({
+            id: mark.student.id,
+            guardianPhone: mark.student.guardianPhone,
+            guardianPhoneNorm: mark.student.guardianPhoneNorm,
+          })),
+        ),
+      });
+
     const items = sessions.flatMap((session) => {
       const label = classLabel(session.classroom);
       const dateISO = session.date.toISOString().slice(0, 10);
 
       return session.marks.map((mark) => {
-        const eligibility = smsEligibility(mark.student);
+        const essentialAlertEligibility =
+          guardianEligibilityByStudent.get(mark.student.id) ?? {
+            eligible: false,
+            reason: "NOT_ENROLLED" as const,
+            phoneNorm: null,
+            enrollmentStatus: null,
+          };
+
+        const eligibility: SmsEligibility = essentialAlertEligibility.eligible
+          ? "SMS_ELIGIBLE"
+          : essentialAlertEligibility.reason === "NO_PHONE"
+            ? "NO_PHONE"
+            : "NO_SMS_OPT_IN";
 
         return {
           markId: mark.id,
@@ -240,6 +259,10 @@ export async function GET(req: NextRequest) {
           guardianPhone: mark.student.guardianPhone ?? null,
           guardianPhoneNorm: mark.student.guardianPhoneNorm ?? null,
           guardianSmsOptIn: !!mark.student.guardianSmsOptIn,
+          legacyGuardianSmsOptIn: !!mark.student.guardianSmsOptIn,
+          essentialAlertEligibility: essentialAlertEligibility.reason,
+          eligibilityAuthority: "ESSENTIAL_ALERT_ENROLLMENT" as const,
+          essentialAlertPurpose: "STUDENT_ATTENDANCE" as const,
           smsEligibility: eligibility,
           smsEligible: eligibility === "SMS_ELIGIBLE",
           note: mark.note ?? null,
@@ -275,7 +298,12 @@ export async function GET(req: NextRequest) {
         count: items.length,
         date: dateParam,
         tenantId: ctx.tenantId,
-        summary,
+        summary: {
+          ...summary,
+          skippedNotEnrolled: summary.skippedNoOptIn,
+          eligibilityAuthority: "ESSENTIAL_ALERT_ENROLLMENT",
+          essentialAlertPurpose: "STUDENT_ATTENDANCE",
+        },
       },
       200
     );

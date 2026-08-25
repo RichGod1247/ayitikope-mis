@@ -6,10 +6,15 @@ import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
 import { assertCanAccessClassroom } from "@/lib/teacherClassroomAccess";
 import { sendSms } from "@/lib/sms";
+import {
+  getGuardianEssentialAlertEligibilityMap,
+  type GuardianEssentialAlertEligibilityReason,
+} from "@/lib/essentialAlerts/enrollment";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const LOCK_TTL_MINUTES = 8;
 const MAX_NOTIFICATIONS_PER_REQUEST = 120;
 
 type NotifyRequestBody = {
@@ -26,6 +31,7 @@ type ResultRow = {
   ok: boolean;
   skipped: boolean;
   skipReason?: "NO_SMS_OPT_IN" | "NO_PHONE" | "NOT_ACTIVE_OR_NOT_FOUND";
+  essentialAlertEligibility?: GuardianEssentialAlertEligibilityReason;
   to?: string;
   error?: string;
 };
@@ -63,10 +69,6 @@ function normRole(v: unknown) {
 
 function studentName(s: { firstName?: string | null; lastName?: string | null }) {
   return [s.firstName, s.lastName].map(clean).filter(Boolean).join(" ") || "Your child";
-}
-
-function guardianPhone(s: { guardianPhoneNorm?: string | null; guardianPhone?: string | null }) {
-  return clean(s.guardianPhoneNorm) || clean(s.guardianPhone) || null;
 }
 
 function classLabel(c: { name?: string | null; grade?: string | null; arm?: string | null }) {
@@ -154,6 +156,7 @@ export async function POST(request: Request) {
       id: true,
       isClosed: true,
       certifiedAt: true,
+      notifyingAt: true,
       notifiedAt: true,
       notifiedByUserId: true,
     },
@@ -184,11 +187,10 @@ export async function POST(request: Request) {
 
   const hasFilter = requestedFilter.size > 0;
 
-  const absentMarks = await prisma.attendanceMark.findMany({
+  const allAbsentMarks = await prisma.attendanceMark.findMany({
     where: {
       sessionId: session.id,
       status: AttendanceStatus.ABSENT,
-      ...(hasFilter ? { studentId: { in: Array.from(requestedFilter) } } : {}),
     },
     select: {
       studentId: true,
@@ -200,7 +202,6 @@ export async function POST(request: Request) {
           lastName: true,
           guardianPhone: true,
           guardianPhoneNorm: true,
-          guardianSmsOptIn: true,
         },
       },
     },
@@ -211,9 +212,10 @@ export async function POST(request: Request) {
     },
   });
 
-  if (!absentMarks.length) {
+  if (!allAbsentMarks.length) {
     return json(200, {
       ok: true,
+      alreadyNotified: false,
       tenantId,
       classroomId,
       date: dateStr,
@@ -222,31 +224,142 @@ export async function POST(request: Request) {
       absentCount: 0,
       eligibleCount: 0,
       successCount: 0,
+      sentCount: 0,
       skippedCount: 0,
       failedCount: 0,
       skippedNoOptIn: 0,
+      skippedNotEnrolled: 0,
       skippedNoPhone: 0,
+      skippedNotActive: 0,
+      eligibilityAuthority: "ESSENTIAL_ALERT_ENROLLMENT",
+      essentialAlertPurpose: "STUDENT_ATTENDANCE",
+      brand: "EDULIFEOS",
+      testMode: process.env.SMS_TEST_MODE === "true",
       results: [],
       summaryText: "No absent learners found for this class/date.",
     });
   }
 
-  if (absentMarks.length > MAX_NOTIFICATIONS_PER_REQUEST) {
+  if (allAbsentMarks.length > MAX_NOTIFICATIONS_PER_REQUEST) {
     return json(400, {
       ok: false,
       error: `Too many absentee notifications in one request. Maximum is ${MAX_NOTIFICATIONS_PER_REQUEST}.`,
-      absentCount: absentMarks.length,
+      absentCount: allAbsentMarks.length,
     });
   }
 
-  const tenant = await prisma.tenant.findUnique({
-    where: { id: tenantId },
-    select: { name: true },
+  // Session-level replay protection can safely seal only a complete absentee notification.
+  // A partial studentIds filter could otherwise seal the session while leaving other absentees unsent.
+  if (hasFilter) {
+    const allAbsentIds = new Set(allAbsentMarks.map((mark) => mark.studentId));
+    const exactFullSet =
+      requestedFilter.size === allAbsentIds.size &&
+      Array.from(requestedFilter).every((id) => allAbsentIds.has(id));
+
+    if (!exactFullSet) {
+      return json(409, {
+        ok: false,
+        error: "PARTIAL_NOTIFICATION_FILTER_NOT_SUPPORTED",
+        detail:
+          "Session-level replay protection requires notifying the complete current absentee set.",
+        sessionId: session.id,
+        absentCount: allAbsentMarks.length,
+      });
+    }
+  }
+
+  if (session.notifiedAt) {
+    return json(200, {
+      ok: true,
+      alreadyNotified: true,
+      notifiedAt: session.notifiedAt.toISOString(),
+      tenantId,
+      classroomId,
+      date: dateStr,
+      sessionId: session.id,
+      total: allAbsentMarks.length,
+      absentCount: allAbsentMarks.length,
+      eligibleCount: 0,
+      successCount: 0,
+      sentCount: 0,
+      skippedCount: 0,
+      failedCount: 0,
+      skippedNoOptIn: 0,
+      skippedNotEnrolled: 0,
+      skippedNoPhone: 0,
+      skippedNotActive: 0,
+      eligibilityAuthority: "ESSENTIAL_ALERT_ENROLLMENT",
+      essentialAlertPurpose: "STUDENT_ATTENDANCE",
+      brand: "EDULIFEOS",
+      testMode: process.env.SMS_TEST_MODE === "true",
+      results: [],
+      summaryText: "Parents were already notified for this session.",
+    });
+  }
+
+  const now = new Date();
+  const lockCutoff = new Date(now.getTime() - LOCK_TTL_MINUTES * 60 * 1000);
+
+  const claim = await prisma.attendanceSession.updateMany({
+    where: {
+      id: session.id,
+      tenantId,
+      notifiedAt: null,
+      AND: [
+        { OR: [{ notifyingAt: null }, { notifyingAt: { lt: lockCutoff } }] },
+        { OR: [{ isClosed: true }, { certifiedAt: { not: null } }] },
+      ],
+    },
+    data: {
+      notifyingAt: now,
+      notifiedByUserId: ctx.userId,
+    },
   });
 
-  const schoolName = tenant?.name ?? "Your school";
-  const label = classLabel(classroom);
+  if (claim.count !== 1) {
+    const current = await prisma.attendanceSession.findFirst({
+      where: { id: session.id, tenantId },
+      select: { notifiedAt: true, notifyingAt: true },
+    });
 
+    if (current?.notifiedAt) {
+      return json(200, {
+        ok: true,
+        alreadyNotified: true,
+        notifiedAt: current.notifiedAt.toISOString(),
+        tenantId,
+        classroomId,
+        date: dateStr,
+        sessionId: session.id,
+        total: allAbsentMarks.length,
+        absentCount: allAbsentMarks.length,
+        eligibleCount: 0,
+        successCount: 0,
+        sentCount: 0,
+        skippedCount: 0,
+        failedCount: 0,
+        skippedNoOptIn: 0,
+        skippedNotEnrolled: 0,
+        skippedNoPhone: 0,
+        skippedNotActive: 0,
+        eligibilityAuthority: "ESSENTIAL_ALERT_ENROLLMENT",
+        essentialAlertPurpose: "STUDENT_ATTENDANCE",
+        brand: "EDULIFEOS",
+        testMode: process.env.SMS_TEST_MODE === "true",
+        results: [],
+        summaryText: "Parents were already notified for this session.",
+      });
+    }
+
+    return json(409, {
+      ok: false,
+      inProgress: true,
+      error: "Notification already in progress. Please wait.",
+      sessionId: session.id,
+    });
+  }
+
+  const absentMarks = allAbsentMarks;
   const results: ResultRow[] = [];
 
   let eligibleCount = 0;
@@ -256,168 +369,274 @@ export async function POST(request: Request) {
   let skippedNoPhone = 0;
   let skippedNotActive = 0;
 
-  for (const mark of absentMarks) {
-    const student = mark.student;
-    const name = studentName(student);
+  try {
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { name: true },
+    });
 
-    if (!student || student.status !== StudentStatus.ACTIVE) {
-      skippedNotActive += 1;
-      results.push({
-        studentId: mark.studentId,
-        studentName: name,
-        kind: "ABSENT",
-        ok: false,
-        skipped: true,
-        skipReason: "NOT_ACTIVE_OR_NOT_FOUND",
-        error: "Student is not active or was not found.",
-      });
-      continue;
-    }
+    const schoolName = tenant?.name ?? "Your school";
+    const label = classLabel(classroom);
 
-    if (!student.guardianSmsOptIn) {
-      skippedNoOptIn += 1;
-      results.push({
-        studentId: student.id,
-        studentName: name,
-        kind: "ABSENT",
-        ok: false,
-        skipped: true,
-        skipReason: "NO_SMS_OPT_IN",
-        error: "Guardian has not opted in for SMS alerts.",
-      });
-      continue;
-    }
-
-    const to = guardianPhone(student);
-
-    if (!to) {
-      skippedNoPhone += 1;
-      results.push({
-        studentId: student.id,
-        studentName: name,
-        kind: "ABSENT",
-        ok: false,
-        skipped: true,
-        skipReason: "NO_PHONE",
-        error: "Guardian phone is missing.",
-      });
-      continue;
-    }
-
-    eligibleCount += 1;
-
-    try {
-      const smsResult = await sendSms({
+    const guardianEligibilityByStudent =
+      await getGuardianEssentialAlertEligibilityMap({
         tenantId,
-        actorId: ctx.userId,
-        to,
-        message: smsBody({
-          schoolName,
-          studentName: name,
-          classLabel: label,
-          date: dateStr,
-        }),
-        template: "ATTENDANCE_ABSENCE_ALERT",
-        payload: {
-          purpose: "attendance_absence_alert",
-          studentId: student.id,
-          studentName: name,
-          classroomId,
-          classLabel: label,
-          date: dateStr,
-          sessionId: session.id,
-        },
+        purpose: "STUDENT_ATTENDANCE",
+        students: absentMarks.map((mark) => ({
+          id: mark.student.id,
+          guardianPhone: mark.student.guardianPhone,
+          guardianPhoneNorm: mark.student.guardianPhoneNorm,
+        })),
       });
 
-      if (smsResult.ok) {
-        successCount += 1;
-      } else {
-        failedCount += 1;
+    for (const mark of absentMarks) {
+      const student = mark.student;
+      const name = studentName(student);
+
+      if (!student || student.status !== StudentStatus.ACTIVE) {
+        skippedNotActive += 1;
+        results.push({
+          studentId: mark.studentId,
+          studentName: name,
+          kind: "ABSENT",
+          ok: false,
+          skipped: true,
+          skipReason: "NOT_ACTIVE_OR_NOT_FOUND",
+          error: "Student is not active or was not found.",
+        });
+        continue;
       }
 
-      results.push({
-        studentId: student.id,
-        studentName: name,
-        kind: "ABSENT",
-        ok: smsResult.ok,
-        skipped: false,
-        to: smsResult.to ?? to,
-        ...(smsResult.ok ? {} : { error: smsResult.error ?? "SMS was not accepted." }),
-      });
-    } catch (e) {
-      failedCount += 1;
-      results.push({
-        studentId: student.id,
-        studentName: name,
-        kind: "ABSENT",
-        ok: false,
-        skipped: false,
-        to,
-        error: e instanceof Error ? e.message : "Send failed.",
-      });
+      const essentialAlertEligibility =
+        guardianEligibilityByStudent.get(student.id) ?? {
+          eligible: false,
+          reason: "NOT_ENROLLED" as const,
+          phoneNorm: null,
+          enrollmentStatus: null,
+        };
+
+      if (!essentialAlertEligibility.eligible) {
+        if (essentialAlertEligibility.reason === "NO_PHONE") {
+          skippedNoPhone += 1;
+          results.push({
+            studentId: student.id,
+            studentName: name,
+            kind: "ABSENT",
+            ok: false,
+            skipped: true,
+            skipReason: "NO_PHONE",
+            essentialAlertEligibility: essentialAlertEligibility.reason,
+            error: "Guardian phone is missing.",
+          });
+        } else {
+          skippedNoOptIn += 1;
+          results.push({
+            studentId: student.id,
+            studentName: name,
+            kind: "ABSENT",
+            ok: false,
+            skipped: true,
+            skipReason: "NO_SMS_OPT_IN",
+            essentialAlertEligibility: essentialAlertEligibility.reason,
+            error:
+              essentialAlertEligibility.reason === "PHONE_CHANGED"
+                ? "Guardian phone changed after enrollment. Essential School Alerts must be enabled again for the current phone."
+                : "Guardian has not enabled Essential School Alerts for attendance.",
+          });
+        }
+        continue;
+      }
+
+      const to = essentialAlertEligibility.phoneNorm;
+
+      if (!to) {
+        skippedNoPhone += 1;
+        results.push({
+          studentId: student.id,
+          studentName: name,
+          kind: "ABSENT",
+          ok: false,
+          skipped: true,
+          skipReason: "NO_PHONE",
+          essentialAlertEligibility: "NO_PHONE",
+          error: "Guardian phone is missing.",
+        });
+        continue;
+      }
+
+      eligibleCount += 1;
+
+      try {
+        const smsResult = await sendSms({
+          tenantId,
+          actorId: ctx.userId,
+          to,
+          message: smsBody({
+            schoolName,
+            studentName: name,
+            classLabel: label,
+            date: dateStr,
+          }),
+          template: "ATTENDANCE_ABSENCE_ALERT",
+          payload: {
+            purpose: "attendance_absence_alert",
+            studentId: student.id,
+            studentName: name,
+            classroomId,
+            classLabel: label,
+            date: dateStr,
+            sessionId: session.id,
+          },
+        });
+
+        if (smsResult.ok) {
+          successCount += 1;
+        } else {
+          failedCount += 1;
+        }
+
+        results.push({
+          studentId: student.id,
+          studentName: name,
+          kind: "ABSENT",
+          ok: smsResult.ok,
+          skipped: false,
+          essentialAlertEligibility: "ELIGIBLE",
+          to: smsResult.to ?? to,
+          ...(smsResult.ok ? {} : { error: smsResult.error ?? "SMS was not accepted." }),
+        });
+      } catch (e) {
+        failedCount += 1;
+        results.push({
+          studentId: student.id,
+          studentName: name,
+          kind: "ABSENT",
+          ok: false,
+          skipped: false,
+          essentialAlertEligibility: "ELIGIBLE",
+          to,
+          error: e instanceof Error ? e.message : "Send failed.",
+        });
+      }
     }
-  }
 
-  const absentCount = absentMarks.length;
-  const skippedCount = skippedNoOptIn + skippedNoPhone + skippedNotActive;
+    const absentCount = absentMarks.length;
+    const skippedCount = skippedNoOptIn + skippedNoPhone + skippedNotActive;
+    const sealedAt = successCount > 0 ? new Date() : null;
 
-  try {
-    await prisma.auditLog.create({
+    const seal = await prisma.attendanceSession.updateMany({
+      where: { id: session.id, tenantId },
       data: {
-        tenantId,
-        userId: ctx.userId,
-        action: "ATTENDANCE_ABSENTEE_NOTIFY_ATTEMPTED",
-        resource: "AttendanceSession",
-        resourceId: session.id,
-        metadata: {
-          classroomId,
-          date: dateStr,
-          absentCount,
-          eligibleCount,
-          successCount,
-          failedCount,
-          skippedCount,
-          skippedNoOptIn,
-          skippedNoPhone,
-          skippedNotActive,
-          brand: "EDULIFEOS",
-          smsTestMode: process.env.SMS_TEST_MODE === "true",
-          results: results.map((r) => ({
-            studentId: r.studentId,
-            studentName: r.studentName,
-            ok: r.ok,
-            skipped: r.skipped,
-            skipReason: r.skipReason ?? null,
-            error: r.error ?? null,
-          })),
-        } as Prisma.JsonObject,
+        notifiedAt: sealedAt,
+        notifyingAt: null,
+        notifiedByUserId: ctx.userId,
       },
     });
-  } catch {
-    // Do not block notification flow because audit failed.
+
+    if (seal.count !== 1) {
+      throw new Error("ATTENDANCE_NOTIFICATION_SEAL_FAILED");
+    }
+
+    try {
+      await prisma.auditLog.create({
+        data: {
+          tenantId,
+          userId: ctx.userId,
+          action: "ATTENDANCE_ABSENTEE_NOTIFY_ATTEMPTED",
+          resource: "AttendanceSession",
+          resourceId: session.id,
+          metadata: {
+            classroomId,
+            date: dateStr,
+            absentCount,
+            eligibleCount,
+            successCount,
+            sentCount: successCount,
+            failedCount,
+            skippedCount,
+            skippedNoOptIn,
+            skippedNoPhone,
+            skippedNotActive,
+            eligibilityAuthority: "ESSENTIAL_ALERT_ENROLLMENT",
+            essentialAlertPurpose: "STUDENT_ATTENDANCE",
+            notificationClaim: "SESSION_NOTIFYING_AT",
+            notificationSealed: sealedAt !== null,
+            brand: "EDULIFEOS",
+            smsTestMode: process.env.SMS_TEST_MODE === "true",
+            results: results.map((r) => ({
+              studentId: r.studentId,
+              studentName: r.studentName,
+              ok: r.ok,
+              skipped: r.skipped,
+              skipReason: r.skipReason ?? null,
+              essentialAlertEligibility: r.essentialAlertEligibility ?? null,
+              error: r.error ?? null,
+            })),
+          } as Prisma.JsonObject,
+        },
+      });
+    } catch {
+      // Do not block notification flow because audit failed.
+    }
+
+    return json(200, {
+      ok: failedCount === 0,
+      alreadyNotified: false,
+      notifiedAt: sealedAt?.toISOString() ?? null,
+      tenantId,
+      classroomId,
+      date: dateStr,
+      sessionId: session.id,
+      total: absentCount,
+      absentCount,
+      eligibleCount,
+      successCount,
+      sentCount: successCount,
+      skippedCount,
+      failedCount,
+      skippedNoOptIn,
+      skippedNotEnrolled: skippedNoOptIn,
+      skippedNoPhone,
+      skippedNotActive,
+      eligibilityAuthority: "ESSENTIAL_ALERT_ENROLLMENT",
+      essentialAlertPurpose: "STUDENT_ATTENDANCE",
+      brand: "EDULIFEOS",
+      testMode: process.env.SMS_TEST_MODE === "true",
+      summaryText: `${successCount}/${absentCount} absentee alert(s) sent. ${skippedCount} skipped, ${failedCount} failed.`,
+      results,
+    });
+  } catch (e) {
+    const sealedAt = successCount > 0 ? new Date() : null;
+
+    try {
+      await prisma.attendanceSession.updateMany({
+        where: { id: session.id, tenantId },
+        data: {
+          notifiedAt: sealedAt,
+          notifyingAt: null,
+          notifiedByUserId: ctx.userId,
+        },
+      });
+    } catch {
+      // Best effort: the session claim prevents immediate concurrent replay even if sealing fails.
+    }
+
+    return json(500, {
+      ok: false,
+      alreadyNotified: sealedAt !== null,
+      notifiedAt: sealedAt?.toISOString() ?? null,
+      error: e instanceof Error ? e.message : "Failed to notify parents. Please try again.",
+      sessionId: session.id,
+      eligibleCount,
+      successCount,
+      sentCount: successCount,
+      failedCount,
+      skippedNoOptIn,
+      skippedNotEnrolled: skippedNoOptIn,
+      skippedNoPhone,
+      skippedNotActive,
+      eligibilityAuthority: "ESSENTIAL_ALERT_ENROLLMENT",
+      essentialAlertPurpose: "STUDENT_ATTENDANCE",
+    });
   }
-
-  const fullySuccessful = failedCount === 0;
-
-  return json(200, {
-    ok: fullySuccessful,
-    tenantId,
-    classroomId,
-    date: dateStr,
-    sessionId: session.id,
-    total: absentCount,
-    absentCount,
-    eligibleCount,
-    successCount,
-    sentCount: successCount,
-    skippedCount,
-    failedCount,
-    skippedNoOptIn,
-    skippedNoPhone,
-    skippedNotActive,
-    brand: "EDULIFEOS",
-    testMode: process.env.SMS_TEST_MODE === "true",
-    summaryText: `${successCount}/${absentCount} absentee alert(s) sent. ${skippedCount} skipped, ${failedCount} failed.`,
-    results,
-  });
 }

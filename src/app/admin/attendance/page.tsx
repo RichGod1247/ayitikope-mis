@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AttendanceStatus, StudentStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
+import { getGuardianEssentialAlertEligibilityMap } from "@/lib/essentialAlerts/enrollment";
 
 export const metadata = { title: "Admin • Attendance" };
 export const dynamic = "force-dynamic";
@@ -36,7 +37,6 @@ const inputClass =
 const labelClass = "block text-xs font-semibold text-slate-700";
 const mutedText = "text-sm text-slate-700";
 const tableHeadClass = "bg-slate-100 text-xs text-slate-800";
-const tableCellClass = "px-3 py-2 text-slate-900";
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -329,13 +329,23 @@ export default async function AdminAttendancePage({ searchParams }: PageProps) {
               guardianName: true,
               guardianPhone: true,
               guardianPhoneNorm: true,
-              guardianSmsOptIn: true,
               classroomId: true,
             },
           },
         },
       })
     : [];
+
+  const guardianEligibilityByStudent =
+    await getGuardianEssentialAlertEligibilityMap({
+      tenantId: ctx.tenantId,
+      purpose: "STUDENT_ATTENDANCE",
+      students: absentRows.map((mark) => ({
+        id: mark.student.id,
+        guardianPhone: mark.student.guardianPhone,
+        guardianPhoneNorm: mark.student.guardianPhoneNorm,
+      })),
+    });
 
   const rowBySession = new Map(rows.filter((row) => row.sessionId).map((row) => [row.sessionId!, row]));
 
@@ -475,7 +485,7 @@ export default async function AdminAttendancePage({ searchParams }: PageProps) {
         <div className="border-b border-zinc-200 px-4 py-3">
           <h2 className="text-sm font-semibold text-zinc-950">Absent learners</h2>
           <p className="text-xs text-zinc-500">
-            SMS eligibility depends on guardian phone and SMS opt-in. Consent skips are expected and must be visible.
+            Attendance SMS is sent only when the guardian enabled Essential School Alerts for the learner&apos;s current phone.
           </p>
         </div>
 
@@ -487,7 +497,7 @@ export default async function AdminAttendancePage({ searchParams }: PageProps) {
                 <th>Class</th>
                 <th>Guardian</th>
                 <th>Phone</th>
-                <th>SMS opt-in</th>
+                <th>Essential Alerts</th>
                 <th>Note</th>
               </tr>
             </thead>
@@ -508,15 +518,39 @@ export default async function AdminAttendancePage({ searchParams }: PageProps) {
                     <td>{mark.student.guardianName ?? "—"}</td>
                     <td>{phone}</td>
                     <td>
-                      {mark.student.guardianSmsOptIn ? (
-                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
-                          Eligible
-                        </span>
-                      ) : (
-                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700">
-                          No opt-in
-                        </span>
-                      )}
+                      {(() => {
+                        const eligibility = guardianEligibilityByStudent.get(mark.student.id);
+
+                        if (eligibility?.eligible) {
+                          return (
+                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
+                              Enabled
+                            </span>
+                          );
+                        }
+
+                        if (eligibility?.reason === "NO_PHONE") {
+                          return (
+                            <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700">
+                              Phone needed
+                            </span>
+                          );
+                        }
+
+                        if (eligibility?.reason === "PHONE_CHANGED") {
+                          return (
+                            <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700">
+                              Re-enable after phone change
+                            </span>
+                          );
+                        }
+
+                        return (
+                          <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700">
+                            Not enabled
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td>{mark.note ?? "—"}</td>
                   </tr>
