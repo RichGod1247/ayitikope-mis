@@ -395,10 +395,12 @@ type MockReleaseNotifyStatus = {
   existingJob: MockReleaseNotifyJob | null;
   totals: {
     activeStudents: number;
+    authorityEligibleLearners: number;
     eligibleGuardianPhones: number;
     eligibleLearners: number;
+    notEligibleLearners: number;
     skippedNoPhone: number;
-    skippedOptOut: number;
+    ambiguousFamilyLearners: number;
   } | null;
   release: {
     id: string;
@@ -1858,7 +1860,7 @@ async function queueMockReleaseSms(nextSessionId?: string | null) {
   if (!targetSessionId) return;
 
   const confirmed = window.confirm(
-    "Notify eligible parents by SMS that this sealed Mock readiness report has been released? This will not send to opted-out guardians.",
+    "Notify currently eligible parents that this sealed Mock readiness report has been released? EduLife OS will recheck Essential School Alerts permission again before each queued SMS is sent.",
   );
 
   if (!confirmed) return;
@@ -1907,7 +1909,7 @@ async function queueMockReleaseSms(nextSessionId?: string | null) {
       ok: true,
       message: json.alreadyQueued
         ? "SMS notification job was already queued."
-        : "SMS notification job has been queued.",
+        : "SMS notification job has been queued. Eligibility will be rechecked before delivery.",
       alreadyNotified: !!json.alreadyNotified,
       canQueue: !!json.canQueue,
       blockers: Array.isArray(json.blockers) ? json.blockers : [],
@@ -3209,7 +3211,7 @@ const latestEvent = existingCase ? latestCaseEvent(existingCase) : null;
 
             <SectionCard
               title="Parent SMS notification"
-              subtitle="Notify eligible parents that the released Mock readiness report is available in the parent portal."
+              subtitle="Uses current Essential School Alerts permission. Eligible siblings in the same verified family share one SMS destination."
             >
               <div className="space-y-4">
                 {mockNotifyStatus.message ? (
@@ -3225,29 +3227,35 @@ const latestEvent = existingCase ? latestCaseEvent(existingCase) : null;
                   </div>
                 ) : null}
 
-                <div className="grid gap-3 md:grid-cols-4">
+                <div className="grid gap-3 md:grid-cols-5">
                   <MetricCard
                     label="Eligible phones"
                     value={mockNotifyStatus.totals?.eligibleGuardianPhones ?? "—"}
-                    hint="One SMS per guardian phone"
+                    hint="One SMS per verified family phone"
                   />
 
                   <MetricCard
                     label="Eligible learners"
                     value={mockNotifyStatus.totals?.eligibleLearners ?? "—"}
-                    hint="Learners covered by SMS"
+                    hint="Currently covered by SMS"
                   />
 
                   <MetricCard
-                    label="Opted out"
-                    value={mockNotifyStatus.totals?.skippedOptOut ?? "—"}
-                    hint="Guardians not receiving SMS"
+                    label="Not enabled"
+                    value={mockNotifyStatus.totals?.notEligibleLearners ?? "—"}
+                    hint="Essential Alerts not current"
                   />
 
                   <MetricCard
                     label="No phone"
                     value={mockNotifyStatus.totals?.skippedNoPhone ?? "—"}
                     hint="Missing guardian phone"
+                  />
+
+                  <MetricCard
+                    label="Family check"
+                    value={mockNotifyStatus.totals?.ambiguousFamilyLearners ?? "—"}
+                    hint="Shared phone could not be safely grouped"
                   />
                 </div>
 

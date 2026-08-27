@@ -161,6 +161,27 @@ export function essentialAlertPublicOrigin(req: Request) {
   throw new Error("ESSENTIAL_ALERT_PUBLIC_ORIGIN_REQUIRED");
 }
 
+export function essentialAlertConfiguredPublicOrigin() {
+  const configured = configuredPublicOrigin();
+
+  // Background SMS workers have no trustworthy request origin and the
+  // recipient cannot use localhost/127.0.0.1 from their phone. Require an
+  // explicitly configured hosted HTTPS origin rather than guessing a port.
+  if (!configured || isLoopbackOrigin(configured)) {
+    throw new Error("ESSENTIAL_ALERT_PUBLIC_ORIGIN_REQUIRED");
+  }
+
+  return configured;
+}
+
+export function essentialAlertParentPortalUrl(req: Request) {
+  return `${essentialAlertPublicOrigin(req)}/parent-portal`;
+}
+
+export function essentialAlertConfiguredParentPortalUrl() {
+  return `${essentialAlertConfiguredPublicOrigin()}/parent-portal`;
+}
+
 export function requestIp(req: Request) {
   const cf = req.headers.get("cf-connecting-ip");
   if (cf) return cf.trim();

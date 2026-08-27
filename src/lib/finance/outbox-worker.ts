@@ -5,14 +5,26 @@ import {
   FinanceOutboxStatus,
   Prisma,
 } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
-import { sendSms } from "@/lib/sms";
+
+import {
+  getGuardianEssentialAlertEligibilityMap,
+  type GuardianEssentialAlertEligibilityReason,
+} from "@/lib/essentialAlerts/enrollment";
+import { buildMockResultsReleaseSmsBody } from "@/lib/essentialAlerts/mockResultsReleaseSms";
+import { normalizeGhanaPhone } from "@/lib/essentialAlerts/policy";
+import { essentialAlertConfiguredParentPortalUrl } from "@/lib/essentialAlerts/publicPage";
 import {
   claimFinanceOutboxEvents,
   markFinanceOutboxCompleted,
   markFinanceOutboxFailed,
 } from "@/lib/finance/outbox";
 import { reprocessPaymentProviderEvent } from "@/lib/finance/provider-event-recovery";
+import { prisma } from "@/lib/prisma";
+import { sendSms } from "@/lib/sms";
+
+const RESULTS_RELEASE_PURPOSE = "RESULTS_RELEASE" as const;
+const ESSENTIAL_ALERT_AUTHORITY = "ESSENTIAL_ALERT_ENROLLMENT" as const;
+const MOCK_RESULTS_RELEASE_TEMPLATE = "MOCK_RESULTS_RELEASE_ALERT" as const;
 
 type WorkerResult = {
   claimed: number;
@@ -45,6 +57,36 @@ function readNumber(payload: Record<string, unknown>, key: string): number | nul
   }
 
   return null;
+}
+
+function readStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+
+  return [
+    ...new Set(
+      value
+        .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
+        .filter(Boolean),
+    ),
+  ];
+}
+
+function cleanStr(value: unknown) {
+  return String(value ?? "").trim();
+}
+
+function normalizeGuardianNameKey(value: unknown) {
+  return cleanStr(value).toLowerCase().replace(/\s+/g, " ");
+}
+
+function studentName(student: {
+  firstName: string | null;
+  lastName: string | null;
+}) {
+  return (
+    [student.firstName, student.lastName].map(cleanStr).filter(Boolean).join(" ") ||
+    "Learner"
+  );
 }
 
 function asJson(value: unknown): Prisma.InputJsonValue {
@@ -125,25 +167,30 @@ async function refreshMockResultsReleaseNotifyJob(args: {
   const now = new Date();
 
   await prisma.$transaction(async (tx) => {
-    const [sentCount, failedCount, pendingCount, job] = await Promise.all([
-      tx.mockResultsReleaseNotifyRecipient.count({
-        where: { jobId: args.jobId, status: "SENT" },
-      }),
-      tx.mockResultsReleaseNotifyRecipient.count({
-        where: { jobId: args.jobId, status: "FAILED" },
-      }),
-      tx.mockResultsReleaseNotifyRecipient.count({
-        where: { jobId: args.jobId, status: "PENDING" },
-      }),
-      tx.mockResultsReleaseNotifyJob.findUnique({
-        where: { id: args.jobId },
-        select: {
-          id: true,
-          totalTargets: true,
-          skippedCount: true,
-        },
-      }),
-    ]);
+    const [sentCount, skippedCount, failedCount, pendingCount, job] =
+      await Promise.all([
+        tx.mockResultsReleaseNotifyRecipient.count({
+          where: { jobId: args.jobId, status: "SENT" },
+        }),
+        tx.mockResultsReleaseNotifyRecipient.count({
+          where: { jobId: args.jobId, status: "SKIPPED" },
+        }),
+        tx.mockResultsReleaseNotifyRecipient.count({
+          where: { jobId: args.jobId, status: "FAILED" },
+        }),
+        tx.mockResultsReleaseNotifyRecipient.count({
+          where: { jobId: args.jobId, status: "PENDING" },
+        }),
+        tx.mockResultsReleaseNotifyJob.findUnique({
+          where: { id: args.jobId },
+          select: {
+            id: true,
+            startedAt: true,
+            completedAt: true,
+            lastError: true,
+          },
+        }),
+      ]);
 
     if (!job) return;
 
@@ -154,27 +201,99 @@ async function refreshMockResultsReleaseNotifyJob(args: {
           ? "FAILED"
           : "COMPLETED";
 
+    const totalTargets = sentCount + skippedCount + failedCount + pendingCount;
+
     await tx.mockResultsReleaseNotifyJob.update({
       where: { id: args.jobId },
       data: {
         status: nextStatus,
+        totalTargets,
         sentCount,
+        skippedCount,
         failedCount,
-        lastError: args.lastError ?? undefined,
-        startedAt: { set: now },
-        completedAt: pendingCount === 0 ? now : null,
+        lastError:
+          failedCount > 0 ? args.lastError ?? job.lastError ?? "SMS_SEND_FAILED" : null,
+        startedAt: job.startedAt ?? now,
+        completedAt: pendingCount === 0 ? job.completedAt ?? now : null,
       },
     });
 
-    if (pendingCount === 0 && failedCount === 0) {
-      await tx.mockResultsRelease.update({
-        where: { id: args.releaseId },
+    if (pendingCount === 0 && failedCount === 0 && sentCount > 0) {
+      await tx.mockResultsRelease.updateMany({
+        where: {
+          id: args.releaseId,
+          smsNotifiedAt: null,
+        },
         data: {
           smsNotifiedAt: now,
         },
       });
     }
   });
+}
+
+async function markMockResultsReleaseRecipientSkipped(args: {
+  tenantId: string;
+  jobId: string;
+  releaseId: string;
+  recipientId: bigint;
+  actorId: string | null;
+  reason: string;
+  eligibilityReasons?: GuardianEssentialAlertEligibilityReason[];
+}) {
+  const skipped = await prisma.$transaction(async (tx) => {
+    const result = await tx.mockResultsReleaseNotifyRecipient.updateMany({
+      where: {
+        id: args.recipientId,
+        tenantId: args.tenantId,
+        status: { in: ["PENDING", "FAILED"] },
+      },
+      data: {
+        status: "SKIPPED",
+        providerMessageId: null,
+        providerStatus: null,
+        providerStatusDescription: `SKIPPED: ${args.reason}`,
+        providerRaw: asJson({
+          skipped: true,
+          reason: args.reason,
+          essentialAlertPurpose: RESULTS_RELEASE_PURPOSE,
+          eligibilityAuthority: ESSENTIAL_ALERT_AUTHORITY,
+          eligibilityReasons: args.eligibilityReasons ?? [],
+          providerCalled: false,
+        }),
+      },
+    });
+
+    if (result.count === 1) {
+      await tx.auditLog.create({
+        data: {
+          tenantId: args.tenantId,
+          userId: args.actorId,
+          action: "MOCK_RESULTS_RELEASE_SMS_SKIPPED",
+          resource: "MockResultsRelease",
+          resourceId: args.releaseId,
+          metadata: {
+            jobId: args.jobId,
+            recipientId: String(args.recipientId),
+            reason: args.reason,
+            essentialAlertPurpose: RESULTS_RELEASE_PURPOSE,
+            eligibilityAuthority: ESSENTIAL_ALERT_AUTHORITY,
+            eligibilityReasons: args.eligibilityReasons ?? [],
+            providerCalled: false,
+          },
+        },
+      });
+    }
+
+    return result.count === 1;
+  });
+
+  await refreshMockResultsReleaseNotifyJob({
+    jobId: args.jobId,
+    releaseId: args.releaseId,
+  });
+
+  return skipped;
 }
 
 async function handleMockResultsReleaseSmsEvent(event: FinanceOutboxEvent) {
@@ -185,37 +304,71 @@ async function handleMockResultsReleaseSmsEvent(event: FinanceOutboxEvent) {
   const tenantId = event.tenantId ?? readString(event.payload, "tenantId");
   const jobId = readString(event.payload, "jobId");
   const releaseId = readString(event.payload, "releaseId");
-  const guardianPhoneNorm = readString(event.payload, "guardianPhoneNorm");
-  const to = readString(event.payload, "to");
-  const message =
-    readString(event.payload, "message") || readString(event.payload, "body");
+  const payloadPhone = readString(event.payload, "guardianPhoneNorm");
 
   if (!tenantId) throw new Error("Mock results SMS payload missing tenantId.");
   if (!jobId) throw new Error("Mock results SMS payload missing jobId.");
   if (!releaseId) throw new Error("Mock results SMS payload missing releaseId.");
-  if (!guardianPhoneNorm) {
+  if (!payloadPhone) {
     throw new Error("Mock results SMS payload missing guardianPhoneNorm.");
   }
-  if (!to) throw new Error("Mock results SMS payload missing to.");
-  if (!message) throw new Error("Mock results SMS payload missing message/body.");
 
   const recipient = await prisma.mockResultsReleaseNotifyRecipient.findFirst({
     where: {
       jobId,
       tenantId,
-      guardianPhoneNorm,
+      guardianPhoneNorm: payloadPhone,
     },
     select: {
       id: true,
       status: true,
+      studentIds: true,
+      guardianPhoneNorm: true,
+      job: {
+        select: {
+          id: true,
+          mockResultsReleaseId: true,
+          createdByUserId: true,
+          startedAt: true,
+          mockResultsRelease: {
+            select: {
+              id: true,
+              tenantId: true,
+              mockExamSessionId: true,
+              classroomId: true,
+              mockLabel: true,
+              readinessStatus: true,
+              releaseSnapshotHash: true,
+              parentVisible: true,
+              tenant: {
+                select: {
+                  id: true,
+                  name: true,
+                  status: true,
+                },
+              },
+              classroom: {
+                select: {
+                  id: true,
+                  status: true,
+                },
+              },
+              mockExamSession: {
+                select: {
+                  id: true,
+                  status: true,
+                },
+              },
+            },
+          },
+        },
+      },
     },
   });
 
+  // A release/job may have been deliberately removed after queueing. The stale
+  // outbox event is then terminal: complete it without ever touching the provider.
   if (!recipient) {
-    throw new Error("Mock results SMS recipient row was not found.");
-  }
-
-  if (recipient.status === "SENT") {
     await refreshMockResultsReleaseNotifyJob({
       jobId,
       releaseId,
@@ -223,21 +376,277 @@ async function handleMockResultsReleaseSmsEvent(event: FinanceOutboxEvent) {
     return;
   }
 
-  await prisma.mockResultsReleaseNotifyJob.update({
-    where: { id: jobId },
-    data: {
-      status: "PROCESSING",
-      startedAt: new Date(),
+  if (recipient.status === "SENT" || recipient.status === "SKIPPED") {
+    await refreshMockResultsReleaseNotifyJob({
+      jobId,
+      releaseId,
+    });
+    return;
+  }
+
+  if (
+    recipient.job.mockResultsReleaseId !== releaseId ||
+    recipient.job.mockResultsRelease.id !== releaseId
+  ) {
+    throw new Error("Mock results SMS release/job identity mismatch.");
+  }
+
+  const release = recipient.job.mockResultsRelease;
+  const actorId =
+    readString(event.payload, "actorId") ?? recipient.job.createdByUserId ?? null;
+
+  // SMS delivery is deliberately at-most-once after provider-attempt admission.
+  // FAILED means a provider attempt was either made or became externally ambiguous.
+  // A stale/crashed outbox reclaim must therefore close locally without another SMS.
+  if (recipient.status === "FAILED") {
+    await prisma.auditLog.create({
+      data: {
+        tenantId,
+        userId: actorId,
+        action: "MOCK_RESULTS_RELEASE_SMS_REPLAY_SUPPRESSED",
+        resource: "MockResultsRelease",
+        resourceId: releaseId,
+        metadata: {
+          jobId,
+          recipientId: String(recipient.id),
+          outboxEventId: event.id,
+          reason: "PRIOR_PROVIDER_ATTEMPT_OR_AMBIGUOUS_OUTCOME",
+          automaticReplaySuppressed: true,
+          providerCallThisRun: false,
+          essentialAlertPurpose: RESULTS_RELEASE_PURPOSE,
+          eligibilityAuthority: ESSENTIAL_ALERT_AUTHORITY,
+        },
+      },
+    });
+
+    await refreshMockResultsReleaseNotifyJob({
+      jobId,
+      releaseId,
+      lastError: "SMS_PROVIDER_ATTEMPT_REQUIRES_MANUAL_REVIEW",
+    });
+    return;
+  }
+
+  const releaseEvidenceValid =
+    release.tenantId === tenantId &&
+    release.tenant.status === "ACTIVE" &&
+    release.mockExamSession.status === "LOCKED" &&
+    release.parentVisible &&
+    ["READY", "OVERRIDE"].includes(String(release.readinessStatus)) &&
+    /^[a-f0-9]{64}$/i.test(cleanStr(release.releaseSnapshotHash)) &&
+    (!release.classroom.status || release.classroom.status === "ACTIVE");
+
+  if (!releaseEvidenceValid) {
+    await markMockResultsReleaseRecipientSkipped({
+      tenantId,
+      jobId,
+      releaseId,
+      recipientId: recipient.id,
+      actorId,
+      reason: "MOCK_RELEASE_NOT_CURRENTLY_ELIGIBLE",
+    });
+    return;
+  }
+
+  const guardianPhoneNorm = normalizeGhanaPhone(recipient.guardianPhoneNorm);
+
+  if (!guardianPhoneNorm) {
+    await markMockResultsReleaseRecipientSkipped({
+      tenantId,
+      jobId,
+      releaseId,
+      recipientId: recipient.id,
+      actorId,
+      reason: "RECIPIENT_PHONE_INVALID",
+    });
+    return;
+  }
+
+  const queuedStudentIds = readStringArray(recipient.studentIds);
+
+  if (!queuedStudentIds.length) {
+    await markMockResultsReleaseRecipientSkipped({
+      tenantId,
+      jobId,
+      releaseId,
+      recipientId: recipient.id,
+      actorId,
+      reason: "QUEUED_LEARNER_SET_EMPTY",
+    });
+    return;
+  }
+
+  const students = await prisma.student.findMany({
+    where: {
+      tenantId,
+      id: { in: queuedStudentIds },
+      status: "ACTIVE",
+    },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      guardianName: true,
+      guardianPhone: true,
+      guardianPhoneNorm: true,
     },
   });
 
+  const eligibility = await getGuardianEssentialAlertEligibilityMap({
+    tenantId,
+    purpose: RESULTS_RELEASE_PURPOSE,
+    students,
+  });
+
+  const eligibilityReasons: GuardianEssentialAlertEligibilityReason[] = [];
+  const eligibleStudents = students.filter((student) => {
+    const result = eligibility.get(student.id);
+
+    if (result) eligibilityReasons.push(result.reason);
+
+    return (
+      result?.eligible === true &&
+      normalizeGhanaPhone(result.phoneNorm) === guardianPhoneNorm
+    );
+  });
+
+  if (!eligibleStudents.length) {
+    await markMockResultsReleaseRecipientSkipped({
+      tenantId,
+      jobId,
+      releaseId,
+      recipientId: recipient.id,
+      actorId,
+      reason: "ESSENTIAL_ALERT_NOT_CURRENTLY_ELIGIBLE",
+      eligibilityReasons,
+    });
+    return;
+  }
+
+  const guardianNameKeys = new Set<string>();
+  let missingGuardianNameCount = 0;
+
+  for (const student of eligibleStudents) {
+    const key = normalizeGuardianNameKey(student.guardianName);
+
+    if (key) guardianNameKeys.add(key);
+    else missingGuardianNameCount += 1;
+  }
+
+  const familyAmbiguous =
+    eligibleStudents.length > 1 &&
+    (missingGuardianNameCount > 0 || guardianNameKeys.size !== 1);
+
+  if (familyAmbiguous) {
+    await markMockResultsReleaseRecipientSkipped({
+      tenantId,
+      jobId,
+      releaseId,
+      recipientId: recipient.id,
+      actorId,
+      reason: "GUARDIAN_FAMILY_AMBIGUOUS",
+      eligibilityReasons,
+    });
+    return;
+  }
+
+  // Resolve the public destination and final send-time message before durable
+  // provider admission. Configuration failures therefore cannot consume the
+  // at-most-once provider attempt.
+  const eligibleStudentIds = eligibleStudents.map((student) => student.id);
+  const eligibleStudentNames = eligibleStudents.map(studentName);
+  const parentPortalUrl = essentialAlertConfiguredParentPortalUrl();
+  const message = buildMockResultsReleaseSmsBody({
+    schoolName: release.tenant.name,
+    studentNames: eligibleStudentNames,
+    mockLabel: release.mockLabel,
+    parentPortalUrl,
+  });
+
+  const admittedAt = new Date();
+  const providerAttemptAdmitted = await prisma.$transaction(async (tx) => {
+    const admitted = await tx.mockResultsReleaseNotifyRecipient.updateMany({
+      where: {
+        id: recipient.id,
+        tenantId,
+        jobId,
+        status: "PENDING",
+      },
+      data: {
+        // FAILED is intentionally used as the fail-closed durable admission state.
+        // If the process dies after this commit, automatic provider replay is forbidden.
+        status: "FAILED",
+        providerMessageId: null,
+        providerStatus: null,
+        providerStatusDescription: "PROVIDER_ATTEMPT_ADMITTED",
+        providerRaw: asJson({
+          providerAttemptAdmitted: true,
+          providerAttemptState: "ADMITTED_AMBIGUOUS_UNTIL_RESULT",
+          providerCalled: true,
+          outboxEventId: event.id,
+          jobId,
+          releaseId,
+          essentialAlertPurpose: RESULTS_RELEASE_PURPOSE,
+          eligibilityAuthority: ESSENTIAL_ALERT_AUTHORITY,
+          admittedAt: admittedAt.toISOString(),
+        }),
+      },
+    });
+
+    if (admitted.count !== 1) return false;
+
+    await tx.mockResultsReleaseNotifyJob.update({
+      where: { id: jobId },
+      data: {
+        status: "PROCESSING",
+        startedAt: recipient.job.startedAt ?? admittedAt,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        tenantId,
+        userId: actorId,
+        action: "MOCK_RESULTS_RELEASE_SMS_PROVIDER_ATTEMPT_ADMITTED",
+        resource: "MockResultsRelease",
+        resourceId: releaseId,
+        metadata: {
+          jobId,
+          recipientId: String(recipient.id),
+          outboxEventId: event.id,
+          providerAttemptAdmitted: true,
+          providerAttemptState: "ADMITTED_AMBIGUOUS_UNTIL_RESULT",
+          essentialAlertPurpose: RESULTS_RELEASE_PURPOSE,
+          eligibilityAuthority: ESSENTIAL_ALERT_AUTHORITY,
+        },
+      },
+    });
+
+    return true;
+  });
+
+  if (!providerAttemptAdmitted) {
+    throw new Error("MOCK_RESULTS_RELEASE_SMS_PROVIDER_ATTEMPT_ADMISSION_FAILED");
+  }
+
   const result = await sendSms({
     tenantId,
-    actorId: readString(event.payload, "actorId"),
-    to,
+    actorId,
+    to: guardianPhoneNorm,
     message,
-    template: readString(event.payload, "template") ?? "mock-results-release",
-    payload: event.payload,
+    template: MOCK_RESULTS_RELEASE_TEMPLATE,
+    payload: {
+      outboxEventId: event.id,
+      jobId,
+      releaseId,
+      mockExamSessionId: release.mockExamSessionId,
+      classroomId: release.classroomId,
+      essentialAlertPurpose: RESULTS_RELEASE_PURPOSE,
+      eligibilityAuthority: ESSENTIAL_ALERT_AUTHORITY,
+      eligibleLearnerCount: eligibleStudentIds.length,
+      studentIds: eligibleStudentIds,
+      releaseSnapshotHash: release.releaseSnapshotHash,
+    },
   });
 
   if (!result.ok) {
@@ -252,7 +661,12 @@ async function handleMockResultsReleaseSmsEvent(event: FinanceOutboxEvent) {
         providerStatus: readProviderStatus(result),
         providerStatusDescription:
           readProviderStatusDescription(result) ?? errorMessage,
-        providerRaw: asJson(result),
+        providerRaw: asJson({
+          providerAttemptAdmitted: true,
+          providerCalled: true,
+          providerOutcome: "NOT_ACCEPTED_OR_AMBIGUOUS",
+          result,
+        }),
       },
     });
 
@@ -262,17 +676,25 @@ async function handleMockResultsReleaseSmsEvent(event: FinanceOutboxEvent) {
       lastError: errorMessage,
     });
 
-    throw new Error(errorMessage);
+    // The provider boundary may already have been crossed. Treat the outbox event
+    // as handled and require explicit forensic/manual recovery rather than retrying.
+    return;
   }
 
   await prisma.mockResultsReleaseNotifyRecipient.update({
     where: { id: recipient.id },
     data: {
       status: "SENT",
+      studentIds: eligibleStudentIds,
       providerMessageId: readProviderMessageId(result),
       providerStatus: readProviderStatus(result),
       providerStatusDescription: readProviderStatusDescription(result),
-      providerRaw: asJson(result),
+      providerRaw: asJson({
+        providerAttemptAdmitted: true,
+        providerCalled: true,
+        providerOutcome: "ACCEPTED",
+        result,
+      }),
     },
   });
 
@@ -321,7 +743,7 @@ async function processFinanceOutboxEvent(event: FinanceOutboxEvent) {
 
     case FinanceOutboxEventType.PAYSTACK_WEBHOOK_TRANSFER_EVENT:
       throw new Error(
-        "Transfer webhook recovery is not implemented in shared core yet. Keep this event failed/dead for admin review."
+        "Transfer webhook recovery is not implemented in shared core yet. Keep this event failed/dead for admin review.",
       );
 
     case FinanceOutboxEventType.SETTLEMENT_PAYOUT_VERIFY:

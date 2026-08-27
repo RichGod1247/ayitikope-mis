@@ -7,7 +7,7 @@ import { requireApiUserContext } from "@/lib/serverAuth";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function noStoreJson(status: number, payload: any) {
+function noStoreJson(status: number, payload: unknown) {
   return NextResponse.json(payload, {
     status,
     headers: {
@@ -95,8 +95,8 @@ type Body = {
 };
 
 export async function POST(req: NextRequest) {
-  const gate = await requireApiUserContext(req as any, { requireTenant: true });
-  if (!gate.ok) return gate.res as any;
+  const gate = await requireApiUserContext(req, { requireTenant: true });
+  if (!gate.ok) return gate.res;
 
   const ctx = gate.ctx;
   const role = roleUpper(ctx.roleName);
@@ -199,8 +199,6 @@ export async function POST(req: NextRequest) {
       id: true,
       firstName: true,
       lastName: true,
-      guardianPhoneNorm: true,
-      guardianSmsOptIn: true,
     },
   });
 

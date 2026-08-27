@@ -1,10 +1,22 @@
 // src/app/api/headteacher/assessment/mock/release/notify/route.ts
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
+
+import {
+  getGuardianEssentialAlertEligibilityMap,
+  type GuardianEssentialAlertEligibilityReason,
+} from "@/lib/essentialAlerts/enrollment";
+import { buildMockResultsReleaseSmsBody } from "@/lib/essentialAlerts/mockResultsReleaseSms";
+import { essentialAlertParentPortalUrl } from "@/lib/essentialAlerts/publicPage";
 import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const RESULTS_RELEASE_PURPOSE = "RESULTS_RELEASE" as const;
+const ESSENTIAL_ALERT_AUTHORITY = "ESSENTIAL_ALERT_ENROLLMENT" as const;
+const MAX_MOCK_NOTIFICATION_STUDENTS = 5000;
 
 function noStoreJson(status: number, payload: unknown) {
   return NextResponse.json(payload, {
@@ -20,10 +32,6 @@ function cleanStr(v: unknown) {
   return String(v ?? "").trim();
 }
 
-function digitsOnly(v: unknown) {
-  return cleanStr(v).replace(/\D/g, "");
-}
-
 function roleUpper(role: string | null | undefined) {
   return cleanStr(role).toUpperCase();
 }
@@ -37,38 +45,30 @@ function isHeadOrAdmin(role: string) {
   );
 }
 
-function normalizePhoneForSms(phone: unknown) {
-  const digits = digitsOnly(phone);
-  if (!digits) return "";
-
-  if (digits.startsWith("233") && digits.length === 12) return digits;
-  if (digits.startsWith("0") && digits.length === 10) return `233${digits.slice(1)}`;
-  if (digits.length === 9) return `233${digits}`;
-
-  return digits;
-}
-
-function buildSmsBody(args: {
-  schoolName: string;
-  studentNames: string[];
-  mockLabel: string;
-}) {
-  const names =
-    args.studentNames.length === 1
-      ? args.studentNames[0]
-      : `${args.studentNames.length} children`;
-
-  return `EduLife OS: ${args.schoolName} has released ${args.mockLabel} BECE readiness for ${names}. Login to the parent portal to view support guidance.`;
+function normalizeGuardianNameKey(value: unknown) {
+  return cleanStr(value).toLowerCase().replace(/\s+/g, " ");
 }
 
 function studentName(s: { firstName: string | null; lastName: string | null }) {
   return [s.firstName, s.lastName].filter(Boolean).join(" ").trim() || "Learner";
 }
 
+function isUniqueConstraintError(error: unknown) {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+}
+
 type Body = {
   sessionId?: string;
   releaseId?: string;
   dryRun?: boolean;
+};
+
+type RecipientBucket = {
+  guardianPhoneNorm: string;
+  studentIds: string[];
+  studentNames: string[];
+  guardianNameKeys: Set<string>;
+  missingGuardianNameCount: number;
 };
 
 export async function GET(req: NextRequest) {
@@ -99,6 +99,7 @@ export async function GET(req: NextRequest) {
     sessionId,
     releaseId,
     dryRun: true,
+    parentPortalUrl: essentialAlertParentPortalUrl(req),
   });
 }
 
@@ -132,6 +133,7 @@ export async function POST(req: NextRequest) {
     sessionId,
     releaseId,
     dryRun,
+    parentPortalUrl: essentialAlertParentPortalUrl(req),
   });
 }
 
@@ -141,6 +143,7 @@ async function previewOrCreateJob(args: {
   sessionId: string;
   releaseId: string;
   dryRun: boolean;
+  parentPortalUrl: string;
 }) {
   const release = await prisma.mockResultsRelease.findFirst({
     where: {
@@ -160,6 +163,7 @@ async function previewOrCreateJob(args: {
       title: true,
       readinessStatus: true,
       readinessScore: true,
+      releaseSnapshotHash: true,
       parentVisible: true,
       smsNotifiedAt: true,
       releasedAt: true,
@@ -233,6 +237,10 @@ async function previewOrCreateJob(args: {
     blockers.push("Mock release readiness is not eligible for parent notification.");
   }
 
+  if (!/^[a-f0-9]{64}$/i.test(cleanStr(release.releaseSnapshotHash))) {
+    blockers.push("Mock release snapshot evidence is missing or invalid.");
+  }
+
   if (release.classroom.status && release.classroom.status !== "ACTIVE") {
     blockers.push("Classroom is not active.");
   }
@@ -248,82 +256,125 @@ async function previewOrCreateJob(args: {
       id: true,
       firstName: true,
       lastName: true,
+      guardianName: true,
       guardianPhone: true,
       guardianPhoneNorm: true,
-      guardianSmsOptIn: true,
     },
+    take: MAX_MOCK_NOTIFICATION_STUDENTS + 1,
   });
 
-  type Bucket = {
-    guardianPhoneNorm: string;
-    sendPhone: string;
-    studentIds: string[];
-    studentNames: string[];
-    optedInCount: number;
-    skippedNoPhone: number;
-    skippedOptOut: number;
-  };
+  if (students.length > MAX_MOCK_NOTIFICATION_STUDENTS) {
+    return noStoreJson(409, {
+      ok: false,
+      error: "MOCK_RELEASE_NOTIFY_TARGET_LIMIT_EXCEEDED",
+      maxStudents: MAX_MOCK_NOTIFICATION_STUDENTS,
+      eligibilityAuthority: ESSENTIAL_ALERT_AUTHORITY,
+      essentialAlertPurpose: RESULTS_RELEASE_PURPOSE,
+    });
+  }
 
-  const grouped = new Map<string, Bucket>();
+  const eligibility = await getGuardianEssentialAlertEligibilityMap({
+    tenantId: args.tenantId,
+    purpose: RESULTS_RELEASE_PURPOSE,
+    students,
+  });
+
+  const reasonCounts = new Map<GuardianEssentialAlertEligibilityReason, number>();
+  const grouped = new Map<string, RecipientBucket>();
 
   let skippedNoPhone = 0;
-  let skippedOptOut = 0;
+  let notEligibleLearners = 0;
+  let authorityEligibleLearners = 0;
 
   for (const student of students) {
-    const sendPhone =
-      normalizePhoneForSms(student.guardianPhoneNorm) ||
-      normalizePhoneForSms(student.guardianPhone);
+    const result = eligibility.get(student.id);
+    const reason = result?.reason ?? "NOT_ENROLLED";
 
-    if (!sendPhone) {
-      skippedNoPhone += 1;
+    reasonCounts.set(reason, (reasonCounts.get(reason) ?? 0) + 1);
+
+    if (!result?.eligible || !result.phoneNorm) {
+      if (reason === "NO_PHONE") skippedNoPhone += 1;
+      else notEligibleLearners += 1;
       continue;
     }
 
-    if (!student.guardianSmsOptIn) {
-      skippedOptOut += 1;
-      continue;
-    }
-
-    const guardianPhoneNorm = sendPhone;
+    authorityEligibleLearners += 1;
 
     const existing =
-      grouped.get(guardianPhoneNorm) ??
+      grouped.get(result.phoneNorm) ??
       ({
-        guardianPhoneNorm,
-        sendPhone,
+        guardianPhoneNorm: result.phoneNorm,
         studentIds: [],
         studentNames: [],
-        optedInCount: 0,
-        skippedNoPhone: 0,
-        skippedOptOut: 0,
-      } satisfies Bucket);
+        guardianNameKeys: new Set<string>(),
+        missingGuardianNameCount: 0,
+      } satisfies RecipientBucket);
+
+    const guardianNameKey = normalizeGuardianNameKey(student.guardianName);
+
+    if (guardianNameKey) {
+      existing.guardianNameKeys.add(guardianNameKey);
+    } else {
+      existing.missingGuardianNameCount += 1;
+    }
 
     existing.studentIds.push(student.id);
     existing.studentNames.push(studentName(student));
-    existing.optedInCount += 1;
-
-    grouped.set(guardianPhoneNorm, existing);
+    grouped.set(result.phoneNorm, existing);
   }
 
-  const recipients = Array.from(grouped.values()).map((bucket) => ({
-    guardianPhoneNorm: bucket.guardianPhoneNorm,
-    sendPhone: bucket.sendPhone,
-    studentIds: bucket.studentIds,
-    studentNames: bucket.studentNames,
-    smsBody: buildSmsBody({
-      schoolName: release.tenant.name,
+  let ambiguousFamilyLearners = 0;
+  const recipients: Array<{
+    guardianPhoneNorm: string;
+    studentIds: string[];
+    studentNames: string[];
+    smsBody: string;
+  }> = [];
+
+  for (const bucket of grouped.values()) {
+    const familyAmbiguous =
+      bucket.studentIds.length > 1 &&
+      (bucket.missingGuardianNameCount > 0 || bucket.guardianNameKeys.size !== 1);
+
+    if (familyAmbiguous) {
+      ambiguousFamilyLearners += bucket.studentIds.length;
+      continue;
+    }
+
+    recipients.push({
+      guardianPhoneNorm: bucket.guardianPhoneNorm,
+      studentIds: bucket.studentIds,
       studentNames: bucket.studentNames,
-      mockLabel: release.mockLabel,
-    }),
-  }));
+      smsBody: buildMockResultsReleaseSmsBody({
+        schoolName: release.tenant.name,
+        studentNames: bucket.studentNames,
+        mockLabel: release.mockLabel,
+        parentPortalUrl: args.parentPortalUrl,
+      }),
+    });
+  }
 
   const alreadyNotified = !!release.smsNotifiedAt;
+  const existingJob = release.notifyJobs[0] ?? null;
 
   if (!recipients.length) {
-    blockers.push("No SMS-eligible parent recipients found.");
+    blockers.push("No currently eligible parent recipients found.");
   }
 
+  if (existingJob && !alreadyNotified) {
+    blockers.push(
+      "A Mock SMS notification job already exists. Refresh its status instead of queueing another.",
+    );
+  }
+
+  const eligibleLearners = recipients.reduce(
+    (sum, recipient) => sum + recipient.studentIds.length,
+    0,
+  );
+
   const preview = {
+    eligibilityAuthority: ESSENTIAL_ALERT_AUTHORITY,
+    essentialAlertPurpose: RESULTS_RELEASE_PURPOSE,
     release: {
       id: release.id,
       mockExamSessionId: release.mockExamSessionId,
@@ -335,6 +386,7 @@ async function previewOrCreateJob(args: {
       title: release.title,
       readinessStatus: String(release.readinessStatus),
       readinessScore: release.readinessScore,
+      releaseSnapshotHash: release.releaseSnapshotHash,
       parentVisible: release.parentVisible,
       releasedAt: release.releasedAt.toISOString(),
       smsNotifiedAt: release.smsNotifiedAt
@@ -345,19 +397,19 @@ async function previewOrCreateJob(args: {
     session: release.mockExamSession,
     totals: {
       activeStudents: students.length,
+      authorityEligibleLearners,
       eligibleGuardianPhones: recipients.length,
-      eligibleLearners: recipients.reduce(
-        (sum, r) => sum + r.studentIds.length,
-        0,
-      ),
+      eligibleLearners,
+      notEligibleLearners,
       skippedNoPhone,
-      skippedOptOut,
+      ambiguousFamilyLearners,
     },
+    eligibilityReasonCounts: Object.fromEntries(reasonCounts.entries()),
     alreadyNotified,
-    existingJob: release.notifyJobs[0] ?? null,
+    existingJob,
     recipients,
     blockers,
-    canQueue: blockers.length === 0 && !alreadyNotified,
+    canQueue: blockers.length === 0 && !alreadyNotified && !existingJob,
   };
 
   if (args.dryRun) {
@@ -385,111 +437,137 @@ async function previewOrCreateJob(args: {
     });
   }
 
-  const result = await prisma.$transaction(async (tx) => {
-    const existingJob = await tx.mockResultsReleaseNotifyJob.findFirst({
+  let result: {
+    jobId: string;
+    alreadyQueued: boolean;
+  };
+
+  try {
+    result = await prisma.$transaction(async (tx) => {
+      const concurrentJob = await tx.mockResultsReleaseNotifyJob.findFirst({
+        where: {
+          tenantId: args.tenantId,
+          mockResultsReleaseId: release.id,
+        },
+        select: {
+          id: true,
+          status: true,
+        },
+      });
+
+      if (concurrentJob) {
+        return {
+          jobId: concurrentJob.id,
+          alreadyQueued: true,
+        };
+      }
+
+      const job = await tx.mockResultsReleaseNotifyJob.create({
+        data: {
+          tenantId: args.tenantId,
+          mockResultsReleaseId: release.id,
+          mockExamSessionId: release.mockExamSessionId,
+          classroomId: release.classroomId,
+          status: "PENDING",
+          totalTargets: recipients.length,
+          sentCount: 0,
+          skippedCount: 0,
+          failedCount: 0,
+          createdByUserId: args.userId,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      for (const recipient of recipients) {
+        await tx.mockResultsReleaseNotifyRecipient.create({
+          data: {
+            jobId: job.id,
+            tenantId: args.tenantId,
+            guardianPhoneNorm: recipient.guardianPhoneNorm,
+            studentIds: recipient.studentIds,
+            status: "PENDING",
+          },
+        });
+
+        await tx.financeOutboxEvent.create({
+          data: {
+            tenantId: args.tenantId,
+            type: "SMS_MOCK_RESULTS_RELEASE",
+            status: "PENDING",
+            idempotencyKey: `mock-results-release:${release.id}:${recipient.guardianPhoneNorm}`,
+            aggregateType: "MockResultsRelease",
+            aggregateId: release.id,
+            payload: {
+              jobId: job.id,
+              releaseId: release.id,
+              mockExamSessionId: release.mockExamSessionId,
+              classroomId: release.classroomId,
+              guardianPhoneNorm: recipient.guardianPhoneNorm,
+              studentIds: recipient.studentIds,
+              actorId: args.userId,
+              essentialAlertPurpose: RESULTS_RELEASE_PURPOSE,
+              eligibilityAuthority: ESSENTIAL_ALERT_AUTHORITY,
+              queuedEligibleLearnerCount: recipient.studentIds.length,
+              releaseSnapshotHash: release.releaseSnapshotHash,
+            },
+          },
+        });
+      }
+
+      await tx.auditLog.create({
+        data: {
+          tenantId: args.tenantId,
+          userId: args.userId,
+          action: "MOCK_RESULTS_RELEASE_SMS_QUEUED",
+          resource: "MockResultsRelease",
+          resourceId: release.id,
+          metadata: {
+            jobId: job.id,
+            mockExamSessionId: release.mockExamSessionId,
+            classroomId: release.classroomId,
+            eligibleGuardianPhones: recipients.length,
+            eligibleLearners,
+            authorityEligibleLearners,
+            notEligibleLearners,
+            skippedNoPhone,
+            ambiguousFamilyLearners,
+            essentialAlertPurpose: RESULTS_RELEASE_PURPOSE,
+            eligibilityAuthority: ESSENTIAL_ALERT_AUTHORITY,
+            releaseSnapshotHash: release.releaseSnapshotHash,
+          },
+        },
+      });
+
+      return {
+        jobId: job.id,
+        alreadyQueued: false,
+      };
+    });
+  } catch (error) {
+    if (!isUniqueConstraintError(error)) throw error;
+
+    const concurrentJob = await prisma.mockResultsReleaseNotifyJob.findFirst({
       where: {
         tenantId: args.tenantId,
         mockResultsReleaseId: release.id,
       },
-      select: {
-        id: true,
-        status: true,
-      },
+      select: { id: true },
     });
 
-    if (existingJob) {
-      return {
-        jobId: existingJob.id,
-        alreadyQueued: true,
-      };
-    }
+    if (!concurrentJob) throw error;
 
-    const job = await tx.mockResultsReleaseNotifyJob.create({
-      data: {
-        tenantId: args.tenantId,
-        mockResultsReleaseId: release.id,
-        mockExamSessionId: release.mockExamSessionId,
-        classroomId: release.classroomId,
-        status: "PENDING",
-        totalTargets: recipients.length,
-        sentCount: 0,
-        skippedCount: skippedNoPhone + skippedOptOut,
-        failedCount: 0,
-        createdByUserId: args.userId,
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    for (const recipient of recipients) {
-      await tx.mockResultsReleaseNotifyRecipient.create({
-        data: {
-          jobId: job.id,
-          tenantId: args.tenantId,
-          guardianPhoneNorm: recipient.guardianPhoneNorm,
-          studentIds: recipient.studentIds,
-          status: "PENDING",
-        },
-      });
-
-      await tx.financeOutboxEvent.create({
-        data: {
-          tenantId: args.tenantId,
-          type: "SMS_MOCK_RESULTS_RELEASE",
-          status: "PENDING",
-          idempotencyKey: `mock-results-release:${release.id}:${recipient.guardianPhoneNorm}`,
-          aggregateType: "MockResultsRelease",
-          aggregateId: release.id,
-          payload: {
-            jobId: job.id,
-            releaseId: release.id,
-            mockExamSessionId: release.mockExamSessionId,
-            classroomId: release.classroomId,
-            guardianPhoneNorm: recipient.guardianPhoneNorm,
-            to: recipient.sendPhone,
-            body: recipient.smsBody,
-            studentIds: recipient.studentIds,
-            studentNames: recipient.studentNames,
-            mockLabel: release.mockLabel,
-            schoolName: release.tenant.name,
-          },
-        },
-      });
-    }
-
-    await tx.auditLog.create({
-      data: {
-        tenantId: args.tenantId,
-        userId: args.userId,
-        action: "MOCK_RESULTS_RELEASE_SMS_QUEUED",
-        resource: "MockResultsRelease",
-        resourceId: release.id,
-        metadata: {
-          jobId: job.id,
-          mockExamSessionId: release.mockExamSessionId,
-          classroomId: release.classroomId,
-          eligibleGuardianPhones: recipients.length,
-          eligibleLearners: recipients.reduce(
-            (sum, r) => sum + r.studentIds.length,
-            0,
-          ),
-          skippedNoPhone,
-          skippedOptOut,
-        },
-      },
-    });
-
-    return {
-      jobId: job.id,
-      alreadyQueued: false,
+    result = {
+      jobId: concurrentJob.id,
+      alreadyQueued: true,
     };
-  });
+  }
 
   return noStoreJson(200, {
     ok: true,
     dryRun: false,
-    queued: true,
+    queued: !result.alreadyQueued,
     ...preview,
     jobId: result.jobId,
     alreadyQueued: result.alreadyQueued,
