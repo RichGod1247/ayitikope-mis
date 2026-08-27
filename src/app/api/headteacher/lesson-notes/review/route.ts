@@ -2,11 +2,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getHeadteacherApiContext } from "@/lib/headteacherAuth";
+import { getStaffEssentialAlertEligibilityMap } from "@/lib/essentialAlerts/enrollment";
 import { sendSms } from "@/lib/sms";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+const LESSON_NOTE_WORKFLOW_PURPOSE = "LESSON_NOTE_WORKFLOW" as const;
+const ESSENTIAL_ALERT_AUTHORITY = "ESSENTIAL_ALERT_ENROLLMENT" as const;
 
 type LessonNoteStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
@@ -220,20 +224,20 @@ async function notifyTeacherAfterReview(params: {
     id: string;
     name: string | null;
     email: string | null;
-    phone: string | null;
-    phoneNorm: string | null;
-    smsOptIn: boolean;
-    teacherProfiles: Array<{ phone: string | null }>;
   };
   classroom: { name: string | null; grade: string | null; arm: string | null } | null;
   ip?: string | null;
   userAgent?: string | null;
 }) {
-  const teacherProfilePhone = params.teacher.teacherProfiles?.[0]?.phone ?? null;
-  const teacherPhone =
-    params.teacher.phone || teacherProfilePhone || params.teacher.phoneNorm || null;
+  const eligibility = await getStaffEssentialAlertEligibilityMap({
+    tenantId: params.tenantId,
+    purpose: LESSON_NOTE_WORKFLOW_PURPOSE,
+    userIds: [params.teacher.id],
+  });
 
-  if (!params.teacher.smsOptIn) {
+  const teacherEligibility = eligibility.get(params.teacher.id);
+
+  if (!teacherEligibility?.eligible || !teacherEligibility.phoneNorm) {
     await writeAudit({
       tenantId: params.tenantId,
       userId: params.actorId,
@@ -243,28 +247,12 @@ async function notifyTeacherAfterReview(params: {
       ip: params.ip,
       userAgent: params.userAgent,
       metadata: {
-        reason: "TEACHER_SMS_OPT_OUT",
-        teacherUserId: params.teacher.id,
-        reviewAction: params.action,
-      },
-    });
-    return;
-  }
-
-  if (!teacherPhone) {
-    await writeAudit({
-      tenantId: params.tenantId,
-      userId: params.actorId,
-      action: "LESSON_NOTE_REVIEW_TEACHER_SMS_SKIPPED",
-      resource: "LessonNote",
-      resourceId: params.lessonNoteId,
-      ip: params.ip,
-      userAgent: params.userAgent,
-      metadata: {
-        reason: "MISSING_TEACHER_PHONE",
+        reason: teacherEligibility?.reason ?? "NOT_ACTIVE_STAFF",
         teacherUserId: params.teacher.id,
         teacherEmail: params.teacher.email,
         reviewAction: params.action,
+        essentialAlertPurpose: LESSON_NOTE_WORKFLOW_PURPOSE,
+        eligibilityAuthority: ESSENTIAL_ALERT_AUTHORITY,
       },
     });
     return;
@@ -289,7 +277,7 @@ async function notifyTeacherAfterReview(params: {
     const result = await sendSms({
       tenantId: params.tenantId,
       actorId: params.actorId,
-      to: teacherPhone,
+      to: teacherEligibility.phoneNorm,
       message,
       template:
         params.action === "APPROVE"
@@ -303,6 +291,8 @@ async function notifyTeacherAfterReview(params: {
         weekNumber: params.weekNumber,
         term: params.term,
         academicYear: params.academicYear,
+        essentialAlertPurpose: LESSON_NOTE_WORKFLOW_PURPOSE,
+        eligibilityAuthority: ESSENTIAL_ALERT_AUTHORITY,
       },
     });
 
@@ -324,6 +314,8 @@ async function notifyTeacherAfterReview(params: {
         smsError: result.error ?? null,
         providerStatusDescription: result.providerStatusDescription ?? null,
         providerMessageId: result.providerMessageId ?? null,
+        essentialAlertPurpose: LESSON_NOTE_WORKFLOW_PURPOSE,
+        eligibilityAuthority: ESSENTIAL_ALERT_AUTHORITY,
       },
     });
   } catch (err) {
@@ -465,14 +457,6 @@ export async function POST(req: NextRequest): Promise<NextResponse<ReviewRespons
             id: true,
             name: true,
             email: true,
-            phone: true,
-            phoneNorm: true,
-            smsOptIn: true,
-            teacherProfiles: {
-              where: { tenantId: ctx.tenantId },
-              take: 1,
-              select: { phone: true },
-            },
           },
         },
       },

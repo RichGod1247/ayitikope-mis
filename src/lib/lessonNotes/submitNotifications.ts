@@ -1,7 +1,11 @@
 // src/lib/lessonNotes/submitNotifications.ts
+import { getStaffEssentialAlertEligibilityMap } from "@/lib/essentialAlerts/enrollment";
 import { prisma } from "@/lib/prisma";
 import { sendSms } from "@/lib/sms";
 import { writeAuditLog } from "@/lib/audit";
+
+const LESSON_NOTE_WORKFLOW_PURPOSE = "LESSON_NOTE_WORKFLOW" as const;
+const ESSENTIAL_ALERT_AUTHORITY = "ESSENTIAL_ALERT_ENROLLMENT" as const;
 
 type LessonNoteSubmitNotificationInput = {
   tenantId: string;
@@ -9,8 +13,6 @@ type LessonNoteSubmitNotificationInput = {
   teacherUserId: string;
   submittedAt: Date;
 };
-
-type PhoneCandidate = string | null | undefined;
 
 function clean(v: unknown) {
   return String(v ?? "").trim();
@@ -29,15 +31,6 @@ function displayName(u: {
   if (full) return full;
 
   return clean(u.email) || "Teacher";
-}
-
-function firstPhone(...items: PhoneCandidate[]) {
-  for (const item of items) {
-    const p = clean(item);
-    if (p) return p;
-  }
-
-  return null;
 }
 
 function shortRef(id: string) {
@@ -108,48 +101,19 @@ function buildHeadteacherMessage(args: {
   return `EduLife OS: Dear Headteacher, ${args.teacherName} has submitted a lesson note for ${args.context}. Please review. Ref: ${args.ref}.`;
 }
 
-async function findTeacherPhone(args: { tenantId: string; userId: string }) {
-  const [user, profile] = await Promise.all([
-    prisma.user.findUnique({
-      where: { id: args.userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        phoneNorm: true,
-        smsOptIn: true,
-      },
-    }),
+async function findTeacher(args: { tenantId: string; userId: string }) {
+  const user = await prisma.user.findUnique({
+    where: { id: args.userId },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      firstName: true,
+      lastName: true,
+    },
+  });
 
-    prisma.teacherProfile
-      .findUnique({
-        where: {
-          teacherProfile_tenant_user_unique: {
-            tenantId: args.tenantId,
-            userId: args.userId,
-          },
-        },
-        select: { phone: true },
-      })
-      .catch(() => null),
-  ]);
-
-  if (!user || user.smsOptIn === false) {
-    return {
-      user,
-      phone: null,
-      skippedReason: user ? "TEACHER_SMS_OPT_OUT" : "TEACHER_NOT_FOUND",
-    };
-  }
-
-  return {
-    user,
-    phone: firstPhone(user.phoneNorm, user.phone, profile?.phone),
-    skippedReason: null,
-  };
+  return { user };
 }
 
 async function findHeadteachers(args: { tenantId: string }) {
@@ -173,44 +137,13 @@ async function findHeadteachers(args: { tenantId: string }) {
           name: true,
           firstName: true,
           lastName: true,
-          phone: true,
-          phoneNorm: true,
-          smsOptIn: true,
         },
       },
     },
     orderBy: { createdAt: "asc" },
   });
 
-  const withProfiles = await Promise.all(
-    rows.map(async (row) => {
-      const profile = await prisma.teacherProfile
-        .findUnique({
-          where: {
-            teacherProfile_tenant_user_unique: {
-              tenantId: args.tenantId,
-              userId: row.userId,
-            },
-          },
-          select: { phone: true },
-        })
-        .catch(() => null);
-
-      const user = row.user;
-      const phone =
-        user?.smsOptIn === false
-          ? null
-          : firstPhone(user?.phoneNorm, user?.phone, profile?.phone);
-
-      return {
-        user,
-        phone,
-        skippedReason: user?.smsOptIn === false ? "HEADTEACHER_SMS_OPT_OUT" : null,
-      };
-    })
-  );
-
-  return withProfiles;
+  return rows.map((row) => ({ user: row.user }));
 }
 
 /**
@@ -257,9 +190,22 @@ export async function notifyLessonNoteSubmitted(args: LessonNoteSubmitNotificati
     }
 
     const [teacherInfo, headteachers] = await Promise.all([
-      findTeacherPhone({ tenantId: args.tenantId, userId: args.teacherUserId }),
+      findTeacher({ tenantId: args.tenantId, userId: args.teacherUserId }),
       findHeadteachers({ tenantId: args.tenantId }),
     ]);
+
+    const recipientUserIds = [
+      args.teacherUserId,
+      ...headteachers
+        .map((head) => head.user?.id ?? null)
+        .filter((userId): userId is string => Boolean(userId)),
+    ];
+
+    const eligibility = await getStaffEssentialAlertEligibilityMap({
+      tenantId: args.tenantId,
+      purpose: LESSON_NOTE_WORKFLOW_PURPOSE,
+      userIds: recipientUserIds,
+    });
 
     const teacherName = teacherInfo.user ? displayName(teacherInfo.user) : "A teacher";
     const context = lessonContext(note);
@@ -297,20 +243,27 @@ export async function notifyLessonNoteSubmitted(args: LessonNoteSubmitNotificati
       error?: string;
     }> = [];
 
-    if (teacherInfo.phone) {
+    const teacherEligibility = eligibility.get(args.teacherUserId);
+
+    if (teacherEligibility?.eligible && teacherEligibility.phoneNorm) {
       const result = await sendSms({
         tenantId: args.tenantId,
         actorId: args.teacherUserId,
-        to: teacherInfo.phone,
+        to: teacherEligibility.phoneNorm,
         message: teacherMessage,
         template,
-        payload: { ...payload, recipientType: "TEACHER" },
+        payload: {
+          ...payload,
+          recipientType: "TEACHER",
+          essentialAlertPurpose: LESSON_NOTE_WORKFLOW_PURPOSE,
+          eligibilityAuthority: ESSENTIAL_ALERT_AUTHORITY,
+        },
       });
 
       sends.push({
         recipientType: "TEACHER",
         userId: args.teacherUserId,
-        phone: teacherInfo.phone,
+        phone: teacherEligibility.phoneNorm,
         ok: Boolean(result.ok),
         error: result.error ? String(result.error) : undefined,
       });
@@ -320,20 +273,21 @@ export async function notifyLessonNoteSubmitted(args: LessonNoteSubmitNotificati
         userId: args.teacherUserId,
         phone: null,
         ok: false,
-        skipped: teacherInfo.skippedReason ?? "TEACHER_PHONE_MISSING",
+        skipped: teacherEligibility?.reason ?? "NOT_ACTIVE_STAFF",
       });
     }
 
     for (const head of headteachers) {
       const headUserId = head.user?.id ?? null;
+      const headEligibility = headUserId ? eligibility.get(headUserId) : null;
 
-      if (!head.phone) {
+      if (!headUserId || !headEligibility?.eligible || !headEligibility.phoneNorm) {
         sends.push({
           recipientType: "HEADTEACHER",
           userId: headUserId,
           phone: null,
           ok: false,
-          skipped: head.skippedReason ?? "HEADTEACHER_PHONE_MISSING",
+          skipped: headEligibility?.reason ?? "NOT_ACTIVE_STAFF",
         });
         continue;
       }
@@ -341,20 +295,22 @@ export async function notifyLessonNoteSubmitted(args: LessonNoteSubmitNotificati
       const result = await sendSms({
         tenantId: args.tenantId,
         actorId: args.teacherUserId,
-        to: head.phone,
+        to: headEligibility.phoneNorm,
         message: headteacherMessage,
         template,
         payload: {
           ...payload,
           recipientType: "HEADTEACHER",
           headteacherUserId: headUserId,
+          essentialAlertPurpose: LESSON_NOTE_WORKFLOW_PURPOSE,
+          eligibilityAuthority: ESSENTIAL_ALERT_AUTHORITY,
         },
       });
 
       sends.push({
         recipientType: "HEADTEACHER",
         userId: headUserId,
-        phone: head.phone,
+        phone: headEligibility.phoneNorm,
         ok: Boolean(result.ok),
         error: result.error ? String(result.error) : undefined,
       });
@@ -370,6 +326,8 @@ export async function notifyLessonNoteSubmitted(args: LessonNoteSubmitNotificati
         template,
         ref,
         context,
+        essentialAlertPurpose: LESSON_NOTE_WORKFLOW_PURPOSE,
+        eligibilityAuthority: ESSENTIAL_ALERT_AUTHORITY,
         sends,
         counts: {
           attempted: sends.filter((s) => s.phone).length,

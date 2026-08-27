@@ -681,6 +681,275 @@ export async function getGuardianEssentialAlertEligibilityMap(input: {
   return results;
 }
 
+export type StaffEssentialAlertPurpose =
+  (typeof ESSENTIAL_ALERT_POLICY.staffPurposes)[number];
+
+export type StaffEssentialAlertEligibilityReason =
+  | "ELIGIBLE"
+  | "NOT_ACTIVE_STAFF"
+  | "NO_PHONE"
+  | "NOT_ENROLLED"
+  | "PHONE_CHANGED"
+  | "POLICY_VERSION_MISMATCH"
+  | "CONSENT_EVIDENCE_MISMATCH"
+  | "PURPOSE_NOT_ALLOWED";
+
+export type StaffEssentialAlertEligibility = {
+  eligible: boolean;
+  reason: StaffEssentialAlertEligibilityReason;
+  phoneNorm: string | null;
+  enrollmentStatus: EssentialAlertEnrollmentStatus | null;
+};
+
+function staffPurposeAllowed(
+  purpose: string,
+): purpose is StaffEssentialAlertPurpose {
+  return (ESSENTIAL_ALERT_POLICY.staffPurposes as readonly string[]).includes(
+    purpose,
+  );
+}
+
+function staffEvidenceAllowsPurpose(
+  value: Prisma.JsonValue,
+  purpose: StaffEssentialAlertPurpose,
+) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+
+  const evidence = value as Prisma.JsonObject;
+  const purposes = evidence.purposes;
+  const consentSource = evidence.consentSource;
+
+  return (
+    evidence.policyId === ESSENTIAL_ALERT_POLICY.policyId &&
+    evidence.policyVersion === ESSENTIAL_ALERT_POLICY.version &&
+    evidence.decision === "ENABLE" &&
+    (consentSource === "SIGNED_STAFF_LINK" ||
+      consentSource === "AUTHENTICATED_STAFF_SELF_SERVICE") &&
+    evidence.institutionFunded === true &&
+    evidence.advertisingAllowed === false &&
+    evidence.healthOrWellbeingConsentIncluded === false &&
+    Array.isArray(purposes) &&
+    purposes.some((entry) => entry === purpose)
+  );
+}
+
+export async function getStaffEssentialAlertEligibilityMap(input: {
+  tenantId: string;
+  purpose: StaffEssentialAlertPurpose;
+  userIds: string[];
+}) {
+  const tenantId = clean(input.tenantId);
+  if (!tenantId) {
+    fail("ESSENTIAL_ALERT_ELIGIBILITY_INPUT_INVALID", 400);
+  }
+
+  const userIds = [
+    ...new Set(input.userIds.map((userId) => clean(userId)).filter(Boolean)),
+  ];
+
+  const results = new Map<string, StaffEssentialAlertEligibility>();
+  if (!userIds.length) return results;
+
+  if (!staffPurposeAllowed(input.purpose)) {
+    for (const userId of userIds) {
+      results.set(userId, {
+        eligible: false,
+        reason: "PURPOSE_NOT_ALLOWED",
+        phoneNorm: null,
+        enrollmentStatus: null,
+      });
+    }
+    return results;
+  }
+
+  const [memberships, profiles] = await Promise.all([
+    prisma.membership.findMany({
+      where: {
+        tenantId,
+        userId: { in: userIds },
+        status: "ACTIVE",
+      },
+      select: {
+        userId: true,
+        role: { select: { name: true } },
+        user: {
+          select: {
+            id: true,
+            phone: true,
+            phoneNorm: true,
+          },
+        },
+      },
+    }),
+    prisma.teacherProfile.findMany({
+      where: {
+        tenantId,
+        userId: { in: userIds },
+      },
+      select: {
+        userId: true,
+        phone: true,
+      },
+    }),
+  ]);
+
+  const membershipByUserId = new Map<string, (typeof memberships)[number]>();
+
+  for (const membership of memberships) {
+    const role = normalizeRole(membership.role?.name);
+    if (
+      membership.user &&
+      membership.user.id === membership.userId &&
+      STAFF_ALERT_ROLES.has(role)
+    ) {
+      membershipByUserId.set(membership.userId, membership);
+    }
+  }
+
+  const profilePhoneByUserId = new Map(
+    profiles.map((profile) => [profile.userId, profile.phone] as const),
+  );
+
+  const prepared: Array<{
+    userId: string;
+    phoneNorm: string;
+    phoneFingerprint: string;
+  }> = [];
+
+  for (const userId of userIds) {
+    const membership = membershipByUserId.get(userId);
+
+    if (!membership?.user) {
+      results.set(userId, {
+        eligible: false,
+        reason: "NOT_ACTIVE_STAFF",
+        phoneNorm: null,
+        enrollmentStatus: null,
+      });
+      continue;
+    }
+
+    const phoneNorm =
+      normalizeGhanaPhone(membership.user.phoneNorm) ??
+      normalizeGhanaPhone(membership.user.phone) ??
+      normalizeGhanaPhone(profilePhoneByUserId.get(userId));
+
+    if (!phoneNorm) {
+      results.set(userId, {
+        eligible: false,
+        reason: "NO_PHONE",
+        phoneNorm: null,
+        enrollmentStatus: null,
+      });
+      continue;
+    }
+
+    prepared.push({
+      userId,
+      phoneNorm,
+      phoneFingerprint: essentialAlertPhoneFingerprint({
+        tenantId,
+        kind: "STAFF",
+        subjectId: userId,
+        phoneNorm,
+      }),
+    });
+  }
+
+  if (!prepared.length) return results;
+
+  const enrollments = await prisma.essentialAlertEnrollment.findMany({
+    where: {
+      tenantId,
+      recipientKind: EssentialAlertRecipientKind.STAFF,
+      userId: { in: prepared.map((staff) => staff.userId) },
+    },
+    select: {
+      userId: true,
+      phoneNormSnapshot: true,
+      phoneFingerprint: true,
+      status: true,
+      policyVersion: true,
+      consentEvidenceJson: true,
+    },
+  });
+
+  const rowsByUserId = new Map<string, typeof enrollments>();
+
+  for (const row of enrollments) {
+    if (!row.userId) continue;
+    const rows = rowsByUserId.get(row.userId) ?? [];
+    rows.push(row);
+    rowsByUserId.set(row.userId, rows);
+  }
+
+  for (const staff of prepared) {
+    const rows = rowsByUserId.get(staff.userId) ?? [];
+    const current = rows.find(
+      (row) => row.phoneFingerprint === staff.phoneFingerprint,
+    );
+
+    if (!current) {
+      results.set(staff.userId, {
+        eligible: false,
+        reason: rows.some(
+          (row) => row.status === EssentialAlertEnrollmentStatus.ENROLLED,
+        )
+          ? "PHONE_CHANGED"
+          : "NOT_ENROLLED",
+        phoneNorm: staff.phoneNorm,
+        enrollmentStatus: null,
+      });
+      continue;
+    }
+
+    if (current.status !== EssentialAlertEnrollmentStatus.ENROLLED) {
+      results.set(staff.userId, {
+        eligible: false,
+        reason: "NOT_ENROLLED",
+        phoneNorm: staff.phoneNorm,
+        enrollmentStatus: current.status,
+      });
+      continue;
+    }
+
+    if (current.policyVersion !== ESSENTIAL_ALERT_POLICY.version) {
+      results.set(staff.userId, {
+        eligible: false,
+        reason: "POLICY_VERSION_MISMATCH",
+        phoneNorm: staff.phoneNorm,
+        enrollmentStatus: current.status,
+      });
+      continue;
+    }
+
+    if (
+      current.phoneNormSnapshot !== staff.phoneNorm ||
+      !staffEvidenceAllowsPurpose(current.consentEvidenceJson, input.purpose)
+    ) {
+      results.set(staff.userId, {
+        eligible: false,
+        reason:
+          current.phoneNormSnapshot !== staff.phoneNorm
+            ? "PHONE_CHANGED"
+            : "CONSENT_EVIDENCE_MISMATCH",
+        phoneNorm: staff.phoneNorm,
+        enrollmentStatus: current.status,
+      });
+      continue;
+    }
+
+    results.set(staff.userId, {
+      eligible: true,
+      reason: "ELIGIBLE",
+      phoneNorm: staff.phoneNorm,
+      enrollmentStatus: current.status,
+    });
+  }
+
+  return results;
+}
+
 async function staffContact(tenantId: string, userId: string) {
   const membership = await prisma.membership.findFirst({
     where: {
