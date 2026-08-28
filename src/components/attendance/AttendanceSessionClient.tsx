@@ -568,6 +568,13 @@ export default function AttendanceSessionClient(props: {
     return physicalRegister.today;
   }, [physicalRegister, registerPeriod]);
 
+  const registerSummaryTitle =
+    registerPeriod === "TODAY"
+      ? "Today's register summary"
+      : registerPeriod === "WEEK"
+        ? "This week's register summary"
+        : "Term-to-date register summary";
+
   const selectedLearnerWindow = registerPeriod === "TERM" ? "term" : "week";
 
   const selectedLearners = useMemo(() => {
@@ -1527,7 +1534,7 @@ export default function AttendanceSessionClient(props: {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <div className="text-sm font-semibold text-[#F7F4ED]">
-                Physical register summary
+                {registerSummaryTitle}
               </div>
               <p className="mt-1 text-[10px] leading-4 text-[#AEB6C4]">
                 Official figures count certified, non-holiday sessions only.
@@ -1566,7 +1573,7 @@ export default function AttendanceSessionClient(props: {
           {!physicalRegister?.available ? (
             <div className="mt-3 rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 py-2 text-[11px] leading-5 text-amber-100">
               {physicalRegister?.reason ||
-                "Official physical-register totals are not available for this date."}
+                "Official register totals are not available for this date."}
             </div>
           ) : selectedRegisterPeriod ? (
             <>
@@ -1590,25 +1597,25 @@ export default function AttendanceSessionClient(props: {
                   </div>
                 </div>
                 <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2">
-                  <div className="text-[9px] text-emerald-100/80">Boys Present</div>
+                  <div className="text-[9px] text-emerald-100/80">Male Present</div>
                   <div className="mt-1 text-base font-semibold text-emerald-100">
                     {selectedRegisterPeriod.boys.present}
                   </div>
                 </div>
                 <div className="rounded-xl border border-rose-300/20 bg-rose-400/10 px-3 py-2">
-                  <div className="text-[9px] text-rose-100/80">Boys Absent</div>
+                  <div className="text-[9px] text-rose-100/80">Male Absent</div>
                   <div className="mt-1 text-base font-semibold text-rose-100">
                     {selectedRegisterPeriod.boys.absent}
                   </div>
                 </div>
                 <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2">
-                  <div className="text-[9px] text-emerald-100/80">Girls Present</div>
+                  <div className="text-[9px] text-emerald-100/80">Female Present</div>
                   <div className="mt-1 text-base font-semibold text-emerald-100">
                     {selectedRegisterPeriod.girls.present}
                   </div>
                 </div>
                 <div className="rounded-xl border border-rose-300/20 bg-rose-400/10 px-3 py-2">
-                  <div className="text-[9px] text-rose-100/80">Girls Absent</div>
+                  <div className="text-[9px] text-rose-100/80">Female Absent</div>
                   <div className="mt-1 text-base font-semibold text-rose-100">
                     {selectedRegisterPeriod.girls.absent}
                   </div>
@@ -1668,9 +1675,9 @@ export default function AttendanceSessionClient(props: {
                             </div>
                             <div className="text-[9px] text-[#8F98A8]">
                               {learner.gender === "BOYS"
-                                ? "Boy"
+                                ? "Male"
                                 : learner.gender === "GIRLS"
-                                  ? "Girl"
+                                  ? "Female"
                                   : "Unclassified"}
                             </div>
                           </div>

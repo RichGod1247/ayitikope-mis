@@ -83,19 +83,39 @@ includesAll(
     '["TODAY", "Today"]',
     '["WEEK", "This week"]',
     '["TERM", "Term to date"]',
+    '"Today\'s register summary"',
+    '"This week\'s register summary"',
+    '"Term-to-date register summary"',
     'Times Opened',
-    'Boys Present',
-    'Boys Absent',
-    'Girls Present',
-    'Girls Absent',
+    'Male Present',
+    'Male Absent',
+    'Female Present',
+    'Female Absent',
     'Total Present',
     'data-attendance-learner-times-opened="x-out-of-y-v1"',
     'Present {learner.selected.present} out of {learner.selected.timesOpened} times opened',
+    '? "Male"',
+    '? "Female"',
     'Official figures count certified, non-holiday sessions only.',
     'EduLife OS never guesses a learner&apos;s sex/gender.',
   ],
   "BBC physical-register UI",
 );
+
+for (const retiredLabel of [
+  "Physical register summary",
+  "Boys Present",
+  "Boys Absent",
+  "Girls Present",
+  "Girls Absent",
+  '? "Boy"',
+  '? "Girl"',
+]) {
+  assert(
+    !client.includes(retiredLabel),
+    `Teacher register UI must not expose retired label: ${retiredLabel}`,
+  );
+}
 
 includesAll(
   weekly,
