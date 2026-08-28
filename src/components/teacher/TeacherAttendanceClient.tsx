@@ -4,6 +4,10 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  resolveAttendanceDate,
+  type AttendanceAcademicCalendar,
+} from "@/lib/attendanceAcademicCalendar";
 
 type Classroom = {
   id: string;
@@ -221,8 +225,10 @@ function StatChip(props: { label: string; value: number; tone?: "neutral" | "goo
 
 export default function TeacherAttendanceClient({
   teacherUserId,
+  academicCalendar,
 }: {
   teacherUserId?: string;
+  academicCalendar: AttendanceAcademicCalendar;
 }) {
   const router = useRouter();
 
@@ -276,6 +282,12 @@ export default function TeacherAttendanceClient({
   const hasExactSelection =
     !canChooseClassroom || showClassArms || visibleClassrooms.some((classroom) => classroom.id === classroomId);
   const unmarked = summary?.totals.unmarked ?? 0;
+  const dateResolution = useMemo(
+    () => resolveAttendanceDate(academicCalendar, dateISO),
+    [academicCalendar, dateISO],
+  );
+  const hasExistingSession = !!summary?.sessionId;
+  const canOpenOrViewDate = hasExistingSession || dateResolution.allowed;
 
   async function loadClassrooms() {
     setLoading(true);
@@ -384,6 +396,8 @@ export default function TeacherAttendanceClient({
         router.push(sessionHref(String(summary.sessionId)));
         return;
       }
+
+      if (!dateResolution.allowed) throw new Error(dateResolution.message);
 
       const r = await fetch("/api/teacher/attendance/sessions/open", {
         method: "POST",
@@ -556,6 +570,46 @@ export default function TeacherAttendanceClient({
       ) : null}
 
       <section className={`${shellCard} p-5 md:p-6 space-y-5`}>
+        <div
+          data-attendance-calendar-authority="tenant-current-term-v1"
+          className={`rounded-2xl border px-4 py-3 ${
+            dateResolution.allowed
+              ? "border-emerald-300/20 bg-emerald-400/10"
+              : "border-amber-300/20 bg-amber-400/10"
+          }`}
+        >
+          <div className="flex flex-wrap items-center gap-2 text-[11px]">
+            <span className="font-semibold text-[#F7F4ED]">School calendar</span>
+            {academicCalendar.academicYear ? (
+              <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[#D7DCE5]">
+                {academicCalendar.academicYear}
+              </span>
+            ) : null}
+            {academicCalendar.term ? (
+              <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[#D7DCE5]">
+                {academicCalendar.term}
+              </span>
+            ) : null}
+            {dateResolution.weekNumber ? (
+              <span className="rounded-full border border-[#E8C96A]/25 bg-[#D4AF37]/10 px-2.5 py-1 font-semibold text-[#E8C96A]">
+                Week {dateResolution.weekNumber}
+              </span>
+            ) : null}
+          </div>
+
+          <p className={`mt-2 text-xs leading-5 ${dateResolution.allowed ? "text-emerald-100" : "text-amber-100"}`}>
+            {dateResolution.allowed
+              ? `${dateResolution.message} ${dateResolution.expectedSchoolDays} school day${dateResolution.expectedSchoolDays === 1 ? "" : "s"} in this week.`
+              : dateResolution.message}
+          </p>
+
+          {academicCalendar.startDateISO && academicCalendar.endDateISO ? (
+            <p className="mt-1 text-[10px] text-[#AEB6C4]">
+              Reopening: {academicCalendar.startDateISO} • Closing: {academicCalendar.endDateISO}
+            </p>
+          ) : null}
+        </div>
+
         <div className="grid gap-4 md:grid-cols-3">
           <div className="space-y-1">
             <label className={labelClass}>Date</label>
@@ -563,6 +617,8 @@ export default function TeacherAttendanceClient({
               type="date"
               className={fieldClass}
               value={dateISO}
+              min={academicCalendar.startDateISO ?? undefined}
+              max={academicCalendar.endDateISO ?? undefined}
               onChange={(e) => setDateISO(e.target.value)}
               disabled={loading || !hasAssignment}
             />
@@ -648,10 +704,29 @@ export default function TeacherAttendanceClient({
             <button
               type="button"
               onClick={() => void openOrGo()}
-              disabled={opening || summaryLoading || !hasAssignment || !hasExactSelection}
+              disabled={
+                opening ||
+                summaryLoading ||
+                !hasAssignment ||
+                !hasExactSelection ||
+                !canOpenOrViewDate
+              }
               className={`${primaryBtn} w-full`}
+              title={
+                canOpenOrViewDate
+                  ? summary?.sessionId
+                    ? "View this attendance session"
+                    : "Open attendance for this school day"
+                  : dateResolution.message
+              }
             >
-              {opening ? "Working…" : summary?.sessionId ? "Go to session" : "Open session"}
+              {opening
+                ? "Working…"
+                : summary?.sessionId
+                  ? dateResolution.allowed
+                    ? "Go to session"
+                    : "View historical session"
+                  : "Open session"}
             </button>
           </div>
         </div>

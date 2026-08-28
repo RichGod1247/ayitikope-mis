@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { assertCanAccessClassroom } from "@/lib/teacherClassroomAccess";
+import { assertAttendanceDateInCurrentTerm } from "@/lib/server/attendanceAcademicCalendar";
 import {
   requireTenantContext,
   assertTenantParamMatches,
@@ -93,6 +94,10 @@ export async function POST(req: Request) {
     if (!existing) return jsonErr(404, "Session not found.");
 
     await assertCanAccessClassroom({ ...safe, classroomId: existing.classroomId });
+    await assertAttendanceDateInCurrentTerm({
+      tenantId: safe.tenantId,
+      date: existing.date,
+    });
 
     if (!existing.isClosed) return jsonErr(409, "Close session before certifying.");
     if (existing.certifiedAt) return jsonErr(409, "Session already certified.");

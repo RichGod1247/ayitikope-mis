@@ -1,5 +1,5 @@
-// src/app/teacher/attendance/page.tsx
 import { requireServerUserContext } from "@/lib/serverAuth";
+import { loadAttendanceAcademicCalendar } from "@/lib/server/attendanceAcademicCalendar";
 import TeacherAttendanceClient from "@/components/teacher/TeacherAttendanceClient";
 
 export const dynamic = "force-dynamic";
@@ -11,5 +11,12 @@ export default async function TeacherAttendancePage() {
     requireTenant: true,
   });
 
-  return <TeacherAttendanceClient teacherUserId={ctx.userId} />;
+  const academicCalendar = await loadAttendanceAcademicCalendar(ctx.tenantId);
+
+  return (
+    <TeacherAttendanceClient
+      teacherUserId={ctx.userId}
+      academicCalendar={academicCalendar}
+    />
+  );
 }

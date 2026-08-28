@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { assertCanAccessClassroom } from "@/lib/teacherClassroomAccess";
+import { assertAttendanceDateInCurrentTerm } from "@/lib/server/attendanceAcademicCalendar";
 import {
   requireTenantContext,
   assertTenantParamMatches,
@@ -49,6 +50,7 @@ async function recoverUniqueRace({ safe, classroomId, date }: OpenInput) {
   // Revalidate classroom authority on the fallback path as well. A unique-race
   // recovery must never become an authorization bypass.
   await assertCanAccessClassroom({ ...safe, classroomId });
+  await assertAttendanceDateInCurrentTerm({ tenantId: safe.tenantId, date });
 
   const existing = await prisma.attendanceSession.findFirst({
     where: { tenantId: safe.tenantId, classroomId, date },
@@ -110,6 +112,7 @@ export async function POST(req: Request) {
     input = { safe, classroomId, date };
 
     await assertCanAccessClassroom({ ...safe, classroomId });
+    await assertAttendanceDateInCurrentTerm({ tenantId: safe.tenantId, date });
 
     const findSession = (tx: Prisma.TransactionClient) =>
       tx.attendanceSession.findFirst({

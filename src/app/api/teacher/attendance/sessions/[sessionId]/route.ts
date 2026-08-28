@@ -4,12 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { AttendanceStatus } from "@prisma/client";
 import { getServerUserContextOrNull } from "@/lib/serverAuth";
 import { assertCanAccessClassroom } from "@/lib/teacherClassroomAccess";
+import { assertAttendanceDateInCurrentTerm } from "@/lib/server/attendanceAcademicCalendar";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const ALLOWED_TEACHER_ROLES = new Set(["TEACHER", "HEADTEACHER", "SCHOOL_ADMIN"]);
-const ALLOWED_STATUSES = new Set(["PRESENT", "ABSENT", "LATE", "EXCUSED"]);
+const INPUT_STATUSES = new Set(["PRESENT", "ABSENT", "LATE", "EXCUSED"]);
+const MANUAL_STATUSES = new Set(["PRESENT", "ABSENT"]);
 const NO_STORE_HEADERS = {
   "Cache-Control": "no-store",
   "X-Content-Type-Options": "nosniff",
@@ -159,6 +161,21 @@ export async function POST(req: Request, ctxRoute: { params: { sessionId: string
     return json({ ok: false, error: "SESSION_CLOSED_LOCKED" }, 400);
   }
 
+  try {
+    await assertAttendanceDateInCurrentTerm({
+      tenantId: ctx.tenantId,
+      date: guard.session.date,
+    });
+  } catch (error: unknown) {
+    return json(
+      {
+        ok: false,
+        error: error instanceof Error ? error.message : "Attendance date is outside the current term.",
+      },
+      Number((error as { status?: number })?.status) || 409,
+    );
+  }
+
   const body = (await req.json().catch(() => null)) as
     | { marks?: Array<{ studentId: string; status: string; note?: string | null }> }
     | null;
@@ -175,7 +192,7 @@ export async function POST(req: Request, ctxRoute: { params: { sessionId: string
     }
 
     const status = String(mark.status ?? "").toUpperCase();
-    if (!ALLOWED_STATUSES.has(status)) {
+    if (!INPUT_STATUSES.has(status)) {
       return json({ ok: false, error: "INVALID_STATUS" }, 400);
     }
 
@@ -195,6 +212,32 @@ export async function POST(req: Request, ctxRoute: { params: { sessionId: string
 
   if (validStudents.length !== uniqueStudentIds.length) {
     return json({ ok: false, error: "STUDENT_OUTSIDE_SESSION_CLASSROOM" }, 400);
+  }
+
+  const existingMarks = await prisma.attendanceMark.findMany({
+    where: {
+      sessionId: guard.session.id,
+      studentId: { in: uniqueStudentIds },
+    },
+    select: { studentId: true, status: true },
+  });
+  const existingStatusByStudent = new Map(
+    existingMarks.map((row) => [row.studentId, row.status]),
+  );
+
+  for (const mark of marks) {
+    const status = String(mark.status ?? "").toUpperCase();
+    if (MANUAL_STATUSES.has(status)) continue;
+    if (existingStatusByStudent.get(mark.studentId) !== status) {
+      return json(
+        {
+          ok: false,
+          error:
+            "Manual attendance accepts only PRESENT or ABSENT. Existing Late/Excused records may be preserved until corrected.",
+        },
+        400,
+      );
+    }
   }
 
   await prisma.$transaction(

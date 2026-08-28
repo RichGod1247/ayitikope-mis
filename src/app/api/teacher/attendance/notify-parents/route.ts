@@ -5,6 +5,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
 import { assertCanAccessClassroom } from "@/lib/teacherClassroomAccess";
+import { assertAttendanceDateInCurrentTerm } from "@/lib/server/attendanceAcademicCalendar";
 import { sendSms } from "@/lib/sms";
 import {
   getGuardianEssentialAlertEligibilityMap,
@@ -159,6 +160,18 @@ export async function POST(req: Request) {
 
   if (!adminLike && session.takenByUserId && session.takenByUserId !== safe.userId) {
     return json(403, { ok: false, error: "This session is owned by another user." });
+  }
+
+  try {
+    await assertAttendanceDateInCurrentTerm({
+      tenantId: safe.tenantId,
+      date: session.date,
+    });
+  } catch (error: unknown) {
+    return json(Number((error as { status?: number })?.status) || 409, {
+      ok: false,
+      error: error instanceof Error ? error.message : "Attendance date is outside the current term.",
+    });
   }
 
   if (!session.isClosed && !session.certifiedAt) {

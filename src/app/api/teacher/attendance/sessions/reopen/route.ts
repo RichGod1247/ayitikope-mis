@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { assertCanAccessClassroom } from "@/lib/teacherClassroomAccess";
+import { assertAttendanceDateInCurrentTerm } from "@/lib/server/attendanceAcademicCalendar";
 import { writeAuditLog } from "@/lib/audit";
 import {
   requireTenantContext,
@@ -145,6 +146,10 @@ export async function POST(req: Request) {
     await assertCanAccessClassroom({
       ...safe,
       classroomId: session.classroomId,
+    });
+    await assertAttendanceDateInCurrentTerm({
+      tenantId: safe.tenantId,
+      date: session.date,
     });
 
     if (session.certifiedAt) {

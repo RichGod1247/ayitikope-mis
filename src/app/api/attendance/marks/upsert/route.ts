@@ -2,12 +2,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
-import { Prisma } from "@prisma/client";
+import { AttendanceStatus as PrismaAttendanceStatus, Prisma } from "@prisma/client";
+import { assertCanAccessClassroom } from "@/lib/teacherClassroomAccess";
+import { assertAttendanceDateInCurrentTerm } from "@/lib/server/attendanceAcademicCalendar";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function json(status: number, payload: any) {
+function json(status: number, payload: unknown) {
   return NextResponse.json(payload, {
     status,
     headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
@@ -66,12 +68,29 @@ export async function POST(req: Request) {
 
   const session = await prisma.attendanceSession.findFirst({
     where: { id: sessionId, tenantId: auth.ctx.tenantId },
-    select: { id: true, classroomId: true, isClosed: true, certifiedAt: true },
+    select: { id: true, classroomId: true, date: true, isClosed: true, certifiedAt: true },
   });
 
   if (!session) return json(404, { ok: false, error: "Session not found." });
   if (session.certifiedAt) return json(409, { ok: false, error: "Session is certified and cannot be edited." });
   if (session.isClosed) return json(409, { ok: false, error: "Session is closed. Reopen it before editing." });
+
+  try {
+    await assertCanAccessClassroom({
+      tenantId: auth.ctx.tenantId,
+      userId: auth.ctx.userId,
+      classroomId: session.classroomId,
+    });
+    await assertAttendanceDateInCurrentTerm({
+      tenantId: auth.ctx.tenantId,
+      date: session.date,
+    });
+  } catch (error: unknown) {
+    return json(Number((error as { status?: number })?.status) || 403, {
+      ok: false,
+      error: error instanceof Error ? error.message : "Forbidden.",
+    });
+  }
 
   const studentIds = items.map((i) => i.studentId);
 
@@ -87,26 +106,38 @@ export async function POST(req: Request) {
 
   const existing = await prisma.attendanceMark.findMany({
     where: { sessionId: session.id, studentId: { in: studentIds } },
-    select: { id: true, studentId: true },
+    select: { id: true, studentId: true, status: true },
   });
-  const existingByStudent = new Map(existing.map((m) => [m.studentId, m.id]));
+  const existingByStudent = new Map(existing.map((m) => [m.studentId, m]));
+
+  for (const it of items) {
+    if (it.status === "PRESENT" || it.status === "ABSENT") continue;
+    const existingMark = existingByStudent.get(it.studentId);
+    if (existingMark?.status !== it.status) {
+      return json(400, {
+        ok: false,
+        error:
+          "Manual attendance accepts only PRESENT or ABSENT. Existing Late/Excused records may be preserved until corrected.",
+      });
+    }
+  }
 
   await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     for (const it of items) {
       const note = it.note?.trim() ? it.note.trim() : null;
-      const existingId = existingByStudent.get(it.studentId);
+      const existingMark = existingByStudent.get(it.studentId);
 
-      if (existingId) {
+      if (existingMark) {
         await tx.attendanceMark.update({
-          where: { id: existingId },
-          data: { status: it.status as any, note },
+          where: { id: existingMark.id },
+          data: { status: PrismaAttendanceStatus[it.status], note },
         });
       } else {
         await tx.attendanceMark.create({
           data: {
             sessionId: session.id,
             studentId: it.studentId,
-            status: it.status as any,
+            status: PrismaAttendanceStatus[it.status],
             note,
           },
         });

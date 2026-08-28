@@ -6,6 +6,7 @@ import { StudentStatus } from "@prisma/client";
 import { z } from "zod";
 import { assertCanAccessClassroom } from "@/lib/teacherClassroomAccess";
 import { getGuardianEssentialAlertEligibilityMap } from "@/lib/essentialAlerts/enrollment";
+import { resolveAttendanceCalendarDate } from "@/lib/server/attendanceAcademicCalendar";
 import {
   requireTenantContext,
   assertTenantParamMatches,
@@ -101,34 +102,40 @@ export async function GET(req: Request) {
       classroomId: session.classroomId,
     });
 
-    const [students, marks] = await prisma.$transaction([
-      prisma.student.findMany({
-        where: {
-          tenantId: safe.tenantId,
-          classroomId: session.classroomId,
-          status: StudentStatus.ACTIVE,
-        },
-        orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          guardianName: true,
-          guardianPhone: true,
-          guardianPhoneNorm: true,
-          healthConsentAt: true,
-        },
-      }),
-      prisma.attendanceMark.findMany({
-        where: { sessionId: session.id },
-        select: {
-          id: true,
-          studentId: true,
-          status: true,
-          note: true,
-          createdAt: true,
-          updatedAt: true,
-        },
+    const [[students, marks], academicCalendar] = await Promise.all([
+      prisma.$transaction([
+        prisma.student.findMany({
+          where: {
+            tenantId: safe.tenantId,
+            classroomId: session.classroomId,
+            status: StudentStatus.ACTIVE,
+          },
+          orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            guardianName: true,
+            guardianPhone: true,
+            guardianPhoneNorm: true,
+            healthConsentAt: true,
+          },
+        }),
+        prisma.attendanceMark.findMany({
+          where: { sessionId: session.id },
+          select: {
+            id: true,
+            studentId: true,
+            status: true,
+            note: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+      ]),
+      resolveAttendanceCalendarDate({
+        tenantId: safe.tenantId,
+        date: session.date,
       }),
     ]);
 
@@ -258,6 +265,10 @@ export async function GET(req: Request) {
       },
       classroom,
       classLabel,
+      academicCalendar: {
+        ...academicCalendar.calendar,
+        ...academicCalendar.date,
+      },
       summary: {
         students: students.length,
         total: students.length,

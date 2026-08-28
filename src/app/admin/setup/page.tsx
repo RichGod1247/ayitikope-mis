@@ -31,12 +31,6 @@ type LoadResp = {
     term3Start: string;
     term3End: string;
 
-    attendanceStartTime: string;
-    attendanceEndTime: string;
-    lateCutoffMinutes: number | null;
-
-    feverThreshold: number | null;
-
     setupCompletedAt?: string | null;
     setupComplete?: boolean;
   };
@@ -58,7 +52,6 @@ const sectionCard =
 const inputBase =
   "h-10 w-full rounded-xl border border-white/10 bg-[#05070B] px-3 py-2 text-sm text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-emerald-400/20";
 const labelBase = "mb-1 block text-sm font-medium text-[#C9CDD6]";
-const helperBase = "mt-2 text-xs text-[#8F98A8]";
 const btnBase =
   "inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-50";
 const btnPrimary =
@@ -66,12 +59,6 @@ const btnPrimary =
 const btnOutline =
   `${btnBase} border-white/10 bg-white/5 text-[#F7F4ED] hover:bg-white/10`;
 
-function toNumOrNull(v: string) {
-  const s = String(v ?? "").trim();
-  if (!s) return null;
-  const n = Number(s);
-  return Number.isFinite(n) ? n : null;
-}
 
 function safeNextPath(raw: string | null, fallback = "/admin/setup") {
   const v = String(raw ?? "").trim();
@@ -137,12 +124,6 @@ export default function AdminSetupPage() {
   const [term3Start, setTerm3Start] = useState("");
   const [term3End, setTerm3End] = useState("");
 
-  const [attendanceStartTime, setAttendanceStartTime] = useState("");
-  const [attendanceEndTime, setAttendanceEndTime] = useState("");
-  const [lateCutoffMinutes, setLateCutoffMinutes] = useState<string>("");
-
-  const [feverThreshold, setFeverThreshold] = useState<string>("");
-
   async function load() {
     setLoading(true);
     setMsg(null);
@@ -153,7 +134,7 @@ export default function AdminSetupPage() {
         credentials: "include",
       });
 
-      const j = (await r.json().catch(() => ({}))) as any;
+      const j = (await r.json().catch(() => ({}))) as Partial<LoadResp>;
 
       const ok = r.ok && (j?.ok === undefined ? true : Boolean(j?.ok));
       if (!ok || !j?.tenant || !j?.settings) {
@@ -177,11 +158,6 @@ export default function AdminSetupPage() {
       setTerm3Start(data.settings.term3Start || "");
       setTerm3End(data.settings.term3End || "");
 
-      setAttendanceStartTime(data.settings.attendanceStartTime || "");
-      setAttendanceEndTime(data.settings.attendanceEndTime || "");
-      setLateCutoffMinutes(data.settings.lateCutoffMinutes == null ? "" : String(data.settings.lateCutoffMinutes));
-      setFeverThreshold(data.settings.feverThreshold == null ? "" : String(data.settings.feverThreshold));
-
       setSetupCompletedAt(data.settings.setupCompletedAt ?? null);
       setSetupComplete(Boolean(data.settings.setupComplete || data.settings.setupCompletedAt));
     } finally {
@@ -204,12 +180,6 @@ export default function AdminSetupPage() {
         term2End: term2End.trim(),
         term3Start: term3Start.trim(),
         term3End: term3End.trim(),
-
-        attendanceStartTime: attendanceStartTime.trim(),
-        attendanceEndTime: attendanceEndTime.trim(),
-        lateCutoffMinutes: toNumOrNull(lateCutoffMinutes),
-
-        feverThreshold: toNumOrNull(feverThreshold),
       };
 
       const r = await fetch("/api/admin/setup/save", {
@@ -265,8 +235,8 @@ export default function AdminSetupPage() {
           <div>
             <h1 className="text-2xl font-semibold text-[#F7F4ED]">Academic Settings</h1>
             <p className="mt-1 max-w-3xl text-sm text-[#C9CDD6]">
-              Configure the school year, term dates, attendance window, and fever threshold.
-              This is now a reusable settings page, not a one-time trapdoor.
+              Set the school year and term dates once. Teacher Attendance uses the current term dates automatically to resolve reopening, weeks, and the last day attendance may be marked.
+              This page remains editable by the Headteacher/Admin when the official calendar changes.
             </p>
           </div>
 
@@ -307,8 +277,16 @@ export default function AdminSetupPage() {
             </div>
           </section>
 
-          <section className={sectionCard}>
-            <h2 className="mb-4 text-lg font-semibold text-[#F7F4ED]">Academic</h2>
+          <section className={sectionCard} data-academic-settings-authority="attendance-current-term-v1">
+            <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-[#F7F4ED]">Academic calendar</h2>
+                <p className="mt-1 text-xs text-[#8F98A8]">
+                  The selected Current Term controls Teacher Attendance. Its Start date is reopening; its End date closes new attendance for that term.
+                </p>
+              </div>
+              {currentTerm ? statusChip(`${currentTerm} · attendance authority`, "ok") : null}
+            </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div>
@@ -334,7 +312,7 @@ export default function AdminSetupPage() {
                   <option value="1st Term" className="bg-[#05070B] text-[#F7F4ED]">
                     1st Term
                   </option>
-                  <option value="2nd Term" className="bg-[#05070B] text-[#F7FED]">
+                  <option value="2nd Term" className="bg-[#05070B] text-[#F7F4ED]">
                     2nd Term
                   </option>
                   <option value="3rd Term" className="bg-[#05070B] text-[#F7F4ED]">
@@ -401,61 +379,6 @@ export default function AdminSetupPage() {
             </div>
           </section>
 
-          <section className={sectionCard}>
-            <h2 className="mb-4 text-lg font-semibold text-[#F7F4ED]">Attendance</h2>
-            <div className="grid gap-4 md:grid-cols-3">
-              <div>
-                <label className={labelBase}>Start Time</label>
-                <input
-                  type="time"
-                  className={inputBase}
-                  value={attendanceStartTime}
-                  onChange={(e) => setAttendanceStartTime(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className={labelBase}>End Time</label>
-                <input
-                  type="time"
-                  className={inputBase}
-                  value={attendanceEndTime}
-                  onChange={(e) => setAttendanceEndTime(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className={labelBase}>Late Cutoff Minutes</label>
-                <input
-                  type="number"
-                  min={0}
-                  className={inputBase}
-                  value={lateCutoffMinutes}
-                  onChange={(e) => setLateCutoffMinutes(e.target.value)}
-                  placeholder="15"
-                />
-              </div>
-            </div>
-          </section>
-
-          <section className={sectionCard}>
-            <h2 className="mb-4 text-lg font-semibold text-[#F7F4ED]">Health</h2>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className={labelBase}>Fever Threshold (°C)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min={30}
-                  max={45}
-                  className={inputBase}
-                  value={feverThreshold}
-                  onChange={(e) => setFeverThreshold(e.target.value)}
-                  placeholder="37.8"
-                />
-                <p className={helperBase}>Valid range: 30.0–45.0. Server still enforces the final rule.</p>
-              </div>
-            </div>
-          </section>
-
           <div className="flex flex-wrap items-center gap-3">
             <button className={btnPrimary} onClick={save} disabled={saving}>
               {saving ? "Saving…" : "Save Settings"}
@@ -466,7 +389,7 @@ export default function AdminSetupPage() {
             </button>
 
             <span className="text-xs text-[#8F98A8]">
-              This page remains editable after initial setup.
+              Attendance timing now comes from the actual register session timestamps; unused Health settings are hidden for now.
             </span>
           </div>
         </>

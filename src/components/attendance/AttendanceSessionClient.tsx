@@ -23,6 +23,23 @@ type SessionDTO = {
   takenByUserId: string | null;
 };
 
+type SessionAcademicCalendarDTO = {
+  configured: boolean;
+  academicYear: string | null;
+  term: string | null;
+  termNumber: 1 | 2 | 3 | null;
+  startDateISO: string | null;
+  endDateISO: string | null;
+  reason: string | null;
+  allowed: boolean;
+  code: "OK" | "CALENDAR_NOT_CONFIGURED" | "DATE_OUTSIDE_CURRENT_TERM" | "WEEKEND" | "INVALID_DATE";
+  message: string;
+  weekNumber: number | null;
+  weekStartDateISO: string | null;
+  weekEndDateISO: string | null;
+  expectedSchoolDays: number;
+};
+
 type ClassroomDTO = {
   id: string;
   name: string;
@@ -75,6 +92,7 @@ type GetOk = {
   session: SessionDTO;
   classroom: ClassroomDTO | null;
   classLabel: string;
+  academicCalendar: SessionAcademicCalendarDTO;
   summary?: SessionSummaryDTO;
   students: StudentRowDTO[];
 };
@@ -330,6 +348,8 @@ export default function AttendanceSessionClient(props: {
     props.initialClassName || "Class",
   );
   const [students, setStudents] = useState<StudentRowDTO[]>([]);
+  const [academicCalendar, setAcademicCalendar] =
+    useState<SessionAcademicCalendarDTO | null>(null);
   const [marks, setMarks] = useState<Record<string, MarkState>>({});
   const baselineMarksRef = useRef<Record<string, MarkState>>({});
 
@@ -355,7 +375,8 @@ export default function AttendanceSessionClient(props: {
 
   const isCertified = !!session?.certifiedAt;
   const isClosed = !!session?.isClosed;
-  const locked = isCertified || isClosed;
+  const calendarMutationLocked = academicCalendar?.allowed !== true;
+  const locked = isCertified || isClosed || calendarMutationLocked;
 
   async function load() {
     setLoading(true);
@@ -378,6 +399,7 @@ export default function AttendanceSessionClient(props: {
 
       setSession(j.session);
       setClassLabel(j.classLabel || props.initialClassName || "Class");
+      setAcademicCalendar(j.academicCalendar);
       setStudents(Array.isArray(j.students) ? j.students : []);
 
       const nextMarks: Record<string, MarkState> = {};
@@ -515,6 +537,7 @@ export default function AttendanceSessionClient(props: {
 
   const canClose =
     !!session &&
+    academicCalendar?.allowed === true &&
     !loading &&
     !mutating &&
     !saving &&
@@ -526,6 +549,7 @@ export default function AttendanceSessionClient(props: {
 
   const canCertify =
     !!session &&
+    academicCalendar?.allowed === true &&
     !loading &&
     !mutating &&
     !saving &&
@@ -536,10 +560,17 @@ export default function AttendanceSessionClient(props: {
     counts.unmarked === 0;
 
   const canReopen =
-    !!session && !loading && !mutating && !saving && !isCertified && isClosed;
+    !!session &&
+    academicCalendar?.allowed === true &&
+    !loading &&
+    !mutating &&
+    !saving &&
+    !isCertified &&
+    isClosed;
 
   const canNotify =
     !!session &&
+    academicCalendar?.allowed === true &&
     !loading &&
     !notifying &&
     !mutating &&
@@ -556,6 +587,8 @@ export default function AttendanceSessionClient(props: {
 
   function closeDisabledReason(): string | null {
     if (!session) return "Session not loaded.";
+    if (calendarMutationLocked)
+      return academicCalendar?.message || "Academic calendar does not allow changes to this register.";
     if (locked) return "Session is already locked.";
     if (dirty) return "Save changes first.";
     if (saveErr) return "Last save failed.";
@@ -569,6 +602,8 @@ export default function AttendanceSessionClient(props: {
   function notifyDisabledReason(): string | null {
     if (!session) return "Session not loaded.";
     if (loading) return "Loading session…";
+    if (calendarMutationLocked)
+      return academicCalendar?.message || "Academic calendar does not allow notifications for this register.";
     if (!(isClosed || isCertified))
       return "Close or certify the session first.";
     if (dirty) return "You have unsaved changes. Save first.";
@@ -583,6 +618,8 @@ export default function AttendanceSessionClient(props: {
   function qrBaseDisabledReason(): string | null {
     if (!session) return "Session not loaded.";
     if (loading) return "Loading session…";
+    if (calendarMutationLocked)
+      return academicCalendar?.message || "Academic calendar does not allow changes to this register.";
     if (locked)
       return "Closed or certified sessions cannot accept register seal scans.";
     if (dirty) return "Save manual changes before scanning.";
@@ -609,6 +646,11 @@ export default function AttendanceSessionClient(props: {
     setSaveErr(null);
 
     try {
+      if (calendarMutationLocked) {
+        throw new Error(
+          academicCalendar?.message || "Academic calendar does not allow changes to this register.",
+        );
+      }
       if (locked) throw new Error("Session is locked (closed/certified).");
 
       const markItems = students
@@ -677,6 +719,11 @@ export default function AttendanceSessionClient(props: {
     setMutErr(null);
 
     try {
+      if (calendarMutationLocked) {
+        throw new Error(
+          academicCalendar?.message || "Academic calendar does not allow changes to this register.",
+        );
+      }
       if ((action === "close" || action === "certify") && dirty) {
         throw new Error(
           "You have unsaved changes. Save before closing/certifying.",
@@ -754,6 +801,11 @@ export default function AttendanceSessionClient(props: {
     setNotifyErr(null);
 
     try {
+      if (calendarMutationLocked) {
+        throw new Error(
+          academicCalendar?.message || "Academic calendar does not allow notifications for this register.",
+        );
+      }
       if (!session.isClosed && !session.certifiedAt) {
         throw new Error("Close or certify the session before notifications.");
       }
@@ -898,6 +950,11 @@ export default function AttendanceSessionClient(props: {
                 <span className="font-semibold text-[#F7F4ED]">{classLabel}</span>
                 <span>•</span>
                 <span>{session.date}</span>
+                {academicCalendar?.weekNumber ? (
+                  <span className="rounded-full border border-[#E8C96A]/20 bg-[#D4AF37]/10 px-2 py-0.5 text-[10px] font-semibold text-[#E8C96A]">
+                    Week {academicCalendar.weekNumber}
+                  </span>
+                ) : null}
                 <span className={statusPill()}>
                   {isCertified ? "CERTIFIED" : isClosed ? "CLOSED" : "OPEN"}
                 </span>
@@ -933,6 +990,12 @@ export default function AttendanceSessionClient(props: {
       </section>
 
       {err ? <Banner tone="error">{err}</Banner> : null}
+
+      {academicCalendar && !academicCalendar.allowed ? (
+        <Banner tone="warn">
+          <b>Read-only register.</b> {academicCalendar.message} Existing attendance history is preserved.
+        </Banner>
+      ) : null}
 
       {counts.unmarked > 0 && !locked ? (
         <Banner tone="warn">

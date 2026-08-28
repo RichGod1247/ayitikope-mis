@@ -104,6 +104,10 @@ for (const marker of [
   "multiStreamClassroomsAvailable",
   "Your assigned Class Teacher / Class Adviser register.",
   "Choose Class arms to select the exact register.",
+  'data-attendance-calendar-authority="tenant-current-term-v1"',
+  "School calendar",
+  "Reopening:",
+  "Closing:",
 ]) {
   assert(
     attendanceList.includes(marker),
@@ -151,6 +155,8 @@ for (const marker of [
   'data-attendance-scanner-ui="collapsed-v1"',
   "showBadgeScanner",
   "QrCameraScanner",
+  "Read-only register.",
+  "academicCalendar?.allowed === true",
 ]) {
   assert(session.includes(marker), "Attendance BBC/mobile marker missing", marker);
 }
@@ -295,7 +301,7 @@ assert(
 );
 
 for (const marker of [
-  'const MANUAL_STATUS = ["PRESENT", "ABSENT"] as const;',
+  'function isManualStatus(status: AttendanceStatus): status is "PRESENT" | "ABSENT"',
   'manualStatusPolicy: "PRESENT_ABSENT_ONLY"',
   'legacyStatusCompatibility: "UNCHANGED_EXISTING_ONLY"',
   "Manual attendance accepts only PRESENT or ABSENT.",
@@ -364,6 +370,7 @@ console.log("Attendance eligibility source  : ESSENTIAL_ALERT_ENROLLMENT");
 console.log("Attendance purpose             : STUDENT_ATTENDANCE");
 console.log("Legacy guardianSmsOptIn        : NOT AUTHORITATIVE");
 console.log("Attendance lifecycle semantics : preserved");
+console.log("Academic calendar authority    : current school term / fail-closed");
 console.log("Browser persistence/polling    : absent");
 console.log("Database accessed              : false");
 console.log("");

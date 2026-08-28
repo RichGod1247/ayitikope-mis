@@ -10,6 +10,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit";
 import { assertCanAccessClassroom } from "@/lib/teacherClassroomAccess";
+import { assertAttendanceDateInCurrentTerm } from "@/lib/server/attendanceAcademicCalendar";
 import {
   requireTenantContext,
   assertTenantParamMatches,
@@ -238,6 +239,10 @@ export async function POST(req: Request) {
     await assertCanAccessClassroom({
       ...safe,
       classroomId: session.classroomId,
+    });
+    await assertAttendanceDateInCurrentTerm({
+      tenantId: safe.tenantId,
+      date: session.date,
     });
 
     const adminLike = isAdminLike(roleName);

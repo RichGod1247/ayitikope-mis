@@ -1,11 +1,36 @@
-// src/app/api/admin/setup/save/route.ts
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
-import { Prisma } from "@prisma/client";
+import {
+  attendanceTermLabel,
+  normalizeAttendanceTermNumber,
+  toISODateOnly,
+} from "@/lib/attendanceAcademicCalendar";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const ALLOWED_ROLES = ["SCHOOL_ADMIN", "HEADTEACHER", "SUPERADMIN"] as const;
+const MAX_BODY_BYTES = 16 * 1024;
+const LEGACY_IGNORED_KEYS = [
+  "attendanceStartTime",
+  "attendanceEndTime",
+  "lateCutoffMinutes",
+  "feverThreshold",
+] as const;
+
+const ALLOWED_KEYS = new Set([
+  "currentAcademicYear",
+  "currentTerm",
+  "term1Start",
+  "term1End",
+  "term2Start",
+  "term2End",
+  "term3Start",
+  "term3End",
+  ...LEGACY_IGNORED_KEYS,
+]);
 
 function json(payload: unknown, status = 200) {
   return NextResponse.json(payload, {
@@ -21,50 +46,30 @@ function cleanStr(v: unknown) {
 function parseISODateOnly(v: unknown): Date | null {
   const s = cleanStr(v);
   if (!s) return null;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) throw new Error("INVALID_DATE");
+
   const d = new Date(`${s}T00:00:00.000Z`);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
-function parseTimeHHMM(v: unknown): string | null {
-  const s = cleanStr(v);
-  if (!s) return null;
-  const m = s.match(/^(\d{1,2}):(\d{2})$/);
-  if (!m) return null;
-  const hh = Number(m[1]);
-  const mm = Number(m[2]);
-  if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
-  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
-}
-
-function toMinutes(hhmm: string | null) {
-  if (!hhmm) return null;
-  const [hh, mm] = hhmm.split(":").map(Number);
-  return hh * 60 + mm;
-}
-
-function parseIntOrNull(v: unknown): number | null {
-  const s = cleanStr(v);
-  if (!s) return null;
-  const n = Number(s);
-  return Number.isFinite(n) ? Math.trunc(n) : null;
-}
-
-function parseDecimal41OrNull(v: unknown): Prisma.Decimal | null {
-  const s = cleanStr(v);
-  if (!s) return null;
-  const n = Number(s);
-  if (!Number.isFinite(n)) return null;
-  if (n < 30 || n > 45) return null;
-  const fixed = Math.round(n * 10) / 10;
-  return new Prisma.Decimal(fixed);
+  if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== s) {
+    throw new Error("INVALID_DATE");
+  }
+  return d;
 }
 
 function assertRange(a: Date | null, b: Date | null, label: string) {
+  if (!!a !== !!b) throw new Error(`INCOMPLETE_RANGE:${label}`);
   if (a && b && a.getTime() > b.getTime()) throw new Error(`BAD_RANGE:${label}`);
 }
 
-function isComplete(data: {
+function assertTermOrder(term1End: Date | null, term2Start: Date | null, term2End: Date | null, term3Start: Date | null) {
+  if (term1End && term2Start && term1End.getTime() >= term2Start.getTime()) {
+    throw new Error("TERM_OVERLAP:TERM1_TERM2");
+  }
+  if (term2End && term3Start && term2End.getTime() >= term3Start.getTime()) {
+    throw new Error("TERM_OVERLAP:TERM2_TERM3");
+  }
+}
+
+function isAcademicComplete(data: {
   currentAcademicYear: string | null;
   currentTerm: string | null;
   term1Start: Date | null;
@@ -73,14 +78,7 @@ function isComplete(data: {
   term2End: Date | null;
   term3Start: Date | null;
   term3End: Date | null;
-  attendanceStartTime: string | null;
-  attendanceEndTime: string | null;
-  lateCutoffMinutes: number | null;
-  feverThreshold: Prisma.Decimal | null;
 }) {
-  const startM = toMinutes(data.attendanceStartTime);
-  const endM = toMinutes(data.attendanceEndTime);
-
   return (
     !!data.currentAcademicYear &&
     !!data.currentTerm &&
@@ -89,81 +87,205 @@ function isComplete(data: {
     !!data.term2Start &&
     !!data.term2End &&
     !!data.term3Start &&
-    !!data.term3End &&
-    startM != null &&
-    endM != null &&
-    startM < endM &&
-    typeof data.lateCutoffMinutes === "number" &&
-    data.lateCutoffMinutes >= 0 &&
-    data.lateCutoffMinutes <= 240 &&
-    data.feverThreshold != null
+    !!data.term3End
   );
+}
+
+function clientIp(req: Request) {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || null;
+}
+
+function userAgent(req: Request) {
+  return req.headers.get("user-agent") || null;
+}
+
+function snapshot(row: {
+  currentAcademicYear: string | null;
+  currentTerm: string | null;
+  term1Start: Date | null;
+  term1End: Date | null;
+  term2Start: Date | null;
+  term2End: Date | null;
+  term3Start: Date | null;
+  term3End: Date | null;
+}) {
+  return {
+    currentAcademicYear: row.currentAcademicYear,
+    currentTerm: row.currentTerm,
+    term1Start: toISODateOnly(row.term1Start),
+    term1End: toISODateOnly(row.term1End),
+    term2Start: toISODateOnly(row.term2Start),
+    term2End: toISODateOnly(row.term2End),
+    term3Start: toISODateOnly(row.term3Start),
+    term3End: toISODateOnly(row.term3End),
+  };
 }
 
 export async function POST(req: Request) {
   const auth = await requireApiUserContext(req, {
     requireTenant: true,
-    requireRoleNames: ["SCHOOL_ADMIN"],
+    requireRoleNames: [...ALLOWED_ROLES],
   });
   if (!auth.ok) return auth.res;
 
-  const ct = (req.headers.get("content-type") || "").toLowerCase();
-  if (!ct.includes("application/json")) return json({ ok: false, error: "CONTENT_TYPE_MUST_BE_JSON" }, 415);
+  const contentType = (req.headers.get("content-type") || "").toLowerCase();
+  if (!contentType.includes("application/json")) {
+    return json({ ok: false, error: "CONTENT_TYPE_MUST_BE_JSON" }, 415);
+  }
+
+  const contentLength = Number(req.headers.get("content-length") || "0");
+  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
+    return json({ ok: false, error: "REQUEST_TOO_LARGE" }, 413);
+  }
 
   try {
     const tenantId = auth.ctx.tenantId;
-    const body = await req.json().catch(() => ({}));
+    const rawText = await req.text();
+    if (Buffer.byteLength(rawText, "utf8") > MAX_BODY_BYTES) {
+      return json({ ok: false, error: "REQUEST_TOO_LARGE" }, 413);
+    }
 
-    const t = await prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: { status: true },
-    });
-    if (!t) return json({ ok: false, error: "TENANT_NOT_FOUND" }, 404);
-    if (t.status !== "ACTIVE") return json({ ok: false, error: "TENANT_NOT_ACTIVE" }, 409);
+    const body = rawText ? (JSON.parse(rawText) as Record<string, unknown>) : {};
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return json({ ok: false, error: "INVALID_BODY" }, 400);
+    }
+
+    for (const key of Object.keys(body)) {
+      if (!ALLOWED_KEYS.has(key)) {
+        return json({ ok: false, error: `UNEXPECTED_FIELD:${key}` }, 400);
+      }
+    }
+
+    const academicYear = cleanStr(body.currentAcademicYear);
+    if (academicYear.length > 40) {
+      return json({ ok: false, error: "Academic year is too long." }, 400);
+    }
+
+    const termNumber = normalizeAttendanceTermNumber(body.currentTerm);
+    const currentTerm = termNumber ? attendanceTermLabel(termNumber) : null;
+    if (cleanStr(body.currentTerm) && !currentTerm) {
+      return json({ ok: false, error: "Choose 1st Term, 2nd Term, or 3rd Term." }, 400);
+    }
 
     const data = {
-      currentAcademicYear: cleanStr((body as any).currentAcademicYear) || null,
-      currentTerm: cleanStr((body as any).currentTerm) || null,
-
-      term1Start: parseISODateOnly((body as any).term1Start),
-      term1End: parseISODateOnly((body as any).term1End),
-      term2Start: parseISODateOnly((body as any).term2Start),
-      term2End: parseISODateOnly((body as any).term2End),
-      term3Start: parseISODateOnly((body as any).term3Start),
-      term3End: parseISODateOnly((body as any).term3End),
-
-      attendanceStartTime: parseTimeHHMM((body as any).attendanceStartTime),
-      attendanceEndTime: parseTimeHHMM((body as any).attendanceEndTime),
-
-      lateCutoffMinutes: parseIntOrNull((body as any).lateCutoffMinutes),
-      feverThreshold: parseDecimal41OrNull((body as any).feverThreshold),
+      currentAcademicYear: academicYear || null,
+      currentTerm,
+      term1Start: parseISODateOnly(body.term1Start),
+      term1End: parseISODateOnly(body.term1End),
+      term2Start: parseISODateOnly(body.term2Start),
+      term2End: parseISODateOnly(body.term2End),
+      term3Start: parseISODateOnly(body.term3Start),
+      term3End: parseISODateOnly(body.term3End),
     };
 
     assertRange(data.term1Start, data.term1End, "TERM1");
     assertRange(data.term2Start, data.term2End, "TERM2");
     assertRange(data.term3Start, data.term3End, "TERM3");
+    assertTermOrder(data.term1End, data.term2Start, data.term2End, data.term3Start);
 
-    const prev = await prisma.tenantSettings.findUnique({
-      where: { tenantId },
-      select: { setupCompletedAt: true },
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { status: true },
     });
+    if (!tenant) return json({ ok: false, error: "TENANT_NOT_FOUND" }, 404);
+    if (tenant.status !== "ACTIVE") return json({ ok: false, error: "TENANT_NOT_ACTIVE" }, 409);
 
-    const completeNow = isComplete(data);
+    const result = await prisma.$transaction(
+      async (tx) => {
+        const previous = await tx.tenantSettings.findUnique({
+          where: { tenantId },
+          select: {
+            currentAcademicYear: true,
+            currentTerm: true,
+            term1Start: true,
+            term1End: true,
+            term2Start: true,
+            term2End: true,
+            term3Start: true,
+            term3End: true,
+            setupCompletedAt: true,
+          },
+        });
 
-    // 🔒 CRITICAL FIX:
-    // once setupCompletedAt is set, NEVER clear it again.
-    const setupCompletedAt = prev?.setupCompletedAt ?? (completeNow ? new Date() : null);
+        const completeNow = isAcademicComplete(data);
+        const setupCompletedAt = previous?.setupCompletedAt ?? (completeNow ? new Date() : null);
+        const before = previous
+          ? snapshot(previous)
+          : {
+              currentAcademicYear: null,
+              currentTerm: null,
+              term1Start: null,
+              term1End: null,
+              term2Start: null,
+              term2End: null,
+              term3Start: null,
+              term3End: null,
+            };
+        const after = snapshot(data);
+        const changed = JSON.stringify(before) !== JSON.stringify(after);
+        const completionChanged = !previous?.setupCompletedAt && !!setupCompletedAt;
 
-    await prisma.tenantSettings.upsert({
-      where: { tenantId },
-      create: { tenantId, ...data, setupCompletedAt },
-      update: { ...data, setupCompletedAt },
-    });
+        if (changed || completionChanged || !previous) {
+          await tx.tenantSettings.upsert({
+            where: { tenantId },
+            create: { tenantId, ...data, setupCompletedAt },
+            update: { ...data, setupCompletedAt },
+          });
+        }
 
-    return json({ ok: true, setupComplete: !!setupCompletedAt, completedAt: setupCompletedAt?.toISOString?.() ?? null }, 200);
-  } catch (err: any) {
-    if (err?.message?.startsWith("BAD_RANGE:")) {
-      return json({ ok: false, error: `Invalid date range: ${err.message.replace("BAD_RANGE:", "")}` }, 400);
+        if (changed) {
+          await tx.auditLog.create({
+            data: {
+              tenantId,
+              userId: auth.ctx.userId,
+              action: "ACADEMIC_CALENDAR_SETTINGS_UPDATED",
+              resource: "TenantSettings",
+              resourceId: tenantId,
+              ip: clientIp(req),
+              userAgent: userAgent(req),
+              metadata: {
+                policy: "ATTENDANCE_ACADEMIC_CALENDAR_V1",
+                actorRole: auth.ctx.roleName ?? null,
+                previous: before,
+                next: after,
+              } satisfies Prisma.JsonObject,
+            },
+          });
+        }
+
+        return { setupCompletedAt, changed };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+
+    return json(
+      {
+        ok: true,
+        setupComplete: !!result.setupCompletedAt,
+        setupCompletedAt: result.setupCompletedAt?.toISOString?.() ?? null,
+        changed: result.changed,
+        // Backward compatibility for older setup clients.
+        completedAt: result.setupCompletedAt?.toISOString?.() ?? null,
+      },
+      200,
+    );
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "";
+
+    if (message === "INVALID_DATE") {
+      return json({ ok: false, error: "Use valid calendar dates." }, 400);
+    }
+    if (message.startsWith("INCOMPLETE_RANGE:")) {
+      return json({ ok: false, error: `Enter both start and end dates for ${message.replace("INCOMPLETE_RANGE:", "")}.` }, 400);
+    }
+    if (message.startsWith("BAD_RANGE:")) {
+      return json({ ok: false, error: `Invalid date range: ${message.replace("BAD_RANGE:", "")}` }, 400);
+    }
+    if (message.startsWith("TERM_OVERLAP:")) {
+      return json({ ok: false, error: "Term date ranges must not overlap." }, 400);
+    }
+    if (err instanceof SyntaxError) {
+      return json({ ok: false, error: "INVALID_JSON" }, 400);
     }
 
     console.error("admin/setup/save error:", err);
