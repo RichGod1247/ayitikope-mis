@@ -3,144 +3,148 @@ import { prisma } from "@/lib/prisma";
 
 type SafeCtx = { userId: string; tenantId: string };
 
-function normalizeLevel(v: string) {
-  return String(v ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+type ClassroomAccessRow = {
+  id: string;
+  name: string;
+  grade: string | null;
+  arm: string | null;
+};
+
+function cleanStr(v: unknown) {
+  return String(v ?? "").trim();
 }
 
-function uniq(xs: string[]) {
-  return Array.from(new Set(xs.map((x) => x.trim()).filter(Boolean)));
+function normalizeLevel(v: unknown) {
+  return cleanStr(v).toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function levelToken(raw: unknown): string | null {
+  const s = normalizeLevel(raw);
+
+  let m = s.match(/^KG([12])$/);
+  if (m) return `KG${m[1]}`;
+
+  m = s.match(/^JHS([1-3])$/);
+  if (m) return `JHS${m[1]}`;
+
+  m = s.match(/^(BASIC|B|BS)([7-9])$/);
+  if (m) return `JHS${Number(m[2]) - 6}`;
+
+  m = s.match(/^(BASIC|B|PRIMARY|P)([1-6])$/);
+  if (m) return `B${m[2]}`;
+
+  return null;
+}
+
+function classroomMatchesLevel(classroom: ClassroomAccessRow, rawLevel: unknown) {
+  const expectedToken = levelToken(rawLevel);
+  if (expectedToken) {
+    return levelToken(classroom.grade) === expectedToken || levelToken(classroom.name) === expectedToken;
+  }
+
+  const expected = normalizeLevel(rawLevel);
+  if (!expected) return false;
+
+  return normalizeLevel(classroom.grade) === expected || normalizeLevel(classroom.name) === expected;
 }
 
 function isAdminLike(roleName: string | null | undefined) {
-  const r = String(roleName ?? "").toUpperCase();
+  const r = cleanStr(roleName).toUpperCase();
   return r.includes("ADMIN") || r.includes("HEAD") || r.includes("OWNER");
 }
 
-function extractAssignedLevels(classes: unknown): string[] {
-  if (Array.isArray(classes)) return classes.filter((c) => typeof c === "string") as string[];
-  if (classes && typeof classes === "object") {
-    const out: string[] = [];
-    for (const [k, v] of Object.entries(classes as Record<string, unknown>)) {
-      if (v) out.push(k);
-    }
-    return out;
-  }
-  return [];
-}
-
-function parseJhsAssignments(j: unknown): string[] {
-  if (!Array.isArray(j)) return [];
-  const levels: string[] = [];
-  for (const row of j as any[]) {
-    const levelsRaw = extractAssignedLevels(row?.classes);
-    for (const c of levelsRaw) levels.push(String(c));
-  }
-  return uniq(levels);
-}
-
-async function getRoleName({ userId, tenantId }: SafeCtx) {
-  const m = await prisma.membership.findFirst({
+async function getActiveMembershipRole({ userId, tenantId }: SafeCtx) {
+  const membership = await prisma.membership.findFirst({
     where: { userId, tenantId, status: "ACTIVE" },
     select: { role: { select: { name: true } } },
   });
-  return m?.role?.name ?? null;
+
+  if (!membership) throw Object.assign(new Error("Forbidden."), { status: 403 });
+  return membership.role?.name ?? null;
 }
 
-async function requireActiveMembership({ userId, tenantId }: SafeCtx) {
-  const m = await prisma.membership.findFirst({
-    where: { userId, tenantId, status: "ACTIVE" },
-    select: { id: true },
+async function loadTeacherProfile(ctx: SafeCtx) {
+  return prisma.teacherProfile.findUnique({
+    where: {
+      teacherProfile_tenant_user_unique: {
+        tenantId: ctx.tenantId,
+        userId: ctx.userId,
+      },
+    },
+    select: {
+      phase: true,
+      classLevel: true,
+      primaryClassroomId: true,
+    },
   });
-  if (!m) throw Object.assign(new Error("Forbidden."), { status: 403 });
+}
+
+async function loadActiveTenantClassrooms(tenantId: string) {
+  return prisma.classroom.findMany({
+    where: { tenantId, status: "ACTIVE" },
+    select: { id: true, name: true, grade: true, arm: true },
+    orderBy: [{ name: "asc" }, { arm: "asc" }],
+  });
+}
+
+async function resolveOrdinaryTeacherAttendanceClassroom(ctx: SafeCtx): Promise<ClassroomAccessRow | null> {
+  const profile = await loadTeacherProfile(ctx);
+  if (!profile) return null;
+
+  if (profile.primaryClassroomId) {
+    return prisma.classroom.findFirst({
+      where: {
+        id: profile.primaryClassroomId,
+        tenantId: ctx.tenantId,
+        status: "ACTIVE",
+      },
+      select: { id: true, name: true, grade: true, arm: true },
+    });
+  }
+
+  // JHS subject assignments are teaching authority, not register authority.
+  // JHS attendance therefore requires an explicit Class Adviser / Class Monitor
+  // assignment through TeacherProfile.primaryClassroomId.
+  if (profile.phase === "JHS") return null;
+
+  // Backward-compatible KG/Primary fallback for legacy profiles that predate
+  // primaryClassroomId. It is allowed only when the class level resolves to
+  // exactly one ACTIVE classroom. Multiple arms fail closed until an admin
+  // explicitly chooses the teacher's primary classroom.
+  const classLevel = cleanStr(profile.classLevel);
+  if (!classLevel) return null;
+
+  const classrooms = await loadActiveTenantClassrooms(ctx.tenantId);
+  const matches = classrooms.filter((classroom) => classroomMatchesLevel(classroom, classLevel));
+
+  return matches.length === 1 ? matches[0] : null;
 }
 
 export async function listAccessibleClassrooms(ctx: SafeCtx) {
-  await requireActiveMembership(ctx);
+  const roleName = await getActiveMembershipRole(ctx);
 
-  const roleName = await getRoleName(ctx);
   if (isAdminLike(roleName)) {
-    return prisma.classroom.findMany({
-      where: { tenantId: ctx.tenantId },
-      select: { id: true, name: true, grade: true, arm: true },
-      orderBy: [{ name: "asc" }],
-    });
+    return loadActiveTenantClassrooms(ctx.tenantId);
   }
 
-  const teacherProfile = await prisma.teacherProfile.findUnique({
-    where: { teacherProfile_tenant_user_unique: { tenantId: ctx.tenantId, userId: ctx.userId } },
-    select: { phase: true, classLevel: true, jhsAssignments: true },
-  });
-
-  if (!teacherProfile) return [];
-
-  if (teacherProfile.phase === "JHS") {
-    const levels = parseJhsAssignments(teacherProfile.jhsAssignments);
-    if (levels.length === 0) return [];
-    const normalized = new Set(levels.map(normalizeLevel));
-
-    return prisma.classroom.findMany({
-      where: {
-        tenantId: ctx.tenantId,
-        OR: [
-          { grade: { in: levels } },
-          { name: { in: levels } },
-          { grade: { in: Array.from(normalized) } },
-          { name: { in: Array.from(normalized) } },
-        ],
-      },
-      select: { id: true, name: true, grade: true, arm: true },
-      orderBy: [{ name: "asc" }],
-    });
-  }
-
-  const lvl = teacherProfile.classLevel?.trim();
-  if (!lvl) return [];
-
-  return prisma.classroom.findMany({
-    where: {
-      tenantId: ctx.tenantId,
-      OR: [{ grade: lvl }, { name: lvl }, { name: { contains: lvl, mode: "insensitive" } }],
-    },
-    select: { id: true, name: true, grade: true, arm: true },
-    orderBy: [{ name: "asc" }],
-  });
+  const classroom = await resolveOrdinaryTeacherAttendanceClassroom(ctx);
+  return classroom ? [classroom] : [];
 }
 
 export async function assertCanAccessClassroom(ctx: SafeCtx & { classroomId: string }) {
-  await requireActiveMembership(ctx);
-
   const classroom = await prisma.classroom.findFirst({
     where: { id: ctx.classroomId, tenantId: ctx.tenantId },
     select: { id: true, name: true, grade: true, arm: true },
   });
   if (!classroom) throw Object.assign(new Error("Classroom not found."), { status: 404 });
 
-  const roleName = await getRoleName(ctx);
+  const roleName = await getActiveMembershipRole(ctx);
   if (isAdminLike(roleName)) return classroom;
 
-  const teacherProfile = await prisma.teacherProfile.findUnique({
-    where: { teacherProfile_tenant_user_unique: { tenantId: ctx.tenantId, userId: ctx.userId } },
-    select: { phase: true, classLevel: true, jhsAssignments: true },
-  });
-  if (!teacherProfile) throw Object.assign(new Error("Forbidden."), { status: 403 });
-
-  if (teacherProfile.phase === "JHS") {
-    const levels = parseJhsAssignments(teacherProfile.jhsAssignments);
-    const cA = normalizeLevel(classroom.grade ?? classroom.name);
-    const ok = levels.some((lvl) => normalizeLevel(lvl) === cA);
-    if (!ok) throw Object.assign(new Error("Forbidden."), { status: 403 });
-    return classroom;
+  const assignedClassroom = await resolveOrdinaryTeacherAttendanceClassroom(ctx);
+  if (!assignedClassroom || assignedClassroom.id !== classroom.id) {
+    throw Object.assign(new Error("Forbidden."), { status: 403 });
   }
-
-  const lvl = (teacherProfile.classLevel ?? "").trim();
-  if (!lvl) throw Object.assign(new Error("Forbidden."), { status: 403 });
-
-  const ok =
-    normalizeLevel(classroom.grade ?? "") === normalizeLevel(lvl) ||
-    normalizeLevel(classroom.name ?? "") === normalizeLevel(lvl) ||
-    normalizeLevel(classroom.name ?? "").includes(normalizeLevel(lvl));
-
-  if (!ok) throw Object.assign(new Error("Forbidden."), { status: 403 });
 
   return classroom;
 }

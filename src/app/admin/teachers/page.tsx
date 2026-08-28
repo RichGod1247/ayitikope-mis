@@ -138,25 +138,47 @@ function classroomArmRank(c: ClassroomLite) {
   return 2;
 }
 
-function singleStreamClassrooms(list: ClassroomLite[]) {
-  const ordered = [...list].sort((a, b) => {
+function orderedClassrooms(list: ClassroomLite[]) {
+  return [...list].sort((a, b) => {
     return (
       classroomLevelOrder(a) - classroomLevelOrder(b) ||
       classroomArmRank(a) - classroomArmRank(b) ||
       classroomLabel(a).localeCompare(classroomLabel(b))
     );
   });
+}
 
-  const chosen = new Map<string, ClassroomLite>();
+function classroomGroupKey(classroom: ClassroomLite) {
+  return classroomLevelToken(classroom) ?? `CLASS:${cleanStr(classroom.name) || classroom.id}`;
+}
 
-  for (const classroom of ordered) {
-    const key = classroomLevelToken(classroom) ?? `CLASS:${cleanStr(classroom.name) || classroom.id}`;
-    if (!chosen.has(key)) chosen.set(key, classroom);
+function singleStreamClassrooms(list: ClassroomLite[]) {
+  const grouped = new Map<string, ClassroomLite[]>();
+
+  for (const classroom of orderedClassrooms(list)) {
+    const key = classroomGroupKey(classroom);
+    const rows = grouped.get(key) ?? [];
+    rows.push(classroom);
+    grouped.set(key, rows);
   }
 
-  return Array.from(chosen.values()).sort((a, b) => {
-    return classroomLevelOrder(a) - classroomLevelOrder(b) || classroomLabel(a).localeCompare(classroomLabel(b));
-  });
+  return Array.from(grouped.values())
+    .filter((rows) => rows.length === 1)
+    .map((rows) => rows[0])
+    .sort((a, b) => {
+      return classroomLevelOrder(a) - classroomLevelOrder(b) || classroomLabel(a).localeCompare(classroomLabel(b));
+    });
+}
+
+function hasMultiStreamClassrooms(list: ClassroomLite[]) {
+  const counts = new Map<string, number>();
+
+  for (const classroom of list) {
+    const key = classroomGroupKey(classroom);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+
+  return Array.from(counts.values()).some((count) => count > 1);
 }
 
 function includeCurrentClassroomOption(list: ClassroomLite[], current?: ClassroomLite | null) {
@@ -469,6 +491,8 @@ export default async function AdminTeachersPage(props: { searchParams?: SP | Pro
     assignmentsByUser.set(assignment.teacherUserId, list);
   }
   const primaryClassroomOptions = singleStreamClassrooms(classrooms);
+  const allPrimaryClassroomOptions = orderedClassrooms(classrooms);
+  const multiStreamClassroomsAvailable = hasMultiStreamClassrooms(classrooms);
   
   const subjectOptions = subjectRows
   .map((row) => ({
@@ -590,9 +614,17 @@ if (focusSubject) {
                       </div>
                     ) : null}
 
-                    <div className="rounded-2xl border border-white/10 bg-[#05070B] p-3">
-                      <p className="text-xs text-[#8F98A8]">Primary class</p>
+                    <div
+                      className="rounded-2xl border border-white/10 bg-[#05070B] p-3"
+                      data-attendance-class-responsibility="primary-classroom-v1"
+                    >
+                      <p className="text-xs text-[#8F98A8]">Class responsibility</p>
                       <p className="mt-1 text-sm font-medium text-[#F7F4ED]">{primaryLabel}</p>
+                      <p className="mt-1 text-xs leading-5 text-[#AEB6C4]">
+                        {p.phase === "JHS"
+                          ? "Class Adviser / Class Monitor responsibility. JHS subject assignments do not grant register access."
+                          : "Class Teacher responsibility for the learner register."}
+                      </p>
 
                       <form action={setPrimaryClass} className="mt-3 flex items-center gap-2">
                         <input type="hidden" name="userId" value={p.userId} />
@@ -605,14 +637,42 @@ if (focusSubject) {
                             Unassigned
                           </option>
                           {includeCurrentClassroomOption(primaryClassroomOptions, p.primaryClassroom).map((c) => (
-  <option key={c.id} value={c.id} className="bg-[#05070B] text-[#F7F4ED]">
-    {classroomLabel(c)}
-  </option>
-))}
+                            <option key={c.id} value={c.id} className="bg-[#05070B] text-[#F7F4ED]">
+                              {classroomLabel(c)}
+                            </option>
+                          ))}
                         </select>
 
                         <button className={submitBtn}>Save</button>
                       </form>
+
+                      {multiStreamClassroomsAvailable ? (
+                        <details className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                          <summary className="cursor-pointer text-xs font-semibold text-[#C9CDD6]">
+                            School uses class arms? Choose exact class
+                          </summary>
+
+                          <form action={setPrimaryClass} className="mt-3 flex items-center gap-2">
+                            <input type="hidden" name="userId" value={p.userId} />
+                            <select
+                              name="primaryClassroomId"
+                              defaultValue={p.primaryClassroomId ?? ""}
+                              className={inputClass}
+                            >
+                              <option value="" className="bg-[#05070B] text-[#F7F4ED]">
+                                Unassigned
+                              </option>
+                              {includeCurrentClassroomOption(allPrimaryClassroomOptions, p.primaryClassroom).map((c) => (
+                                <option key={c.id} value={c.id} className="bg-[#05070B] text-[#F7F4ED]">
+                                  {classroomLabel(c)}
+                                </option>
+                              ))}
+                            </select>
+
+                            <button className={submitBtn}>Save exact class</button>
+                          </form>
+                        </details>
+                      ) : null}
                     </div>
 
                     <div className="rounded-2xl border border-emerald-300/15 bg-emerald-400/5 p-3">

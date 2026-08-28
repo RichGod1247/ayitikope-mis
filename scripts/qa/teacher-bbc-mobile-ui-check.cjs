@@ -93,6 +93,22 @@ for (const marker of [
   );
 }
 
+for (const marker of [
+  'data-attendance-class-mode="single-default-v1"',
+  "Single stream",
+  "Class arms",
+  "singleStreamClassrooms",
+  "multiStreamClassroomsAvailable",
+  "Your assigned Class Teacher / Class Adviser register.",
+  "Choose Class arms to select the exact register.",
+]) {
+  assert(
+    attendanceList.includes(marker),
+    "Attendance class-mode/BBC marker missing",
+    marker,
+  );
+}
+
 for (const forbidden of [
   "Brand/Sender ID",
   "setBrand(",

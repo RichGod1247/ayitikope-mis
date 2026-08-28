@@ -98,9 +98,100 @@ function safeNum(v: unknown): number {
   return typeof v === "number" && Number.isFinite(v) ? v : 0;
 }
 
-function buildClassLabel(c: Classroom | null | undefined): string {
+function cleanStr(v: unknown) {
+  return String(v ?? "").trim();
+}
+
+function normalizeLevel(raw: unknown) {
+  return cleanStr(raw).toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function levelToken(raw: unknown): string | null {
+  const s = normalizeLevel(raw);
+
+  let m = s.match(/^KG([12])$/);
+  if (m) return `KG${m[1]}`;
+
+  m = s.match(/^JHS([1-3])$/);
+  if (m) return `JHS${m[1]}`;
+
+  m = s.match(/^(BASIC|B|BS)([7-9])$/);
+  if (m) return `JHS${Number(m[2]) - 6}`;
+
+  m = s.match(/^(BASIC|B|PRIMARY|P)([1-6])$/);
+  if (m) return `B${m[2]}`;
+
+  return null;
+}
+
+function classroomGroupKey(c: Classroom) {
+  return levelToken(c.grade) ?? levelToken(c.name) ?? `CLASS:${normalizeLevel(c.name) || c.id}`;
+}
+
+function levelOrder(c: Classroom) {
+  const token = levelToken(c.grade) ?? levelToken(c.name);
+
+  if (token === "KG1") return 1;
+  if (token === "KG2") return 2;
+  if (token && /^B[1-6]$/.test(token)) return 10 + Number(token.slice(1));
+  if (token && /^JHS[1-3]$/.test(token)) return 30 + Number(token.slice(3));
+
+  return 999;
+}
+
+function classroomArmRank(c: Classroom) {
+  const arm = cleanStr(c.arm).toUpperCase();
+  if (!arm) return 0;
+  if (arm === "A") return 1;
+  return 2;
+}
+
+function orderedClassrooms(list: Classroom[]) {
+  return [...list].sort((a, b) => {
+    return (
+      levelOrder(a) - levelOrder(b) ||
+      classroomArmRank(a) - classroomArmRank(b) ||
+      buildClassLabel(a, true).localeCompare(buildClassLabel(b, true))
+    );
+  });
+}
+
+function singleStreamClassrooms(list: Classroom[]) {
+  const grouped = new Map<string, Classroom[]>();
+
+  for (const classroom of orderedClassrooms(list)) {
+    const key = classroomGroupKey(classroom);
+    const rows = grouped.get(key) ?? [];
+    rows.push(classroom);
+    grouped.set(key, rows);
+  }
+
+  return Array.from(grouped.values())
+    .filter((rows) => rows.length === 1)
+    .map((rows) => rows[0]);
+}
+
+function multiStreamClassroomsAvailable(list: Classroom[]) {
+  const counts = new Map<string, number>();
+
+  for (const classroom of list) {
+    const key = classroomGroupKey(classroom);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+
+  return Array.from(counts.values()).some((count) => count > 1);
+}
+
+function buildClassLabel(c: Classroom | null | undefined, includeArm = true): string {
   if (!c) return "";
-  return [c.name, c.grade, c.arm].filter(Boolean).join(" • ");
+
+  const name = cleanStr(c.name);
+  const grade = cleanStr(c.grade);
+  const base = name || grade || "Classroom";
+  const gradePart = grade && normalizeLevel(grade) !== normalizeLevel(name) ? grade : "";
+  const armPart = includeArm && cleanStr(c.arm) ? `Arm ${cleanStr(c.arm)}` : "";
+
+  return [base, gradePart, armPart].filter(Boolean).join(" • ");
 }
 
 function notifyLine(j: Extract<NotifyResponse, { ok: true }>) {
@@ -137,6 +228,7 @@ export default function TeacherAttendanceClient({
 
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [classroomId, setClassroomId] = useState<string>("");
+  const [showClassArms, setShowClassArms] = useState(false);
   const [dateISO, setDateISO] = useState<string>(todayISO());
 
   const [loading, setLoading] = useState(true);
@@ -157,15 +249,32 @@ export default function TeacherAttendanceClient({
   const [notifyErr, setNotifyErr] = useState<string | null>(null);
   const [notifyOk, setNotifyOk] = useState<string | null>(null);
 
+  const orderedAccessibleClassrooms = useMemo(() => orderedClassrooms(classrooms), [classrooms]);
+  const singleStreamOptions = useMemo(
+    () => singleStreamClassrooms(orderedAccessibleClassrooms),
+    [orderedAccessibleClassrooms]
+  );
+  const hasMultiStream = useMemo(
+    () => multiStreamClassroomsAvailable(orderedAccessibleClassrooms),
+    [orderedAccessibleClassrooms]
+  );
+  const canChooseClassroom = classrooms.length > 1;
+  const visibleClassrooms = useMemo(
+    () => (showClassArms ? orderedAccessibleClassrooms : singleStreamOptions),
+    [orderedAccessibleClassrooms, showClassArms, singleStreamOptions]
+  );
+
   const selectedClassroom = useMemo(
     () => classrooms.find((x) => x.id === classroomId) ?? null,
     [classrooms, classroomId]
   );
 
-  const classLabel = useMemo(() => buildClassLabel(selectedClassroom), [selectedClassroom]);
+  const classLabel = useMemo(() => buildClassLabel(selectedClassroom, true), [selectedClassroom]);
 
-  const hasAssignment = classrooms.length > 0 && !!classroomId;
-  const canChooseClassroom = classrooms.length > 1;
+  const hasAccessibleClassrooms = classrooms.length > 0;
+  const hasAssignment = hasAccessibleClassrooms && !!classroomId;
+  const hasExactSelection =
+    !canChooseClassroom || showClassArms || visibleClassrooms.some((classroom) => classroom.id === classroomId);
   const unmarked = summary?.totals.unmarked ?? 0;
 
   async function loadClassrooms() {
@@ -182,16 +291,44 @@ export default function TeacherAttendanceClient({
       if (!r.ok || !j.ok) throw new Error(j.ok ? `HTTP ${r.status}` : j.error);
 
       const list = Array.isArray(j.classrooms) ? j.classrooms : [];
-      setClassrooms(list);
+      const ordered = orderedClassrooms(list);
+      const singleStream = singleStreamClassrooms(ordered);
 
-      const stillValid = classroomId && list.some((c) => c.id === classroomId);
-      if (!stillValid) setClassroomId(list[0]?.id || "");
+      setClassrooms(ordered);
+
+      const currentIsAccessible = !!classroomId && ordered.some((c) => c.id === classroomId);
+      const currentIsVisible =
+        currentIsAccessible && (showClassArms || singleStream.some((c) => c.id === classroomId));
+
+      if (!currentIsVisible) {
+        const fallback =
+          singleStream[0] ?? (ordered.length === 1 ? ordered[0] : showClassArms ? ordered[0] : null);
+        setClassroomId(fallback?.id || "");
+      }
+
+      if (ordered.length <= 1) setShowClassArms(false);
     } catch (e: unknown) {
       setErr(safeText((e as { message?: unknown })?.message) || "Failed to load classrooms.");
       setClassrooms([]);
       setClassroomId("");
     } finally {
       setLoading(false);
+    }
+  }
+
+  function switchClassMode(nextShowClassArms: boolean) {
+    setShowClassArms(nextShowClassArms);
+    setSummary(null);
+    setSummaryErr(null);
+    setOpenErr(null);
+
+    if (nextShowClassArms) {
+      if (!classroomId) setClassroomId(orderedAccessibleClassrooms[0]?.id || "");
+      return;
+    }
+
+    if (!singleStreamOptions.some((classroom) => classroom.id === classroomId)) {
+      setClassroomId(singleStreamOptions[0]?.id || "");
     }
   }
 
@@ -202,6 +339,7 @@ export default function TeacherAttendanceClient({
 
     try {
       if (!classroomId) throw new Error("No assigned classroom.");
+      if (!hasExactSelection) throw new Error("Choose Class arms to select the exact register.");
       if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) throw new Error("Invalid date.");
 
       const r = await fetch(
@@ -239,6 +377,7 @@ export default function TeacherAttendanceClient({
 
     try {
       if (!hasAssignment) throw new Error("No assigned classroom.");
+      if (!hasExactSelection) throw new Error("Choose Class arms to select the exact register.");
       if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) throw new Error("Invalid date.");
 
       if (summary?.sessionId) {
@@ -429,35 +568,87 @@ export default function TeacherAttendanceClient({
             />
           </div>
 
-          <div className="space-y-1">
-            <label className={labelClass}>Classroom</label>
-            <select
-              className={fieldClass}
-              value={classroomId}
-              onChange={(e) => setClassroomId(e.target.value)}
-              disabled={loading || !hasAssignment || !canChooseClassroom}
-            >
-              {hasAssignment ? (
-                classrooms.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {[c.name, c.grade, c.arm].filter(Boolean).join(" • ")}
-                  </option>
-                ))
-              ) : (
-                <option value="">No assigned classroom</option>
-              )}
-            </select>
+          <div className="space-y-2" data-attendance-class-mode="single-default-v1">
+            <label className={labelClass}>Class</label>
 
-            {!canChooseClassroom && hasAssignment ? (
-              <div className={subtleText}>Assigned classroom locked because only one class is available.</div>
+            {canChooseClassroom && hasMultiStream ? (
+              <div
+                className="grid grid-cols-2 gap-1 rounded-xl border border-white/10 bg-[#05070B] p-1"
+                aria-label="Class stream mode"
+              >
+                <button
+                  type="button"
+                  aria-pressed={!showClassArms}
+                  onClick={() => switchClassMode(false)}
+                  className={`rounded-lg px-3 py-2 text-xs font-semibold ${
+                    !showClassArms
+                      ? "bg-[#D4AF37] text-[#071A3D]"
+                      : "text-[#C9CDD6] hover:bg-white/5"
+                  }`}
+                >
+                  Single stream
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={showClassArms}
+                  onClick={() => switchClassMode(true)}
+                  className={`rounded-lg px-3 py-2 text-xs font-semibold ${
+                    showClassArms
+                      ? "bg-[#D4AF37] text-[#071A3D]"
+                      : "text-[#C9CDD6] hover:bg-white/5"
+                  }`}
+                >
+                  Class arms
+                </button>
+              </div>
             ) : null}
+
+            {canChooseClassroom ? (
+              <>
+                <select
+                  className={fieldClass}
+                  value={classroomId}
+                  onChange={(e) => setClassroomId(e.target.value)}
+                  disabled={loading || visibleClassrooms.length === 0}
+                >
+                  {visibleClassrooms.length ? (
+                    visibleClassrooms.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {buildClassLabel(c, showClassArms)}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">
+                      {hasMultiStream ? "Switch to Class arms to choose the exact register" : "No classroom available"}
+                    </option>
+                  )}
+                </select>
+
+                {hasMultiStream && !showClassArms ? (
+                  <div className={subtleText}>
+                    Single-stream view hides levels that have multiple arms. Choose <b>Class arms</b> for an exact register.
+                  </div>
+                ) : null}
+              </>
+            ) : hasAssignment ? (
+              <div className="rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED]">
+                <div className="font-medium">{buildClassLabel(selectedClassroom, true)}</div>
+                <div className="mt-1 text-[11px] text-[#AEB6C4]">
+                  Your assigned Class Teacher / Class Adviser register.
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 py-2 text-sm text-amber-100">
+                No attendance class assigned.
+              </div>
+            )}
           </div>
 
           <div className="flex items-end">
             <button
               type="button"
               onClick={() => void openOrGo()}
-              disabled={opening || summaryLoading || !hasAssignment}
+              disabled={opening || summaryLoading || !hasAssignment || !hasExactSelection}
               className={`${primaryBtn} w-full`}
             >
               {opening ? "Working…" : summary?.sessionId ? "Go to session" : "Open session"}
@@ -563,9 +754,10 @@ export default function TeacherAttendanceClient({
         </div>
       </section>
 
-      {!hasAssignment ? (
+      {!hasAccessibleClassrooms ? (
         <section className="rounded-2xl border border-amber-300/20 bg-amber-400/12 p-4 text-sm text-amber-100">
-          You don’t have a class assigned. Ask the admin to assign you in <b>Admin → Teachers</b>.
+          You don’t have an attendance class assigned. Ask the headteacher/admin to set your
+          <b> Class Teacher / Class Adviser</b> responsibility in <b>Admin → Teachers</b>.
         </section>
       ) : null}
     </section>

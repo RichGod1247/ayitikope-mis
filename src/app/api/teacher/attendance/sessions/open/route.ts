@@ -26,6 +26,10 @@ function parseDateISO(dateISO: string): Date {
   return d;
 }
 
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
 type Body = {
   tenantId?: string; // legacy/back-compat only
   classroomId?: string;
@@ -33,7 +37,54 @@ type Body = {
   dateISO?: string; // legacy YYYY-MM-DD
 };
 
+type SafeCtx = { userId: string; tenantId: string };
+
+type OpenInput = {
+  safe: SafeCtx;
+  classroomId: string;
+  date: Date;
+};
+
+async function recoverUniqueRace({ safe, classroomId, date }: OpenInput) {
+  // Revalidate classroom authority on the fallback path as well. A unique-race
+  // recovery must never become an authorization bypass.
+  await assertCanAccessClassroom({ ...safe, classroomId });
+
+  const existing = await prisma.attendanceSession.findFirst({
+    where: { tenantId: safe.tenantId, classroomId, date },
+    select: { id: true, certifiedAt: true, takenByUserId: true, isClosed: true },
+  });
+
+  if (!existing) return jsonErr(500, "Failed to open session.");
+  if (existing.certifiedAt) return jsonErr(409, "Session already certified for this class/date.");
+  if (existing.isClosed) return jsonErr(409, "Session is closed. Reopen it before editing.");
+  if (existing.takenByUserId && existing.takenByUserId !== safe.userId) {
+    return jsonErr(403, "This session is owned by another user.");
+  }
+
+  const claimed = await prisma.attendanceSession.updateMany({
+    where: {
+      id: existing.id,
+      certifiedAt: null,
+      isClosed: false,
+      OR: [{ takenByUserId: null }, { takenByUserId: safe.userId }],
+    },
+    data: { takenByUserId: safe.userId },
+  });
+
+  if (claimed.count !== 1) {
+    return jsonErr(403, "This session was claimed by another user.");
+  }
+
+  return NextResponse.json(
+    { ok: true, sessionId: existing.id },
+    { headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } }
+  );
+}
+
 export async function POST(req: Request) {
+  let input: OpenInput | null = null;
+
   try {
     const ctx = await requireTenantContext();
     const safe = { userId: ctx.userId, tenantId: ctx.tenantId };
@@ -52,9 +103,11 @@ export async function POST(req: Request) {
     let date: Date;
     try {
       date = parseDateISO(dateISO);
-    } catch (e: any) {
-      return jsonErr(400, String(e?.message || "Invalid date."));
+    } catch (error: unknown) {
+      return jsonErr(400, errorMessage(error, "Invalid date."));
     }
+
+    input = { safe, classroomId, date };
 
     await assertCanAccessClassroom({ ...safe, classroomId });
 
@@ -116,51 +169,17 @@ export async function POST(req: Request) {
       { ok: true, sessionId: result.sessionId },
       { headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } }
     );
-  } catch (e: any) {
-    // unique race fallback (P2002)
-    if (String(e?.code || "") === "P2002") {
+  } catch (error: unknown) {
+    if (String((error as { code?: unknown })?.code ?? "") === "P2002" && input) {
       try {
-        const ctx = await requireTenantContext();
-        const safe = { userId: ctx.userId, tenantId: ctx.tenantId };
-
-        const body = (await req.json().catch(() => null)) as Body | null;
-        const classroomId = String(body?.classroomId || "").trim();
-        const dateISO = String(body?.dateISO || body?.date || "").trim();
-        if (!classroomId || !dateISO) return jsonErr(400, "classroomId and dateISO/date are required.");
-        const date = parseDateISO(dateISO);
-
-        const existing = await prisma.attendanceSession.findFirst({
-          where: { tenantId: safe.tenantId, classroomId, date },
-          select: { id: true, certifiedAt: true, takenByUserId: true, isClosed: true },
-        });
-
-        if (!existing) return jsonErr(500, "Failed to open session.");
-        if (existing.certifiedAt) return jsonErr(409, "Session already certified for this class/date.");
-        if (existing.isClosed) return jsonErr(409, "Session is closed. Reopen it before editing.");
-        if (existing.takenByUserId && existing.takenByUserId !== safe.userId) {
-          return jsonErr(403, "This session is owned by another user.");
-        }
-
-        await prisma.attendanceSession.updateMany({
-          where: {
-            id: existing.id,
-            certifiedAt: null,
-            isClosed: false,
-            OR: [{ takenByUserId: null }, { takenByUserId: safe.userId }],
-          },
-          data: { takenByUserId: safe.userId },
-        });
-
-        return NextResponse.json(
-          { ok: true, sessionId: existing.id },
-          { headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } }
-        );
-      } catch {
-        return jsonErr(500, "Failed to open session.");
+        return await recoverUniqueRace(input);
+      } catch (raceError: unknown) {
+        const { status, msg } = toHttpError(raceError);
+        return jsonErr(status, msg);
       }
     }
 
-    const { status, msg } = toHttpError(e);
+    const { status, msg } = toHttpError(error);
     return jsonErr(status, msg);
   }
 }
