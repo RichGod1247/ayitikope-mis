@@ -204,6 +204,7 @@ export async function POST(req: Request) {
             term3Start: true,
             term3End: true,
             setupCompletedAt: true,
+            updatedAt: true,
           },
         });
 
@@ -225,12 +226,16 @@ export async function POST(req: Request) {
         const changed = JSON.stringify(before) !== JSON.stringify(after);
         const completionChanged = !previous?.setupCompletedAt && !!setupCompletedAt;
 
+        let settingsUpdatedAt = previous?.updatedAt ?? null;
+
         if (changed || completionChanged || !previous) {
-          await tx.tenantSettings.upsert({
+          const saved = await tx.tenantSettings.upsert({
             where: { tenantId },
             create: { tenantId, ...data, setupCompletedAt },
             update: { ...data, setupCompletedAt },
+            select: { updatedAt: true },
           });
+          settingsUpdatedAt = saved.updatedAt;
         }
 
         if (changed) {
@@ -253,7 +258,7 @@ export async function POST(req: Request) {
           });
         }
 
-        return { setupCompletedAt, changed };
+        return { setupCompletedAt, updatedAt: settingsUpdatedAt, changed };
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
@@ -263,6 +268,7 @@ export async function POST(req: Request) {
         ok: true,
         setupComplete: !!result.setupCompletedAt,
         setupCompletedAt: result.setupCompletedAt?.toISOString?.() ?? null,
+        updatedAt: result.updatedAt?.toISOString?.() ?? null,
         changed: result.changed,
         // Backward compatibility for older setup clients.
         completedAt: result.setupCompletedAt?.toISOString?.() ?? null,

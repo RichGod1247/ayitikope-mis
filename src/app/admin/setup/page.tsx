@@ -33,6 +33,7 @@ type LoadResp = {
 
     setupCompletedAt?: string | null;
     setupComplete?: boolean;
+    updatedAt?: string | null;
   };
 };
 
@@ -41,6 +42,7 @@ type SaveResp = {
   error?: string;
   setupComplete?: boolean;
   setupCompletedAt?: string | null;
+  updatedAt?: string | null;
 };
 
 type MsgTone = "ok" | "error" | "info";
@@ -111,7 +113,8 @@ export default function AdminSetupPage() {
 
   const [tenantName, setTenantName] = useState("");
   const [schoolCode, setSchoolCode] = useState("");
-  const [setupCompletedAt, setSetupCompletedAt] = useState<string | null>(null);
+  const [, setSetupCompletedAt] = useState<string | null>(null);
+  const [settingsUpdatedAt, setSettingsUpdatedAt] = useState<string | null>(null);
   const [setupComplete, setSetupComplete] = useState(false);
 
   const [currentAcademicYear, setCurrentAcademicYear] = useState("");
@@ -159,6 +162,7 @@ export default function AdminSetupPage() {
       setTerm3End(data.settings.term3End || "");
 
       setSetupCompletedAt(data.settings.setupCompletedAt ?? null);
+      setSettingsUpdatedAt(data.settings.updatedAt ?? null);
       setSetupComplete(Boolean(data.settings.setupComplete || data.settings.setupCompletedAt));
     } finally {
       setLoading(false);
@@ -200,6 +204,7 @@ export default function AdminSetupPage() {
       const complete = Boolean(j.setupComplete);
       setSetupComplete(complete);
       if (j.setupCompletedAt !== undefined) setSetupCompletedAt(j.setupCompletedAt ?? null);
+      if (j.updatedAt !== undefined) setSettingsUpdatedAt(j.updatedAt ?? null);
 
       if (complete && explicitNext && explicitNext !== "/admin/setup") {
         setMsgTone("ok");
@@ -244,9 +249,9 @@ export default function AdminSetupPage() {
             <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
               Redirect target: <span className="font-mono text-[#D7DCE5]">{next}</span>
             </span>
-            {setupCompletedAt ? (
+            {settingsUpdatedAt ? (
               <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
-                Completed at: <span className="text-[#D7DCE5]">{new Date(setupCompletedAt).toLocaleString()}</span>
+                Last updated: <span className="text-[#D7DCE5]">{new Date(settingsUpdatedAt).toLocaleString()}</span>
               </span>
             ) : null}
           </div>

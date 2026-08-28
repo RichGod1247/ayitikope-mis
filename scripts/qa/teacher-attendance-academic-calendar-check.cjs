@@ -157,6 +157,24 @@ for (const marker of [
 ]) {
   assert(setupPage.includes(marker), "Academic settings UX marker missing", marker);
 }
+
+for (const marker of [
+  "updatedAt?: string | null",
+  "setSettingsUpdatedAt(data.settings.updatedAt ?? null)",
+  "setSettingsUpdatedAt(j.updatedAt ?? null)",
+  "Last updated:",
+]) {
+  assert(setupPage.includes(marker), "Academic settings last-updated UX marker missing", marker);
+}
+assert(!setupPage.includes("Completed at:"), "Setup completion timestamp must not be presented as the latest settings update");
+for (const marker of [
+  "updatedAt: true",
+  "select: { updatedAt: true }",
+  "updatedAt: result.updatedAt",
+]) {
+  assert(setupSave.includes(marker), "Academic settings last-updated response marker missing", marker);
+}
+
 for (const marker of [
   'action: "ACADEMIC_CALENDAR_SETTINGS_UPDATED"',
   'resource: "TenantSettings"',
@@ -262,6 +280,7 @@ console.log("Legacy attendance/health fields : PRESERVED IN SCHEMA / NOT REWRITT
 console.log("Session timing truth            : createdAt / closedAt / certifiedAt");
 console.log("Headteacher/Admin calendar edit : ALLOWED");
 console.log("Calendar correction audit       : SAME SERIALIZABLE TRANSACTION");
+console.log("Academic settings timestamp     : LAST UPDATED / TenantSettings.updatedAt");
 console.log("Legacy mark writers             : CLASS AUTH + CURRENT TERM + PRESENT/ABSENT PARITY");
 console.log("Holiday supersession            : DEFERRED TO UI-P3B");
 console.log("Schema migration                : NONE");
