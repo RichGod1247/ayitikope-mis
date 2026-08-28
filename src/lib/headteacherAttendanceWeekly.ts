@@ -249,6 +249,7 @@ export async function getWeeklyAttendanceStats(params: {
       SELECT s."id" AS "sessionId", s."classroomId"
       FROM "edulife_os"."AttendanceSession" s
       WHERE s."tenantId" = ${tenantId}
+        AND s."isHoliday" = false
         AND s."date"::date BETWEEN ${start}::date AND ${end}::date
         AND s."classroomId" IN (${Prisma.join(classroomIds)})
     )

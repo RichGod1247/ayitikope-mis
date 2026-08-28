@@ -16,13 +16,16 @@ type Classroom = {
   arm?: string | null;
 };
 
-type SummaryState = "NONE" | "OPEN" | "CLOSED" | "CERTIFIED";
+type SummaryState = "NONE" | "OPEN" | "CLOSED" | "CERTIFIED" | "HOLIDAY";
 
 type Summary = {
   state: SummaryState;
   sessionId?: string | null;
   dateISO: string;
   classroomId: string;
+  isHoliday?: boolean;
+  holidayReason?: string | null;
+  holidayDeclaredAt?: string | null;
   totals: {
     students: number;
     total?: number;
@@ -518,6 +521,7 @@ export default function TeacherAttendanceClient({
 
   function statePill(state: SummaryState) {
     const base = "inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold";
+    if (state === "HOLIDAY") return `${base} border-sky-300/20 bg-sky-400/12 text-sky-100`;
     if (state === "CERTIFIED") return `${base} border-indigo-300/20 bg-indigo-400/12 text-indigo-100`;
     if (state === "CLOSED") return `${base} border-rose-300/20 bg-rose-400/12 text-rose-100`;
     if (state === "OPEN") return `${base} border-amber-300/20 bg-amber-400/12 text-amber-100`;
@@ -779,6 +783,12 @@ export default function TeacherAttendanceClient({
             ) : summary ? (
               <div className="flex flex-wrap items-center gap-2 text-[11px]">
                 <span className={statePill(summary.state)}>{summary.state}</span>
+
+                {summary.state === "HOLIDAY" ? (
+                  <span className="rounded-full border border-sky-300/15 bg-sky-400/8 px-3 py-1 text-sky-100">
+                    {summary.holidayReason || "School closed"} · No Times Opened
+                  </span>
+                ) : null}
 
                 <StatChip label="Total" value={summary.totals.students} />
                 <StatChip label="Marked" value={safeNum(summary.totals.marked)} />

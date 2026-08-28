@@ -45,6 +45,10 @@ const sessionSelect = {
   isClosed: true,
   closedAt: true,
   certifiedAt: true,
+  isHoliday: true,
+  holidayReason: true,
+  holidayDeclaredAt: true,
+  holidayDeclaredByUserId: true,
   classroom: { select: { name: true } },
 } satisfies Prisma.AttendanceSessionSelect;
 
@@ -63,6 +67,10 @@ function toApiSession(s: SessionRow) {
     isClosed: s.isClosed,
     closedAt: isoOrNull(s.closedAt),
     certifiedAt: isoOrNull(s.certifiedAt),
+    isHoliday: s.isHoliday,
+    holidayReason: s.holidayReason ?? null,
+    holidayDeclaredAt: isoOrNull(s.holidayDeclaredAt),
+    holidayDeclaredByUserId: s.holidayDeclaredByUserId ?? null,
   };
 }
 
@@ -99,6 +107,7 @@ export async function POST(req: Request) {
       date: existing.date,
     });
 
+    if (existing.isHoliday) return jsonErr(409, "Holiday sessions are excluded from certification.");
     if (!existing.isClosed) return jsonErr(409, "Close session before certifying.");
     if (existing.certifiedAt) return jsonErr(409, "Session already certified.");
     if (existing.takenByUserId && existing.takenByUserId !== safe.userId) {
@@ -113,6 +122,7 @@ export async function POST(req: Request) {
         tenantId: safe.tenantId,
         isClosed: true,
         certifiedAt: null,
+        isHoliday: false,
         OR: [{ takenByUserId: null }, { takenByUserId: safe.userId }],
       },
       data: { certifiedAt: now, takenByUserId: safe.userId },

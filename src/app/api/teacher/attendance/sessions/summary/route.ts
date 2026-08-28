@@ -12,7 +12,7 @@ import { assertCanAccessClassroom } from "@/lib/teacherClassroomAccess";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type SummaryState = "NONE" | "OPEN" | "CLOSED" | "CERTIFIED";
+type SummaryState = "NONE" | "OPEN" | "CLOSED" | "CERTIFIED" | "HOLIDAY";
 
 function noStoreJson(status: number, body: unknown) {
   return NextResponse.json(body, {
@@ -35,8 +35,11 @@ function parseDateISO(dateISO: string): Date {
   return d;
 }
 
-function toState(session: { isClosed: boolean; certifiedAt: Date | null } | null): SummaryState {
+function toState(
+  session: { isClosed: boolean; certifiedAt: Date | null; isHoliday: boolean } | null,
+): SummaryState {
   if (!session) return "NONE";
+  if (session.isHoliday) return "HOLIDAY";
   if (session.certifiedAt) return "CERTIFIED";
   if (session.isClosed) return "CLOSED";
   return "OPEN";
@@ -103,6 +106,9 @@ export async function GET(req: Request) {
           takenByUserId: true,
           closedAt: true,
           certifiedByUserId: true,
+          isHoliday: true,
+          holidayReason: true,
+          holidayDeclaredAt: true,
         },
       }),
     ]);
@@ -114,7 +120,7 @@ export async function GET(req: Request) {
       EXCUSED: 0,
     };
 
-    if (session) {
+    if (session && !session.isHoliday) {
       const grouped = await prisma.attendanceMark.groupBy({
         by: ["status"],
         where: {
@@ -133,13 +139,23 @@ export async function GET(req: Request) {
       }
     }
 
-    const marked = counts.PRESENT + counts.ABSENT + counts.LATE + counts.EXCUSED;
-    const unmarked = Math.max(0, studentCount - marked);
+    const marked = session?.isHoliday
+      ? 0
+      : counts.PRESENT + counts.ABSENT + counts.LATE + counts.EXCUSED;
+    const unmarked = session?.isHoliday ? 0 : Math.max(0, studentCount - marked);
 
     return noStoreJson(200, {
       ok: true,
       summary: {
-        state: toState(session ? { isClosed: session.isClosed, certifiedAt: session.certifiedAt } : null),
+        state: toState(
+          session
+            ? {
+                isClosed: session.isClosed,
+                certifiedAt: session.certifiedAt,
+                isHoliday: session.isHoliday,
+              }
+            : null,
+        ),
         sessionId: session?.id ?? null,
         date: dateISO,
         dateISO,
@@ -148,6 +164,11 @@ export async function GET(req: Request) {
         closedAt: session?.closedAt ? session.closedAt.toISOString() : null,
         certifiedAt: session?.certifiedAt ? session.certifiedAt.toISOString() : null,
         certifiedByUserId: session?.certifiedByUserId ?? null,
+        isHoliday: session?.isHoliday ?? false,
+        holidayReason: session?.holidayReason ?? null,
+        holidayDeclaredAt: session?.holidayDeclaredAt
+          ? session.holidayDeclaredAt.toISOString()
+          : null,
         totals: {
           students: studentCount,
           total: studentCount,

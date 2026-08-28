@@ -68,10 +68,16 @@ export async function POST(req: Request) {
 
   const session = await prisma.attendanceSession.findFirst({
     where: { id: sessionId, tenantId: auth.ctx.tenantId },
-    select: { id: true, classroomId: true, date: true, isClosed: true, certifiedAt: true },
+    select: { id: true, classroomId: true, date: true, isClosed: true, certifiedAt: true, isHoliday: true },
   });
 
   if (!session) return json(404, { ok: false, error: "Session not found." });
+  if (session.isHoliday) {
+    return json(409, {
+      ok: false,
+      error: "This day is recorded as a holiday. Learner marks are locked and excluded from the official register.",
+    });
+  }
   if (session.certifiedAt) return json(409, { ok: false, error: "Session is certified and cannot be edited." });
   if (session.isClosed) return json(409, { ok: false, error: "Session is closed. Reopen it before editing." });
 
@@ -122,28 +128,38 @@ export async function POST(req: Request) {
     }
   }
 
-  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    for (const it of items) {
-      const note = it.note?.trim() ? it.note.trim() : null;
-      const existingMark = existingByStudent.get(it.studentId);
+  try {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      for (const it of items) {
+        const note = it.note?.trim() ? it.note.trim() : null;
+        const existingMark = existingByStudent.get(it.studentId);
 
-      if (existingMark) {
-        await tx.attendanceMark.update({
-          where: { id: existingMark.id },
-          data: { status: PrismaAttendanceStatus[it.status], note },
-        });
-      } else {
-        await tx.attendanceMark.create({
-          data: {
-            sessionId: session.id,
-            studentId: it.studentId,
-            status: PrismaAttendanceStatus[it.status],
-            note,
-          },
-        });
+        if (existingMark) {
+          await tx.attendanceMark.update({
+            where: { id: existingMark.id },
+            data: { status: PrismaAttendanceStatus[it.status], note },
+          });
+        } else {
+          await tx.attendanceMark.create({
+            data: {
+              sessionId: session.id,
+              studentId: it.studentId,
+              status: PrismaAttendanceStatus[it.status],
+              note,
+            },
+          });
+        }
       }
+    });
+  } catch (error: unknown) {
+    if (String((error as { message?: unknown })?.message ?? "").includes("ATTENDANCE_HOLIDAY_MARKS_LOCKED")) {
+      return json(409, {
+        ok: false,
+        error: "This day was changed to a holiday while attendance was being saved. No holiday mark changes are allowed.",
+      });
     }
-  });
+    throw error;
+  }
 
   return json(200, { ok: true, count: items.length });
 }

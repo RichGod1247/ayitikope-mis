@@ -49,6 +49,7 @@ export async function GET(req: Request) {
       JOIN "edulife_os"."AttendanceSession" s
         ON s."id" = m."sessionId"
       WHERE s."tenantId" = ${tenantId}
+        AND s."isHoliday" = false
         AND m."studentId" IS NOT NULL
       GROUP BY m."studentId"
     `;

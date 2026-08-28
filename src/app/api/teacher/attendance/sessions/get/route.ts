@@ -43,6 +43,40 @@ function compactName(firstName?: string | null, lastName?: string | null) {
   return [firstName, lastName].filter(Boolean).join(" ").trim();
 }
 
+const PRE_CERT_HOLIDAY_ROLES = new Set([
+  "TEACHER",
+  "SCHOOL_ADMIN",
+  "HEADTEACHER",
+  "SUPERADMIN",
+  "SUPER_ADMIN",
+  "SYSTEM_ADMIN",
+  "OWNER",
+]);
+
+const CERTIFIED_HOLIDAY_ROLES = new Set([
+  "SCHOOL_ADMIN",
+  "HEADTEACHER",
+  "SUPERADMIN",
+  "SUPER_ADMIN",
+  "SYSTEM_ADMIN",
+  "OWNER",
+]);
+
+function normalizeRoleName(value: unknown) {
+  const role = String(value ?? "").trim().toUpperCase().replace(/\s+/g, "_");
+  if (role === "ADMIN") return "SCHOOL_ADMIN";
+  if (role === "HEADMASTER") return "HEADTEACHER";
+  return role;
+}
+
+function canDeclarePreCertHoliday(value: unknown) {
+  return PRE_CERT_HOLIDAY_ROLES.has(normalizeRoleName(value));
+}
+
+function canSupersedeCertifiedHoliday(value: unknown) {
+  return CERTIFIED_HOLIDAY_ROLES.has(normalizeRoleName(value));
+}
+
 export async function GET(req: Request) {
   try {
     const ctx = await requireTenantContext();
@@ -79,6 +113,10 @@ export async function GET(req: Request) {
         certifiedAt: true,
         certifiedByUserId: true,
         takenByUserId: true,
+        isHoliday: true,
+        holidayReason: true,
+        holidayDeclaredAt: true,
+        holidayDeclaredByUserId: true,
         classroom: {
           select: {
             id: true,
@@ -102,7 +140,7 @@ export async function GET(req: Request) {
       classroomId: session.classroomId,
     });
 
-    const [[students, marks], academicCalendar] = await Promise.all([
+    const [[students, marks], academicCalendar, membership] = await Promise.all([
       prisma.$transaction([
         prisma.student.findMany({
           where: {
@@ -136,6 +174,14 @@ export async function GET(req: Request) {
       resolveAttendanceCalendarDate({
         tenantId: safe.tenantId,
         date: session.date,
+      }),
+      prisma.membership.findFirst({
+        where: {
+          tenantId: safe.tenantId,
+          userId: safe.userId,
+          status: "ACTIVE",
+        },
+        select: { role: { select: { name: true } } },
       }),
     ]);
 
@@ -243,6 +289,13 @@ export async function GET(req: Request) {
       };
     });
 
+    const roleName = normalizeRoleName(membership?.role?.name);
+    const certifiedHolidayAuthority = canSupersedeCertifiedHoliday(roleName);
+    const ownerOrAdmin =
+      certifiedHolidayAuthority ||
+      !session.takenByUserId ||
+      session.takenByUserId === safe.userId;
+
     return noStoreJson(200, {
       ok: true,
       mode: "ATTENDANCE_ONLY",
@@ -262,6 +315,18 @@ export async function GET(req: Request) {
           : null,
         certifiedByUserId: session.certifiedByUserId ?? null,
         takenByUserId: session.takenByUserId ?? null,
+        isHoliday: session.isHoliday,
+        holidayReason: session.holidayReason ?? null,
+        holidayDeclaredAt: session.holidayDeclaredAt
+          ? session.holidayDeclaredAt.toISOString()
+          : null,
+        holidayDeclaredByUserId: session.holidayDeclaredByUserId ?? null,
+      },
+      holidayAuthority: {
+        roleName,
+        canDeclareBeforeCertification:
+          canDeclarePreCertHoliday(roleName) && ownerOrAdmin && !session.certifiedAt,
+        canSupersedeCertified: certifiedHolidayAuthority && !!session.certifiedAt,
       },
       classroom,
       classLabel,

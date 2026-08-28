@@ -45,6 +45,10 @@ const sessionSelect = {
   isClosed: true,
   closedAt: true,
   certifiedAt: true,
+  isHoliday: true,
+  holidayReason: true,
+  holidayDeclaredAt: true,
+  holidayDeclaredByUserId: true,
   classroom: { select: { name: true } },
 } satisfies Prisma.AttendanceSessionSelect;
 
@@ -63,6 +67,10 @@ function toApiSession(s: SessionRow) {
     isClosed: s.isClosed,
     closedAt: isoOrNull(s.closedAt),
     certifiedAt: isoOrNull(s.certifiedAt),
+    isHoliday: s.isHoliday,
+    holidayReason: s.holidayReason ?? null,
+    holidayDeclaredAt: isoOrNull(s.holidayDeclaredAt),
+    holidayDeclaredByUserId: s.holidayDeclaredByUserId ?? null,
   };
 }
 
@@ -99,6 +107,7 @@ export async function POST(req: Request) {
       date: existing.date,
     });
 
+    if (existing.isHoliday) return jsonErr(409, "Holiday sessions cannot be closed or edited.");
     if (existing.certifiedAt) return jsonErr(409, "Session is certified (immutable).");
     if (existing.takenByUserId && existing.takenByUserId !== safe.userId) {
       return jsonErr(403, "This session is owned by another user.");
@@ -118,6 +127,7 @@ export async function POST(req: Request) {
         id: sessionId,
         tenantId: safe.tenantId,
         certifiedAt: null,
+        isHoliday: false,
         OR: [{ takenByUserId: null }, { takenByUserId: safe.userId }],
       },
       data: { isClosed: true, closedAt: now, takenByUserId: safe.userId },

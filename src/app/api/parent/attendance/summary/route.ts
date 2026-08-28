@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
     marks = await (prisma as any).attendanceMark.findMany({
       where: {
         studentId,
-        session: { tenantId, date: { gte: windowStart } },
+        session: { tenantId, date: { gte: windowStart }, isHoliday: false },
       },
       select: { sessionId: true, status: true },
     });

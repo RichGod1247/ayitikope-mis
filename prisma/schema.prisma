@@ -63,7 +63,8 @@ model User {
   teacherAssessmentAssignmentsMade    TeacherAssessmentAssignment[] @relation("TeacherAssessmentAssignmentCreatedBy")
   teacherAssessmentAssignmentsRevoked TeacherAssessmentAssignment[] @relation("TeacherAssessmentAssignmentRevokedBy")
   tenantBootstrapInvitesCreated       TenantBootstrapInvite[]       @relation("TenantBootstrapInviteCreatedBy")
-  AttendanceSession                   AttendanceSession[]
+  AttendanceSession                   AttendanceSession[]              @relation("AttendanceSessionTakenBy")
+  attendanceHolidayDeclarations      AttendanceSession[]              @relation("AttendanceHolidayDeclaredBy")
   attendanceBadgesIssued              StudentAttendanceBadge[]      @relation("AttendanceBadgeIssuedBy")
   attendanceBadgesRevoked             StudentAttendanceBadge[]      @relation("AttendanceBadgeRevokedBy")
   attendanceScans                     AttendanceScanEvent[]         @relation("AttendanceScanScannedBy")
@@ -1074,6 +1075,14 @@ model AttendanceSession {
   certifiedAt       DateTime? @db.Timestamptz(6)
   certifiedNote     String?
 
+  /// UI-P3B — authoritative non-instructional day fact.
+  /// Existing certified marks are preserved when a Headteacher/Admin later
+  /// supersedes the day as a holiday; official calculations exclude it.
+  isHoliday               Boolean   @default(false)
+  holidayReason           String?
+  holidayDeclaredAt       DateTime? @db.Timestamptz(6)
+  holidayDeclaredByUserId String?
+
   /// ✅ Day 4 — SMS idempotency (server-enforced)
   /// notifyingAt: lock while sending
   /// notifiedAt: set once any messages successfully sent
@@ -1084,9 +1093,10 @@ model AttendanceSession {
   marks      AttendanceMark[]
   scanEvents AttendanceScanEvent[]
 
-  classroom Classroom @relation(fields: [classroomId], references: [id], onUpdate: NoAction, map: "AttendanceSession_classroom_fkey")
-  takenBy   User?     @relation(fields: [takenByUserId], references: [id], onUpdate: NoAction, map: "AttendanceSession_takenBy_fkey")
-  tenant    Tenant    @relation(fields: [tenantId], references: [id], onUpdate: NoAction, map: "AttendanceSession_tenant_fkey")
+  classroom       Classroom @relation(fields: [classroomId], references: [id], onUpdate: NoAction, map: "AttendanceSession_classroom_fkey")
+  takenBy         User?     @relation("AttendanceSessionTakenBy", fields: [takenByUserId], references: [id], onUpdate: NoAction, map: "AttendanceSession_takenBy_fkey")
+  holidayDeclaredBy User?   @relation("AttendanceHolidayDeclaredBy", fields: [holidayDeclaredByUserId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "AttendanceSession_holidayDeclaredBy_fkey")
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onUpdate: NoAction, map: "AttendanceSession_tenant_fkey")
 
   @@unique([tenantId, classroomId, date], map: "AttendanceSession_tenant_classroom_date_unique")
   @@index([date])
@@ -1095,6 +1105,7 @@ model AttendanceSession {
   @@index([tenantId, classroomId, date, isClosed, certifiedAt], map: "attendance_certified_idx")
   @@index([tenantId, classroomId, date, isClosed], map: "attendance_isClosed_idx")
   @@index([tenantId, classroomId, date, notifiedAt], map: "attendance_notified_idx")
+  @@index([tenantId, classroomId, date, isHoliday, certifiedAt], map: "attendance_official_day_idx")
 }
 
 model AttendanceMark {

@@ -156,6 +156,7 @@ export async function POST(request: Request) {
       id: true,
       isClosed: true,
       certifiedAt: true,
+      isHoliday: true,
       notifyingAt: true,
       notifiedAt: true,
       notifiedByUserId: true,
@@ -166,6 +167,13 @@ export async function POST(request: Request) {
     return json(400, {
       ok: false,
       error: "No attendance session found for this class/date.",
+    });
+  }
+
+  if (session.isHoliday) {
+    return json(409, {
+      ok: false,
+      error: "This day is recorded as a holiday. Attendance notifications are disabled for holiday sessions.",
     });
   }
 
@@ -305,6 +313,7 @@ export async function POST(request: Request) {
       id: session.id,
       tenantId,
       notifiedAt: null,
+      isHoliday: false,
       AND: [
         { OR: [{ notifyingAt: null }, { notifyingAt: { lt: lockCutoff } }] },
         { OR: [{ isClosed: true }, { certifiedAt: { not: null } }] },
@@ -319,8 +328,15 @@ export async function POST(request: Request) {
   if (claim.count !== 1) {
     const current = await prisma.attendanceSession.findFirst({
       where: { id: session.id, tenantId },
-      select: { notifiedAt: true, notifyingAt: true },
+      select: { notifiedAt: true, notifyingAt: true, isHoliday: true },
     });
+
+    if (current?.isHoliday) {
+      return json(409, {
+        ok: false,
+        error: "This day is recorded as a holiday. Attendance notifications are disabled for holiday sessions.",
+      });
+    }
 
     if (current?.notifiedAt) {
       return json(200, {
@@ -525,7 +541,7 @@ export async function POST(request: Request) {
     const sealedAt = successCount > 0 ? new Date() : null;
 
     const seal = await prisma.attendanceSession.updateMany({
-      where: { id: session.id, tenantId },
+      where: { id: session.id, tenantId, isHoliday: false },
       data: {
         notifiedAt: sealedAt,
         notifyingAt: null,
@@ -610,7 +626,7 @@ export async function POST(request: Request) {
 
     try {
       await prisma.attendanceSession.updateMany({
-        where: { id: session.id, tenantId },
+        where: { id: session.id, tenantId, isHoliday: false },
         data: {
           notifiedAt: sealedAt,
           notifyingAt: null,

@@ -37,6 +37,10 @@ const sessionSelect = {
   certifiedAt: true,
   certifiedByUserId: true,
   takenByUserId: true,
+  isHoliday: true,
+  holidayReason: true,
+  holidayDeclaredAt: true,
+  holidayDeclaredByUserId: true,
   classroom: { select: { name: true, grade: true, arm: true } },
 } satisfies Prisma.AttendanceSessionSelect;
 
@@ -105,6 +109,10 @@ function toApiSession(session: SessionRow) {
     closedAt: isoOrNull(session.closedAt),
     certifiedAt: isoOrNull(session.certifiedAt),
     certifiedByUserId: session.certifiedByUserId ?? null,
+    isHoliday: session.isHoliday,
+    holidayReason: session.holidayReason ?? null,
+    holidayDeclaredAt: isoOrNull(session.holidayDeclaredAt),
+    holidayDeclaredByUserId: session.holidayDeclaredByUserId ?? null,
   };
 }
 
@@ -152,6 +160,13 @@ export async function POST(req: Request) {
       date: session.date,
     });
 
+    if (session.isHoliday) {
+      return noStoreJson(409, {
+        ok: false,
+        error: "Holiday sessions cannot be reopened for learner marks.",
+      });
+    }
+
     if (session.certifiedAt) {
       return noStoreJson(409, {
         ok: false,
@@ -180,6 +195,7 @@ export async function POST(req: Request) {
         id: session.id,
         tenantId: safe.tenantId,
         certifiedAt: null,
+        isHoliday: false,
         isClosed: true,
         ...(adminLike
           ? {}

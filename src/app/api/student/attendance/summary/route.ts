@@ -77,6 +77,7 @@ export async function GET(req: Request) {
           tenantId: ctx.tenantId,
           ...(classroomId ? { classroomId } : {}),
           date: { gte: fromDate, lte: toDate },
+          isHoliday: false,
         },
       },
       select: {

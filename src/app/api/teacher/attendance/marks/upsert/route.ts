@@ -205,6 +205,7 @@ export async function POST(req: Request) {
           isClosed: true,
           certifiedAt: true,
           takenByUserId: true,
+          isHoliday: true,
           classroom: { select: { name: true, grade: true, arm: true } },
         },
       }),
@@ -212,6 +213,13 @@ export async function POST(req: Request) {
 
     if (!session) {
       return noStoreJson(404, { ok: false, error: "Session not found." });
+    }
+
+    if (session.isHoliday) {
+      return noStoreJson(409, {
+        ok: false,
+        error: "This day is recorded as a holiday. Learner marks are locked and excluded from the official register.",
+      });
     }
 
     if (session.certifiedAt) {
@@ -429,6 +437,13 @@ export async function POST(req: Request) {
       correctionCount: updatedCount,
     });
   } catch (e) {
+    if (String((e as { message?: unknown })?.message ?? "").includes("ATTENDANCE_HOLIDAY_MARKS_LOCKED")) {
+      return noStoreJson(409, {
+        ok: false,
+        error: "This day was changed to a holiday while attendance was being saved. No holiday mark changes are allowed.",
+      });
+    }
+
     const { status, msg } = toHttpError(e);
     return noStoreJson(status, { ok: false, error: msg });
   }

@@ -129,6 +129,7 @@ export async function POST(req: Request) {
       isClosed: true,
       certifiedAt: true,
       takenByUserId: true,
+      isHoliday: true,
       certifiedByUserId: true,
       notifyingAt: true,
       notifiedAt: true,
@@ -171,6 +172,13 @@ export async function POST(req: Request) {
     return json(Number((error as { status?: number })?.status) || 409, {
       ok: false,
       error: error instanceof Error ? error.message : "Attendance date is outside the current term.",
+    });
+  }
+
+  if (session.isHoliday) {
+    return json(409, {
+      ok: false,
+      error: "This day is recorded as a holiday. Attendance notifications are disabled for holiday sessions.",
     });
   }
 
@@ -273,6 +281,7 @@ export async function POST(req: Request) {
       id: session.id,
       tenantId: safe.tenantId,
       notifiedAt: null,
+      isHoliday: false,
       AND: [
         { OR: [{ notifyingAt: null }, { notifyingAt: { lt: lockCutoff } }] },
         { OR: [{ isClosed: true }, { certifiedAt: { not: null } }] },
@@ -287,8 +296,15 @@ export async function POST(req: Request) {
   if (claim.count !== 1) {
     const current = await prisma.attendanceSession.findFirst({
       where: { id: session.id, tenantId: safe.tenantId },
-      select: { notifiedAt: true, notifyingAt: true },
+      select: { notifiedAt: true, notifyingAt: true, isHoliday: true },
     });
+
+    if (current?.isHoliday) {
+      return json(409, {
+        ok: false,
+        error: "This day is recorded as a holiday. Attendance notifications are disabled for holiday sessions.",
+      });
+    }
 
     if (current?.notifiedAt) {
       return json(200, {
@@ -467,7 +483,7 @@ export async function POST(req: Request) {
     const sealedAt = successCount > 0 ? new Date() : null;
 
     const seal = await prisma.attendanceSession.updateMany({
-      where: { id: session.id, tenantId: safe.tenantId },
+      where: { id: session.id, tenantId: safe.tenantId, isHoliday: false },
       data: {
         notifiedAt: sealedAt,
         notifyingAt: null,
@@ -547,7 +563,7 @@ export async function POST(req: Request) {
 
     try {
       await prisma.attendanceSession.updateMany({
-        where: { id: session.id, tenantId: safe.tenantId },
+        where: { id: session.id, tenantId: safe.tenantId, isHoliday: false },
         data: {
           notifiedAt: sealedAt,
           notifyingAt: null,

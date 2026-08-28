@@ -21,6 +21,10 @@ type SessionDTO = {
   certifiedAt: string | null;
   certifiedByUserId?: string | null;
   takenByUserId: string | null;
+  isHoliday: boolean;
+  holidayReason: string | null;
+  holidayDeclaredAt: string | null;
+  holidayDeclaredByUserId: string | null;
 };
 
 type SessionAcademicCalendarDTO = {
@@ -93,6 +97,11 @@ type GetOk = {
   classroom: ClassroomDTO | null;
   classLabel: string;
   academicCalendar: SessionAcademicCalendarDTO;
+  holidayAuthority?: {
+    roleName: string;
+    canDeclareBeforeCertification: boolean;
+    canSupersedeCertified: boolean;
+  };
   summary?: SessionSummaryDTO;
   students: StudentRowDTO[];
 };
@@ -112,6 +121,16 @@ type SaveMarksResponse = SaveMarksOk | ApiErr;
 
 type MutateOk = { ok: true; session: SessionDTO };
 type MutateResponse = MutateOk | ApiErr;
+
+type HolidayOk = {
+  ok: true;
+  alreadyHoliday: boolean;
+  supersededCertifiedAttendance: boolean;
+  officialAttendanceExcluded: boolean;
+  notificationExcluded: boolean;
+  session: SessionDTO;
+};
+type HolidayResponse = HolidayOk | ApiErr;
 
 type NotifyOk = {
   ok: true;
@@ -350,6 +369,11 @@ export default function AttendanceSessionClient(props: {
   const [students, setStudents] = useState<StudentRowDTO[]>([]);
   const [academicCalendar, setAcademicCalendar] =
     useState<SessionAcademicCalendarDTO | null>(null);
+  const [holidayAuthority, setHolidayAuthority] = useState({
+    roleName: "",
+    canDeclareBeforeCertification: false,
+    canSupersedeCertified: false,
+  });
   const [marks, setMarks] = useState<Record<string, MarkState>>({});
   const baselineMarksRef = useRef<Record<string, MarkState>>({});
 
@@ -361,6 +385,12 @@ export default function AttendanceSessionClient(props: {
   const [mutating, setMutating] = useState(false);
   const [mutMsg, setMutMsg] = useState<string | null>(null);
   const [mutErr, setMutErr] = useState<string | null>(null);
+
+  const [holidayChecked, setHolidayChecked] = useState(false);
+  const [holidayReason, setHolidayReason] = useState("");
+  const [holidaySaving, setHolidaySaving] = useState(false);
+  const [holidayMsg, setHolidayMsg] = useState<string | null>(null);
+  const [holidayErr, setHolidayErr] = useState<string | null>(null);
 
   const [notifying, setNotifying] = useState(false);
   const [notifyMsg, setNotifyMsg] = useState<string | null>(null);
@@ -375,8 +405,9 @@ export default function AttendanceSessionClient(props: {
 
   const isCertified = !!session?.certifiedAt;
   const isClosed = !!session?.isClosed;
+  const isHoliday = !!session?.isHoliday;
   const calendarMutationLocked = academicCalendar?.allowed !== true;
-  const locked = isCertified || isClosed || calendarMutationLocked;
+  const locked = isHoliday || isCertified || isClosed || calendarMutationLocked;
 
   async function load() {
     setLoading(true);
@@ -400,6 +431,13 @@ export default function AttendanceSessionClient(props: {
       setSession(j.session);
       setClassLabel(j.classLabel || props.initialClassName || "Class");
       setAcademicCalendar(j.academicCalendar);
+      setHolidayAuthority(
+        j.holidayAuthority ?? {
+          roleName: "",
+          canDeclareBeforeCertification: false,
+          canSupersedeCertified: false,
+        },
+      );
       setStudents(Array.isArray(j.students) ? j.students : []);
 
       const nextMarks: Record<string, MarkState> = {};
@@ -419,6 +457,10 @@ export default function AttendanceSessionClient(props: {
       setSaveErr(null);
       setMutMsg(null);
       setMutErr(null);
+      setHolidayChecked(false);
+      setHolidayReason("");
+      setHolidayMsg(null);
+      setHolidayErr(null);
       setNotifyMsg(null);
       setNotifyErr(null);
       setQrMsg(null);
@@ -541,6 +583,7 @@ export default function AttendanceSessionClient(props: {
     !loading &&
     !mutating &&
     !saving &&
+    !isHoliday &&
     !isCertified &&
     !isClosed &&
     !dirty &&
@@ -553,6 +596,7 @@ export default function AttendanceSessionClient(props: {
     !loading &&
     !mutating &&
     !saving &&
+    !isHoliday &&
     !isCertified &&
     isClosed &&
     !dirty &&
@@ -565,6 +609,7 @@ export default function AttendanceSessionClient(props: {
     !loading &&
     !mutating &&
     !saving &&
+    !isHoliday &&
     !isCertified &&
     isClosed;
 
@@ -575,10 +620,41 @@ export default function AttendanceSessionClient(props: {
     !notifying &&
     !mutating &&
     !saving &&
+    !isHoliday &&
     (isClosed || isCertified) &&
     !dirty &&
     !saveErr &&
     alertPreview.total > 0;
+
+  const canStartHoliday =
+    !!session &&
+    !isHoliday &&
+    academicCalendar?.allowed === true &&
+    !loading &&
+    !holidaySaving &&
+    !saving &&
+    !mutating &&
+    !notifying &&
+    !dirty &&
+    (isCertified
+      ? holidayAuthority.canSupersedeCertified
+      : holidayAuthority.canDeclareBeforeCertification && counts.marked === 0);
+
+  const holidayDisabledReason = (() => {
+    if (!session) return "Session not loaded.";
+    if (isHoliday) return "Holiday already recorded.";
+    if (calendarMutationLocked)
+      return academicCalendar?.message || "Academic calendar does not allow changes to this register.";
+    if (isCertified && !holidayAuthority.canSupersedeCertified)
+      return "Only the Headteacher or an authorized school administrator can correct a certified day to a holiday.";
+    if (!isCertified && !holidayAuthority.canDeclareBeforeCertification)
+      return "You cannot declare Holiday for this session.";
+    if (!isCertified && counts.marked > 0)
+      return "Clear or correct learner marks before declaring Holiday.";
+    if (dirty) return "Clear unsaved learner changes before declaring Holiday.";
+    if (holidaySaving || saving || mutating || notifying) return "Another attendance action is in progress.";
+    return null;
+  })();
 
   const qrBaseBlockReason = qrBaseDisabledReason();
   const canUseQrCamera = !!session && !qrBaseBlockReason;
@@ -604,6 +680,7 @@ export default function AttendanceSessionClient(props: {
     if (loading) return "Loading session…";
     if (calendarMutationLocked)
       return academicCalendar?.message || "Academic calendar does not allow notifications for this register.";
+    if (isHoliday) return "Holiday sessions do not send attendance notifications.";
     if (!(isClosed || isCertified))
       return "Close or certify the session first.";
     if (dirty) return "You have unsaved changes. Save first.";
@@ -620,6 +697,7 @@ export default function AttendanceSessionClient(props: {
     if (loading) return "Loading session…";
     if (calendarMutationLocked)
       return academicCalendar?.message || "Academic calendar does not allow changes to this register.";
+    if (isHoliday) return "Holiday sessions cannot accept register seal scans.";
     if (locked)
       return "Closed or certified sessions cannot accept register seal scans.";
     if (dirty) return "Save manual changes before scanning.";
@@ -651,6 +729,7 @@ export default function AttendanceSessionClient(props: {
           academicCalendar?.message || "Academic calendar does not allow changes to this register.",
         );
       }
+      if (isHoliday) throw new Error("This day is recorded as a holiday. Learner marks are locked.");
       if (locked) throw new Error("Session is locked (closed/certified).");
 
       const markItems = students
@@ -793,6 +872,94 @@ export default function AttendanceSessionClient(props: {
     }
   }
 
+  async function saveHoliday(): Promise<boolean> {
+    if (!session) return false;
+
+    setHolidaySaving(true);
+    setHolidayMsg(null);
+    setHolidayErr(null);
+
+    try {
+      if (calendarMutationLocked) {
+        throw new Error(
+          academicCalendar?.message ||
+            "Academic calendar does not allow changes to this register.",
+        );
+      }
+
+      if (!holidayChecked) {
+        throw new Error("Tick Holiday first.");
+      }
+
+      const reason = holidayReason.trim();
+      if (reason.length < 4) {
+        throw new Error("Enter a clear holiday reason.");
+      }
+
+      if (!isCertified) {
+        if (dirty) {
+          throw new Error(
+            "Unsaved learner marks exist. Clear them before saving Holiday.",
+          );
+        }
+        if (counts.marked > 0) {
+          throw new Error(
+            "Holiday can be saved before certification only when there are no learner marks.",
+          );
+        }
+      } else if (!holidayAuthority.canSupersedeCertified) {
+        throw new Error(
+          "Only the Headteacher or an authorized school administrator can correct a certified day to a holiday.",
+        );
+      }
+
+      let confirmCertifiedSupersession = false;
+      if (isCertified) {
+        confirmCertifiedSupersession = window.confirm(
+          "Correct this certified day to Holiday? Original learner marks and certification will be preserved as evidence, but the day will be excluded from official attendance totals and future attendance notifications.",
+        );
+
+        if (!confirmCertifiedSupersession) {
+          throw new Error("Holiday correction cancelled.");
+        }
+      }
+
+      const r = await fetch("/api/teacher/attendance/sessions/holiday", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          sessionId: session.id,
+          reason,
+          confirmCertifiedSupersession,
+        }),
+      });
+
+      const j: HolidayResponse = await r.json().catch(() => ({
+        ok: false,
+        error: "Failed to parse holiday response.",
+      }));
+
+      if (!r.ok || !j.ok) throw new Error(j.ok ? `HTTP ${r.status}` : j.error);
+
+      setSession(j.session);
+      const successMessage = j.supersededCertifiedAttendance
+        ? "Certified attendance preserved as evidence. This day is now excluded from official attendance as a holiday."
+        : "Holiday saved. No Times Opened or learner attendance will be counted for this day.";
+
+      await load();
+      setHolidayMsg(successMessage);
+      return true;
+    } catch (e: unknown) {
+      setHolidayErr(
+        safeText((e as { message?: unknown })?.message) ||
+          "Failed to save holiday.",
+      );
+      return false;
+    } finally {
+      setHolidaySaving(false);
+    }
+  }
+
   async function notifyParents(): Promise<boolean> {
     if (!session) return false;
 
@@ -805,6 +972,9 @@ export default function AttendanceSessionClient(props: {
         throw new Error(
           academicCalendar?.message || "Academic calendar does not allow notifications for this register.",
         );
+      }
+      if (session.isHoliday) {
+        throw new Error("Holiday sessions do not send attendance notifications.");
       }
       if (!session.isClosed && !session.certifiedAt) {
         throw new Error("Close or certify the session before notifications.");
@@ -897,6 +1067,8 @@ export default function AttendanceSessionClient(props: {
   function statusPill() {
     const base =
       "inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold";
+    if (isHoliday)
+      return `${base} border-sky-300/20 bg-sky-400/12 text-sky-100`;
     if (isCertified)
       return `${base} border-indigo-300/20 bg-indigo-400/12 text-indigo-100`;
     if (isClosed)
@@ -910,9 +1082,11 @@ export default function AttendanceSessionClient(props: {
   const registerClosed = isClosed || isCertified;
   const legacyStatusCount = counts.late + counts.excused;
 
-  const guideCurrentStep = isCertified
+  const guideCurrentStep = isHoliday
     ? 4
-    : registerClosed
+    : isCertified
+      ? 4
+      : registerClosed
       ? 4
       : !allLearnersMarked
         ? 1
@@ -920,8 +1094,12 @@ export default function AttendanceSessionClient(props: {
           ? 2
           : 3;
 
-  const guideMessage = isCertified
-    ? alertPreview.total > 0
+  const guideMessage = isHoliday
+    ? session?.certifiedAt
+      ? "Holiday correction saved. Original certified marks are preserved as evidence and excluded from official totals."
+      : "Holiday saved. Do not mark learners; this day does not count as Times Opened."
+    : isCertified
+      ? alertPreview.total > 0
       ? `Certified. ${alertPreview.total} absent learner(s) can now be notified.`
       : "Certified. Attendance is complete."
     : registerClosed
@@ -956,7 +1134,13 @@ export default function AttendanceSessionClient(props: {
                   </span>
                 ) : null}
                 <span className={statusPill()}>
-                  {isCertified ? "CERTIFIED" : isClosed ? "CLOSED" : "OPEN"}
+                  {isHoliday
+                    ? "HOLIDAY"
+                    : isCertified
+                      ? "CERTIFIED"
+                      : isClosed
+                        ? "CLOSED"
+                        : "OPEN"}
                 </span>
                 {dirty ? (
                   <span className="text-[11px] font-semibold text-amber-200">
@@ -1016,6 +1200,16 @@ export default function AttendanceSessionClient(props: {
       {saveMsg ? <Banner tone="ok">{saveMsg}</Banner> : null}
       {mutErr ? <Banner tone="error">{mutErr}</Banner> : null}
       {mutMsg ? <Banner tone="info">{mutMsg}</Banner> : null}
+      {holidayErr ? <Banner tone="error">{holidayErr}</Banner> : null}
+      {holidayMsg ? <Banner tone="ok">{holidayMsg}</Banner> : null}
+      {isHoliday && session ? (
+        <Banner tone="info">
+          <b>Holiday:</b> {session.holidayReason || "School closed."} This day is excluded from Times Opened, official attendance totals and future attendance notifications.
+          {session.certifiedAt ? (
+            <span className="block mt-1 text-[11px]">Original certified learner marks remain preserved as audit evidence.</span>
+          ) : null}
+        </Banner>
+      ) : null}
       {notifyErr ? <Banner tone="error">{notifyErr}</Banner> : null}
       {notifyMsg ? <Banner tone="info">{notifyMsg}</Banner> : null}
       {qrErr ? <Banner tone="error">{qrErr}</Banner> : null}
@@ -1031,7 +1225,7 @@ export default function AttendanceSessionClient(props: {
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-[#F7F4ED]">What to do</span>
               <span className="rounded-full border border-[#E8C96A]/20 bg-[#D4AF37]/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[#E8C96A]">
-                Step {guideCurrentStep} of 4
+                {isHoliday ? "Holiday" : `Step ${guideCurrentStep} of 4`}
               </span>
             </div>
             <p className="mt-1 truncate text-[11px] leading-4 text-[#C9CDD6] sm:whitespace-normal">
@@ -1039,57 +1233,137 @@ export default function AttendanceSessionClient(props: {
             </p>
           </div>
 
-          <div className="grid grid-cols-4 gap-1.5 xl:min-w-[500px]">
-            <GuideStep
-              number={1}
-              label="Mark learners"
-              shortLabel="Mark"
-              state={
-                allLearnersMarked
-                  ? "done"
-                  : guideCurrentStep === 1
-                    ? "current"
-                    : "pending"
-              }
-            />
-            <GuideStep
-              number={2}
-              label="Save marks"
-              shortLabel="Save"
-              state={
-                marksSaved
-                  ? "done"
-                  : guideCurrentStep === 2
-                    ? "current"
-                    : "pending"
-              }
-            />
-            <GuideStep
-              number={3}
-              label="Close register"
-              shortLabel="Close"
-              state={
-                registerClosed
-                  ? "done"
-                  : guideCurrentStep === 3
-                    ? "current"
-                    : "pending"
-              }
-            />
-            <GuideStep
-              number={4}
-              label="Certify"
-              shortLabel="Certify"
-              state={
-                isCertified
-                  ? "done"
-                  : guideCurrentStep === 4
-                    ? "current"
-                    : "pending"
-              }
-            />
-          </div>
+          {isHoliday ? (
+            <div className="rounded-xl border border-sky-300/20 bg-sky-400/10 px-4 py-2 text-[11px] font-semibold text-sky-100 xl:min-w-[300px]">
+              ✓ Holiday recorded · No learner attendance required
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 gap-1.5 xl:min-w-[500px]">
+              <GuideStep
+                number={1}
+                label="Mark learners"
+                shortLabel="Mark"
+                state={
+                  allLearnersMarked
+                    ? "done"
+                    : guideCurrentStep === 1
+                      ? "current"
+                      : "pending"
+                }
+              />
+              <GuideStep
+                number={2}
+                label="Save marks"
+                shortLabel="Save"
+                state={
+                  marksSaved
+                    ? "done"
+                    : guideCurrentStep === 2
+                      ? "current"
+                      : "pending"
+                }
+              />
+              <GuideStep
+                number={3}
+                label="Close register"
+                shortLabel="Close"
+                state={
+                  registerClosed
+                    ? "done"
+                    : guideCurrentStep === 3
+                      ? "current"
+                      : "pending"
+                }
+              />
+              <GuideStep
+                number={4}
+                label="Certify"
+                shortLabel="Certify"
+                state={
+                  isCertified
+                    ? "done"
+                    : guideCurrentStep === 4
+                      ? "current"
+                      : "pending"
+                }
+              />
+            </div>
+          )}
         </div>
+
+        {session && !isHoliday && (
+          (!isCertified && holidayAuthority.canDeclareBeforeCertification) ||
+          (isCertified && holidayAuthority.canSupersedeCertified)
+        ) ? (
+          <div
+            data-attendance-holiday-control="v1"
+            className="mt-2 rounded-xl border border-sky-300/15 bg-sky-400/8 p-2.5"
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <label
+                className="inline-flex cursor-pointer items-center gap-2 text-[11px] font-semibold text-sky-100"
+                title={holidayDisabledReason ?? undefined}
+              >
+                <input
+                  type="checkbox"
+                  checked={holidayChecked}
+                  onChange={(event) => {
+                    const checked = event.target.checked;
+                    setHolidayChecked(checked);
+                    if (!checked) {
+                      setHolidayReason("");
+                      setHolidayErr(null);
+                    }
+                  }}
+                  disabled={!canStartHoliday && !holidayChecked}
+                  className="h-4 w-4 rounded border-white/20 bg-[#07111F]"
+                />
+                Holiday / school closed
+              </label>
+
+              {!holidayChecked && holidayDisabledReason ? (
+                <span className="text-[10px] text-sky-100/70">
+                  {holidayDisabledReason}
+                </span>
+              ) : null}
+            </div>
+
+            {holidayChecked ? (
+              <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                <input
+                  type="text"
+                  value={holidayReason}
+                  onChange={(event) => setHolidayReason(event.target.value)}
+                  maxLength={500}
+                  placeholder={
+                    isCertified
+                      ? "Reason for correcting this certified day to Holiday"
+                      : "Reason, e.g. Public holiday"
+                  }
+                  className={`${tinyFieldClass} flex-1`}
+                  disabled={holidaySaving}
+                  aria-label="Holiday reason"
+                />
+                <button
+                  type="button"
+                  onClick={() => void saveHoliday()}
+                  disabled={
+                    holidaySaving ||
+                    holidayReason.trim().length < 4 ||
+                    !canStartHoliday
+                  }
+                  className="inline-flex items-center justify-center rounded-lg bg-sky-200 px-3 py-2 text-[11px] font-semibold text-[#071A3D] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {holidaySaving
+                    ? "Saving…"
+                    : isCertified
+                      ? "Correct to Holiday"
+                      : "Save Holiday"}
+                </button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-white/10 pt-2">
           {!locked ? (
@@ -1151,7 +1425,7 @@ export default function AttendanceSessionClient(props: {
             </>
           ) : null}
 
-          {isCertified ? (
+          {isCertified && !isHoliday ? (
             <span className="inline-flex items-center rounded-lg border border-emerald-300/20 bg-emerald-400/12 px-3 py-1.5 text-[11px] font-semibold text-emerald-100">
               ✓ Certified
             </span>
@@ -1165,18 +1439,20 @@ export default function AttendanceSessionClient(props: {
               aria-expanded={showAttendanceSummary}
               aria-controls="attendance-summary-panel"
             >
-              Attendance summary {showAttendanceSummary ? "▴" : "▾"}
+              {isHoliday ? "Preserved evidence" : "Attendance summary"} {showAttendanceSummary ? "▴" : "▾"}
             </button>
 
-            <button
-              type="button"
-              onClick={() => void notifyParents()}
-              disabled={!canNotify}
-              className="inline-flex items-center justify-center rounded-lg bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-3 py-1.5 text-[11px] font-semibold text-[#071A3D] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
-              title={notifyDisabledReason() ?? "Notify eligible parents"}
-            >
-              {notifying ? "Notifying…" : "Notify parents"}
-            </button>
+            {!isHoliday ? (
+              <button
+                type="button"
+                onClick={() => void notifyParents()}
+                disabled={!canNotify}
+                className="inline-flex items-center justify-center rounded-lg bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-3 py-1.5 text-[11px] font-semibold text-[#071A3D] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                title={notifyDisabledReason() ?? "Notify eligible parents"}
+              >
+                {notifying ? "Notifying…" : "Notify parents"}
+              </button>
+            ) : null}
           </div>
         </div>
       </section>
@@ -1187,7 +1463,14 @@ export default function AttendanceSessionClient(props: {
           data-attendance-summary-ui="collapsed-v2"
           className={`${shellCard} p-4`}
         >
-          <div className="text-sm font-semibold text-[#F7F4ED]">Attendance summary</div>
+          <div className="text-sm font-semibold text-[#F7F4ED]">
+            {isHoliday ? "Preserved attendance evidence" : "Attendance summary"}
+          </div>
+          {isHoliday ? (
+            <p className="mt-1 text-[10px] leading-4 text-sky-100">
+              These marks, if any, are historical evidence only and are excluded from official attendance calculations.
+            </p>
+          ) : null}
 
           <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
             <CountChip label="Total" value={counts.total} />

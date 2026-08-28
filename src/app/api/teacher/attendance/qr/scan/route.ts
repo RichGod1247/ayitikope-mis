@@ -225,6 +225,7 @@ export async function POST(req: Request) {
           isClosed: true,
           certifiedAt: true,
           takenByUserId: true,
+          isHoliday: true,
           classroom: { select: { name: true, grade: true, arm: true } },
         },
       }),
@@ -254,6 +255,13 @@ export async function POST(req: Request) {
       return noStoreJson(403, {
         ok: false,
         error: "This session is owned by another user.",
+      });
+    }
+
+    if (session.isHoliday) {
+      return noStoreJson(409, {
+        ok: false,
+        error: "This day is recorded as a holiday. Badge attendance is locked.",
       });
     }
 
@@ -481,6 +489,13 @@ export async function POST(req: Request) {
       message: `${studentName} marked PRESENT by register seal scan.`,
     });
   } catch (e) {
+    if (String((e as { message?: unknown })?.message ?? "").includes("ATTENDANCE_HOLIDAY_MARKS_LOCKED")) {
+      return noStoreJson(409, {
+        ok: false,
+        error: "This day was changed to a holiday while the badge was being scanned. No attendance mark was saved.",
+      });
+    }
+
     const { status, msg } = toHttpError(e);
     return noStoreJson(status, { ok: false, error: msg });
   }

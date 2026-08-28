@@ -8,7 +8,7 @@ import { assertCanAccessClassroom } from "@/lib/teacherClassroomAccess";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type SummaryState = "NONE" | "OPEN" | "CLOSED" | "CERTIFIED";
+type SummaryState = "NONE" | "OPEN" | "CLOSED" | "CERTIFIED" | "HOLIDAY";
 
 function json(status: number, payload: any) {
   return NextResponse.json(payload, {
@@ -24,8 +24,11 @@ function parseDateISO(dateISO: string): Date {
   return d;
 }
 
-function toState(session: { isClosed: boolean; certifiedAt: Date | null } | null): SummaryState {
+function toState(
+  session: { isClosed: boolean; certifiedAt: Date | null; isHoliday: boolean } | null,
+): SummaryState {
   if (!session) return "NONE";
+  if (session.isHoliday) return "HOLIDAY";
   if (session.certifiedAt) return "CERTIFIED";
   if (session.isClosed) return "CLOSED";
   return "OPEN";
@@ -59,14 +62,14 @@ export async function GET(req: Request) {
 
   const session = await prisma.attendanceSession.findFirst({
     where: { tenantId: auth.ctx.tenantId, classroomId, date },
-    select: { id: true, isClosed: true, certifiedAt: true },
+    select: { id: true, isClosed: true, certifiedAt: true, isHoliday: true, holidayReason: true },
   });
 
   const studentCount = await prisma.student.count({ where: { tenantId: auth.ctx.tenantId, classroomId } });
 
   let absent = 0, late = 0, excused = 0;
 
-  if (session) {
+  if (session && !session.isHoliday) {
     const grouped = await prisma.attendanceMark.groupBy({
       by: ["status"],
       where: { sessionId: session.id },
@@ -82,16 +85,34 @@ export async function GET(req: Request) {
     }
   }
 
-  const present = Math.max(0, studentCount - absent - late - excused);
+  const present = session?.isHoliday
+    ? 0
+    : Math.max(0, studentCount - absent - late - excused);
 
   return json(200, {
     ok: true,
     summary: {
-      state: toState(session ? { isClosed: session.isClosed, certifiedAt: session.certifiedAt } : null),
+      state: toState(
+        session
+          ? {
+              isClosed: session.isClosed,
+              certifiedAt: session.certifiedAt,
+              isHoliday: session.isHoliday,
+            }
+          : null,
+      ),
       sessionId: session?.id ?? null,
       dateISO,
       classroomId,
-      totals: { students: studentCount, present, absent, late, excused },
+      isHoliday: session?.isHoliday ?? false,
+      holidayReason: session?.holidayReason ?? null,
+      totals: {
+        students: studentCount,
+        present,
+        absent: session?.isHoliday ? 0 : absent,
+        late: session?.isHoliday ? 0 : late,
+        excused: session?.isHoliday ? 0 : excused,
+      },
     },
   });
 }

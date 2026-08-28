@@ -48,6 +48,10 @@ async function assertTeacherCanAccessSession(opts: {
       classroomId: true,
       isClosed: true,
       certifiedAt: true,
+      isHoliday: true,
+      holidayReason: true,
+      holidayDeclaredAt: true,
+      holidayDeclaredByUserId: true,
       classroom: { select: { id: true, name: true, grade: true, arm: true } },
     },
   });
@@ -114,7 +118,13 @@ export async function GET(_req: Request, ctxRoute: { params: { sessionId: string
     if (status in counts) counts[status as keyof typeof counts] += 1;
   }
 
-  const state = session.certifiedAt ? "CERTIFIED" : session.isClosed ? "CLOSED" : "OPEN";
+  const state = session.isHoliday
+    ? "HOLIDAY"
+    : session.certifiedAt
+      ? "CERTIFIED"
+      : session.isClosed
+        ? "CLOSED"
+        : "OPEN";
 
   return json({
     ok: true,
@@ -124,6 +134,10 @@ export async function GET(_req: Request, ctxRoute: { params: { sessionId: string
       state,
       isClosed: session.isClosed,
       certifiedAt: session.certifiedAt,
+      isHoliday: session.isHoliday,
+      holidayReason: session.holidayReason ?? null,
+      holidayDeclaredAt: session.holidayDeclaredAt,
+      holidayDeclaredByUserId: session.holidayDeclaredByUserId ?? null,
       classroom: session.classroom,
     },
     students: students.map((student) => ({ id: student.id, name: nameOf(student) })),
@@ -153,6 +167,10 @@ export async function POST(req: Request, ctxRoute: { params: { sessionId: string
   });
 
   if (!guard.ok) return json({ ok: false, error: guard.error }, guard.status);
+
+  if (guard.session.isHoliday) {
+    return json({ ok: false, error: "SESSION_HOLIDAY_LOCKED" }, 409);
+  }
 
   if (guard.session.certifiedAt) {
     return json({ ok: false, error: "SESSION_CERTIFIED_LOCKED" }, 400);
@@ -240,23 +258,30 @@ export async function POST(req: Request, ctxRoute: { params: { sessionId: string
     }
   }
 
-  await prisma.$transaction(
-    marks.map((mark) =>
-      prisma.attendanceMark.upsert({
-        where: { sessionId_studentId: { sessionId: guard.session.id, studentId: mark.studentId } },
-        create: {
-          sessionId: guard.session.id,
-          studentId: mark.studentId,
-          status: String(mark.status).toUpperCase() as AttendanceStatus,
-          note: mark.note ?? null,
-        },
-        update: {
-          status: String(mark.status).toUpperCase() as AttendanceStatus,
-          note: mark.note ?? null,
-        },
-      })
-    )
-  );
+  try {
+    await prisma.$transaction(
+      marks.map((mark) =>
+        prisma.attendanceMark.upsert({
+          where: { sessionId_studentId: { sessionId: guard.session.id, studentId: mark.studentId } },
+          create: {
+            sessionId: guard.session.id,
+            studentId: mark.studentId,
+            status: String(mark.status).toUpperCase() as AttendanceStatus,
+            note: mark.note ?? null,
+          },
+          update: {
+            status: String(mark.status).toUpperCase() as AttendanceStatus,
+            note: mark.note ?? null,
+          },
+        }),
+      ),
+    );
+  } catch (error: unknown) {
+    if (String((error as { message?: unknown })?.message ?? "").includes("ATTENDANCE_HOLIDAY_MARKS_LOCKED")) {
+      return json({ ok: false, error: "SESSION_HOLIDAY_LOCKED" }, 409);
+    }
+    throw error;
+  }
 
   return json({ ok: true });
 }

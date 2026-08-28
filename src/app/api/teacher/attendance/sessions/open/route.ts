@@ -54,10 +54,16 @@ async function recoverUniqueRace({ safe, classroomId, date }: OpenInput) {
 
   const existing = await prisma.attendanceSession.findFirst({
     where: { tenantId: safe.tenantId, classroomId, date },
-    select: { id: true, certifiedAt: true, takenByUserId: true, isClosed: true },
+    select: { id: true, certifiedAt: true, takenByUserId: true, isClosed: true, isHoliday: true },
   });
 
   if (!existing) return jsonErr(500, "Failed to open session.");
+  if (existing.isHoliday) {
+    return NextResponse.json(
+      { ok: true, sessionId: existing.id },
+      { headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } },
+    );
+  }
   if (existing.certifiedAt) return jsonErr(409, "Session already certified for this class/date.");
   if (existing.isClosed) return jsonErr(409, "Session is closed. Reopen it before editing.");
   if (existing.takenByUserId && existing.takenByUserId !== safe.userId) {
@@ -117,11 +123,15 @@ export async function POST(req: Request) {
     const findSession = (tx: Prisma.TransactionClient) =>
       tx.attendanceSession.findFirst({
         where: { tenantId: safe.tenantId, classroomId, date },
-        select: { id: true, certifiedAt: true, takenByUserId: true, isClosed: true },
+        select: { id: true, certifiedAt: true, takenByUserId: true, isClosed: true, isHoliday: true },
       });
 
     const result = await prisma.$transaction(async (tx) => {
       const existing = await findSession(tx);
+
+      if (existing?.isHoliday) {
+        return { ok: true as const, sessionId: existing.id };
+      }
 
       if (existing?.certifiedAt) {
         return { ok: false as const, status: 409, error: "Session already certified for this class/date." };
