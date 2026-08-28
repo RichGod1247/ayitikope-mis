@@ -173,6 +173,7 @@ export async function GET(req: NextRequest) {
         tenantId: ctx.tenantId,
         classroomId: { in: classroomIds },
         date: { gte: day.start, lt: day.endExclusive },
+        certifiedAt: { not: null },
         isHoliday: false,
       },
       select: {

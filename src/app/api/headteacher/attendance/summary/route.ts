@@ -45,7 +45,22 @@ export async function GET(req: NextRequest) {
         ok: true,
         start: stats.start,
         end: stats.end,
+        timesOpened: stats.totals.timesOpened,
         totalMarks: stats.totals.marks,
+        byGender: {
+          boys: {
+            present: stats.totals.boysPresent,
+            absent: stats.totals.boysAbsent,
+          },
+          girls: {
+            present: stats.totals.girlsPresent,
+            absent: stats.totals.girlsAbsent,
+          },
+          unclassified: {
+            present: stats.totals.unclassifiedPresent,
+            absent: stats.totals.unclassifiedAbsent,
+          },
+        },
         byStatus: {
           present: stats.totals.present,
           absent: stats.totals.absent,

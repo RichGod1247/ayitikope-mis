@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
     marks = await (prisma as any).attendanceMark.findMany({
       where: {
         studentId,
-        session: { tenantId, date: { gte: windowStart }, isHoliday: false },
+        session: { tenantId, date: { gte: windowStart }, certifiedAt: { not: null }, isHoliday: false },
       },
       select: { sessionId: true, status: true },
     });
@@ -112,7 +112,7 @@ export async function GET(req: NextRequest) {
 
   const totalSessions = sessionIds.size || marks.length;
   const attendanceRate =
-    totalSessions > 0 ? Number((((daysPresent + daysExcused) / totalSessions) * 100).toFixed(1)) : null;
+    totalSessions > 0 ? Number(((daysPresent / totalSessions) * 100).toFixed(1)) : null;
 
   return noStoreJson(200, {
     ok: true,
@@ -127,7 +127,7 @@ export async function GET(req: NextRequest) {
       daysLate,
       daysExcused,
       attendanceRate,
-      note: "Attendance rate counts PRESENT + EXCUSED as attended.",
+      note: "Official attendance uses certified, non-holiday sessions. Late/Excused history is preserved but is not reclassified as Present.",
     },
   });
 }

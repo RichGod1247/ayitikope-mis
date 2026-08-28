@@ -7,6 +7,7 @@ import { z } from "zod";
 import { assertCanAccessClassroom } from "@/lib/teacherClassroomAccess";
 import { getGuardianEssentialAlertEligibilityMap } from "@/lib/essentialAlerts/enrollment";
 import { resolveAttendanceCalendarDate } from "@/lib/server/attendanceAcademicCalendar";
+import { getPhysicalRegisterAccounting } from "@/lib/server/attendancePhysicalRegister";
 import {
   requireTenantContext,
   assertTenantParamMatches,
@@ -185,6 +186,13 @@ export async function GET(req: Request) {
       }),
     ]);
 
+    const physicalRegister = await getPhysicalRegisterAccounting({
+      tenantId: safe.tenantId,
+      classroomId: session.classroomId,
+      asOfDate: session.date,
+      calendar: academicCalendar.calendar,
+    });
+
     const guardianEligibilityByStudent =
       await getGuardianEssentialAlertEligibilityMap({
         tenantId: safe.tenantId,
@@ -344,6 +352,7 @@ export async function GET(req: Request) {
         late,
         excused,
       },
+      physicalRegister,
       students: studentRows,
     });
   } catch (e) {

@@ -89,6 +89,43 @@ type SessionSummaryDTO = {
   excused: number;
 };
 
+type PhysicalRegisterGender = "BOYS" | "GIRLS" | "UNCLASSIFIED";
+type PhysicalRegisterPeriodKey = "TODAY" | "WEEK" | "TERM";
+
+type PhysicalRegisterPeriodDTO = {
+  label: string;
+  startDateISO: string;
+  endDateISO: string;
+  timesOpened: number;
+  boys: { present: number; absent: number };
+  girls: { present: number; absent: number };
+  unclassified: { present: number; absent: number };
+  totalPresent: number;
+  totalAbsent: number;
+  legacyOtherOccurrences: number;
+};
+
+type PhysicalRegisterLearnerDTO = {
+  studentId: string;
+  name: string;
+  gender: PhysicalRegisterGender;
+  week: { present: number; timesOpened: number };
+  term: { present: number; timesOpened: number };
+};
+
+type PhysicalRegisterDTO = {
+  available: boolean;
+  reason: string | null;
+  asOfDateISO: string;
+  academicYear: string | null;
+  term: string | null;
+  weekNumber: number | null;
+  today: PhysicalRegisterPeriodDTO;
+  week: PhysicalRegisterPeriodDTO;
+  termToDate: PhysicalRegisterPeriodDTO;
+  learners: PhysicalRegisterLearnerDTO[];
+};
+
 type GetOk = {
   ok: true;
   mode?: string;
@@ -103,6 +140,7 @@ type GetOk = {
     canSupersedeCertified: boolean;
   };
   summary?: SessionSummaryDTO;
+  physicalRegister: PhysicalRegisterDTO;
   students: StudentRowDTO[];
 };
 
@@ -402,6 +440,9 @@ export default function AttendanceSessionClient(props: {
   const [qrErr, setQrErr] = useState<string | null>(null);
   const [showBadgeScanner, setShowBadgeScanner] = useState(false);
   const [showAttendanceSummary, setShowAttendanceSummary] = useState(false);
+  const [physicalRegister, setPhysicalRegister] = useState<PhysicalRegisterDTO | null>(null);
+  const [registerPeriod, setRegisterPeriod] = useState<PhysicalRegisterPeriodKey>("TODAY");
+  const [showLearnerBreakdown, setShowLearnerBreakdown] = useState(false);
 
   const isCertified = !!session?.certifiedAt;
   const isClosed = !!session?.isClosed;
@@ -439,6 +480,7 @@ export default function AttendanceSessionClient(props: {
         },
       );
       setStudents(Array.isArray(j.students) ? j.students : []);
+      setPhysicalRegister(j.physicalRegister ?? null);
 
       const nextMarks: Record<string, MarkState> = {};
 
@@ -465,6 +507,7 @@ export default function AttendanceSessionClient(props: {
       setNotifyErr(null);
       setQrMsg(null);
       setQrErr(null);
+      setShowLearnerBreakdown(false);
     } catch (e: unknown) {
       const msg =
         safeText((e as { message?: unknown })?.message) ||
@@ -517,6 +560,24 @@ export default function AttendanceSessionClient(props: {
 
     return { total, marked, unmarked, present, absent, late, excused };
   }, [students, marks]);
+
+  const selectedRegisterPeriod = useMemo(() => {
+    if (!physicalRegister) return null;
+    if (registerPeriod === "WEEK") return physicalRegister.week;
+    if (registerPeriod === "TERM") return physicalRegister.termToDate;
+    return physicalRegister.today;
+  }, [physicalRegister, registerPeriod]);
+
+  const selectedLearnerWindow = registerPeriod === "TERM" ? "term" : "week";
+
+  const selectedLearners = useMemo(() => {
+    if (!physicalRegister || registerPeriod === "TODAY") return [];
+
+    return physicalRegister.learners.map((learner) => ({
+      ...learner,
+      selected: learner[selectedLearnerWindow],
+    }));
+  }, [physicalRegister, registerPeriod, selectedLearnerWindow]);
 
   function markRemainingPresent() {
     if (locked || loading || students.length === 0 || counts.unmarked === 0)
@@ -1439,7 +1500,7 @@ export default function AttendanceSessionClient(props: {
               aria-expanded={showAttendanceSummary}
               aria-controls="attendance-summary-panel"
             >
-              {isHoliday ? "Preserved evidence" : "Attendance summary"} {showAttendanceSummary ? "▴" : "▾"}
+              Register summary {showAttendanceSummary ? "▴" : "▾"}
             </button>
 
             {!isHoliday ? (
@@ -1460,45 +1521,209 @@ export default function AttendanceSessionClient(props: {
       {showAttendanceSummary ? (
         <section
           id="attendance-summary-panel"
-          data-attendance-summary-ui="collapsed-v2"
+          data-attendance-summary-ui="physical-register-v1"
           className={`${shellCard} p-4`}
         >
-          <div className="text-sm font-semibold text-[#F7F4ED]">
-            {isHoliday ? "Preserved attendance evidence" : "Attendance summary"}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="text-sm font-semibold text-[#F7F4ED]">
+                Physical register summary
+              </div>
+              <p className="mt-1 text-[10px] leading-4 text-[#AEB6C4]">
+                Official figures count certified, non-holiday sessions only.
+              </p>
+            </div>
+
+            <div
+              data-attendance-register-periods="today-week-term-v1"
+              className="grid grid-cols-3 gap-1 rounded-xl border border-white/10 bg-[#05070B] p-1"
+            >
+              {([
+                ["TODAY", "Today"],
+                ["WEEK", "This week"],
+                ["TERM", "Term to date"],
+              ] as Array<[PhysicalRegisterPeriodKey, string]>).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={registerPeriod === key}
+                  onClick={() => {
+                    setRegisterPeriod(key);
+                    setShowLearnerBreakdown(false);
+                  }}
+                  className={`rounded-lg px-2 py-2 text-[10px] font-semibold sm:px-3 ${
+                    registerPeriod === key
+                      ? "bg-[#D4AF37] text-[#071A3D]"
+                      : "text-[#C9CDD6] hover:bg-white/5"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
-          {isHoliday ? (
-            <p className="mt-1 text-[10px] leading-4 text-sky-100">
-              These marks, if any, are historical evidence only and are excluded from official attendance calculations.
-            </p>
+
+          {!physicalRegister?.available ? (
+            <div className="mt-3 rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 py-2 text-[11px] leading-5 text-amber-100">
+              {physicalRegister?.reason ||
+                "Official physical-register totals are not available for this date."}
+            </div>
+          ) : selectedRegisterPeriod ? (
+            <>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold text-[#F7F4ED]">
+                  {selectedRegisterPeriod.label}
+                </span>
+                <span className="text-[10px] text-[#8F98A8]">
+                  {selectedRegisterPeriod.startDateISO}
+                  {selectedRegisterPeriod.startDateISO !== selectedRegisterPeriod.endDateISO
+                    ? ` → ${selectedRegisterPeriod.endDateISO}`
+                    : ""}
+                </span>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                <div className="rounded-xl border border-[#E8C96A]/20 bg-[#D4AF37]/10 px-3 py-2">
+                  <div className="text-[9px] uppercase tracking-wide text-[#E8C96A]">Times Opened</div>
+                  <div className="mt-1 text-lg font-semibold text-[#F7F4ED]">
+                    {selectedRegisterPeriod.timesOpened}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2">
+                  <div className="text-[9px] text-emerald-100/80">Boys Present</div>
+                  <div className="mt-1 text-base font-semibold text-emerald-100">
+                    {selectedRegisterPeriod.boys.present}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-rose-300/20 bg-rose-400/10 px-3 py-2">
+                  <div className="text-[9px] text-rose-100/80">Boys Absent</div>
+                  <div className="mt-1 text-base font-semibold text-rose-100">
+                    {selectedRegisterPeriod.boys.absent}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2">
+                  <div className="text-[9px] text-emerald-100/80">Girls Present</div>
+                  <div className="mt-1 text-base font-semibold text-emerald-100">
+                    {selectedRegisterPeriod.girls.present}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-rose-300/20 bg-rose-400/10 px-3 py-2">
+                  <div className="text-[9px] text-rose-100/80">Girls Absent</div>
+                  <div className="mt-1 text-base font-semibold text-rose-100">
+                    {selectedRegisterPeriod.girls.absent}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                  <div className="text-[9px] text-[#AEB6C4]">Total Present</div>
+                  <div className="mt-1 text-base font-semibold text-[#F7F4ED]">
+                    {selectedRegisterPeriod.totalPresent}
+                  </div>
+                </div>
+              </div>
+
+              {registerPeriod === "TODAY" && selectedRegisterPeriod.timesOpened === 0 ? (
+                <p className="mt-3 text-[10px] leading-4 text-[#AEB6C4]">
+                  This day is not in official totals yet. A normal school day counts as Times Opened only after certification; a Holiday never counts.
+                </p>
+              ) : null}
+
+              {selectedRegisterPeriod.unclassified.present > 0 ||
+              selectedRegisterPeriod.unclassified.absent > 0 ? (
+                <p className="mt-2 text-[10px] leading-4 text-amber-200">
+                  Unclassified sex/gender: {selectedRegisterPeriod.unclassified.present} Present ·{" "}
+                  {selectedRegisterPeriod.unclassified.absent} Absent. EduLife OS never guesses a learner&apos;s sex/gender.
+                </p>
+              ) : null}
+
+              {selectedRegisterPeriod.legacyOtherOccurrences > 0 ? (
+                <p className="mt-2 text-[10px] leading-4 text-amber-200">
+                  {selectedRegisterPeriod.legacyOtherOccurrences} historical Late/Excused occurrence(s) are preserved but are not reclassified as Present or Absent.
+                </p>
+              ) : null}
+
+              {registerPeriod !== "TODAY" ? (
+                <div className="mt-3 border-t border-white/10 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowLearnerBreakdown((current) => !current)}
+                    className="inline-flex items-center justify-center rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/10"
+                    aria-expanded={showLearnerBreakdown}
+                  >
+                    Learner breakdown {showLearnerBreakdown ? "▴" : "▾"}
+                  </button>
+
+                  {showLearnerBreakdown ? (
+                    <div
+                      data-attendance-learner-times-opened="x-out-of-y-v1"
+                      className="mt-2 max-h-72 divide-y divide-white/10 overflow-y-auto rounded-xl border border-white/10 bg-[#07111F]/70"
+                    >
+                      {selectedLearners.map((learner) => (
+                        <div
+                          key={learner.studentId}
+                          className="flex items-center justify-between gap-3 px-3 py-2 text-[11px]"
+                        >
+                          <div className="min-w-0">
+                            <div className="truncate font-medium text-[#F7F4ED]">
+                              {learner.name}
+                            </div>
+                            <div className="text-[9px] text-[#8F98A8]">
+                              {learner.gender === "BOYS"
+                                ? "Boy"
+                                : learner.gender === "GIRLS"
+                                  ? "Girl"
+                                  : "Unclassified"}
+                            </div>
+                          </div>
+                          <div className="shrink-0 text-right font-semibold text-[#D7DCE5]">
+                            Present {learner.selected.present} out of {learner.selected.timesOpened} times opened
+                          </div>
+                        </div>
+                      ))}
+
+                      {selectedLearners.length === 0 ? (
+                        <div className="px-3 py-4 text-center text-[11px] text-[#AEB6C4]">
+                          No active learners are currently attached to this register.
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </>
           ) : null}
 
-          <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
-            <CountChip label="Total" value={counts.total} />
-            <CountChip label="Marked" value={counts.marked} />
-            <CountChip
-              label="Unmarked"
-              value={counts.unmarked}
-              tone={counts.unmarked ? "warn" : "good"}
-            />
-            <CountChip label="Present" value={counts.present} tone="good" />
-            <CountChip label="Absent" value={counts.absent} tone="bad" />
-            {legacyStatusCount > 0 ? (
-              <CountChip label="Previous status" value={legacyStatusCount} tone="warn" />
+          <div className="mt-4 border-t border-white/10 pt-3">
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-[#8F98A8]">
+              Current session evidence
+            </div>
+            {isHoliday ? (
+              <p className="mt-1 text-[10px] leading-4 text-sky-100">
+                Preserved marks below are historical evidence only and are excluded from official totals.
+              </p>
             ) : null}
-          </div>
 
-          <p className="mt-3 text-[11px] leading-5 text-[#AEB6C4]">
-            Parent alerts: <b>{alertPreview.absentees.length}</b> absent •{" "}
-            <b>{alertPreview.eligible.length}</b> Essential Alerts eligible •{" "}
-            <b>{alertPreview.skippedNotEnabled}</b> not enabled •{" "}
-            <b>{alertPreview.skippedNoPhone}</b> no phone
-          </p>
+            <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
+              <CountChip label="Total" value={counts.total} />
+              <CountChip label="Marked" value={counts.marked} />
+              <CountChip
+                label="Unmarked"
+                value={counts.unmarked}
+                tone={counts.unmarked ? "warn" : "good"}
+              />
+              <CountChip label="Present" value={counts.present} tone="good" />
+              <CountChip label="Absent" value={counts.absent} tone="bad" />
+              {legacyStatusCount > 0 ? (
+                <CountChip label="Previous status" value={legacyStatusCount} tone="warn" />
+              ) : null}
+            </div>
 
-          {legacyStatusCount > 0 ? (
-            <p className="mt-2 text-[10px] leading-4 text-amber-200">
-              {legacyStatusCount} older Late/Excused mark(s) are preserved for history. New manual marks use only Present or Absent.
+            <p className="mt-3 text-[11px] leading-5 text-[#AEB6C4]">
+              Parent alerts: <b>{alertPreview.absentees.length}</b> absent •{" "}
+              <b>{alertPreview.eligible.length}</b> Essential Alerts eligible •{" "}
+              <b>{alertPreview.skippedNotEnabled}</b> not enabled •{" "}
+              <b>{alertPreview.skippedNoPhone}</b> no phone
             </p>
-          ) : null}
+          </div>
         </section>
       ) : null}
 

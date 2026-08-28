@@ -6,7 +6,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 type KPI = {
   classLabel: string;
   enrolled: number;
+  timesOpened: number;
   marks: number;
+  boysPresent: number;
+  boysAbsent: number;
+  girlsPresent: number;
+  girlsAbsent: number;
+  unclassifiedPresent: number;
+  unclassifiedAbsent: number;
   present: number;
   absent: number;
   late: number;
@@ -88,11 +95,34 @@ export default function WeeklyAttendancePage() {
       const parsed: KPI[] = body
         .filter(Boolean)
         .map((line) => {
-          const [label, enrolled, marks, present, absent, late, excused, pct] = line.split(",");
+          const [
+            label,
+            enrolled,
+            timesOpened,
+            marks,
+            boysPresent,
+            boysAbsent,
+            girlsPresent,
+            girlsAbsent,
+            unclassifiedPresent,
+            unclassifiedAbsent,
+            present,
+            absent,
+            late,
+            excused,
+            pct,
+          ] = line.split(",");
           return {
             classLabel: label?.replace(/^"|"$/g, "").replace(/""/g, '"') || "Class",
             enrolled: Number(enrolled || 0),
+            timesOpened: Number(timesOpened || 0),
             marks: Number(marks || 0),
+            boysPresent: Number(boysPresent || 0),
+            boysAbsent: Number(boysAbsent || 0),
+            girlsPresent: Number(girlsPresent || 0),
+            girlsAbsent: Number(girlsAbsent || 0),
+            unclassifiedPresent: Number(unclassifiedPresent || 0),
+            unclassifiedAbsent: Number(unclassifiedAbsent || 0),
             present: Number(present || 0),
             absent: Number(absent || 0),
             late: Number(late || 0),
@@ -134,14 +164,35 @@ export default function WeeklyAttendancePage() {
   const totals = rows.reduce(
     (acc, r) => {
       acc.enrolled += r.enrolled;
+      acc.timesOpened += r.timesOpened;
       acc.marks += r.marks;
+      acc.boysPresent += r.boysPresent;
+      acc.boysAbsent += r.boysAbsent;
+      acc.girlsPresent += r.girlsPresent;
+      acc.girlsAbsent += r.girlsAbsent;
+      acc.unclassifiedPresent += r.unclassifiedPresent;
+      acc.unclassifiedAbsent += r.unclassifiedAbsent;
       acc.present += r.present;
       acc.absent += r.absent;
       acc.late += r.late;
       acc.excused += r.excused;
       return acc;
     },
-    { enrolled: 0, marks: 0, present: 0, absent: 0, late: 0, excused: 0 }
+    {
+      enrolled: 0,
+      timesOpened: 0,
+      marks: 0,
+      boysPresent: 0,
+      boysAbsent: 0,
+      girlsPresent: 0,
+      girlsAbsent: 0,
+      unclassifiedPresent: 0,
+      unclassifiedAbsent: 0,
+      present: 0,
+      absent: 0,
+      late: 0,
+      excused: 0,
+    }
   );
 
   const pctOverall =
@@ -277,14 +328,14 @@ export default function WeeklyAttendancePage() {
 
       <section className="grid grid-cols-1 gap-4 md:gap-5 lg:grid-cols-[1.5fr_minmax(0,1.3fr)]">
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <KpiCard label="Classes in report" value={fmt(rows.length)} hint="Distinct classes with marks in this range." />
-          <KpiCard label="Marks taken" value={fmt(totals.marks)} hint="Every time a register was taken." />
-          <KpiCard label="Present marks" value={fmt(totals.present)} hint="Total present across all marks." />
+          <KpiCard label="Classes in report" value={fmt(rows.length)} hint="Current school classes in this report." />
+          <KpiCard label="Times opened" value={fmt(totals.timesOpened)} hint="Certified, non-holiday class-days only." />
+          <KpiCard label="Present occurrences" value={fmt(totals.present)} hint="Certified present occurrences across all classes." />
           <KpiCard
             label="Overall present %"
             value={`${pctOverall.toFixed(1)}%`}
             tone={pctOverall >= 90 ? "good" : pctOverall >= 80 ? "ok" : "warn"}
-            hint="Whole-school attendance rate for the week."
+            hint="Present share of certified attendance marks."
           />
         </div>
 
@@ -359,7 +410,7 @@ export default function WeeklyAttendancePage() {
       <section className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
           <h2 className="text-sm font-semibold text-[#F7F4ED]">By class (Mon–Fri)</h2>
-          <p className="text-[11px] text-[#AEB6C4]">Each row is a class rolled up across the selected dates.</p>
+          <p className="text-[11px] text-[#AEB6C4]">Each row uses certified, non-holiday sessions only.</p>
         </div>
 
         <div className="overflow-x-auto">
@@ -368,11 +419,12 @@ export default function WeeklyAttendancePage() {
               <tr>
                 <Th label="Class" align="left" />
                 <Th label="Enrolled" />
-                <Th label="Marks" />
-                <Th label="Present" />
-                <Th label="Absent" />
-                <Th label="Late" />
-                <Th label="Excused" />
+                <Th label="Times Opened" />
+                <Th label="Boys P" />
+                <Th label="Boys A" />
+                <Th label="Girls P" />
+                <Th label="Girls A" />
+                <Th label="Total P" />
                 <Th label="Present %" />
               </tr>
             </thead>
@@ -381,18 +433,19 @@ export default function WeeklyAttendancePage() {
                 <tr key={`${r.classLabel}-${idx}`} className="border-b border-white/10 hover:bg-white/[0.03]">
                   <td className="whitespace-nowrap px-3 py-2 text-left text-[#F7F4ED]">{r.classLabel}</td>
                   <td className="px-3 py-2 text-right text-[#DCE1EA]">{fmt(r.enrolled)}</td>
-                  <td className="px-3 py-2 text-right text-[#DCE1EA]">{fmt(r.marks)}</td>
+                  <td className="px-3 py-2 text-right font-semibold text-[#F7F4ED]">{fmt(r.timesOpened)}</td>
+                  <td className="px-3 py-2 text-right text-[#DCE1EA]">{fmt(r.boysPresent)}</td>
+                  <td className="px-3 py-2 text-right text-[#DCE1EA]">{fmt(r.boysAbsent)}</td>
+                  <td className="px-3 py-2 text-right text-[#DCE1EA]">{fmt(r.girlsPresent)}</td>
+                  <td className="px-3 py-2 text-right text-[#DCE1EA]">{fmt(r.girlsAbsent)}</td>
                   <td className="px-3 py-2 text-right text-[#DCE1EA]">{fmt(r.present)}</td>
-                  <td className="px-3 py-2 text-right text-[#DCE1EA]">{fmt(r.absent)}</td>
-                  <td className="px-3 py-2 text-right text-[#DCE1EA]">{fmt(r.late)}</td>
-                  <td className="px-3 py-2 text-right text-[#DCE1EA]">{fmt(r.excused)}</td>
                   <td className="px-3 py-2 text-right font-mono text-[#F7F4ED]">{r.pct.toFixed(1)}%</td>
                 </tr>
               ))}
 
               {rows.length === 0 && !loading && (
                 <tr>
-                  <td className="px-4 py-6 text-center text-xs text-[#AEB6C4]" colSpan={8}>
+                  <td className="px-4 py-6 text-center text-xs text-[#AEB6C4]" colSpan={9}>
                     No data in this range yet.
                   </td>
                 </tr>

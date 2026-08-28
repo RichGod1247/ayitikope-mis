@@ -38,7 +38,14 @@ type EnrolledRow = { classroomId: string; enrolled: number };
 
 type StatRow = {
   classroomId: string;
+  timesOpened: number;
   marks: number;
+  boysPresent: number;
+  boysAbsent: number;
+  girlsPresent: number;
+  girlsAbsent: number;
+  unclassifiedPresent: number;
+  unclassifiedAbsent: number;
   present: number;
   absent: number;
   late: number;
@@ -49,7 +56,14 @@ export type WeeklyAttendanceRow = {
   classroomId: string;
   classLabel: string;
   enrolled: number;
+  timesOpened: number;
   marks: number;
+  boysPresent: number;
+  boysAbsent: number;
+  girlsPresent: number;
+  girlsAbsent: number;
+  unclassifiedPresent: number;
+  unclassifiedAbsent: number;
   present: number;
   absent: number;
   late: number;
@@ -63,7 +77,14 @@ export type WeeklyAttendanceStats = {
   totals: {
     classes: number;
     enrolled: number;
+    timesOpened: number;
     marks: number;
+    boysPresent: number;
+    boysAbsent: number;
+    girlsPresent: number;
+    girlsAbsent: number;
+    unclassifiedPresent: number;
+    unclassifiedAbsent: number;
     present: number;
     absent: number;
     late: number;
@@ -79,7 +100,14 @@ type CandidateRow = {
   classArm: string | null;
   className: string | null;
   enrolled: number;
+  timesOpened: number;
   marks: number;
+  boysPresent: number;
+  boysAbsent: number;
+  girlsPresent: number;
+  girlsAbsent: number;
+  unclassifiedPresent: number;
+  unclassifiedAbsent: number;
   present: number;
   absent: number;
   late: number;
@@ -221,7 +249,14 @@ export async function getWeeklyAttendanceStats(params: {
       totals: {
         classes: 0,
         enrolled: 0,
+        timesOpened: 0,
         marks: 0,
+        boysPresent: 0,
+        boysAbsent: 0,
+        girlsPresent: 0,
+        girlsAbsent: 0,
+        unclassifiedPresent: 0,
+        unclassifiedAbsent: 0,
         present: 0,
         absent: 0,
         late: 0,
@@ -237,7 +272,9 @@ export async function getWeeklyAttendanceStats(params: {
   const enrolledRows = await prisma.$queryRaw<EnrolledRow[]>`
     SELECT st."classroomId", COUNT(st."id")::int AS enrolled
     FROM "edulife_os"."Student" st
-    WHERE st."classroomId" IN (${Prisma.join(classroomIds)})
+    WHERE st."tenantId" = ${tenantId}
+      AND st."status" = 'ACTIVE'
+      AND st."classroomId" IN (${Prisma.join(classroomIds)})
     GROUP BY st."classroomId"
   `;
 
@@ -249,19 +286,58 @@ export async function getWeeklyAttendanceStats(params: {
       SELECT s."id" AS "sessionId", s."classroomId"
       FROM "edulife_os"."AttendanceSession" s
       WHERE s."tenantId" = ${tenantId}
+        AND s."certifiedAt" IS NOT NULL
         AND s."isHoliday" = false
         AND s."date"::date BETWEEN ${start}::date AND ${end}::date
         AND s."classroomId" IN (${Prisma.join(classroomIds)})
+    ),
+    tenant_marks AS (
+      SELECT
+        m."id",
+        m."sessionId",
+        m."status",
+        st."sex",
+        st."gender"
+      FROM "edulife_os"."AttendanceMark" m
+      JOIN "edulife_os"."Student" st
+        ON st."id" = m."studentId"
+       AND st."tenantId" = ${tenantId}
     )
     SELECT
       rs."classroomId",
-      COUNT(m."id")::int AS marks,
-      COUNT(CASE WHEN m."status" = 'PRESENT' THEN 1 END)::int AS present,
-      COUNT(CASE WHEN m."status" = 'ABSENT'  THEN 1 END)::int AS absent,
-      COUNT(CASE WHEN m."status" = 'LATE'    THEN 1 END)::int AS late,
-      COUNT(CASE WHEN m."status" = 'EXCUSED' THEN 1 END)::int AS excused
+      COUNT(DISTINCT rs."sessionId")::int AS "timesOpened",
+      COUNT(tm."id")::int AS marks,
+      COUNT(CASE
+        WHEN tm."status" = 'PRESENT'
+         AND UPPER(BTRIM(COALESCE(tm."sex", tm."gender", ''))) = 'MALE'
+        THEN 1 END)::int AS "boysPresent",
+      COUNT(CASE
+        WHEN tm."status" = 'ABSENT'
+         AND UPPER(BTRIM(COALESCE(tm."sex", tm."gender", ''))) = 'MALE'
+        THEN 1 END)::int AS "boysAbsent",
+      COUNT(CASE
+        WHEN tm."status" = 'PRESENT'
+         AND UPPER(BTRIM(COALESCE(tm."sex", tm."gender", ''))) = 'FEMALE'
+        THEN 1 END)::int AS "girlsPresent",
+      COUNT(CASE
+        WHEN tm."status" = 'ABSENT'
+         AND UPPER(BTRIM(COALESCE(tm."sex", tm."gender", ''))) = 'FEMALE'
+        THEN 1 END)::int AS "girlsAbsent",
+      COUNT(CASE
+        WHEN tm."status" = 'PRESENT'
+         AND UPPER(BTRIM(COALESCE(tm."sex", tm."gender", ''))) NOT IN ('MALE', 'FEMALE')
+        THEN 1 END)::int AS "unclassifiedPresent",
+      COUNT(CASE
+        WHEN tm."status" = 'ABSENT'
+         AND UPPER(BTRIM(COALESCE(tm."sex", tm."gender", ''))) NOT IN ('MALE', 'FEMALE')
+        THEN 1 END)::int AS "unclassifiedAbsent",
+      COUNT(CASE WHEN tm."status" = 'PRESENT' THEN 1 END)::int AS present,
+      COUNT(CASE WHEN tm."status" = 'ABSENT'  THEN 1 END)::int AS absent,
+      COUNT(CASE WHEN tm."status" = 'LATE'    THEN 1 END)::int AS late,
+      COUNT(CASE WHEN tm."status" = 'EXCUSED' THEN 1 END)::int AS excused
     FROM range_sessions rs
-    LEFT JOIN "edulife_os"."AttendanceMark" m ON m."sessionId" = rs."sessionId"
+    LEFT JOIN tenant_marks tm
+      ON tm."sessionId" = rs."sessionId"
     GROUP BY rs."classroomId"
   `;
 
@@ -272,7 +348,14 @@ export async function getWeeklyAttendanceStats(params: {
     const enrolled = enrolledMap.get(c.classroomId) ?? 0;
     const st = statsMap.get(c.classroomId) ?? {
       classroomId: c.classroomId,
+      timesOpened: 0,
       marks: 0,
+      boysPresent: 0,
+      boysAbsent: 0,
+      girlsPresent: 0,
+      girlsAbsent: 0,
+      unclassifiedPresent: 0,
+      unclassifiedAbsent: 0,
       present: 0,
       absent: 0,
       late: 0,
@@ -285,7 +368,14 @@ export async function getWeeklyAttendanceStats(params: {
       classArm: c.classArm,
       className: c.className,
       enrolled,
+      timesOpened: st.timesOpened,
       marks: st.marks,
+      boysPresent: st.boysPresent,
+      boysAbsent: st.boysAbsent,
+      girlsPresent: st.girlsPresent,
+      girlsAbsent: st.girlsAbsent,
+      unclassifiedPresent: st.unclassifiedPresent,
+      unclassifiedAbsent: st.unclassifiedAbsent,
       present: st.present,
       absent: st.absent,
       late: st.late,
@@ -329,7 +419,14 @@ export async function getWeeklyAttendanceStats(params: {
       classroomId: chosen.classroomId,
       classLabel: singleStreamLabelFromRow(chosen),
       enrolled: chosen.enrolled,
+      timesOpened: chosen.timesOpened,
       marks: chosen.marks,
+      boysPresent: chosen.boysPresent,
+      boysAbsent: chosen.boysAbsent,
+      girlsPresent: chosen.girlsPresent,
+      girlsAbsent: chosen.girlsAbsent,
+      unclassifiedPresent: chosen.unclassifiedPresent,
+      unclassifiedAbsent: chosen.unclassifiedAbsent,
       present: chosen.present,
       absent: chosen.absent,
       late: chosen.late,
@@ -348,7 +445,14 @@ export async function getWeeklyAttendanceStats(params: {
       classroomId: row.classroomId,
       classLabel: classLabelFromParts(row.classGrade, row.classArm, row.className),
       enrolled: row.enrolled,
+      timesOpened: row.timesOpened,
       marks: row.marks,
+      boysPresent: row.boysPresent,
+      boysAbsent: row.boysAbsent,
+      girlsPresent: row.girlsPresent,
+      girlsAbsent: row.girlsAbsent,
+      unclassifiedPresent: row.unclassifiedPresent,
+      unclassifiedAbsent: row.unclassifiedAbsent,
       present: row.present,
       absent: row.absent,
       late: row.late,
@@ -361,7 +465,14 @@ export async function getWeeklyAttendanceStats(params: {
     (acc, r) => {
       acc.classes += 1;
       acc.enrolled += r.enrolled;
+      acc.timesOpened += r.timesOpened;
       acc.marks += r.marks;
+      acc.boysPresent += r.boysPresent;
+      acc.boysAbsent += r.boysAbsent;
+      acc.girlsPresent += r.girlsPresent;
+      acc.girlsAbsent += r.girlsAbsent;
+      acc.unclassifiedPresent += r.unclassifiedPresent;
+      acc.unclassifiedAbsent += r.unclassifiedAbsent;
       acc.present += r.present;
       acc.absent += r.absent;
       acc.late += r.late;
@@ -371,7 +482,14 @@ export async function getWeeklyAttendanceStats(params: {
     {
       classes: 0,
       enrolled: 0,
+      timesOpened: 0,
       marks: 0,
+      boysPresent: 0,
+      boysAbsent: 0,
+      girlsPresent: 0,
+      girlsAbsent: 0,
+      unclassifiedPresent: 0,
+      unclassifiedAbsent: 0,
       present: 0,
       absent: 0,
       late: 0,
