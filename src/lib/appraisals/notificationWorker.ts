@@ -7,6 +7,10 @@ import {
 import { sendEmail } from "@/lib/email/sendEmail";
 import { sendSms } from "@/lib/sms";
 import {
+  getStaffEssentialAlertEligibilityMap,
+  type StaffEssentialAlertEligibility,
+} from "@/lib/essentialAlerts/enrollment";
+import {
   claimAppraisalNotifications,
   getAppraisalNotificationHealth,
   markAppraisalNotificationFailed,
@@ -24,6 +28,10 @@ type DeliveryPayload = {
 const DEFAULT_APPRAISAL_SMS_DELIVERY = {
   template: "director-feedback-cycle-opened",
 } as const;
+
+const OFFICIAL_APPRAISAL_PURPOSE = "OFFICIAL_APPRAISAL" as const;
+const OFFICIAL_APPRAISAL_SMS_AUTHORITY =
+  "STAFF_ESSENTIAL_ALERT_ENROLLMENT" as const;
 
 export type AppraisalNotificationWorkerResult = {
   claimed: number;
@@ -89,6 +97,32 @@ function deliveryPayload(
   };
 }
 
+
+function requireCurrentOfficialAppraisalSmsDestination(input: {
+  notification: AppraisalNotification;
+  eligibility: StaffEssentialAlertEligibility | undefined;
+}) {
+  if (!input.notification.recipientUserId) {
+    throw new Error(
+      "APPRAISAL_NOTIFICATION_SMS_RECIPIENT_IDENTITY_MISSING",
+    );
+  }
+
+  if (!input.eligibility) {
+    throw new Error(
+      "APPRAISAL_NOTIFICATION_SMS_ESSENTIAL_ALERT_NOT_REVALIDATED",
+    );
+  }
+
+  if (!input.eligibility.eligible || !input.eligibility.phoneNorm) {
+    throw new Error(
+      `APPRAISAL_NOTIFICATION_SMS_ESSENTIAL_ALERT_NOT_ELIGIBLE:${input.eligibility.reason}`,
+    );
+  }
+
+  return input.eligibility.phoneNorm;
+}
+
 async function deliverSms(
   notification: AppraisalNotification,
 ) {
@@ -99,11 +133,31 @@ async function deliverSms(
       "APPRAISAL_NOTIFICATION_SMS_TENANT_MISSING",
     );
   }
+  if (!notification.recipientUserId) {
+    throw new Error(
+      "APPRAISAL_NOTIFICATION_SMS_RECIPIENT_IDENTITY_MISSING",
+    );
+  }
+
+  const eligibilityByUserId =
+    await getStaffEssentialAlertEligibilityMap({
+      tenantId: notification.recipientTenantId,
+      purpose: OFFICIAL_APPRAISAL_PURPOSE,
+      userIds: [notification.recipientUserId],
+    });
+  const eligibility = eligibilityByUserId.get(
+    notification.recipientUserId,
+  );
+  const currentDestination =
+    requireCurrentOfficialAppraisalSmsDestination({
+      notification,
+      eligibility,
+    });
 
   const result = await sendSms({
     tenantId: notification.recipientTenantId,
     actorId: null,
-    to: delivery.destination,
+    to: currentDestination,
     message: delivery.text,
     template: delivery.template ?? DEFAULT_APPRAISAL_SMS_DELIVERY.template,
     payload: {
@@ -112,6 +166,10 @@ async function deliverSms(
       type: notification.type,
       channel: notification.channel,
       idempotencyKey: notification.idempotencyKey,
+      essentialAlertPurpose: OFFICIAL_APPRAISAL_PURPOSE,
+      essentialAlertAuthority: OFFICIAL_APPRAISAL_SMS_AUTHORITY,
+      essentialAlertEligibility: eligibility?.reason ?? null,
+      queuedDestinationRevalidated: true,
     },
   });
 

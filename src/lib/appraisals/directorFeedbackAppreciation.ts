@@ -11,6 +11,10 @@ import { assertAppraisalAuthority } from "@/lib/appraisals/authority";
 import { DIRECTOR_FEEDBACK_POLICY } from "@/lib/appraisals/directorFeedback";
 import { prisma } from "@/lib/prisma";
 import { effectiveRole } from "@/lib/roleRouting";
+import {
+  getStaffEssentialAlertEligibilityMap,
+  type StaffEssentialAlertEligibility,
+} from "@/lib/essentialAlerts/enrollment";
 
 export const DIRECTOR_FEEDBACK_APPRECIATION_POLICY = {
   notificationType: AppraisalNotificationType.PARTICIPATION_APPRECIATION,
@@ -42,13 +46,6 @@ type AppreciationParticipant = {
   respondentTenantId: string | null;
   respondent: {
     email: string;
-    phone: string | null;
-    phoneNorm: string | null;
-    smsOptIn: boolean;
-    teacherProfiles: Array<{
-      tenantId: string;
-      phone: string;
-    }>;
   };
 };
 
@@ -107,45 +104,73 @@ function safeEmail(value: unknown) {
   return email;
 }
 
-function safePhone(value: unknown) {
-  const raw = clean(value);
-  if (!raw) return null;
 
-  const digits = raw.replace(/\D/g, "");
-  if (!digits) return null;
+const OFFICIAL_APPRAISAL_PURPOSE = "OFFICIAL_APPRAISAL" as const;
+const OFFICIAL_APPRAISAL_SMS_AUTHORITY =
+  "STAFF_ESSENTIAL_ALERT_ENROLLMENT" as const;
+const OFFICIAL_APPRAISAL_ELIGIBILITY_CONCURRENCY = 8;
 
-  if (digits.length === 10 && digits.startsWith("0")) {
-    return `+233${digits.slice(1)}`;
-  }
-
-  if (digits.length === 12 && digits.startsWith("233")) {
-    return `+${digits}`;
-  }
-
-  if (digits.length >= 10 && digits.length <= 15) {
-    return `+${digits}`;
-  }
-
-  return null;
+function staffEligibilityKey(tenantId: string, userId: string) {
+  return `${tenantId}\u0000${userId}`;
 }
 
-function participantPhone(participant: AppreciationParticipant) {
-  const direct =
-    safePhone(participant.respondent.phoneNorm) ??
-    safePhone(participant.respondent.phone);
+async function resolveOfficialAppraisalSmsEligibility(
+  participants: AppreciationParticipant[],
+) {
+  const byTenant = new Map<string, Set<string>>();
 
-  if (direct) return direct;
+  for (const participant of participants) {
+    const tenantId = clean(participant.respondentTenantId);
+    const userId = clean(participant.respondentUserId);
+    if (!tenantId || !userId) continue;
+    const users = byTenant.get(tenantId) ?? new Set<string>();
+    users.add(userId);
+    byTenant.set(tenantId, users);
+  }
 
-  const tenantProfile = participant.respondent.teacherProfiles.find(
-    (profile) =>
-      participant.respondentTenantId &&
-      profile.tenantId === participant.respondentTenantId,
-  );
+  const output = new Map<string, StaffEssentialAlertEligibility>();
+  const entries = [...byTenant.entries()];
 
-  return (
-    safePhone(tenantProfile?.phone) ??
-    safePhone(participant.respondent.teacherProfiles[0]?.phone)
-  );
+  for (let offset = 0; offset < entries.length; offset += OFFICIAL_APPRAISAL_ELIGIBILITY_CONCURRENCY) {
+    const batch = entries.slice(
+      offset,
+      offset + OFFICIAL_APPRAISAL_ELIGIBILITY_CONCURRENCY,
+    );
+    const resolved = await Promise.all(
+      batch.map(async ([tenantId, users]) => ({
+        tenantId,
+        values: await getStaffEssentialAlertEligibilityMap({
+          tenantId,
+          purpose: OFFICIAL_APPRAISAL_PURPOSE,
+          userIds: [...users],
+        }),
+      })),
+    );
+
+    for (const result of resolved) {
+      for (const [userId, eligibility] of result.values) {
+        output.set(staffEligibilityKey(result.tenantId, userId), eligibility);
+      }
+    }
+  }
+
+  return output;
+}
+
+function officialAppraisalSmsLastError(input: {
+  tenantId: string | null;
+  eligibility: StaffEssentialAlertEligibility | undefined;
+}) {
+  if (!input.tenantId) {
+    return "ESSENTIAL_ALERT_OFFICIAL_APPRAISAL_TENANT_UNAVAILABLE";
+  }
+  if (!input.eligibility) {
+    return "ESSENTIAL_ALERT_OFFICIAL_APPRAISAL_NOT_REVALIDATED";
+  }
+  if (!input.eligibility.eligible || !input.eligibility.phoneNorm) {
+    return `ESSENTIAL_ALERT_OFFICIAL_APPRAISAL_${input.eligibility.reason}`;
+  }
+  return null;
 }
 
 function notificationKey(input: {
@@ -187,6 +212,7 @@ export function buildDirectorFeedbackAppreciationRows(input: {
   cycleId: string;
   jurisdictionName: string | null;
   participants: AppreciationParticipant[];
+  smsEligibilityByRecipient?: Map<string, StaffEssentialAlertEligibility>;
   now: Date;
 }): Prisma.AppraisalNotificationCreateManyInput[] {
   const common = commonPayload(input);
@@ -194,11 +220,21 @@ export function buildDirectorFeedbackAppreciationRows(input: {
 
   for (const participant of input.participants) {
     const email = safeEmail(participant.respondent.email);
-    const phone = participantPhone(participant);
-    const smsAllowed = participant.respondent.smsOptIn !== false;
-    const smsDeliverable = Boolean(
-      phone && smsAllowed && participant.respondentTenantId,
-    );
+    const recipientTenantId = clean(participant.respondentTenantId) || null;
+    const smsEligibility = recipientTenantId
+      ? input.smsEligibilityByRecipient?.get(
+          staffEligibilityKey(recipientTenantId, participant.respondentUserId),
+        )
+      : undefined;
+    const smsDestination =
+      smsEligibility?.eligible && smsEligibility.phoneNorm
+        ? smsEligibility.phoneNorm
+        : null;
+    const smsDeliverable = Boolean(recipientTenantId && smsDestination);
+    const smsLastError = officialAppraisalSmsLastError({
+      tenantId: recipientTenantId,
+      eligibility: smsEligibility,
+    });
 
     rows.push({
       cycleId: input.cycleId,
@@ -235,9 +271,12 @@ export function buildDirectorFeedbackAppreciationRows(input: {
       }),
       payload: {
         ...common,
+        essentialAlertPurpose: OFFICIAL_APPRAISAL_PURPOSE,
+        essentialAlertAuthority: OFFICIAL_APPRAISAL_SMS_AUTHORITY,
+        essentialAlertEligibility: smsEligibility?.reason ?? null,
         delivery: smsDeliverable
           ? {
-              destination: phone!,
+              destination: smsDestination!,
               text: APPRECIATION_SMS,
               template: DIRECTOR_FEEDBACK_APPRECIATION_POLICY.smsTemplate,
             }
@@ -246,13 +285,7 @@ export function buildDirectorFeedbackAppreciationRows(input: {
       attempts: 0,
       maxAttempts: DIRECTOR_FEEDBACK_APPRECIATION_POLICY.maximumAttempts,
       priority: DIRECTOR_FEEDBACK_APPRECIATION_POLICY.priority,
-      lastError: !smsAllowed
-        ? "SMS_OPT_OUT"
-        : !participant.respondentTenantId
-          ? "TENANT_UNAVAILABLE"
-          : phone
-            ? null
-            : "PHONE_UNAVAILABLE",
+      lastError: smsLastError,
     });
 
     rows.push({
@@ -423,15 +456,6 @@ async function finalizedParticipants(cycleId: string) {
       respondent: {
         select: {
           email: true,
-          phone: true,
-          phoneNorm: true,
-          smsOptIn: true,
-          teacherProfiles: {
-            select: {
-              tenantId: true,
-              phone: true,
-            },
-          },
         },
       },
     },
@@ -540,10 +564,14 @@ export async function sendDirectorFeedbackAppreciation(input: {
     fail("DIRECTOR_FEEDBACK_APPRECIATION_NO_FINALIZED_PARTICIPANTS", 409);
   }
 
+  const smsEligibilityByRecipient =
+    await resolveOfficialAppraisalSmsEligibility(participants);
+
   const rows = buildDirectorFeedbackAppreciationRows({
     cycleId: cycle.id,
     jurisdictionName: cycle.targetZoneNameSnapshot,
     participants,
+    smsEligibilityByRecipient,
     now,
   });
 
@@ -572,6 +600,9 @@ export async function sendDirectorFeedbackAppreciation(input: {
               finalizedParticipants: participants.length,
               rowsCreated: created.count,
               channels: DIRECTOR_FEEDBACK_APPRECIATION_POLICY.channels,
+              essentialAlertPurpose: OFFICIAL_APPRAISAL_PURPOSE,
+              smsAuthority: OFFICIAL_APPRAISAL_SMS_AUTHORITY,
+              legacySmsOptInAuthoritative: false,
               providerDeliveryTriggered: false,
               respondentIdentityReturnedToDirector: false,
               schoolIdentityReturnedToDirector: false,

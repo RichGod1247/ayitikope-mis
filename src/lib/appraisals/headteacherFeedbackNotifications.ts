@@ -7,6 +7,10 @@ import {
   Prisma,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import {
+  getStaffEssentialAlertEligibilityMap,
+  type StaffEssentialAlertEligibility,
+} from "@/lib/essentialAlerts/enrollment";
 import { APPRAISAL_AUDIT_ACTIONS } from "@/lib/appraisals/audit";
 import {
   HEADTEACHER_FEEDBACK_POLICY,
@@ -65,13 +69,6 @@ type NotificationParticipantRecord = {
   invitedAt: Date | null;
   respondent: {
     email: string;
-    phone: string | null;
-    phoneNorm: string | null;
-    smsOptIn: boolean;
-    teacherProfiles: Array<{
-      tenantId: string;
-      phone: string;
-    }>;
   };
 };
 
@@ -149,6 +146,7 @@ export type EnsureHeadteacherFeedbackNotificationsInput = {
   userAgent?: string | null;
   now?: Date;
   database?: HeadteacherFeedbackNotificationDatabase;
+  essentialAlertEligibilityResolver?: StaffEssentialAlertEligibilityResolver;
 };
 
 export type EnsureHeadteacherFeedbackNotificationsResult = {
@@ -162,11 +160,13 @@ export type EnsureHeadteacherFeedbackNotificationsResult = {
 export type ApproveHeadteacherFeedbackWithNotificationsInput =
   ApproveAndOpenHeadteacherFeedbackCycleInput & {
     notificationDatabase?: HeadteacherFeedbackNotificationDatabase;
+    essentialAlertEligibilityResolver?: StaffEssentialAlertEligibilityResolver;
   };
 
 export type DirectOpenHeadteacherFeedbackWithNotificationsInput =
   DirectOpenHeadteacherFeedbackCycleInput & {
     notificationDatabase?: HeadteacherFeedbackNotificationDatabase;
+    essentialAlertEligibilityResolver?: StaffEssentialAlertEligibilityResolver;
   };
 
 export type HeadteacherFeedbackOpenedWithNotificationsResult = {
@@ -222,41 +222,28 @@ function safeEmail(value: unknown) {
   return email;
 }
 
-function safePhone(value: unknown) {
-  const raw = clean(value);
-  if (!raw) return null;
-  const digits = raw.replace(/\D/g, "");
-  if (!digits) return null;
-  if (digits.length === 10 && digits.startsWith("0")) {
-    return `+233${digits.slice(1)}`;
-  }
-  if (digits.length === 12 && digits.startsWith("233")) {
-    return `+${digits}`;
-  }
-  if (digits.length >= 10 && digits.length <= 15) {
-    return `+${digits}`;
-  }
-  return null;
-}
-
-function participantPhone(participant: NotificationParticipantRecord) {
-  const direct =
-    safePhone(participant.respondent.phoneNorm) ??
-    safePhone(participant.respondent.phone);
-  if (direct) return direct;
-
-  const matchingProfile = participant.respondent.teacherProfiles.find(
-    (profile) => profile.tenantId === participant.respondentTenantId,
-  );
-
-  return (
-    safePhone(matchingProfile?.phone) ??
-    safePhone(participant.respondent.teacherProfiles[0]?.phone)
-  );
-}
-
 function compactDate(value: Date) {
   return value.toISOString().slice(0, 10);
+}
+
+
+const OFFICIAL_APPRAISAL_PURPOSE = "OFFICIAL_APPRAISAL" as const;
+const OFFICIAL_APPRAISAL_SMS_AUTHORITY =
+  "STAFF_ESSENTIAL_ALERT_ENROLLMENT" as const;
+
+type StaffEssentialAlertEligibilityResolver =
+  typeof getStaffEssentialAlertEligibilityMap;
+
+function officialAppraisalSmsLastError(
+  eligibility: StaffEssentialAlertEligibility | undefined,
+) {
+  if (!eligibility) {
+    return "ESSENTIAL_ALERT_OFFICIAL_APPRAISAL_NOT_REVALIDATED";
+  }
+  if (!eligibility.eligible || !eligibility.phoneNorm) {
+    return `ESSENTIAL_ALERT_OFFICIAL_APPRAISAL_${eligibility.reason}`;
+  }
+  return null;
 }
 
 function notificationKey(input: {
@@ -300,6 +287,7 @@ export function buildHeadteacherFeedbackNotificationRows(input: {
   cycleId: string;
   deadlineAt: Date;
   participants: NotificationParticipantRecord[];
+  smsEligibilityByUserId?: Map<string, StaffEssentialAlertEligibility>;
   now: Date;
 }): Prisma.AppraisalNotificationCreateManyInput[] {
   const common = commonPayload(input);
@@ -307,8 +295,14 @@ export function buildHeadteacherFeedbackNotificationRows(input: {
 
   for (const participant of input.participants) {
     const email = safeEmail(participant.respondent.email);
-    const phone = participantPhone(participant);
-    const smsAllowed = participant.respondent.smsOptIn !== false;
+    const smsEligibility = input.smsEligibilityByUserId?.get(
+      participant.respondentUserId,
+    );
+    const smsDestination =
+      smsEligibility?.eligible && smsEligibility.phoneNorm
+        ? smsEligibility.phoneNorm
+        : null;
+    const smsLastError = officialAppraisalSmsLastError(smsEligibility);
 
     rows.push({
       cycleId: input.cycleId,
@@ -335,10 +329,9 @@ export function buildHeadteacherFeedbackNotificationRows(input: {
       recipientTenantId: participant.respondentTenantId,
       channel: AppraisalNotificationChannel.SMS,
       type: HEADTEACHER_FEEDBACK_NOTIFICATION_POLICY.notificationType,
-      status:
-        phone && smsAllowed
-          ? AppraisalNotificationStatus.PENDING
-          : AppraisalNotificationStatus.SKIPPED,
+      status: smsDestination
+        ? AppraisalNotificationStatus.PENDING
+        : AppraisalNotificationStatus.SKIPPED,
       idempotencyKey: notificationKey({
         cycleId: input.cycleId,
         respondentUserId: participant.respondentUserId,
@@ -346,9 +339,12 @@ export function buildHeadteacherFeedbackNotificationRows(input: {
       }),
       payload: {
         ...common,
-        delivery: phone
+        essentialAlertPurpose: OFFICIAL_APPRAISAL_PURPOSE,
+        essentialAlertAuthority: OFFICIAL_APPRAISAL_SMS_AUTHORITY,
+        essentialAlertEligibility: smsEligibility?.reason ?? null,
+        delivery: smsDestination
           ? {
-              destination: phone,
+              destination: smsDestination,
               text: `Confidential Headteacher feedback is open in EduLife OS. Submit by ${compactDate(
                 input.deadlineAt,
               )}. Sign in to respond.`,
@@ -360,11 +356,7 @@ export function buildHeadteacherFeedbackNotificationRows(input: {
       attempts: 0,
       maxAttempts: HEADTEACHER_FEEDBACK_NOTIFICATION_POLICY.maximumAttempts,
       priority: HEADTEACHER_FEEDBACK_NOTIFICATION_POLICY.priority,
-      lastError: !smsAllowed
-        ? "SMS_OPT_OUT"
-        : phone
-          ? null
-          : "PHONE_UNAVAILABLE",
+      lastError: smsLastError,
     });
 
     rows.push({
@@ -604,12 +596,6 @@ export async function ensureHeadteacherFeedbackCycleNotifications(
       respondent: {
         select: {
           email: true,
-          phone: true,
-          phoneNorm: true,
-          smsOptIn: true,
-          teacherProfiles: {
-            select: { tenantId: true, phone: true },
-          },
         },
       },
     },
@@ -634,10 +620,20 @@ export async function ensureHeadteacherFeedbackCycleNotifications(
     seen.add(participant.respondentUserId);
   }
 
+  const eligibilityResolver =
+    input.essentialAlertEligibilityResolver ??
+    getStaffEssentialAlertEligibilityMap;
+  const smsEligibilityByUserId = await eligibilityResolver({
+    tenantId: targetTenantId,
+    purpose: OFFICIAL_APPRAISAL_PURPOSE,
+    userIds: participants.map((participant) => participant.respondentUserId),
+  });
+
   const rows = buildHeadteacherFeedbackNotificationRows({
     cycleId,
     deadlineAt,
     participants,
+    smsEligibilityByUserId,
     now,
   });
 
@@ -679,6 +675,9 @@ export async function ensureHeadteacherFeedbackCycleNotifications(
               rowsCreated: created.count,
               channels:
                 HEADTEACHER_FEEDBACK_NOTIFICATION_POLICY.channels,
+              essentialAlertPurpose: OFFICIAL_APPRAISAL_PURPOSE,
+              smsAuthority: OFFICIAL_APPRAISAL_SMS_AUTHORITY,
+              legacySmsOptInAuthoritative: false,
               respondentIdentitiesIncluded: false,
               contactDestinationsIncluded: false,
               individualStatusesIncluded: false,
@@ -725,6 +724,8 @@ export async function approveAndOpenHeadteacherFeedbackCycleWithNotifications(
     userAgent: input.userAgent,
     now: input.now,
     database: input.notificationDatabase,
+    essentialAlertEligibilityResolver:
+      input.essentialAlertEligibilityResolver,
   });
 
   return {
@@ -749,6 +750,8 @@ export async function directOpenHeadteacherFeedbackCycleWithNotifications(
     userAgent: input.userAgent,
     now: input.now,
     database: input.notificationDatabase,
+    essentialAlertEligibilityResolver:
+      input.essentialAlertEligibilityResolver,
   });
 
   return {

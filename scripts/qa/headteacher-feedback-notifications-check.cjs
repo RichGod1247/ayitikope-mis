@@ -67,6 +67,31 @@ const policy = {
 Module._load = function mockLoad(request, parent, isMain) {
   if (request === "@prisma/client") return prismaClientMock;
   if (request === "@/lib/prisma") return { prisma: {} };
+  if (request === "@/lib/essentialAlerts/enrollment") {
+    return {
+      async getStaffEssentialAlertEligibilityMap(input) {
+        const result = new Map();
+        for (const userId of input.userIds ?? []) {
+          if (userId === "teacher-one") {
+            result.set(userId, {
+              eligible: true,
+              reason: "ELIGIBLE",
+              phoneNorm: "+233244000001",
+              enrollmentStatus: "ENROLLED",
+            });
+          } else {
+            result.set(userId, {
+              eligible: false,
+              reason: "NOT_ENROLLED",
+              phoneNorm: "+233244000002",
+              enrollmentStatus: null,
+            });
+          }
+        }
+        return result;
+      },
+    };
+  }
   if (request === "@/lib/appraisals/audit") {
     return { APPRAISAL_AUDIT_ACTIONS: { NOTIFICATION_QUEUED: "APPRAISAL_NOTIFICATION_QUEUED" } };
   }
@@ -259,10 +284,8 @@ function fakeDatabase(input = {}) {
 async function main() {
   const servicePath = "src/lib/appraisals/headteacherFeedbackNotifications.ts";
   const workerPath = "src/lib/appraisals/notificationWorker.ts";
-  const indexPath = "src/lib/appraisals/index.ts";
   const serviceSource = read(servicePath);
   const workerSource = read(workerPath);
-  const indexSource = read(indexPath);
 
   contains(serviceSource, "buildHeadteacherFeedbackNotificationRows", "rows:builder");
   contains(serviceSource, "ensureHeadteacherFeedbackCycleNotifications", "rows:ensure");
@@ -273,6 +296,10 @@ async function main() {
   contains(serviceSource, "AppraisalNotificationStatus.PENDING", "provider:queued");
   contains(serviceSource, "AppraisalNotificationStatus.SKIPPED", "provider:contact-fallback");
   contains(serviceSource, "providerCalled: false", "audit:no-provider");
+  contains(serviceSource, 'const OFFICIAL_APPRAISAL_PURPOSE = "OFFICIAL_APPRAISAL" as const;', "essential-alerts:purpose");
+  contains(serviceSource, "getStaffEssentialAlertEligibilityMap", "essential-alerts:authority-helper");
+  contains(serviceSource, "STAFF_ESSENTIAL_ALERT_ENROLLMENT", "essential-alerts:authority-marker");
+  excludes(serviceSource, "smsOptIn", "essential-alerts:no-legacy-sms-opt-in-authority");
   contains(serviceSource, "respondentIdentitiesIncluded: false", "audit:no-identities");
   contains(serviceSource, "contactDestinationsIncluded: false", "audit:no-contacts");
   excludes(serviceSource, "sendSms", "service:no-sms-provider");
@@ -282,7 +309,6 @@ async function main() {
   contains(workerSource, 'const template = readString(payload.delivery, "template");', "worker:template-read");
   contains(workerSource, 'template: delivery.template ?? DEFAULT_APPRAISAL_SMS_DELIVERY.template', "worker:generic-template");
   contains(workerSource, 'template: "director-feedback-cycle-opened"', "worker:director-fallback-preserved");
-  contains(indexSource, 'export * from "./headteacherFeedbackNotifications";', "barrel:export");
 
   const serviceAbsolute = path.join(repoRoot, servicePath);
   delete require.cache[require.resolve(serviceAbsolute)];
@@ -307,6 +333,26 @@ async function main() {
     cycleId: "cycle-open",
     deadlineAt: new Date("2026-08-08T08:00:00.000Z"),
     participants,
+    smsEligibilityByUserId: new Map([
+      [
+        "teacher-one",
+        {
+          eligible: true,
+          reason: "ELIGIBLE",
+          phoneNorm: "+233244000001",
+          enrollmentStatus: "ENROLLED",
+        },
+      ],
+      [
+        "teacher-two",
+        {
+          eligible: false,
+          reason: "NOT_ENROLLED",
+          phoneNorm: "+233244000002",
+          enrollmentStatus: null,
+        },
+      ],
+    ]),
     now: new Date("2026-08-01T08:01:00.000Z"),
   });
 
@@ -409,7 +455,9 @@ async function main() {
   console.log("Open-flow integration          : C3 approval + C4 direct-open wrappers");
   console.log("Notification event             : CYCLE_OPENED");
   console.log("In-app assignment              : immediately SENT");
-  console.log("SMS/email                      : PENDING or contact-safe SKIPPED");
+  console.log("SMS authority                  : OFFICIAL_APPRAISAL Essential Alert enrollment");
+  console.log("SMS                            : PENDING only when currently eligible");
+  console.log("Email                          : PENDING or contact-safe SKIPPED");
   console.log("Queue idempotency              : unique per cycle/teacher/channel");
   console.log("Repeated seeding               : EXISTING_MATCH");
   console.log("Participant invitedAt          : set once");

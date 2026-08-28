@@ -10,35 +10,23 @@ const ts = require("typescript");
 const repoRoot = path.resolve(__dirname, "..", "..");
 
 function fail(message, detail) {
-  const suffix =
-    detail === undefined ? "" : `\n${JSON.stringify(detail, null, 2)}`;
+  const suffix = detail === undefined ? "" : `\n${JSON.stringify(detail, null, 2)}`;
   throw new Error(`${message}${suffix}`);
 }
-
 function assert(condition, message, detail) {
   if (!condition) fail(message, detail);
 }
-
 function read(relativePath) {
   const absolutePath = path.join(repoRoot, relativePath);
-  assert(fs.existsSync(absolutePath), "N7_U17_REQUIRED_FILE_MISSING", {
-    relativePath,
-  });
+  assert(fs.existsSync(absolutePath), "N7_U17_REQUIRED_FILE_MISSING", { relativePath });
   return fs.readFileSync(absolutePath, "utf8");
 }
-
 function contains(source, marker, label) {
-  assert(source.includes(marker), `N7_U17_MARKER_MISSING:${label}`, {
-    marker,
-  });
+  assert(source.includes(marker), `N7_U17_MARKER_MISSING:${label}`, { marker });
 }
-
 function excludes(source, marker, label) {
-  assert(!source.includes(marker), `N7_U17_FORBIDDEN_MARKER:${label}`, {
-    marker,
-  });
+  assert(!source.includes(marker), `N7_U17_FORBIDDEN_MARKER:${label}`, { marker });
 }
-
 function transpile(relativePath, source) {
   const output = ts.transpileModule(source, {
     fileName: relativePath,
@@ -52,11 +40,9 @@ function transpile(relativePath, source) {
       strict: true,
     },
   });
-
   const errors = (output.diagnostics ?? []).filter(
     (diagnostic) => diagnostic.category === ts.DiagnosticCategory.Error,
   );
-
   if (errors.length) {
     fail("N7_U17_TYPESCRIPT_TRANSPILE_FAILED", {
       relativePath,
@@ -71,8 +57,7 @@ function main() {
   const schemaPath = "prisma/schema.prisma";
   const migrationPath =
     "prisma/migrations/20260813233000_director_feedback_participation_appreciation/migration.sql";
-  const servicePath =
-    "src/lib/appraisals/directorFeedbackAppreciation.ts";
+  const servicePath = "src/lib/appraisals/directorFeedbackAppreciation.ts";
   const routePath =
     "src/app/api/district/director-feedback/review/appreciation/route.ts";
   const clientPath =
@@ -96,108 +81,41 @@ function main() {
     transpile(relativePath, source);
   }
 
-  contains(
-    schema,
-    "PARTICIPATION_APPRECIATION",
-    "schema:dedicated-notification-type",
-  );
-  contains(
-    migration,
-    "ALTER TYPE \"AppraisalNotificationType\"",
-    "migration:enum-target",
-  );
+  contains(schema, "PARTICIPATION_APPRECIATION", "schema:dedicated-notification-type");
+  contains(migration, 'ALTER TYPE "AppraisalNotificationType"', "migration:enum-target");
   contains(
     migration,
     "ADD VALUE IF NOT EXISTS 'PARTICIPATION_APPRECIATION'",
     "migration:idempotent-enum-value",
   );
 
-  contains(
-    service,
-    "AppraisalNotificationType.PARTICIPATION_APPRECIATION",
-    "service:truthful-event-type",
-  );
-  contains(
-    service,
-    "AppraisalCycleStatus.RELEASED",
-    "service:completed-review-only",
-  );
-  contains(
-    service,
-    "AppraisalParticipantStatus.FINALIZED",
-    "service:finalized-participants-only",
-  );
-  contains(
-    service,
-    '"VIEW_DIRECTOR_FEEDBACK_RESULTS"',
-    "service:director-authority",
-  );
-  contains(
-    service,
-    "cycle.targetUserId !== actorUserId",
-    "service:own-cycle-scope",
-  );
-  contains(
-    service,
-    'cycle.targetRoleSnapshot !== "DISTRICT_DIRECTOR"',
-    "service:director-target-scope",
-  );
-  contains(
-    service,
-    "AppraisalNotificationChannel.IN_APP",
-    "service:in-app-channel",
-  );
-  contains(
-    service,
-    "AppraisalNotificationChannel.SMS",
-    "service:sms-channel",
-  );
-  contains(
-    service,
-    "AppraisalNotificationChannel.EMAIL",
-    "service:email-channel",
-  );
-  contains(service, "skipDuplicates: true", "service:idempotent-outbox");
-  contains(
-    service,
-    'template: DIRECTOR_FEEDBACK_APPRECIATION_POLICY.smsTemplate',
-    "service:dedicated-sms-template",
-  );
-  contains(
-    service,
-    'title: APPRECIATION_TITLE',
-    "service:prepared-title",
-  );
-  contains(
-    service,
-    "Thank you for taking part in my confidential leadership feedback exercise.",
-    "service:prepared-appreciation-message",
-  );
-  contains(
-    service,
-    "respondentIdentityReturnedToDirector: false",
-    "service:no-identity-audit",
-  );
-  contains(
-    service,
-    "schoolIdentityReturnedToDirector: false",
-    "service:no-school-audit",
-  );
-  contains(
-    service,
-    "scoreValuesRecordedInAudit: false",
-    "service:no-score-audit",
-  );
-  contains(
-    service,
-    "providerDeliveryTriggered: false",
-    "service:no-provider-in-transaction",
-  );
-  contains(
-    service,
-    "Prisma.TransactionIsolationLevel.Serializable",
-    "service:serializable-transaction",
-  );
+  for (const [marker, label] of [
+    ["AppraisalNotificationType.PARTICIPATION_APPRECIATION", "service:truthful-event-type"],
+    ["AppraisalCycleStatus.RELEASED", "service:completed-review-only"],
+    ["AppraisalParticipantStatus.FINALIZED", "service:finalized-participants-only"],
+    ['"VIEW_DIRECTOR_FEEDBACK_RESULTS"', "service:director-authority"],
+    ["cycle.targetUserId !== actorUserId", "service:own-cycle-scope"],
+    ['cycle.targetRoleSnapshot !== "DISTRICT_DIRECTOR"', "service:director-target-scope"],
+    ["AppraisalNotificationChannel.IN_APP", "service:in-app-channel"],
+    ["AppraisalNotificationChannel.SMS", "service:sms-channel"],
+    ["AppraisalNotificationChannel.EMAIL", "service:email-channel"],
+    ["skipDuplicates: true", "service:idempotent-outbox"],
+    ["template: DIRECTOR_FEEDBACK_APPRECIATION_POLICY.smsTemplate", "service:dedicated-sms-template"],
+    ["title: APPRECIATION_TITLE", "service:prepared-title"],
+    ["Thank you for taking part in my confidential leadership feedback exercise.", "service:prepared-appreciation-message"],
+    ["respondentIdentityReturnedToDirector: false", "service:no-identity-audit"],
+    ["schoolIdentityReturnedToDirector: false", "service:no-school-audit"],
+    ["scoreValuesRecordedInAudit: false", "service:no-score-audit"],
+    ["providerDeliveryTriggered: false", "service:no-provider-in-transaction"],
+    ["Prisma.TransactionIsolationLevel.Serializable", "service:serializable-transaction"],
+    ["getStaffEssentialAlertEligibilityMap", "service:essential-alert-authority"],
+    ['const OFFICIAL_APPRAISAL_PURPOSE = "OFFICIAL_APPRAISAL" as const;', "service:essential-alert-purpose"],
+    ["STAFF_ESSENTIAL_ALERT_ENROLLMENT", "service:essential-alert-authority-marker"],
+    ["OFFICIAL_APPRAISAL_ELIGIBILITY_CONCURRENCY = 8", "service:bounded-multitenant-authority"],
+  ]) {
+    contains(service, marker, label);
+  }
+  excludes(service, "smsOptIn", "service:no-legacy-sms-opt-in-authority");
   excludes(service, "sendSms", "service:no-direct-sms-provider");
   excludes(service, "sendEmail", "service:no-direct-email-provider");
 
@@ -209,11 +127,7 @@ function main() {
     "DIRECTOR_FEEDBACK_APPRECIATION_CONFIRMATION_REQUIRED",
     "api:explicit-confirmation",
   );
-  contains(
-    route,
-    "ALLOWED_BODY_FIELDS",
-    "api:strict-body-allowlist",
-  );
+  contains(route, "ALLOWED_BODY_FIELDS", "api:strict-body-allowlist");
   excludes(route, "prisma.", "api:no-direct-prisma");
   excludes(route, "sendSms", "api:no-direct-sms-provider");
   excludes(route, "sendEmail", "api:no-direct-email-provider");
@@ -222,23 +136,19 @@ function main() {
 
   contains(client, "Thank participating Headteachers", "ui:appreciation-card");
   contains(client, "Send appreciation", "ui:single-action-button");
-  contains(
-    client,
-    'workspace?.cycle?.status !== "RELEASED"',
-    "ui:completed-review-only",
-  );
+  contains(client, 'workspace?.cycle?.status !== "RELEASED"', "ui:completed-review-only");
   contains(
     client,
     '"/api/district/director-feedback/review/appreciation"',
     "ui:appreciation-post",
   );
+  contains(client, "review/appreciation?cycleId=", "ui:appreciation-status-get");
+  contains(client, "Finalized participants only", "ui:recipient-count-safe");
   contains(
     client,
-    "review/appreciation?cycleId=",
-    "ui:appreciation-status-get",
+    "Recipient names, schools and scores are never shown here.",
+    "ui:privacy-copy",
   );
-  contains(client, "Finalized participants only", "ui:recipient-count-safe");
-  contains(client, "Recipient names, schools and scores are never shown here.", "ui:privacy-copy");
   excludes(client, "localStorage", "ui:no-local-storage");
   excludes(client, "sessionStorage", "ui:no-session-storage");
 
@@ -247,37 +157,23 @@ function main() {
     "delivery.template ?? DEFAULT_APPRAISAL_SMS_DELIVERY.template",
     "worker:payload-template-override",
   );
-  contains(
-    worker,
-    "deliveryPayload(notification.payload)",
-    "worker:payload-driven-delivery",
-  );
+  contains(worker, "deliveryPayload(notification.payload)", "worker:payload-driven-delivery");
   contains(
     worker,
     "idempotencyKey: notification.idempotencyKey",
     "worker:email-idempotency",
   );
-  excludes(
-    worker,
-    "notification.type ===",
-    "worker:no-type-specific-appreciation-branch",
-  );
-  excludes(
-    worker,
-    "switch (notification.type)",
-    "worker:no-type-switch",
-  );
+  contains(worker, "getStaffEssentialAlertEligibilityMap", "worker:send-time-authority");
+  contains(worker, "to: currentDestination", "worker:current-authoritative-phone");
+  excludes(worker, "notification.type ===", "worker:no-type-specific-appreciation-branch");
+  excludes(worker, "switch (notification.type)", "worker:no-type-switch");
 
   contains(
     release,
     "respondentNotificationCreated: false",
     "release:no-false-result-release-notification",
   );
-  contains(
-    release,
-    "providerDeliveryTriggered: false",
-    "release:no-provider-delivery",
-  );
+  contains(release, "providerDeliveryTriggered: false", "release:no-provider-delivery");
 
   console.log("");
   console.log("=== N7-U17 DIRECTOR PARTICIPATION APPRECIATION PROOF ===");
@@ -286,7 +182,8 @@ function main() {
   console.log("Recipients                    : finalized frozen participants only");
   console.log("Prepared message              : server-controlled appreciation copy");
   console.log("In-app                        : immediate SENT outbox row");
-  console.log("SMS                           : queued when opted-in + reachable");
+  console.log("SMS authority                 : OFFICIAL_APPRAISAL Essential Alert enrollment");
+  console.log("SMS                           : queued only when currently eligible");
   console.log("Email                         : queued when address is usable");
   console.log("Notification event            : PARTICIPATION_APPRECIATION");
   console.log("Result release notification   : not misused");
@@ -294,7 +191,7 @@ function main() {
   console.log("Provider calls in transaction : absent");
   console.log("Director identity output      : counts only; no recipients");
   console.log("Score / answer leakage        : absent");
-  console.log("Worker                        : existing payload-driven spine reused");
+  console.log("Worker                        : current-phone revalidated payload-driven spine");
   console.log("Browser persistence           : absent");
   console.log("Database accessed             : false");
   console.log("");

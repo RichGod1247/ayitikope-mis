@@ -108,6 +108,22 @@ Module._load = function patchedLoad(request, parent, isMain) {
     };
   }
   if (request === "@/lib/prisma") return { prisma: {} };
+  if (request === "@/lib/essentialAlerts/enrollment") {
+    return {
+      async getStaffEssentialAlertEligibilityMap(input) {
+        const result = new Map();
+        for (const userId of input.userIds ?? []) {
+          result.set(userId, {
+            eligible: true,
+            reason: "ELIGIBLE",
+            phoneNorm: "+233244000000",
+            enrollmentStatus: "ENROLLED",
+          });
+        }
+        return result;
+      },
+    };
+  }
   if (request === "@/lib/appraisals/audit") {
     return {
       APPRAISAL_AUDIT_ACTIONS: {
@@ -396,6 +412,12 @@ async function main() {
     cycle,
     releasedAt,
     releaseProofHash: proofHash,
+    smsEligibility: {
+      eligible: true,
+      reason: "ELIGIBLE",
+      phoneNorm: "+233244000000",
+      enrollmentStatus: "ENROLLED",
+    },
     now,
   });
   equal(built.length, 2, "only external outbox rows are built");
@@ -433,18 +455,24 @@ async function main() {
     cycle: releasedCycle({
       targetUser: {
         email: "invalid",
-        phone: null,
-        phoneNorm: null,
-        smsOptIn: false,
-        teacherProfiles: [],
       },
     }),
     releasedAt,
     releaseProofHash: proofHash,
+    smsEligibility: {
+      eligible: false,
+      reason: "NOT_ENROLLED",
+      phoneNorm: "+233244000000",
+      enrollmentStatus: null,
+    },
     now,
   });
-  equal(skippedRows[0].status, "SKIPPED", "SMS opt-out skipped");
-  equal(skippedRows[0].lastError, "SMS_OPT_OUT", "SMS opt-out reason");
+  equal(skippedRows[0].status, "SKIPPED", "SMS without Essential Alert authority skipped");
+  equal(
+    skippedRows[0].lastError,
+    "ESSENTIAL_ALERT_OFFICIAL_APPRAISAL_NOT_ENROLLED",
+    "Essential Alert rejection reason",
+  );
   equal(skippedRows[1].status, "SKIPPED", "invalid email skipped");
   equal(skippedRows[1].lastError, "EMAIL_UNAVAILABLE", "email skip reason");
 
@@ -643,6 +671,27 @@ async function main() {
   excludes(noticeClientSource, 'target="_blank"', "notice action stays in portal");
   excludes(noticeClientSource, "window.location", "no unchecked imperative redirect");
 
+  includes(
+    serviceSource,
+    'const OFFICIAL_APPRAISAL_PURPOSE = "OFFICIAL_APPRAISAL" as const;',
+    "Official Appraisal Essential Alert purpose",
+  );
+  includes(
+    serviceSource,
+    "getStaffEssentialAlertEligibilityMap",
+    "Essential Alert authority helper",
+  );
+  includes(
+    serviceSource,
+    "STAFF_ESSENTIAL_ALERT_ENROLLMENT",
+    "Essential Alert authority marker",
+  );
+  excludes(
+    serviceSource,
+    "smsOptIn",
+    "legacy smsOptIn authority removed",
+  );
+
   for (const forbidden of [
     "sendSms",
     "sendEmail",
@@ -662,6 +711,7 @@ async function main() {
   console.log("In-app system                   : Official Notice Inbox");
   console.log("In-app route                    : /headteacher/my-appraisal");
   console.log("In-app lifecycle                : visible + read tracking");
+  console.log("SMS authority                   : OFFICIAL_APPRAISAL Essential Alert enrollment");
   console.log("SMS/email                       : appraisal outbox only");
   console.log("Legacy invisible in-app rows    : ignored, not duplicated");
   console.log("Queue idempotency               : release proof + cycle + channel hash");

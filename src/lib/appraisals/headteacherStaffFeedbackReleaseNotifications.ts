@@ -12,6 +12,10 @@ import {
   Prisma,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import {
+  getStaffEssentialAlertEligibilityMap,
+  type StaffEssentialAlertEligibility,
+} from "@/lib/essentialAlerts/enrollment";
 import { HEADTEACHER_FEEDBACK_POLICY } from "@/lib/appraisals/headteacherFeedback";
 
 export const HEADTEACHER_STAFF_FEEDBACK_RELEASE_NOTIFICATION_POLICY = {
@@ -46,10 +50,6 @@ type ReleasedCycle = {
   targetRoleSnapshot: string | null;
   targetUser: {
     email: string;
-    phone: string | null;
-    phoneNorm: string | null;
-    smsOptIn: boolean;
-    teacherProfiles: Array<{ tenantId: string; phone: string }>;
   };
 };
 
@@ -134,6 +134,7 @@ export type EnsureHeadteacherStaffFeedbackReleaseNotificationsInput = {
   userAgent?: string | null;
   now?: Date;
   database?: HeadteacherStaffFeedbackReleaseNotificationDatabase;
+  essentialAlertEligibilityResolver?: StaffEssentialAlertEligibilityResolver;
 };
 
 export type EnsureHeadteacherStaffFeedbackReleaseNotificationsResult = {
@@ -221,24 +222,24 @@ function safeEmail(value: unknown) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
 }
 
-function safePhone(value: unknown) {
-  const digits = clean(value).replace(/\D/g, "");
-  if (!digits) return null;
-  if (digits.length === 10 && digits.startsWith("0")) {
-    return `+233${digits.slice(1)}`;
-  }
-  if (digits.length === 12 && digits.startsWith("233")) return `+${digits}`;
-  if (digits.length >= 10 && digits.length <= 15) return `+${digits}`;
-  return null;
-}
 
-function targetPhone(cycle: ReleasedCycle) {
-  const direct = safePhone(cycle.targetUser.phoneNorm) ?? safePhone(cycle.targetUser.phone);
-  if (direct) return direct;
-  const matching = cycle.targetUser.teacherProfiles.find(
-    (profile) => profile.tenantId === cycle.targetTenantId,
-  );
-  return safePhone(matching?.phone) ?? null;
+const OFFICIAL_APPRAISAL_PURPOSE = "OFFICIAL_APPRAISAL" as const;
+const OFFICIAL_APPRAISAL_SMS_AUTHORITY =
+  "STAFF_ESSENTIAL_ALERT_ENROLLMENT" as const;
+
+type StaffEssentialAlertEligibilityResolver =
+  typeof getStaffEssentialAlertEligibilityMap;
+
+function officialAppraisalSmsLastError(
+  eligibility: StaffEssentialAlertEligibility | undefined,
+) {
+  if (!eligibility) {
+    return "ESSENTIAL_ALERT_OFFICIAL_APPRAISAL_NOT_REVALIDATED";
+  }
+  if (!eligibility.eligible || !eligibility.phoneNorm) {
+    return `ESSENTIAL_ALERT_OFFICIAL_APPRAISAL_${eligibility.reason}`;
+  }
+  return null;
 }
 
 function releaseProof(review: ReleasedReview) {
@@ -356,10 +357,6 @@ export async function ensureHeadteacherStaffFeedbackReleaseNotifications(
         targetUser: {
           select: {
             email: true,
-            phone: true,
-            phoneNorm: true,
-            smsOptIn: true,
-            teacherProfiles: { select: { tenantId: true, phone: true } },
           },
         },
       },
@@ -413,8 +410,20 @@ export async function ensureHeadteacherStaffFeedbackReleaseNotifications(
   assertMembership(cycle, membership);
 
   const email = safeEmail(cycle.targetUser.email);
-  const phone = targetPhone(cycle);
-  const smsAllowed = cycle.targetUser.smsOptIn !== false;
+  const eligibilityResolver =
+    input.essentialAlertEligibilityResolver ??
+    getStaffEssentialAlertEligibilityMap;
+  const smsEligibilityByUserId = await eligibilityResolver({
+    tenantId: cycle.targetTenantId,
+    purpose: OFFICIAL_APPRAISAL_PURPOSE,
+    userIds: [cycle.targetUserId],
+  });
+  const smsEligibility = smsEligibilityByUserId.get(cycle.targetUserId);
+  const smsDestination =
+    smsEligibility?.eligible && smsEligibility.phoneNorm
+      ? smsEligibility.phoneNorm
+      : null;
+  const smsLastError = officialAppraisalSmsLastError(smsEligibility);
   const baseKey = {
     cycleId,
     reviewId,
@@ -451,16 +460,18 @@ export async function ensureHeadteacherStaffFeedbackReleaseNotifications(
       recipientTenantId: cycle.targetTenantId,
       channel: AppraisalNotificationChannel.SMS,
       type: AppraisalNotificationType.FEEDBACK_RELEASED,
-      status:
-        phone && smsAllowed
-          ? AppraisalNotificationStatus.PENDING
-          : AppraisalNotificationStatus.SKIPPED,
+      status: smsDestination
+        ? AppraisalNotificationStatus.PENDING
+        : AppraisalNotificationStatus.SKIPPED,
       idempotencyKey: idempotencyKey({ ...baseKey, channel: "SMS" }),
       payload: jsonObject({
         ...commonPayload,
-        delivery: phone
+        essentialAlertPurpose: OFFICIAL_APPRAISAL_PURPOSE,
+        essentialAlertAuthority: OFFICIAL_APPRAISAL_SMS_AUTHORITY,
+        essentialAlertEligibility: smsEligibility?.reason ?? null,
+        delivery: smsDestination
           ? {
-              destination: phone,
+              destination: smsDestination,
               text:
                 "Your confidential staff-feedback appraisal result has been released in EduLife OS. Sign in to view it.",
             }
@@ -470,11 +481,7 @@ export async function ensureHeadteacherStaffFeedbackReleaseNotifications(
       maxAttempts:
         HEADTEACHER_STAFF_FEEDBACK_RELEASE_NOTIFICATION_POLICY.maximumAttempts,
       priority: HEADTEACHER_STAFF_FEEDBACK_RELEASE_NOTIFICATION_POLICY.priority,
-      lastError: !smsAllowed
-        ? "SMS_OPT_OUT"
-        : phone
-          ? null
-          : "PHONE_UNAVAILABLE",
+      lastError: smsLastError,
     },
     {
       cycleId,
@@ -595,6 +602,9 @@ export async function ensureHeadteacherStaffFeedbackReleaseNotifications(
               releaseProofHash,
               officialInAppNoticeCreated: officialCreated,
               externalRowsCreated: created.count,
+              essentialAlertPurpose: OFFICIAL_APPRAISAL_PURPOSE,
+              smsAuthority: OFFICIAL_APPRAISAL_SMS_AUTHORITY,
+              legacySmsOptInAuthoritative: false,
               recipientIdentityIncluded: false,
               contactDestinationsIncluded: false,
               respondentIdentitiesIncluded: false,

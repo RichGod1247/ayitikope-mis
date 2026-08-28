@@ -13,6 +13,10 @@ import {
   Prisma,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import {
+  getStaffEssentialAlertEligibilityMap,
+  type StaffEssentialAlertEligibility,
+} from "@/lib/essentialAlerts/enrollment";
 import { APPRAISAL_AUDIT_ACTIONS } from "@/lib/appraisals/audit";
 import { HEADTEACHER_FEEDBACK_POLICY } from "@/lib/appraisals/headteacherFeedback";
 import {
@@ -60,11 +64,6 @@ export const HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY = {
 
 const RELEASE_NOTIFICATION_AUDIT_RESOURCE = "AppraisalCycle";
 
-type ReleaseTargetProfile = {
-  tenantId: string;
-  phone: string;
-};
-
 type ReleasedCycleRecord = {
   id: string;
   status: string;
@@ -75,10 +74,6 @@ type ReleasedCycleRecord = {
   metadata: unknown;
   targetUser: {
     email: string;
-    phone: string | null;
-    phoneNorm: string | null;
-    smsOptIn: boolean;
-    teacherProfiles: ReleaseTargetProfile[];
   };
 };
 
@@ -186,6 +181,7 @@ export type EnsureHeadteacherDirectorReleaseNotificationsInput = {
   userAgent?: string | null;
   now?: Date;
   database?: HeadteacherDirectorReleaseNotificationDatabase;
+  essentialAlertEligibilityResolver?: StaffEssentialAlertEligibilityResolver;
 };
 
 export type EnsureHeadteacherDirectorReleaseNotificationsResult = {
@@ -285,36 +281,24 @@ function safeEmail(value: unknown) {
   return email;
 }
 
-function safePhone(value: unknown) {
-  const raw = clean(value);
-  if (!raw) return null;
-  const digits = raw.replace(/\D/g, "");
-  if (!digits) return null;
-  if (digits.length === 10 && digits.startsWith("0")) {
-    return `+233${digits.slice(1)}`;
+
+const OFFICIAL_APPRAISAL_PURPOSE = "OFFICIAL_APPRAISAL" as const;
+const OFFICIAL_APPRAISAL_SMS_AUTHORITY =
+  "STAFF_ESSENTIAL_ALERT_ENROLLMENT" as const;
+
+type StaffEssentialAlertEligibilityResolver =
+  typeof getStaffEssentialAlertEligibilityMap;
+
+function officialAppraisalSmsLastError(
+  eligibility: StaffEssentialAlertEligibility | undefined,
+) {
+  if (!eligibility) {
+    return "ESSENTIAL_ALERT_OFFICIAL_APPRAISAL_NOT_REVALIDATED";
   }
-  if (digits.length === 12 && digits.startsWith("233")) {
-    return `+${digits}`;
-  }
-  if (digits.length >= 10 && digits.length <= 15) {
-    return `+${digits}`;
+  if (!eligibility.eligible || !eligibility.phoneNorm) {
+    return `ESSENTIAL_ALERT_OFFICIAL_APPRAISAL_${eligibility.reason}`;
   }
   return null;
-}
-
-function targetPhone(cycle: ReleasedCycleRecord) {
-  const direct =
-    safePhone(cycle.targetUser.phoneNorm) ?? safePhone(cycle.targetUser.phone);
-  if (direct) return direct;
-
-  const matchingProfile = cycle.targetUser.teacherProfiles.find(
-    (profile) => profile.tenantId === cycle.targetTenantId,
-  );
-
-  return (
-    safePhone(matchingProfile?.phone) ??
-    safePhone(cycle.targetUser.teacherProfiles[0]?.phone)
-  );
 }
 
 function idempotencyKey(input: {
@@ -431,6 +415,7 @@ export function buildHeadteacherDirectorReleaseNotificationRows(input: {
   workflow?: string;
   releasedAt: string;
   releaseProofHash: string;
+  smsEligibility?: StaffEssentialAlertEligibility;
   now: Date;
 }): Prisma.AppraisalNotificationCreateManyInput[] {
   const workflow = clean(input.workflow) || HEADTEACHER_FEEDBACK_POLICY.workflow;
@@ -441,8 +426,11 @@ export function buildHeadteacherDirectorReleaseNotificationRows(input: {
     releaseProofHash: input.releaseProofHash,
   });
   const email = safeEmail(input.cycle.targetUser.email);
-  const phone = targetPhone(input.cycle);
-  const smsAllowed = input.cycle.targetUser.smsOptIn !== false;
+  const smsDestination =
+    input.smsEligibility?.eligible && input.smsEligibility.phoneNorm
+      ? input.smsEligibility.phoneNorm
+      : null;
+  const smsLastError = officialAppraisalSmsLastError(input.smsEligibility);
   const keyInput = {
     workflow,
     cycleId: input.cycle.id,
@@ -457,19 +445,21 @@ export function buildHeadteacherDirectorReleaseNotificationRows(input: {
       recipientTenantId: input.cycle.targetTenantId,
       channel: AppraisalNotificationChannel.SMS,
       type: HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.notificationType,
-      status:
-        phone && smsAllowed
-          ? AppraisalNotificationStatus.PENDING
-          : AppraisalNotificationStatus.SKIPPED,
+      status: smsDestination
+        ? AppraisalNotificationStatus.PENDING
+        : AppraisalNotificationStatus.SKIPPED,
       idempotencyKey: idempotencyKey({
         ...keyInput,
         channel: AppraisalNotificationChannel.SMS,
       }),
       payload: {
         ...common,
-        delivery: phone
+        essentialAlertPurpose: OFFICIAL_APPRAISAL_PURPOSE,
+        essentialAlertAuthority: OFFICIAL_APPRAISAL_SMS_AUTHORITY,
+        essentialAlertEligibility: input.smsEligibility?.reason ?? null,
+        delivery: smsDestination
           ? {
-              destination: phone,
+              destination: smsDestination,
               text:
                 "Your Headteacher appraisal result has been released in EduLife OS. Sign in to view it.",
               template:
@@ -481,11 +471,7 @@ export function buildHeadteacherDirectorReleaseNotificationRows(input: {
       maxAttempts:
         HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.maximumAttempts,
       priority: HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.priority,
-      lastError: !smsAllowed
-        ? "SMS_OPT_OUT"
-        : phone
-          ? null
-          : "PHONE_UNAVAILABLE",
+      lastError: smsLastError,
     },
     {
       cycleId: input.cycle.id,
@@ -990,6 +976,9 @@ async function seedNotificationRows(input: {
                 GovernanceOfficialNoticeChannel.IN_APP,
                 ...HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.externalChannels,
               ],
+              essentialAlertPurpose: OFFICIAL_APPRAISAL_PURPOSE,
+              smsAuthority: OFFICIAL_APPRAISAL_SMS_AUTHORITY,
+              legacySmsOptInAuthoritative: false,
               inAppHref:
                 HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_POLICY.inAppHref,
               recipientIdentityIncluded: false,
@@ -1063,12 +1052,6 @@ export async function ensureHeadteacherDirectorReleaseNotifications(
       targetUser: {
         select: {
           email: true,
-          phone: true,
-          phoneNorm: true,
-          smsOptIn: true,
-          teacherProfiles: {
-            select: { tenantId: true, phone: true },
-          },
         },
       },
     },
@@ -1111,11 +1094,22 @@ export async function ensureHeadteacherDirectorReleaseNotifications(
   });
   assertActiveTargetMembership({ cycle, membership });
 
+  const eligibilityResolver =
+    input.essentialAlertEligibilityResolver ??
+    getStaffEssentialAlertEligibilityMap;
+  const smsEligibilityByUserId = await eligibilityResolver({
+    tenantId: targetTenantId,
+    purpose: OFFICIAL_APPRAISAL_PURPOSE,
+    userIds: [cycle.targetUserId],
+  });
+  const smsEligibility = smsEligibilityByUserId.get(cycle.targetUserId);
+
   const rows = buildHeadteacherDirectorReleaseNotificationRows({
     cycle,
     workflow: releaseContext.workflow,
     releasedAt,
     releaseProofHash,
+    smsEligibility,
     now,
   });
   const officialNoticeKey = officialNoticeIdempotencyKey({
