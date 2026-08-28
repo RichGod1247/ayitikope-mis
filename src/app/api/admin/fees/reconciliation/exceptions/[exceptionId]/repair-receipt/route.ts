@@ -4,8 +4,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
-import { recalculateInvoiceTotals } from "@/lib/finance/core";
-import { sendSms } from "@/lib/sms";
+import {
+  enqueueFeeReceiptSmsOutbox,
+  recalculateInvoiceTotals,
+} from "@/lib/finance/core";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -378,6 +380,32 @@ export async function POST(
 
         const invoiceAfter = await recalculateInvoiceTotals(tx, tenantId, invoice.id);
 
+        const amountCedis = (payment.amountPesewas / 100).toFixed(2);
+        const outstandingCedis = (invoiceAfter.balancePesewas / 100).toFixed(2);
+
+        await enqueueFeeReceiptSmsOutbox(tx, {
+          tenantId,
+          actorId: actorUserId,
+          receiptId: receipt.id,
+          receiptNumber: receipt.receiptNumber,
+          feePaymentId: payment.id,
+          invoiceId: invoice.id,
+          studentId: invoice.studentId,
+          guardianPhone: invoice.student?.guardianPhone ?? null,
+          guardianPhoneNorm: invoice.student?.guardianPhoneNorm ?? null,
+          template: "FEES_RECEIPT_REPAIR",
+          source: "RECONCILIATION_REPAIR",
+          message:
+            `EduLife OS: Receipt ${receipt.receiptNumber} has been issued for ` +
+            `GHS ${amountCedis} paid for ${studentName} ` +
+            `(${
+              invoice.student?.classroom?.name ||
+              invoice.student?.classroom?.grade ||
+              "Class"
+            }) - ${invoice.term} ${invoice.academicYear}. Balance: GHS ${outstandingCedis}. ` +
+            `School: ${tenant.name}. Keep this SMS as proof.`,
+        });
+
         const updatedException = await tx.reconciliationException.update({
           where: { id: exception.id },
           data: {
@@ -436,23 +464,6 @@ export async function POST(
           batchAutoClosed,
           exception: updatedException,
           receipt,
-          smsPayload: guardianPhone
-            ? {
-                to: guardianPhone,
-                tenantName: tenant.name,
-                studentName,
-                classLabel:
-                  invoice.student?.classroom?.name ||
-                  invoice.student?.classroom?.grade ||
-                  "Class",
-                term: invoice.term,
-                academicYear: invoice.academicYear,
-                amountPesewas: payment.amountPesewas,
-                outstandingPesewas: invoiceAfter.balancePesewas,
-                receiptId: receipt.id,
-                receiptNumber: receipt.receiptNumber,
-              }
-            : null,
         };
       },
       {
@@ -463,33 +474,6 @@ export async function POST(
 
     if (!result.ok) {
       return json(result.status, { ok: false, error: result.error });
-    }
-
-    if (result.repaired && result.smsPayload) {
-      const amountCedis = (result.smsPayload.amountPesewas / 100).toFixed(2);
-      const outstandingCedis = (result.smsPayload.outstandingPesewas / 100).toFixed(2);
-
-      sendSms({
-        tenantId,
-        actorId: actorUserId,
-        to: result.smsPayload.to,
-        message:
-          `EduLife OS: Receipt ${result.smsPayload.receiptNumber} has been issued for ` +
-          `GHS ${amountCedis} paid for ${result.smsPayload.studentName} ` +
-          `(${result.smsPayload.classLabel}) - ${result.smsPayload.term} ` +
-          `${result.smsPayload.academicYear}. Balance: GHS ${outstandingCedis}. ` +
-          `School: ${result.smsPayload.tenantName}. Keep this SMS as proof.`,
-        template: "FEES_RECEIPT_REPAIR",
-        payload: {
-          receiptId: result.smsPayload.receiptId,
-          receiptNumber: result.smsPayload.receiptNumber,
-          amountPesewas: result.smsPayload.amountPesewas,
-          outstandingPesewas: result.smsPayload.outstandingPesewas,
-          source: "RECONCILIATION_REPAIR",
-        },
-      }).catch((err) => {
-        console.error("[RECONCILIATION_REPAIR_SMS_ERROR]", err);
-      });
     }
 
     return json(200, {

@@ -47,18 +47,20 @@ type FeesTemplateResponse = {
 type NotifySimulateResponse = {
   ok: boolean;
   total?: number;
-  skippedNoPhone?: number;
+  requested?: number;
+  eligibleCount?: number;
+  skippedCount?: number;
   error?: string;
 };
 
 type NotifySendResponse = {
   ok: boolean;
-  total?: number;
-  attempted?: number;
-  successCount?: number;
-  sent?: number;
-  brand?: string;
-  from?: string;
+  requested?: number;
+  eligibleCount?: number;
+  queuedCount?: number;
+  alreadyHandledCount?: number;
+  skippedCount?: number;
+  blockedCount?: number;
   error?: string;
 };
 
@@ -309,12 +311,6 @@ export default function FeesArrearsPage() {
       const payload = {
         arrears: selectedRows.map((row) => ({
           invoiceId: row.invoiceId,
-          studentName: row.studentName,
-          guardianPhone: row.guardianPhone,
-          amountDue: row.amountDue,
-          className: row.className,
-          term: row.term,
-          dueDate: row.dueDate,
         })),
       };
 
@@ -339,17 +335,25 @@ export default function FeesArrearsPage() {
 
       if (simulateOnly) {
         const result = raw as NotifySimulateResponse;
-        const total = Number(result.total ?? 0);
+        const eligible = Number(result.eligibleCount ?? result.total ?? 0);
+        const requested = Number(result.requested ?? selectedRows.length);
+        const skipped = Number(
+          result.skippedCount ?? Math.max(0, requested - eligible)
+        );
 
         setInfo(
-          `Simulation complete. ${total} reminder(s) would have been sent. No parent was contacted.`
+          `Simulation complete. ${eligible} reminder(s) are currently eligible; ${skipped} would be skipped. No parent was contacted.`
         );
       } else {
         const result = raw as NotifySendResponse;
-        const success = Number(result.successCount ?? result.sent ?? 0);
-        const total = Number(result.total ?? result.attempted ?? selectedRows.length);
+        const queued = Number(result.queuedCount ?? 0);
+        const alreadyHandled = Number(result.alreadyHandledCount ?? 0);
+        const skipped = Number(result.skippedCount ?? 0);
+        const blocked = Number(result.blockedCount ?? 0);
 
-        setInfo(`Fee reminder request processed. Success reported: ${success}/${total}.`);
+        setInfo(
+          `Fee reminder request processed. Queued: ${queued}. Already handled today: ${alreadyHandled}. Skipped: ${skipped}. Blocked: ${blocked}. Delivery runs through the background worker.`
+        );
       }
     } catch {
       setError("Network or server error while sending reminders.");
@@ -661,7 +665,7 @@ export default function FeesArrearsPage() {
             <h2 className="text-lg font-semibold text-zinc-900">
               {confirmSimulateOnly
                 ? "Run simulation only?"
-                : "Confirm sending SMS reminders?"}
+                : "Confirm queueing SMS reminders?"}
             </h2>
 
             <p className="break-words text-sm text-zinc-600">
@@ -674,7 +678,7 @@ export default function FeesArrearsPage() {
                 </>
               ) : (
                 <>
-                  <span className="font-semibold">send</span>{" "}
+                  <span className="font-semibold">queue</span>{" "}
                   <span className="font-semibold">{selectedRows.length}</span>{" "}
                   real reminder(s) using the current template.
                 </>
@@ -682,9 +686,9 @@ export default function FeesArrearsPage() {
             </p>
 
             <p className="text-sm text-zinc-600">
-              Estimated SMS units:{" "}
+              Maximum estimated SMS units:{" "}
               <span className="font-semibold">{estimatedSmsCount}</span> •
-              Estimated cost:{" "}
+              Maximum estimated cost:{" "}
               <span className="font-semibold">
                 GH₵ {estimatedCost.toFixed(2)}
               </span>
@@ -707,10 +711,10 @@ export default function FeesArrearsPage() {
                 {sending
                   ? confirmSimulateOnly
                     ? "Simulating…"
-                    : "Sending…"
+                    : "Queueing…"
                   : confirmSimulateOnly
                     ? "Yes, simulate"
-                    : "Yes, send"}
+                    : "Yes, queue"}
               </button>
             </div>
           </div>

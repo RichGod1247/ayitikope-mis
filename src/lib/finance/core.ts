@@ -1,5 +1,6 @@
 // src/lib/finance/core.ts
 import crypto from "crypto";
+import { getGuardianEssentialAlertEligibilityMap } from "@/lib/essentialAlerts/enrollment";
 import { prisma } from "@/lib/prisma";
 import type { Prisma, PrismaClient } from "@prisma/client";
 
@@ -37,6 +38,8 @@ const TX_LONG = {
 const DEFAULT_PAYMENT_INTENT_TTL_MINUTES = 30;
 const IDEMPOTENCY_LOCK_STALE_MINUTES = 10;
 const INVOICE_GENERATION_CHUNK_SIZE = 100;
+const FEE_PAYMENT_PURPOSE = "FEE_PAYMENT" as const;
+const ESSENTIAL_ALERT_AUTHORITY = "ESSENTIAL_ALERT_ENROLLMENT" as const;
 
 export class FinanceError extends Error {
   code: FinanceErrorCode;
@@ -66,6 +69,23 @@ type ManualPaymentResult = {
   term: string;
   academicYear: string;
   outstandingPesewas: number;
+};
+
+export type CurrentFeeArrearsRow = {
+  invoiceId: string;
+  studentId: string;
+  studentName: string;
+  guardianPhone: string | null;
+  guardianPhoneNorm: string | null;
+  className: string | null;
+  term: string | null;
+  academicYear: string | null;
+  dueDate: Date | null;
+  grossPaidPesewas: number;
+  succeededRefundPesewas: number;
+  pendingRefundPesewas: number;
+  netPaidPesewas: number;
+  balancePesewas: number;
 };
 
 function cleanMethod(method: string | null | undefined): string {
@@ -311,7 +331,7 @@ function buildReceiptSmsMessage(input: {
   }. Keep this SMS as proof.`;
 }
 
-async function enqueueReceiptSmsOutbox(
+export async function enqueueFeeReceiptSmsOutbox(
   tx: TxClient,
   input: {
     tenantId: string;
@@ -320,11 +340,52 @@ async function enqueueReceiptSmsOutbox(
     receiptNumber: string;
     feePaymentId: string;
     invoiceId: string;
-    to: string | null;
+    studentId: string;
+    guardianPhone?: string | null;
+    guardianPhoneNorm?: string | null;
     message: string;
+    template?: string;
+    source?: string | null;
   }
 ) {
-  if (!input.to?.trim()) return null;
+  const eligibilityMap = await getGuardianEssentialAlertEligibilityMap({
+    tx,
+    tenantId: input.tenantId,
+    purpose: FEE_PAYMENT_PURPOSE,
+    students: [
+      {
+        id: input.studentId,
+        guardianPhone: input.guardianPhone ?? null,
+        guardianPhoneNorm: input.guardianPhoneNorm ?? null,
+      },
+    ],
+  });
+
+  const eligibility = eligibilityMap.get(input.studentId);
+  const authorizedPhone = eligibility?.eligible ? eligibility.phoneNorm : null;
+
+  if (!authorizedPhone) {
+    await tx.auditLog.create({
+      data: {
+        tenantId: input.tenantId,
+        userId: input.actorId ?? null,
+        action: "FINANCE_SMS_ESSENTIAL_ALERT_SKIPPED",
+        resource: "Receipt",
+        resourceId: input.receiptId,
+        metadata: {
+          eventType: "SMS_RECEIPT",
+          studentId: input.studentId,
+          essentialAlertPurpose: FEE_PAYMENT_PURPOSE,
+          eligibilityAuthority: ESSENTIAL_ALERT_AUTHORITY,
+          eligibilityReason: eligibility?.reason ?? "NOT_ENROLLED",
+          providerCalled: false,
+          rawPhoneIncluded: false,
+        },
+      },
+    });
+
+    return null;
+  }
 
   return tx.financeOutboxEvent.upsert({
     where: {
@@ -343,13 +404,17 @@ async function enqueueReceiptSmsOutbox(
       payload: toPrismaJson({
         tenantId: input.tenantId,
         actorId: input.actorId ?? null,
-        to: input.to,
+        to: authorizedPhone,
         message: input.message,
-        template: "FEES_RECEIPT",
+        template: input.template ?? "FEES_RECEIPT",
+        source: input.source ?? "PAYMENT_RECEIPT",
         receiptId: input.receiptId,
         receiptNumber: input.receiptNumber,
         feePaymentId: input.feePaymentId,
         invoiceId: input.invoiceId,
+        studentId: input.studentId,
+        essentialAlertPurpose: FEE_PAYMENT_PURPOSE,
+        eligibilityAuthority: ESSENTIAL_ALERT_AUTHORITY,
       }),
       priority: 3,
       maxAttempts: 5,
@@ -850,6 +915,185 @@ export async function getInvoiceBalance(
   return invoice;
 }
 
+export async function loadCurrentFeeArrears(input: {
+  tenantId: string;
+  invoiceIds: string[];
+  tx?: TxClient;
+  limit?: number;
+}): Promise<CurrentFeeArrearsRow[]> {
+  const tenantId = String(input.tenantId ?? "").trim();
+  const invoiceIds = [
+    ...new Set(input.invoiceIds.map((id) => String(id ?? "").trim()).filter(Boolean)),
+  ];
+
+  if (!tenantId || !invoiceIds.length) return [];
+
+  const limit = Math.max(1, Math.min(input.limit ?? 500, 500));
+  const db: DbClient = input.tx ?? prisma;
+
+  const invoices = await db.feeInvoice.findMany({
+    where: {
+      tenantId,
+      id: { in: invoiceIds.slice(0, limit) },
+      status: { notIn: ["CANCELLED", "WRITTEN_OFF"] },
+    },
+    select: {
+      id: true,
+      studentId: true,
+      term: true,
+      academicYear: true,
+      dueDate: true,
+      totalBilledPesewas: true,
+      totalWaivedPesewas: true,
+    },
+    take: limit,
+  });
+
+  if (!invoices.length) return [];
+
+  const resolvedInvoiceIds = invoices.map((invoice) => invoice.id);
+  const payments = await db.feePayment.findMany({
+    where: {
+      tenantId,
+      invoiceId: { in: resolvedInvoiceIds },
+      status: "SUCCESS",
+    },
+    select: { id: true, invoiceId: true, amountPesewas: true },
+    take: 10_000,
+  });
+
+  const grossPaidByInvoice = new Map<string, number>();
+  const paymentIdToInvoiceId = new Map<string, string>();
+  for (const payment of payments) {
+    paymentIdToInvoiceId.set(payment.id, payment.invoiceId);
+    grossPaidByInvoice.set(
+      payment.invoiceId,
+      (grossPaidByInvoice.get(payment.invoiceId) ?? 0) + (payment.amountPesewas ?? 0),
+    );
+  }
+
+  const succeededRefundByInvoice = new Map<string, number>();
+  const pendingRefundByInvoice = new Map<string, number>();
+  const paymentIds = payments.map((payment) => payment.id);
+
+  if (paymentIds.length) {
+    const refunds = await db.feeRefund.findMany({
+      where: {
+        tenantId,
+        feePaymentId: { in: paymentIds },
+        status: { in: ["REQUESTED", "APPROVED", "PROCESSING", "SUCCEEDED"] },
+      },
+      select: { feePaymentId: true, status: true, amountPesewas: true },
+      take: 10_000,
+    });
+
+    for (const refund of refunds) {
+      const invoiceId = paymentIdToInvoiceId.get(refund.feePaymentId);
+      if (!invoiceId) continue;
+
+      if (refund.status === "SUCCEEDED") {
+        succeededRefundByInvoice.set(
+          invoiceId,
+          (succeededRefundByInvoice.get(invoiceId) ?? 0) + (refund.amountPesewas ?? 0),
+        );
+      } else {
+        pendingRefundByInvoice.set(
+          invoiceId,
+          (pendingRefundByInvoice.get(invoiceId) ?? 0) + (refund.amountPesewas ?? 0),
+        );
+      }
+    }
+  }
+
+  const studentIds = [
+    ...new Set(invoices.map((invoice) => invoice.studentId).filter(Boolean)),
+  ];
+  const students = await db.student.findMany({
+    where: {
+      tenantId,
+      id: { in: studentIds },
+      status: "ACTIVE",
+    },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      guardianPhone: true,
+      guardianPhoneNorm: true,
+      classroomId: true,
+    },
+    take: 8_000,
+  });
+  const studentById = new Map(students.map((student) => [student.id, student]));
+
+  const classroomIds = [
+    ...new Set(
+      students
+        .map((student) => student.classroomId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  const classrooms = classroomIds.length
+    ? await db.classroom.findMany({
+        where: { tenantId, id: { in: classroomIds } },
+        select: { id: true, name: true, grade: true, arm: true },
+        take: 4_000,
+      })
+    : [];
+  const classroomById = new Map(
+    classrooms.map((classroom) => [classroom.id, classroom]),
+  );
+
+  const rows: CurrentFeeArrearsRow[] = [];
+
+  for (const invoice of invoices) {
+    const student = studentById.get(invoice.studentId);
+    if (!student) continue;
+
+    const billedPesewas = invoice.totalBilledPesewas ?? 0;
+    const waivedPesewas = invoice.totalWaivedPesewas ?? 0;
+    const netDuePesewas = Math.max(0, billedPesewas - waivedPesewas);
+    const grossPaidPesewas = grossPaidByInvoice.get(invoice.id) ?? 0;
+    const succeededRefundPesewas = succeededRefundByInvoice.get(invoice.id) ?? 0;
+    const pendingRefundPesewas = pendingRefundByInvoice.get(invoice.id) ?? 0;
+    const netPaidPesewas = Math.max(0, grossPaidPesewas - succeededRefundPesewas);
+    const balancePesewas = Math.max(0, netDuePesewas - netPaidPesewas);
+    if (balancePesewas <= 0) continue;
+
+    const classroom = student.classroomId
+      ? classroomById.get(student.classroomId) ?? null
+      : null;
+    const className = classroom?.name?.trim()
+      ? classroom.name.trim()
+      : [classroom?.grade, classroom?.arm]
+          .map((value) => String(value ?? "").trim())
+          .filter(Boolean)
+          .join(" ") || null;
+
+    rows.push({
+      invoiceId: invoice.id,
+      studentId: student.id,
+      studentName:
+        [student.firstName, student.lastName].filter(Boolean).join(" ").trim() ||
+        "Learner",
+      guardianPhone: student.guardianPhone ?? null,
+      guardianPhoneNorm: student.guardianPhoneNorm ?? null,
+      className,
+      term: invoice.term ?? null,
+      academicYear: invoice.academicYear ?? null,
+      dueDate: invoice.dueDate ?? null,
+      grossPaidPesewas,
+      succeededRefundPesewas,
+      pendingRefundPesewas,
+      netPaidPesewas,
+      balancePesewas,
+    });
+  }
+
+  rows.sort((a, b) => b.balancePesewas - a.balancePesewas);
+  return rows;
+}
+
 export async function generateInvoicesForClassroomFeeStructure(input: {
   tenantId: string;
   classroomId: string;
@@ -1290,14 +1534,16 @@ export async function recordManualPayment(input: {
       invoice.student?.classroom?.grade ||
       "Class";
 
-    await enqueueReceiptSmsOutbox(tx, {
+    await enqueueFeeReceiptSmsOutbox(tx, {
       tenantId,
       actorId: actorUserId,
       receiptId: receipt.id,
       receiptNumber: receipt.receiptNumber,
       feePaymentId: payment.id,
       invoiceId,
-      to: guardianPhone,
+      studentId: invoice.studentId,
+      guardianPhone: invoice.student?.guardianPhone ?? null,
+      guardianPhoneNorm: invoice.student?.guardianPhoneNorm ?? null,
       message: buildReceiptSmsMessage({
         amountPesewas,
         studentName,
@@ -2182,14 +2428,16 @@ export async function finalizePaystackChargeSuccess(input: {
       intent.invoice.student?.classroom?.grade ||
       "Class";
 
-    await enqueueReceiptSmsOutbox(tx, {
+    await enqueueFeeReceiptSmsOutbox(tx, {
       tenantId: intent.tenantId,
       actorId: null,
       receiptId: receipt.id,
       receiptNumber: receipt.receiptNumber,
       feePaymentId: payment.id,
       invoiceId: intent.invoiceId,
-      to: guardianPhone,
+      studentId: intent.studentId,
+      guardianPhone: intent.invoice.student?.guardianPhone ?? null,
+      guardianPhoneNorm: intent.invoice.student?.guardianPhoneNorm ?? null,
       message: buildReceiptSmsMessage({
         amountPesewas,
         studentName,

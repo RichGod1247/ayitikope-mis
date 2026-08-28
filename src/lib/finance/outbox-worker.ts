@@ -18,11 +18,14 @@ import {
   markFinanceOutboxCompleted,
   markFinanceOutboxFailed,
 } from "@/lib/finance/outbox";
+import { loadCurrentFeeArrears } from "@/lib/finance/core";
 import { reprocessPaymentProviderEvent } from "@/lib/finance/provider-event-recovery";
 import { prisma } from "@/lib/prisma";
 import { sendSms } from "@/lib/sms";
 
 const RESULTS_RELEASE_PURPOSE = "RESULTS_RELEASE" as const;
+const FEE_PAYMENT_PURPOSE = "FEE_PAYMENT" as const;
+const FEE_ACCOUNT_NOTICE_PURPOSE = "FEE_ACCOUNT_NOTICE" as const;
 const ESSENTIAL_ALERT_AUTHORITY = "ESSENTIAL_ALERT_ENROLLMENT" as const;
 const MOCK_RESULTS_RELEASE_TEMPLATE = "MOCK_RESULTS_RELEASE_ALERT" as const;
 
@@ -156,6 +159,210 @@ async function handleSmsEvent(event: FinanceOutboxEvent) {
 
   if (!result.ok) {
     throw new Error(result.error ?? result.providerStatusDescription ?? "SMS send failed.");
+  }
+}
+
+async function auditFinanceSmsSkipped(input: {
+  event: FinanceOutboxEvent;
+  tenantId: string;
+  actorId: string | null;
+  invoiceId: string | null;
+  studentId: string | null;
+  purpose: typeof FEE_PAYMENT_PURPOSE | typeof FEE_ACCOUNT_NOTICE_PURPOSE;
+  reason: string;
+  eligibilityReason?: GuardianEssentialAlertEligibilityReason | null;
+}) {
+  await prisma.auditLog.create({
+    data: {
+      tenantId: input.tenantId,
+      userId: input.actorId,
+      action: "FINANCE_SMS_ESSENTIAL_ALERT_SKIPPED",
+      resource: input.event.aggregateType || "FinanceOutboxEvent",
+      resourceId: input.event.aggregateId || input.event.id,
+      metadata: {
+        outboxEventId: input.event.id,
+        eventType: input.event.type,
+        invoiceId: input.invoiceId,
+        studentId: input.studentId,
+        reason: input.reason,
+        eligibilityReason: input.eligibilityReason ?? null,
+        essentialAlertPurpose: input.purpose,
+        eligibilityAuthority: ESSENTIAL_ALERT_AUTHORITY,
+        providerCalled: false,
+        rawPhoneIncluded: false,
+      },
+    },
+  });
+}
+
+async function handleFinanceEssentialAlertSmsEvent(
+  event: FinanceOutboxEvent,
+  purpose: typeof FEE_PAYMENT_PURPOSE | typeof FEE_ACCOUNT_NOTICE_PURPOSE,
+) {
+  if (!isRecord(event.payload)) {
+    throw new Error("Finance Essential Alert SMS payload must be an object.");
+  }
+
+  const payloadTenantId = readString(event.payload, "tenantId");
+  const tenantId = event.tenantId ?? payloadTenantId;
+  const actorId = readString(event.payload, "actorId");
+  const message = readString(event.payload, "message");
+  const template = readString(event.payload, "template");
+  const invoiceId = readString(event.payload, "invoiceId");
+  const payloadStudentId = readString(event.payload, "studentId");
+
+  if (!tenantId) throw new Error("Finance Essential Alert SMS missing tenantId.");
+  if (event.tenantId && payloadTenantId && event.tenantId !== payloadTenantId) {
+    throw new Error("Finance Essential Alert SMS tenant identity mismatch.");
+  }
+  if (!invoiceId) throw new Error("Finance Essential Alert SMS missing invoiceId.");
+  if (!message) throw new Error("Finance Essential Alert SMS missing message.");
+
+  let student: {
+    id: string;
+    guardianPhone: string | null;
+    guardianPhoneNorm: string | null;
+  } | null = null;
+
+  if (purpose === FEE_ACCOUNT_NOTICE_PURPOSE) {
+    const currentArrears = await loadCurrentFeeArrears({
+      tenantId,
+      invoiceIds: [invoiceId],
+      limit: 1,
+    });
+    const current = currentArrears.find((row) => row.invoiceId === invoiceId) ?? null;
+
+    if (!current) {
+      await auditFinanceSmsSkipped({
+        event,
+        tenantId,
+        actorId,
+        invoiceId,
+        studentId: payloadStudentId,
+        purpose,
+        reason: "ACCOUNT_NOTICE_NO_LONGER_CURRENT",
+      });
+      return;
+    }
+
+    const queuedBalancePesewas = readNumber(event.payload, "balancePesewas");
+    if (
+      queuedBalancePesewas === null ||
+      queuedBalancePesewas !== current.balancePesewas
+    ) {
+      await auditFinanceSmsSkipped({
+        event,
+        tenantId,
+        actorId,
+        invoiceId,
+        studentId: current.studentId,
+        purpose,
+        reason: "ACCOUNT_STATE_CHANGED_AFTER_QUEUE",
+      });
+      return;
+    }
+
+    student = {
+      id: current.studentId,
+      guardianPhone: current.guardianPhone,
+      guardianPhoneNorm: current.guardianPhoneNorm,
+    };
+  } else {
+    const invoice = await prisma.feeInvoice.findFirst({
+      where: { id: invoiceId, tenantId },
+      select: {
+        studentId: true,
+        student: {
+          select: {
+            id: true,
+            status: true,
+            guardianPhone: true,
+            guardianPhoneNorm: true,
+          },
+        },
+      },
+    });
+
+    if (!invoice?.student || invoice.student.status !== "ACTIVE") {
+      await auditFinanceSmsSkipped({
+        event,
+        tenantId,
+        actorId,
+        invoiceId,
+        studentId: payloadStudentId ?? invoice?.studentId ?? null,
+        purpose,
+        reason: "CURRENT_ACTIVE_LEARNER_NOT_FOUND",
+      });
+      return;
+    }
+
+    student = {
+      id: invoice.student.id,
+      guardianPhone: invoice.student.guardianPhone,
+      guardianPhoneNorm: invoice.student.guardianPhoneNorm,
+    };
+  }
+
+  if (!student) {
+    throw new Error("Finance Essential Alert SMS learner resolution failed.");
+  }
+
+  if (payloadStudentId && payloadStudentId !== student.id) {
+    await auditFinanceSmsSkipped({
+      event,
+      tenantId,
+      actorId,
+      invoiceId,
+      studentId: student.id,
+      purpose,
+      reason: "LEARNER_IDENTITY_MISMATCH",
+    });
+    return;
+  }
+
+  const eligibilityMap = await getGuardianEssentialAlertEligibilityMap({
+    tenantId,
+    purpose,
+    students: [student],
+  });
+  const eligibility = eligibilityMap.get(student.id);
+  const authorizedPhone = eligibility?.eligible
+    ? normalizeGhanaPhone(eligibility.phoneNorm)
+    : null;
+
+  if (!authorizedPhone) {
+    await auditFinanceSmsSkipped({
+      event,
+      tenantId,
+      actorId,
+      invoiceId,
+      studentId: student.id,
+      purpose,
+      reason: "ESSENTIAL_ALERT_NOT_CURRENTLY_ELIGIBLE",
+      eligibilityReason: eligibility?.reason ?? null,
+    });
+    return;
+  }
+
+  const result = await sendSms({
+    tenantId,
+    actorId,
+    to: authorizedPhone,
+    message,
+    template,
+    payload: {
+      ...event.payload,
+      studentId: student.id,
+      essentialAlertPurpose: purpose,
+      eligibilityAuthority: ESSENTIAL_ALERT_AUTHORITY,
+      workerRevalidated: true,
+    },
+  });
+
+  if (!result.ok) {
+    throw new Error(
+      result.error ?? result.providerStatusDescription ?? "Finance SMS send failed.",
+    );
   }
 }
 
@@ -728,7 +935,16 @@ async function processFinanceOutboxEvent(event: FinanceOutboxEvent) {
   switch (event.type) {
     case FinanceOutboxEventType.SMS_RECEIPT:
     case FinanceOutboxEventType.SMS_REFUND_NOTICE:
+      await handleFinanceEssentialAlertSmsEvent(event, FEE_PAYMENT_PURPOSE);
+      return;
+
     case FinanceOutboxEventType.SMS_ARREARS_NOTICE:
+      await handleFinanceEssentialAlertSmsEvent(
+        event,
+        FEE_ACCOUNT_NOTICE_PURPOSE,
+      );
+      return;
+
     case FinanceOutboxEventType.SMS_RESULTS_RELEASE:
       await handleSmsEvent(event);
       return;

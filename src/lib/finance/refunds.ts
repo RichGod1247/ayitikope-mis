@@ -8,6 +8,7 @@ import {
   RefundStatus,
   type Prisma,
 } from "@prisma/client";
+import { getGuardianEssentialAlertEligibilityMap } from "@/lib/essentialAlerts/enrollment";
 import { prisma } from "@/lib/prisma";
 import {
   FinanceError,
@@ -18,6 +19,8 @@ import {
 type TxClient = Prisma.TransactionClient;
 
 const TX_LONG = { maxWait: 10_000, timeout: 60_000 } as const;
+const FEE_PAYMENT_PURPOSE = "FEE_PAYMENT" as const;
+const ESSENTIAL_ALERT_AUTHORITY = "ESSENTIAL_ALERT_ENROLLMENT" as const;
 
 function clean(v: unknown) {
   return String(v ?? "").trim();
@@ -236,29 +239,68 @@ function buildRefundFailedSmsMessage(input: {
 async function enqueueRefundSms(
   tx: TxClient,
   input: {
-  tenantId: string;
-  actorId?: string | null;
-  refundId: string;
-  receiptId: string | null;
-  feePaymentId: string;
-  invoiceId: string;
-  to: string | null;
-  message: string;
-  kind: "REQUESTED" | "PROCESSING" | "SUCCEEDED" | "FAILED";
-  template:
-    | "FEES_REFUND_REQUESTED"
-    | "FEES_REFUND_PROCESSING"
-    | "FEES_REFUND_SUCCEEDED"
-    | "FEES_REFUND_FAILED";
-  amountPesewas?: number | null;
-  studentName?: string | null;
-  receiptNumber?: string | null;
-  provider?: PaymentProvider | string | null;
-  providerReference?: string | null;
-  providerRefundReference?: string | null;
-}
+    tenantId: string;
+    actorId?: string | null;
+    refundId: string;
+    receiptId: string | null;
+    feePaymentId: string;
+    invoiceId: string;
+    studentId: string;
+    guardianPhone?: string | null;
+    guardianPhoneNorm?: string | null;
+    message: string;
+    kind: "REQUESTED" | "PROCESSING" | "SUCCEEDED" | "FAILED";
+    template:
+      | "FEES_REFUND_REQUESTED"
+      | "FEES_REFUND_PROCESSING"
+      | "FEES_REFUND_SUCCEEDED"
+      | "FEES_REFUND_FAILED";
+    amountPesewas?: number | null;
+    studentName?: string | null;
+    receiptNumber?: string | null;
+    provider?: PaymentProvider | string | null;
+    providerReference?: string | null;
+    providerRefundReference?: string | null;
+  }
 ) {
-  if (!input.to?.trim()) return null;
+  const eligibilityMap = await getGuardianEssentialAlertEligibilityMap({
+    tx,
+    tenantId: input.tenantId,
+    purpose: FEE_PAYMENT_PURPOSE,
+    students: [
+      {
+        id: input.studentId,
+        guardianPhone: input.guardianPhone ?? null,
+        guardianPhoneNorm: input.guardianPhoneNorm ?? null,
+      },
+    ],
+  });
+  const eligibility = eligibilityMap.get(input.studentId);
+  const authorizedPhone = eligibility?.eligible ? eligibility.phoneNorm : null;
+
+  if (!authorizedPhone) {
+    await tx.auditLog.create({
+      data: {
+        tenantId: input.tenantId,
+        userId: input.actorId ?? null,
+        action: "FINANCE_SMS_ESSENTIAL_ALERT_SKIPPED",
+        resource: "FeeRefund",
+        resourceId: input.refundId,
+        metadata: {
+          eventType: "SMS_REFUND_NOTICE",
+          refundStage: input.kind,
+          studentId: input.studentId,
+          essentialAlertPurpose: FEE_PAYMENT_PURPOSE,
+          eligibilityAuthority: ESSENTIAL_ALERT_AUTHORITY,
+          eligibilityReason: eligibility?.reason ?? "NOT_ENROLLED",
+          providerCalled: false,
+          rawPhoneIncluded: false,
+        },
+      },
+    });
+
+    return null;
+  }
 
   const idempotencyKey = `refund-sms:${input.refundId}:${input.kind}`;
 
@@ -279,7 +321,7 @@ async function enqueueRefundSms(
       payload: toJson({
         tenantId: input.tenantId,
         actorId: input.actorId ?? null,
-        to: input.to,
+        to: authorizedPhone,
         message: input.message,
         template: input.template,
         refundStage: input.kind,
@@ -287,17 +329,20 @@ async function enqueueRefundSms(
         receiptId: input.receiptId,
         feePaymentId: input.feePaymentId,
         invoiceId: input.invoiceId,
-amountPesewas: input.amountPesewas ?? null,
-refundAmountPesewas: input.amountPesewas ?? null,
-studentName: input.studentName ?? null,
-receiptNumber: input.receiptNumber ?? null,
-provider: input.provider ?? null,
-providerReference: input.providerReference ?? null,
-providerRefundReference: input.providerRefundReference ?? null,
-truthSource:
-  String(input.provider ?? "").toUpperCase() === "PAYSTACK"
-    ? "Paystack refund lifecycle notice"
-    : "School-recorded manual/cash refund notice",
+        studentId: input.studentId,
+        amountPesewas: input.amountPesewas ?? null,
+        refundAmountPesewas: input.amountPesewas ?? null,
+        studentName: input.studentName ?? null,
+        receiptNumber: input.receiptNumber ?? null,
+        provider: input.provider ?? null,
+        providerReference: input.providerReference ?? null,
+        providerRefundReference: input.providerRefundReference ?? null,
+        truthSource:
+          String(input.provider ?? "").toUpperCase() === "PAYSTACK"
+            ? "Paystack refund lifecycle notice"
+            : "School-recorded manual/cash refund notice",
+        essentialAlertPurpose: FEE_PAYMENT_PURPOSE,
+        eligibilityAuthority: ESSENTIAL_ALERT_AUTHORITY,
       }),
       priority: input.kind === "REQUESTED" ? 2 : 3,
       maxAttempts: 5,
@@ -595,12 +640,6 @@ export async function requestFeeRefund(input: {
           .join(" ")
           .trim() || "Student";
 
-      const guardianPhone =
-        payment.invoice.student?.guardianPhoneNorm ||
-        payment.invoice.student?.guardianPhone ||
-        payment.receipt.issuedToPhone ||
-        null;
-
       await enqueueRefundSms(tx, {
         tenantId,
         actorId: input.requestedByUserId ?? null,
@@ -608,7 +647,9 @@ export async function requestFeeRefund(input: {
         receiptId: payment.receipt.id,
         feePaymentId: payment.id,
         invoiceId: payment.invoiceId,
-        to: guardianPhone,
+        studentId: payment.invoice.studentId,
+        guardianPhone: payment.invoice.student?.guardianPhone ?? null,
+        guardianPhoneNorm: payment.invoice.student?.guardianPhoneNorm ?? null,
         kind: "REQUESTED",
         template: "FEES_REFUND_REQUESTED",
         message: buildRefundRequestSmsMessage({
@@ -876,12 +917,6 @@ export async function finalizeRefundSuccess(
       .join(" ")
       .trim() || "Student";
 
-  const guardianPhone =
-    refund.feePayment.invoice.student?.guardianPhoneNorm ||
-    refund.feePayment.invoice.student?.guardianPhone ||
-    refund.receipt?.issuedToPhone ||
-    null;
-
   await enqueueRefundSms(tx, {
   tenantId: input.tenantId,
   actorId: input.actorUserId,
@@ -889,7 +924,9 @@ export async function finalizeRefundSuccess(
   receiptId: refund.receiptId,
   feePaymentId: refund.feePaymentId,
   invoiceId: refund.feePayment.invoiceId,
-  to: guardianPhone,
+  studentId: refund.feePayment.invoice.studentId,
+  guardianPhone: refund.feePayment.invoice.student?.guardianPhone ?? null,
+  guardianPhoneNorm: refund.feePayment.invoice.student?.guardianPhoneNorm ?? null,
   kind: "SUCCEEDED",
   template: "FEES_REFUND_SUCCEEDED",
   amountPesewas: refund.amountPesewas,
@@ -970,6 +1007,7 @@ async function enqueueRefundFailedSms(
           invoiceId: true,
           invoice: {
             select: {
+              studentId: true,
               tenant: { select: { name: true } },
               student: {
                 select: {
@@ -1004,12 +1042,6 @@ async function enqueueRefundFailedSms(
       .join(" ")
       .trim() || "Student";
 
-  const guardianPhone =
-    refund.feePayment.invoice.student?.guardianPhoneNorm ||
-    refund.feePayment.invoice.student?.guardianPhone ||
-    refund.receipt?.issuedToPhone ||
-    null;
-
   return enqueueRefundSms(tx, {
     tenantId: input.tenantId,
     actorId: input.actorId ?? null,
@@ -1017,7 +1049,9 @@ async function enqueueRefundFailedSms(
     receiptId: refund.receiptId,
     feePaymentId: refund.feePaymentId,
     invoiceId: refund.feePayment.invoiceId,
-    to: guardianPhone,
+    studentId: refund.feePayment.invoice.studentId,
+    guardianPhone: refund.feePayment.invoice.student?.guardianPhone ?? null,
+    guardianPhoneNorm: refund.feePayment.invoice.student?.guardianPhoneNorm ?? null,
     kind: "FAILED",
     template: "FEES_REFUND_FAILED",
     message: buildRefundFailedSmsMessage({
@@ -1513,6 +1547,7 @@ export async function executeApprovedFeeRefund(input: {
             invoiceId: true,
             invoice: {
               select: {
+                studentId: true,
                 tenant: {
                   select: {
                     name: true,
@@ -1636,12 +1671,6 @@ export async function executeApprovedFeeRefund(input: {
           .join(" ")
           .trim() || "Student";
 
-      const guardianPhone =
-        refund.feePayment.invoice.student?.guardianPhoneNorm ||
-        refund.feePayment.invoice.student?.guardianPhone ||
-        refund.receipt?.issuedToPhone ||
-        null;
-
       await enqueueRefundSms(tx, {
         tenantId: input.tenantId,
         actorId: input.actorUserId,
@@ -1649,7 +1678,9 @@ export async function executeApprovedFeeRefund(input: {
         receiptId: refund.receipt?.id ?? null,
         feePaymentId: refund.feePaymentId,
         invoiceId: refund.feePayment.invoiceId,
-        to: guardianPhone,
+        studentId: refund.feePayment.invoice.studentId,
+        guardianPhone: refund.feePayment.invoice.student?.guardianPhone ?? null,
+        guardianPhoneNorm: refund.feePayment.invoice.student?.guardianPhoneNorm ?? null,
         kind: "PROCESSING",
         template: "FEES_REFUND_PROCESSING",
         message: buildRefundProcessingSmsMessage({

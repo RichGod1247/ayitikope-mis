@@ -527,6 +527,7 @@ export async function getGuardianEssentialAlertEligibilityMap(input: {
   tenantId: string;
   purpose: GuardianEssentialAlertPurpose;
   students: GuardianEligibilityStudent[];
+  tx?: Prisma.TransactionClient;
 }) {
   const tenantId = clean(input.tenantId);
   if (!tenantId) {
@@ -589,7 +590,9 @@ export async function getGuardianEssentialAlertEligibilityMap(input: {
 
   if (!prepared.length) return results;
 
-  const enrollments = await prisma.essentialAlertEnrollment.findMany({
+  const eligibilityDb = input.tx ?? prisma;
+
+  const enrollments = await eligibilityDb.essentialAlertEnrollment.findMany({
     where: {
       tenantId,
       recipientKind: EssentialAlertRecipientKind.GUARDIAN,
