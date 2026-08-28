@@ -61,9 +61,12 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
   ].filter((item) => item.show);
 
   return (
-    <div className="min-h-screen bg-[#05070B] text-[#F7F4ED]">
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-[rgba(5,7,11,0.94)] backdrop-blur-xl">
-        <div className="relative mx-auto max-w-6xl px-4 py-3 xl:py-4">
+    <div className="min-h-screen bg-[#05070B] text-[#F7F4ED] [--teacher-sticky-top:65px] xl:[--teacher-sticky-top:73px]">
+      <header
+        data-teacher-sticky-header="v1"
+        className="sticky top-0 z-40 border-b border-white/10 bg-[rgba(5,7,11,0.94)] backdrop-blur-xl"
+      >
+        <div className="relative mx-auto min-h-[64px] max-w-6xl px-4 py-3 xl:min-h-[72px] xl:py-4">
           <div className="pointer-events-none absolute -left-12 top-0 h-28 w-28 rounded-full bg-[#1B66D1]/20 blur-3xl" />
           <div className="pointer-events-none absolute right-0 top-0 h-24 w-24 rounded-full bg-[#D4AF37]/14 blur-3xl" />
 

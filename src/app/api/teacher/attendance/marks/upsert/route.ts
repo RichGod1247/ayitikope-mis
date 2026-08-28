@@ -14,13 +14,12 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const STATUS = ["PRESENT", "ABSENT", "LATE", "EXCUSED"] as const;
-
+const INPUT_STATUS = ["PRESENT", "ABSENT", "LATE", "EXCUSED"] as const;
 const QR_GENERATED_NOTE = "Marked PRESENT by QR badge scan.";
 
 const ItemSchema = z.object({
   studentId: z.string().trim().min(1, "studentId is required."),
-  status: z.enum(STATUS),
+  status: z.enum(INPUT_STATUS),
   note: z.string().max(280, "Note is too long.").optional().nullable(),
 });
 
@@ -125,6 +124,14 @@ async function loadActiveRoleName(userId: string, tenantId: string) {
 
 function sameMark(existing: ExistingMark, desired: DesiredMark) {
   return existing.status === desired.status && (existing.note ?? null) === (desired.note ?? null);
+}
+
+function isManualStatus(status: AttendanceStatus): status is "PRESENT" | "ABSENT" {
+  return status === "PRESENT" || status === "ABSENT";
+}
+
+function isPreservedLegacyStatus(status: AttendanceStatus) {
+  return status === "LATE" || status === "EXCUSED";
 }
 
 export async function POST(req: Request) {
@@ -278,6 +285,27 @@ export async function POST(req: Request) {
       ])
     );
 
+    // UI-P2 manual-register policy:
+    // New manual truth is binary: PRESENT or ABSENT.
+    // Historical LATE/EXCUSED rows remain readable and may be re-saved only
+    // when their status is unchanged, so old records/notes are not destroyed.
+    for (const desiredMark of desired) {
+      if (isManualStatus(desiredMark.status)) continue;
+
+      const existing = existingByStudent.get(desiredMark.studentId);
+      const preservesExistingLegacyStatus =
+        isPreservedLegacyStatus(desiredMark.status) &&
+        existing?.status === desiredMark.status;
+
+      if (!preservesExistingLegacyStatus) {
+        return noStoreJson(400, {
+          ok: false,
+          error:
+            "Manual attendance accepts only PRESENT or ABSENT. Existing Late/Excused records may be preserved until corrected.",
+        });
+      }
+    }
+
     const auditChanges: AuditChange[] = [];
     let createdCount = 0;
     let updatedCount = 0;
@@ -373,6 +401,8 @@ export async function POST(req: Request) {
           dateISO: session.date.toISOString().slice(0, 10),
           roleName,
           adminLike,
+          manualStatusPolicy: "PRESENT_ABSENT_ONLY",
+          legacyStatusCompatibility: "UNCHANGED_EXISTING_ONLY",
           requestedCount: items.length,
           dedupedCount: desired.length,
           createdCount,

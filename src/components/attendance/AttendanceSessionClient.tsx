@@ -5,6 +5,7 @@ import QrCameraScanner from "@/components/attendance/QrCameraScanner";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
+type ManualAttendanceStatus = "PRESENT" | "ABSENT";
 type AttendanceDisplayStatus = AttendanceStatus | "UNMARKED";
 
 type ApiErr = { ok: false; error: string };
@@ -213,18 +214,14 @@ function CountChip(props: {
   );
 }
 
-function statusButtonClass(active: boolean, status: AttendanceStatus) {
+function statusButtonClass(active: boolean, status: ManualAttendanceStatus) {
   if (!active)
     return "border-white/10 bg-white/5 text-[#D7DCE5] hover:bg-white/10";
 
   if (status === "PRESENT")
     return "border-emerald-300/20 bg-emerald-400/12 text-emerald-100";
-  if (status === "LATE")
-    return "border-amber-300/20 bg-amber-400/12 text-amber-100";
-  if (status === "ABSENT")
-    return "border-rose-300/20 bg-rose-400/12 text-rose-100";
 
-  return "border-white/10 bg-white/10 text-[#F7F4ED]";
+  return "border-rose-300/20 bg-rose-400/12 text-rose-100";
 }
 
 function notifyLine(j: NotifyOk) {
@@ -248,13 +245,22 @@ function AttendanceStatusButtons({
 }: {
   status: AttendanceDisplayStatus;
   disabled: boolean;
-  onChange: (status: AttendanceStatus) => void;
+  onChange: (status: ManualAttendanceStatus) => void;
   mobile?: boolean;
 }) {
+  const legacyStatus =
+    status === "LATE" ? "Late" : status === "EXCUSED" ? "Excused" : null;
+
   return (
-    <div className={mobile ? "grid grid-cols-2 gap-2" : "flex flex-wrap gap-2"}>
-      {(["PRESENT", "LATE", "ABSENT", "EXCUSED"] as AttendanceStatus[]).map(
-        (option) => (
+    <div data-attendance-manual-statuses="present-absent-v1" className="space-y-2">
+      {legacyStatus ? (
+        <div className="text-[10px] font-medium text-amber-200">
+          Previous status: {legacyStatus}. Choose Present or Absent when correcting it.
+        </div>
+      ) : null}
+
+      <div className={mobile ? "grid grid-cols-2 gap-2" : "flex flex-wrap gap-2"}>
+        {(["PRESENT", "ABSENT"] as ManualAttendanceStatus[]).map((option) => (
           <button
             key={option}
             type="button"
@@ -264,20 +270,14 @@ function AttendanceStatusButtons({
               "border font-semibold transition disabled:opacity-60",
               mobile
                 ? "min-h-11 rounded-xl px-3 py-2 text-xs"
-                : "rounded-full px-3 py-1 text-[11px]",
+                : "rounded-full px-4 py-1.5 text-xs",
               statusButtonClass(status === option, option),
             ].join(" ")}
           >
-            {option === "PRESENT"
-              ? "Present"
-              : option === "LATE"
-                ? "Late"
-                : option === "ABSENT"
-                  ? "Absent"
-                  : "Excused"}
+            {option === "PRESENT" ? "Present" : "Absent"}
           </button>
-        ),
-      )}
+        ))}
+      </div>
     </div>
   );
 }
@@ -285,10 +285,12 @@ function AttendanceStatusButtons({
 function GuideStep({
   number,
   label,
+  shortLabel,
   state,
 }: {
   number: number;
   label: string;
+  shortLabel: string;
   state: "done" | "current" | "pending";
 }) {
   const cls =
@@ -299,11 +301,17 @@ function GuideStep({
         : "border-white/10 bg-white/5 text-[#AEB6C4]";
 
   return (
-    <div className={`flex min-w-0 items-center gap-2 rounded-xl border px-3 py-2 ${cls}`}>
-      <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-current/20 text-[11px] font-bold">
+    <div
+      aria-current={state === "current" ? "step" : undefined}
+      className={`flex min-w-0 items-center justify-center gap-1 rounded-lg border px-2 py-1.5 ${cls}`}
+    >
+      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-current/20 text-[10px] font-bold">
         {state === "done" ? "✓" : number}
       </span>
-      <span className="text-xs font-semibold">{label}</span>
+      <span className="truncate text-[10px] font-semibold sm:hidden">{shortLabel}</span>
+      <span className="hidden truncate text-[10px] font-semibold sm:inline xl:text-[11px]">
+        {label}
+      </span>
     </div>
   );
 }
@@ -343,6 +351,7 @@ export default function AttendanceSessionClient(props: {
   const [qrMsg, setQrMsg] = useState<string | null>(null);
   const [qrErr, setQrErr] = useState<string | null>(null);
   const [showBadgeScanner, setShowBadgeScanner] = useState(false);
+  const [showAttendanceSummary, setShowAttendanceSummary] = useState(false);
 
   const isCertified = !!session?.certifiedAt;
   const isClosed = !!session?.isClosed;
@@ -847,6 +856,7 @@ export default function AttendanceSessionClient(props: {
   const allLearnersMarked = counts.total > 0 && counts.unmarked === 0;
   const marksSaved = allLearnersMarked && !dirty && !saveErr;
   const registerClosed = isClosed || isCertified;
+  const legacyStatusCount = counts.late + counts.excused;
 
   const guideCurrentStep = isCertified
     ? 4
@@ -859,14 +869,16 @@ export default function AttendanceSessionClient(props: {
           : 3;
 
   const guideMessage = isCertified
-    ? "Attendance is certified. Notify parents of absentees if needed."
+    ? alertPreview.total > 0
+      ? `Certified. ${alertPreview.total} absent learner(s) can now be notified.`
+      : "Certified. Attendance is complete."
     : registerClosed
-      ? "The register is closed. Certify it next, or reopen only when a correction is necessary."
+      ? "Register closed. Certify attendance next."
       : !allLearnersMarked
-        ? `Mark every learner first. ${counts.unmarked} still need a status.`
+        ? `Mark every learner Present or Absent. ${counts.unmarked} still unmarked.`
         : dirty
-          ? "All learners are marked. Save your changes next."
-          : "All learners are marked and saved. Close the register next.";
+          ? "All learners are marked. Save marks next."
+          : "Marks are saved. Close the register next.";
 
   return (
     <section className="space-y-4">
@@ -948,20 +960,27 @@ export default function AttendanceSessionClient(props: {
 
       <section
         data-attendance-bbc-guide="v1"
-        className={`${shellCard} p-4 md:p-5`}
+        data-attendance-guide-sticky="compact-v2"
+        className="sticky top-[var(--teacher-sticky-top)] z-30 rounded-2xl border border-[#E8C96A]/20 bg-[rgba(8,12,19,0.96)] p-3 shadow-[0_14px_40px_rgba(0,0,0,0.34)] backdrop-blur-xl"
       >
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="text-sm font-semibold text-[#F7F4ED]">
-              What to do
+        <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0 xl:max-w-[36%]">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-[#F7F4ED]">What to do</span>
+              <span className="rounded-full border border-[#E8C96A]/20 bg-[#D4AF37]/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[#E8C96A]">
+                Step {guideCurrentStep} of 4
+              </span>
             </div>
-            <p className="mt-1 text-xs leading-5 text-[#C9CDD6]">{guideMessage}</p>
+            <p className="mt-1 truncate text-[11px] leading-4 text-[#C9CDD6] sm:whitespace-normal">
+              {guideMessage}
+            </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="grid grid-cols-4 gap-1.5 xl:min-w-[500px]">
             <GuideStep
               number={1}
               label="Mark learners"
+              shortLabel="Mark"
               state={
                 allLearnersMarked
                   ? "done"
@@ -973,6 +992,7 @@ export default function AttendanceSessionClient(props: {
             <GuideStep
               number={2}
               label="Save marks"
+              shortLabel="Save"
               state={
                 marksSaved
                   ? "done"
@@ -984,6 +1004,7 @@ export default function AttendanceSessionClient(props: {
             <GuideStep
               number={3}
               label="Close register"
+              shortLabel="Close"
               state={
                 registerClosed
                   ? "done"
@@ -995,6 +1016,7 @@ export default function AttendanceSessionClient(props: {
             <GuideStep
               number={4}
               label="Certify"
+              shortLabel="Certify"
               state={
                 isCertified
                   ? "done"
@@ -1006,27 +1028,24 @@ export default function AttendanceSessionClient(props: {
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-white/10 pt-2">
           {!locked ? (
             <>
               <button
                 type="button"
                 onClick={markRemainingPresent}
-                disabled={
-                  loading || saving || mutating || counts.unmarked === 0
-                }
-                className={ghostBtn}
-                title="Only unmarked learners are changed to PRESENT. Existing Late, Absent and Excused marks stay unchanged."
+                disabled={loading || saving || mutating || counts.unmarked === 0}
+                className="inline-flex items-center justify-center rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                title="Only unmarked learners are changed to PRESENT. Existing marks are never overwritten."
               >
-                Mark unmarked Present
-                {counts.unmarked > 0 ? ` (${counts.unmarked})` : ""}
+                Mark remaining Present{counts.unmarked > 0 ? ` (${counts.unmarked})` : ""}
               </button>
 
               <button
                 type="button"
                 onClick={() => void saveAll()}
                 disabled={!canSave}
-                className={primaryBtn}
+                className="inline-flex items-center justify-center rounded-lg bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-3 py-1.5 text-[11px] font-semibold text-[#071A3D] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {saving ? "Saving…" : "Save marks"}
               </button>
@@ -1035,7 +1054,9 @@ export default function AttendanceSessionClient(props: {
                 type="button"
                 onClick={() => void mutate("close")}
                 disabled={!canClose}
-                className={canClose ? primaryBtn : ghostBtn}
+                className={canClose
+                  ? "inline-flex items-center justify-center rounded-lg bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-3 py-1.5 text-[11px] font-semibold text-[#071A3D] transition hover:brightness-105"
+                  : "inline-flex items-center justify-center rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-[#AEB6C4] disabled:cursor-not-allowed disabled:opacity-50"}
                 title={closeDisabledReason() ?? "Close register"}
               >
                 Close register
@@ -1049,12 +1070,8 @@ export default function AttendanceSessionClient(props: {
                 type="button"
                 onClick={() => void mutate("certify")}
                 disabled={!canCertify}
-                className={primaryBtn}
-                title={
-                  counts.unmarked > 0
-                    ? "Mark all learners first."
-                    : "Certify attendance"
-                }
+                className="inline-flex items-center justify-center rounded-lg bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-3 py-1.5 text-[11px] font-semibold text-[#071A3D] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                title={counts.unmarked > 0 ? "Mark all learners first." : "Certify attendance"}
               >
                 Certify attendance
               </button>
@@ -1063,7 +1080,7 @@ export default function AttendanceSessionClient(props: {
                 type="button"
                 onClick={() => void mutate("reopen")}
                 disabled={!canReopen}
-                className={ghostBtn}
+                className="inline-flex items-center justify-center rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
                 title="Reopen only when you need to correct a mark"
               >
                 Reopen to correct
@@ -1072,68 +1089,72 @@ export default function AttendanceSessionClient(props: {
           ) : null}
 
           {isCertified ? (
-            <span className="inline-flex items-center rounded-xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-2 text-sm font-semibold text-emerald-100">
-              ✓ Attendance certified
+            <span className="inline-flex items-center rounded-lg border border-emerald-300/20 bg-emerald-400/12 px-3 py-1.5 text-[11px] font-semibold text-emerald-100">
+              ✓ Certified
             </span>
           ) : null}
-        </div>
-      </section>
 
-      <section
-        data-attendance-summary-ui="notify-inline-v1"
-        className={`${shellCard} p-4 md:p-5`}
-      >
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <div className="text-sm font-semibold text-[#F7F4ED]">
-              Attendance summary
-            </div>
+          <div className="flex flex-1 flex-wrap items-center justify-end gap-2 sm:min-w-fit">
+            <button
+              type="button"
+              onClick={() => setShowAttendanceSummary((current) => !current)}
+              className="inline-flex items-center justify-center rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/10"
+              aria-expanded={showAttendanceSummary}
+              aria-controls="attendance-summary-panel"
+            >
+              Attendance summary {showAttendanceSummary ? "▴" : "▾"}
+            </button>
 
-            <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
-              <CountChip label="Total" value={counts.total} />
-              <CountChip label="Marked" value={counts.marked} />
-              <CountChip
-                label="Unmarked"
-                value={counts.unmarked}
-                tone={counts.unmarked ? "warn" : "good"}
-              />
-              <CountChip label="Present" value={counts.present} tone="good" />
-              <CountChip label="Late" value={counts.late} tone="warn" />
-              <CountChip label="Absent" value={counts.absent} tone="bad" />
-              <CountChip label="Excused" value={counts.excused} />
-            </div>
-
-            <p className="mt-3 text-[11px] leading-5 text-[#AEB6C4]">
-              Parent alerts: <b>{alertPreview.absentees.length}</b> absent •{" "}
-              <b>{alertPreview.eligible.length}</b> Essential Alerts eligible •{" "}
-              <b>{alertPreview.skippedNotEnabled}</b> not enabled •{" "}
-              <b>{alertPreview.skippedNoPhone}</b> no phone
-            </p>
-          </div>
-
-          <div className="shrink-0">
             <button
               type="button"
               onClick={() => void notifyParents()}
               disabled={!canNotify}
-              className={`${primaryBtn} w-full sm:w-auto`}
+              className="inline-flex items-center justify-center rounded-lg bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-3 py-1.5 text-[11px] font-semibold text-[#071A3D] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
               title={notifyDisabledReason() ?? "Notify eligible parents"}
             >
               {notifying ? "Notifying…" : "Notify parents"}
             </button>
-
-            {!canNotify ? (
-              <p className="mt-2 max-w-xs text-[10px] leading-4 text-[#8F98A8]">
-                {notifyDisabledReason() || "Parent notifications are not ready yet."}
-              </p>
-            ) : (
-              <p className="mt-2 max-w-xs text-[10px] leading-4 text-[#8F98A8]">
-                EduLife OS sends attendance SMS only to guardians who enabled Essential School Alerts.
-              </p>
-            )}
           </div>
         </div>
       </section>
+
+      {showAttendanceSummary ? (
+        <section
+          id="attendance-summary-panel"
+          data-attendance-summary-ui="collapsed-v2"
+          className={`${shellCard} p-4`}
+        >
+          <div className="text-sm font-semibold text-[#F7F4ED]">Attendance summary</div>
+
+          <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+            <CountChip label="Total" value={counts.total} />
+            <CountChip label="Marked" value={counts.marked} />
+            <CountChip
+              label="Unmarked"
+              value={counts.unmarked}
+              tone={counts.unmarked ? "warn" : "good"}
+            />
+            <CountChip label="Present" value={counts.present} tone="good" />
+            <CountChip label="Absent" value={counts.absent} tone="bad" />
+            {legacyStatusCount > 0 ? (
+              <CountChip label="Previous status" value={legacyStatusCount} tone="warn" />
+            ) : null}
+          </div>
+
+          <p className="mt-3 text-[11px] leading-5 text-[#AEB6C4]">
+            Parent alerts: <b>{alertPreview.absentees.length}</b> absent •{" "}
+            <b>{alertPreview.eligible.length}</b> Essential Alerts eligible •{" "}
+            <b>{alertPreview.skippedNotEnabled}</b> not enabled •{" "}
+            <b>{alertPreview.skippedNoPhone}</b> no phone
+          </p>
+
+          {legacyStatusCount > 0 ? (
+            <p className="mt-2 text-[10px] leading-4 text-amber-200">
+              {legacyStatusCount} older Late/Excused mark(s) are preserved for history. New manual marks use only Present or Absent.
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       {showBadgeScanner && !locked ? (
         <section
@@ -1203,7 +1224,7 @@ export default function AttendanceSessionClient(props: {
                 Learner register
               </h2>
               <p className="mt-1 text-[11px] text-[#AEB6C4]">
-                Tap one status for every learner. Notes are optional.
+                Tap Present or Absent for every learner. Mark note is optional.
               </p>
             </div>
 
@@ -1333,7 +1354,7 @@ export default function AttendanceSessionClient(props: {
                           ) : null}
                         </td>
 
-                        <td className="min-w-[330px]">
+                        <td className="min-w-[220px]">
                           <AttendanceStatusButtons
                             status={mark.status}
                             disabled={locked}

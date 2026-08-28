@@ -28,6 +28,7 @@ const session = read("src/components/attendance/AttendanceSessionClient.tsx");
 const scanner = read("src/components/attendance/QrCameraScanner.tsx");
 const notifyRoute = read("src/app/api/teacher/attendance/notify-parents/route.ts");
 const sessionGetRoute = read("src/app/api/teacher/attendance/sessions/get/route.ts");
+const marksUpsertRoute = read("src/app/api/teacher/attendance/marks/upsert/route.ts");
 
 for (const marker of [
   'data-teacher-glance-ui="bbc-compact-v1"',
@@ -58,6 +59,8 @@ for (const marker of [
   "group-open:hidden",
   "xl:hidden",
   "hidden items-center gap-3 xl:flex",
+  'data-teacher-sticky-header="v1"',
+  "[--teacher-sticky-top:65px]",
 ]) {
   assert(layout.includes(marker), "Teacher mobile navigation marker missing", marker);
 }
@@ -124,17 +127,24 @@ for (const forbidden of [
 
 for (const marker of [
   'data-attendance-bbc-guide="v1"',
+  'data-attendance-guide-sticky="compact-v2"',
+  "top-[var(--teacher-sticky-top)]",
   "What to do",
+  "Step {guideCurrentStep} of 4",
   "Mark learners",
   "Save marks",
   "Close register",
   "Certify",
-  'data-attendance-summary-ui="notify-inline-v1"',
+  "showAttendanceSummary",
+  'data-attendance-summary-ui="collapsed-v2"',
   "Attendance summary",
   "Notify parents",
+  'data-attendance-manual-statuses="present-absent-v1"',
+  '(["PRESENT", "ABSENT"] as ManualAttendanceStatus[])',
   'data-attendance-register-ui="primary-v1"',
   "Learner register",
-  "Tap one status for every learner.",
+  "Tap Present or Absent for every learner. Mark note is optional.",
+  "Mark note",
   "md:hidden",
   "hidden overflow-x-auto md:block",
   "Scan learner badge",
@@ -155,6 +165,8 @@ for (const forbidden of [
   "closeThenNotify()",
   "Close + Notify",
   "initialBrand",
+  'data-attendance-summary-ui="notify-inline-v1"',
+  '(["PRESENT", "LATE", "ABSENT", "EXCUSED"] as AttendanceStatus[])',
 ]) {
   assert(
     !session.includes(forbidden),
@@ -165,8 +177,24 @@ for (const forbidden of [
 
 assert(
   session.indexOf('data-attendance-register-ui="primary-v1"') >
-    session.indexOf('data-attendance-summary-ui="notify-inline-v1"'),
-  "Learner register must follow the compact guide and summary",
+    session.indexOf('data-attendance-bbc-guide="v1"'),
+  "Learner register must follow the compact sticky guide",
+);
+
+assert(
+  session.includes("{showAttendanceSummary ? (") &&
+    session.includes('data-attendance-summary-ui="collapsed-v2"'),
+  "Attendance summary must remain collapsed until explicitly opened",
+);
+
+const guideStart = session.indexOf('data-attendance-bbc-guide="v1"');
+const notifyButton = session.indexOf("Notify parents", guideStart);
+const summaryPanel = session.indexOf('data-attendance-summary-ui="collapsed-v2"');
+
+assert(
+  guideStart >= 0 && notifyButton > guideStart && summaryPanel > notifyButton,
+  "Notify parents must live in the sticky guide before the collapsed summary panel",
+  { guideStart, notifyButton, summaryPanel },
 );
 
 assert(
@@ -267,6 +295,32 @@ assert(
 );
 
 for (const marker of [
+  'const MANUAL_STATUS = ["PRESENT", "ABSENT"] as const;',
+  'manualStatusPolicy: "PRESENT_ABSENT_ONLY"',
+  'legacyStatusCompatibility: "UNCHANGED_EXISTING_ONLY"',
+  "Manual attendance accepts only PRESENT or ABSENT.",
+  "existing?.status === desiredMark.status",
+]) {
+  assert(
+    marksUpsertRoute.includes(marker),
+    "Manual Present/Absent server policy marker missing",
+    marker,
+  );
+}
+
+assert(
+  marksUpsertRoute.indexOf("existingByStudent") <
+    marksUpsertRoute.indexOf("Manual attendance accepts only PRESENT or ABSENT."),
+  "Legacy compatibility validation must be grounded in the existing stored mark",
+);
+
+assert(
+  marksUpsertRoute.indexOf("Manual attendance accepts only PRESENT or ABSENT.") <
+    marksUpsertRoute.indexOf("await prisma.$transaction(async (tx) =>"),
+  "Present/Absent policy must reject invalid manual status before attendance writes",
+);
+
+for (const marker of [
   'await import("@zxing/browser")',
   "controlsRef.current?.stop()",
   "video.srcObject = null",
@@ -275,7 +329,7 @@ for (const marker of [
   assert(scanner.includes(marker), "QR camera cleanup/lazy-load contract missing", marker);
 }
 
-for (const source of [dashboard, layout, attendancePage, attendanceList, session, notifyRoute]) {
+for (const source of [dashboard, layout, attendancePage, attendanceList, session, notifyRoute, marksUpsertRoute]) {
   for (const forbidden of ["localStorage", "sessionStorage", "setInterval("]) {
     assert(
       !source.includes(forbidden),
@@ -294,7 +348,11 @@ console.log("Desktop navigation             : preserved");
 console.log("Mobile navigation              : collapsed behind Menu");
 console.log("Mobile logout                  : hidden inside Menu");
 console.log("Attendance guide               : Mark -> Save -> Close -> Certify");
-console.log("Attendance summary             : counts + Notify parents");
+console.log("Attendance summary             : collapsed behind explicit button");
+console.log("Sticky progress guide          : compact under teacher header");
+console.log("Notify parents                 : moved into progress guide");
+console.log("Manual learner statuses        : PRESENT / ABSENT only");
+console.log("Legacy Late/Excused records    : read/preserve compatibility only");
 console.log("Notification preview card      : removed");
 console.log("Learner register               : primary responsive content");
 console.log("Mobile learner register        : native cards, no wide-table dependency");
