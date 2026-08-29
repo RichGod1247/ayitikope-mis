@@ -5,6 +5,7 @@ import { requireApiUserContext } from "@/lib/serverAuth";
 import { StudentStatus } from "@prisma/client";
 import { z } from "zod";
 import { cleanStr, normalizeGhPhoneE164 } from "@/lib/phoneNormGH";
+import { parseStudentDateOfBirth } from "@/lib/studentDateOfBirth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,6 +28,7 @@ const BodySchema = z
     classroomId: z.string().nullable().optional(),
     gender: z.string().nullable().optional(),
     sex: z.string().nullable().optional(),
+    dateOfBirth: z.string().nullable().optional(),
     dob: z.string().nullable().optional(),
     note: z.string().nullable().optional(),
   })
@@ -71,6 +73,21 @@ export async function POST(req: NextRequest) {
     }
   }
 
+
+  const dateOfBirth = parseStudentDateOfBirth(parsed.data.dateOfBirth);
+  if (!dateOfBirth.ok) {
+    return noStoreJson(400, { ok: false, error: dateOfBirth.error });
+  }
+
+  let legacyDob: Date | null = null;
+  if (parsed.data.dob) {
+    const parsedLegacyDob = new Date(String(parsed.data.dob));
+    if (Number.isNaN(parsedLegacyDob.getTime())) {
+      return noStoreJson(400, { ok: false, error: "INVALID_DOB" });
+    }
+    legacyDob = parsedLegacyDob;
+  }
+
   const created = await prisma.student.create({
     data: {
       tenantId: auth.ctx.tenantId,
@@ -82,7 +99,8 @@ export async function POST(req: NextRequest) {
       guardianPhoneNorm,
       gender: parsed.data.gender ? cleanStr(parsed.data.gender) : null,
       sex: parsed.data.sex ? cleanStr(parsed.data.sex) : null,
-      dob: parsed.data.dob ? new Date(String(parsed.data.dob)) : null,
+      dateOfBirth: dateOfBirth.value,
+      dob: legacyDob,
       note: parsed.data.note ? cleanStr(parsed.data.note) : null,
       classroomId: classroomId || null,
     },

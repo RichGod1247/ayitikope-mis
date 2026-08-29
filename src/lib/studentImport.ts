@@ -1,6 +1,7 @@
 // src/lib/studentImport.ts
 import { normalizeGhPhoneE164 } from "@/lib/phoneNormGH";
 import { normalizeArmNorm, normalizeNameNorm } from "@/lib/normalize";
+import { parseStudentDateOfBirth } from "@/lib/studentDateOfBirth";
 
 export type ClassroomLite = {
   id: string;
@@ -15,6 +16,7 @@ export type ParsedBulkStudentRow = {
   lastName: string;
   guardianName: string | null;
   guardianPhone: string | null;
+  dateOfBirth: string | null;
   classLabel: string | null;
   gender: string | null;
   note: string | null;
@@ -123,6 +125,11 @@ const HEADER_ALIASES: Record<string, keyof ParsedBulkStudentRow | null> = {
   phone: "guardianPhone",
   mobile: "guardianPhone",
 
+  dateofbirth: "dateOfBirth",
+  birthdate: "dateOfBirth",
+  birth: "dateOfBirth",
+  dob: "dateOfBirth",
+
   class: "classLabel",
   classroom: "classLabel",
   classlabel: "classLabel",
@@ -176,6 +183,7 @@ export function parseBulkStudentCsv(text: string): {
       lastName,
       guardianName: optional(indexMap.guardianName != null ? r[indexMap.guardianName] : "", 120),
       guardianPhone: optional(indexMap.guardianPhone != null ? r[indexMap.guardianPhone] : "", 32),
+      dateOfBirth: optional(indexMap.dateOfBirth != null ? r[indexMap.dateOfBirth] : "", 10),
       classLabel: optional(indexMap.classLabel != null ? r[indexMap.classLabel] : "", 80),
       gender: optional(indexMap.gender != null ? r[indexMap.gender] : "", 32),
       note: optional(indexMap.note != null ? r[indexMap.note] : "", 500),
@@ -186,6 +194,7 @@ export function parseBulkStudentCsv(text: string): {
       !parsed.lastName &&
       !parsed.guardianName &&
       !parsed.guardianPhone &&
+      !parsed.dateOfBirth &&
       !parsed.classLabel &&
       !parsed.gender &&
       !parsed.note;
@@ -294,6 +303,9 @@ export function previewBulkStudentImport(text: string, classes: ClassroomLite[])
 
     const guardianPhoneNorm = row.guardianPhone ? normalizeGhPhoneE164(row.guardianPhone) : null;
     if (row.guardianPhone && !guardianPhoneNorm) reasons.push("INVALID_GUARDIAN_PHONE_GH");
+
+    const dateOfBirth = parseStudentDateOfBirth(row.dateOfBirth);
+    if (!dateOfBirth.ok) reasons.push(dateOfBirth.error);
 
     const classResolved = resolveClassroomId(row.classLabel, lookup);
     if (classResolved.error) reasons.push(classResolved.error);

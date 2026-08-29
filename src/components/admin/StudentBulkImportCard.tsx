@@ -26,6 +26,10 @@ function friendlyReason(code: string): string {
       return "Missing firstName or lastName.";
     case "INVALID_GUARDIAN_PHONE_GH":
       return "Guardian phone must be a Ghana number (024…, 055…, +233…).";
+    case "INVALID_DATE_OF_BIRTH":
+      return "Date of birth must use YYYY-MM-DD.";
+    case "DATE_OF_BIRTH_IN_FUTURE":
+      return "Date of birth cannot be in the future.";
     case "UNKNOWN_CLASS_LABEL":
       return "Class not recognized. Use formats like “KG 1”, “B1 A”, “JHS 3 B”.";
     case "AMBIGUOUS_CLASS_LABEL":
@@ -121,7 +125,13 @@ function primaryBtnClass() {
   return "rounded-xl border border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-sm font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] transition hover:brightness-105 disabled:opacity-60";
 }
 
-export default function StudentBulkImportCard({ classes }: { classes: ClassroomLite[] }) {
+export default function StudentBulkImportCard({
+  classes,
+  embedded = false,
+}: {
+  classes: ClassroomLite[];
+  embedded?: boolean;
+}) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement | null>(null);
 
@@ -141,10 +151,10 @@ export default function StudentBulkImportCard({ classes }: { classes: ClassroomL
   function buildTemplateCsv() {
     return normalizeCsvText(
       [
-        "firstName,lastName,class,guardianName,guardianPhone,gender,note",
-        "Ama,Mensah,B1 A,Esi Mensah,0241234567,Female,New learner",
-        "Kwesi,Owusu,KG 1,Kojo Owusu,0551234567,Male,",
-        "Amina,Sarpong,JHS 3 B,Ali Sarpong,0201234567,Female,Transfer",
+        "firstName,lastName,dateOfBirth,class,guardianName,guardianPhone,gender,note",
+        "Ama,Mensah,2015-06-12,B1 A,Esi Mensah,0241234567,Female,New learner",
+        "Kwesi,Owusu,2019-03-08,KG 1,Kojo Owusu,0551234567,Male,",
+        "Amina,Sarpong,2013-11-25,JHS 3 B,Ali Sarpong,0201234567,Female,Transfer",
       ].join("\n")
     );
   }
@@ -210,8 +220,8 @@ export default function StudentBulkImportCard({ classes }: { classes: ClassroomL
       });
 
       if (Number(data.importedCount || 0) > 0) router.refresh();
-    } catch (e: any) {
-      setServerError(String(e?.message || "Network error during import."));
+    } catch (caught) {
+      setServerError(caught instanceof Error ? caught.message : "Network error during import.");
     } finally {
       setSubmitting(false);
     }
@@ -219,12 +229,16 @@ export default function StudentBulkImportCard({ classes }: { classes: ClassroomL
 
   const topIssues: PreviewIssue[] = preview.issues.slice(0, 20);
 
+  const containerClass = embedded
+    ? "space-y-3 text-[#F7F4ED]"
+    : "rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl space-y-3 text-[#F7F4ED]";
+
   return (
-    <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl space-y-4 text-[#F7F4ED]">
+    <div className={containerClass}>
       <div>
         <h2 className="text-sm font-semibold text-[#F7F4ED]">Bulk Import (Excel-friendly)</h2>
         <p className="mt-1 text-sm text-[#C9CDD6]">
-          1) Download template → 2) Fill in Excel → 3) Upload → Import.
+          Download the template, fill it in Excel, then upload the CSV. DOB uses YYYY-MM-DD.
         </p>
       </div>
 
@@ -277,7 +291,7 @@ export default function StudentBulkImportCard({ classes }: { classes: ClassroomL
         </div>
       )}
 
-      <div className="rounded-2xl border border-white/10 bg-[#07111F]/80 p-4 space-y-2">
+      <div className="rounded-xl border border-white/10 bg-[#07111F]/80 p-3 space-y-2">
         <div className="text-xs font-semibold text-[#F7F4ED]">Optional: assign a default class</div>
         <p className="text-[11px] text-[#C9CDD6]">
           If some rows have an empty <b className="text-[#F7F4ED]">class</b> cell, we can apply one class to all of them during import.
@@ -298,7 +312,7 @@ export default function StudentBulkImportCard({ classes }: { classes: ClassroomL
         </select>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-[#07111F]/80 p-4">
+      <div className="rounded-xl border border-white/10 bg-[#07111F]/80 p-3">
         <div className="flex items-center justify-between gap-2">
           <div>
             <p className="text-sm font-semibold text-[#F7F4ED]">Preview</p>
@@ -320,10 +334,10 @@ export default function StudentBulkImportCard({ classes }: { classes: ClassroomL
           <textarea
             value={csvText}
             onChange={(e) => setCsvText(normalizeCsvText(e.target.value))}
-            rows={10}
+            rows={7}
             className="mt-3 w-full rounded-xl border border-white/10 bg-[#05070B] px-3 py-2 font-mono text-sm text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/25"
-            placeholder={`firstName,lastName,class,guardianName,guardianPhone,gender,note
-Ama,Mensah,B1 A,Esi Mensah,0241234567,Female,New learner`}
+            placeholder={`firstName,lastName,dateOfBirth,class,guardianName,guardianPhone,gender,note
+Ama,Mensah,2015-06-12,B1 A,Esi Mensah,0241234567,Female,New learner`}
           />
         ) : null}
 

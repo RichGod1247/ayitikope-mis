@@ -5,6 +5,7 @@ import { requireApiUserContext } from "@/lib/serverAuth";
 import { StudentStatus } from "@prisma/client";
 import { z } from "zod";
 import { cleanStr, normalizeGhPhoneE164 } from "@/lib/phoneNormGH";
+import { parseStudentDateOfBirth } from "@/lib/studentDateOfBirth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,6 +25,7 @@ const PatchSchema = z
     lastName: z.string().nullable().optional(),
     gender: z.string().nullable().optional(),
     sex: z.string().nullable().optional(),
+    dateOfBirth: z.string().nullable().optional(),
     dob: z.string().nullable().optional(),
     guardianName: z.string().nullable().optional(),
     guardianPhone: z.string().nullable().optional(),
@@ -52,6 +54,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       lastName: true,
       gender: true,
       sex: true,
+      dateOfBirth: true,
       dob: true,
       guardianName: true,
       guardianPhone: true,
@@ -96,6 +99,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (parsed.data.lastName !== undefined) data.lastName = parsed.data.lastName ? cleanStr(parsed.data.lastName) : null;
   if (parsed.data.gender !== undefined) data.gender = parsed.data.gender ? cleanStr(parsed.data.gender) : null;
   if (parsed.data.sex !== undefined) data.sex = parsed.data.sex ? cleanStr(parsed.data.sex) : null;
+
+  if (parsed.data.dateOfBirth !== undefined) {
+    const dateOfBirth = parseStudentDateOfBirth(parsed.data.dateOfBirth);
+    if (!dateOfBirth.ok) {
+      return noStoreJson(400, { ok: false, error: dateOfBirth.error });
+    }
+    data.dateOfBirth = dateOfBirth.value;
+  }
 
   if (parsed.data.dob !== undefined) {
     if (!parsed.data.dob) data.dob = null;

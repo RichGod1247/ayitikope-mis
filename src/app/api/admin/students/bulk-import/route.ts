@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
 import { StudentStatus } from "@prisma/client";
 import { normalizeGhPhoneE164 } from "@/lib/phoneNormGH";
+import { parseStudentDateOfBirth } from "@/lib/studentDateOfBirth";
 import {
   buildClassroomLookup,
   buildStudentDuplicateKey,
@@ -115,6 +116,7 @@ export async function POST(req: NextRequest) {
     guardianName: string | null;
     guardianPhone: string | null;
     guardianPhoneNorm: string | null;
+    dateOfBirth: Date | null;
     gender: string | null;
     note: string | null;
     classroomId: string | null;
@@ -128,6 +130,7 @@ export async function POST(req: NextRequest) {
     const lastName = clean(raw?.lastName, 80);
     const guardianName = optional(raw?.guardianName, 120);
     const guardianPhone = optional(raw?.guardianPhone, 32);
+    const dateOfBirthRaw = optional(raw?.dateOfBirth, 10);
     const classLabel = optional(raw?.classLabel, 80);
     const gender = optional(raw?.gender, 32);
     const note = optional(raw?.note, 500);
@@ -142,6 +145,13 @@ export async function POST(req: NextRequest) {
     if (guardianPhone && !guardianPhoneNorm) {
       invalidCount += 1;
       errors.push({ rowNumber: rowNumber || errors.length + 2, error: "INVALID_GUARDIAN_PHONE_GH" });
+      continue;
+    }
+
+    const dateOfBirth = parseStudentDateOfBirth(dateOfBirthRaw);
+    if (!dateOfBirth.ok) {
+      invalidCount += 1;
+      errors.push({ rowNumber: rowNumber || errors.length + 2, error: dateOfBirth.error });
       continue;
     }
 
@@ -182,6 +192,7 @@ export async function POST(req: NextRequest) {
       guardianName,
       guardianPhone,
       guardianPhoneNorm,
+      dateOfBirth: dateOfBirth.value,
       gender,
       note,
       classroomId: classResolved.classroomId,

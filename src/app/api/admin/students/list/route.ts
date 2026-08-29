@@ -83,6 +83,7 @@ export async function GET(req: NextRequest) {
       lastName: true,
       gender: true,
       sex: true,
+      dateOfBirth: true,
       dob: true,
       guardianName: true,
       guardianPhone: true,

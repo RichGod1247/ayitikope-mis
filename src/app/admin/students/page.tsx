@@ -5,6 +5,12 @@ import { requireServerUserContext } from "@/lib/serverAuth";
 import { StudentStatus } from "@prisma/client";
 import { normalizeGhPhoneE164 } from "@/lib/phoneNormGH";
 import StudentBulkImportCard from "@/components/admin/StudentBulkImportCard";
+import StudentEssentialAlertsCard from "@/components/admin/StudentEssentialAlertsCard";
+import {
+  parseStudentDateOfBirth,
+  studentDateOfBirthIso,
+  studentDateOfBirthLabel,
+} from "@/lib/studentDateOfBirth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -42,23 +48,31 @@ function buildHref(base: string, params: Record<string, string | null | undefine
 }
 
 function shellCardClass() {
-  return "rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl";
+  return "rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl";
 }
 
 function inputClass() {
   return "mt-1 w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/25";
 }
 
+function compactInputClass() {
+  return "w-full rounded-lg border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/25";
+}
+
 function selectClass() {
   return "mt-1 w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/25";
 }
 
+function compactSelectClass() {
+  return "w-full rounded-lg border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/25";
+}
+
 function outlineBtnClass() {
-  return "rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-[#F7F4ED] transition hover:bg-white/10";
+  return "rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-[#F7F4ED] transition hover:bg-white/10";
 }
 
 function primaryBtnClass() {
-  return "rounded-xl border border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-sm font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] transition hover:brightness-105";
+  return "rounded-lg border border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-sm font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] transition hover:brightness-105";
 }
 
 async function createStudent(formData: FormData) {
@@ -73,8 +87,10 @@ async function createStudent(formData: FormData) {
   const classroomId = optional(formData.get("classroomId"), 64);
   const gender = optional(formData.get("gender"), 32);
   const note = optional(formData.get("note"), 500);
+  const dateOfBirth = parseStudentDateOfBirth(formData.get("dateOfBirth"));
 
   if (!firstName || !lastName) redirect("/admin/students?error=MISSING_NAME");
+  if (!dateOfBirth.ok) redirect(`/admin/students?error=${dateOfBirth.error}`);
 
   if (classroomId) {
     const ok = await prisma.classroom.findFirst({
@@ -112,6 +128,7 @@ async function createStudent(formData: FormData) {
       status: StudentStatus.ACTIVE,
       firstName,
       lastName,
+      dateOfBirth: dateOfBirth.value,
       guardianName,
       guardianPhone: guardianPhoneRaw,
       guardianPhoneNorm,
@@ -151,51 +168,7 @@ async function updateStudentClass(formData: FormData) {
   }
 
   await prisma.student.update({ where: { id: studentId }, data: { classroomId } });
-  redirect("/admin/students?saved=1");
-}
-
-async function toggleGuardianSms(formData: FormData) {
-  "use server";
-
-  const safe = await requireAdmin("/admin/students");
-  const studentId = clean(formData.get("studentId"), 128);
-  if (!studentId) redirect("/admin/students?error=BAD_INPUT");
-
-  const student = await prisma.student.findFirst({
-    where: { id: studentId, tenantId: safe.tenantId },
-    select: { id: true, guardianSmsOptIn: true, status: true },
-  });
-  if (!student) redirect("/admin/students?error=STUDENT_NOT_FOUND");
-  if (student.status === StudentStatus.ARCHIVED) redirect("/admin/students?error=ARCHIVED_IMMUTABLE");
-
-  await prisma.student.update({
-    where: { id: studentId },
-    data: { guardianSmsOptIn: !student.guardianSmsOptIn },
-  });
-
-  redirect("/admin/students?saved=1");
-}
-
-async function toggleHealthConsent(formData: FormData) {
-  "use server";
-
-  const safe = await requireAdmin("/admin/students");
-  const studentId = clean(formData.get("studentId"), 128);
-  if (!studentId) redirect("/admin/students?error=BAD_INPUT");
-
-  const student = await prisma.student.findFirst({
-    where: { id: studentId, tenantId: safe.tenantId },
-    select: { id: true, healthConsentAt: true, status: true },
-  });
-  if (!student) redirect("/admin/students?error=STUDENT_NOT_FOUND");
-  if (student.status === StudentStatus.ARCHIVED) redirect("/admin/students?error=ARCHIVED_IMMUTABLE");
-
-  await prisma.student.update({
-    where: { id: studentId },
-    data: { healthConsentAt: student.healthConsentAt ? null : new Date() },
-  });
-
-  redirect("/admin/students?saved=1");
+  redirect(`/admin/students?saved=1&section=list${classroomId ? `&classroomId=${encodeURIComponent(classroomId)}` : ""}`);
 }
 
 async function archiveStudent(formData: FormData) {
@@ -218,7 +191,7 @@ async function archiveStudent(formData: FormData) {
     });
   }
 
-  redirect("/admin/students?archived=1");
+  redirect("/admin/students?archived=1&section=list");
 }
 
 async function restoreStudent(formData: FormData) {
@@ -241,19 +214,18 @@ async function restoreStudent(formData: FormData) {
     });
   }
 
-  redirect("/admin/students?restored=1&show=archived");
+  redirect("/admin/students?restored=1&show=archived&section=list");
 }
 
 export default async function AdminStudentsPage(props: { searchParams?: SP | Promise<SP> }) {
   const safe = await requireAdmin("/admin/students");
-
   const sp = (await Promise.resolve(props.searchParams ?? {})) as SP;
 
   const show = typeof sp.show === "string" ? sp.show : "active";
   const showArchived = show === "archived";
-
   const q = typeof sp.q === "string" ? sp.q.trim() : "";
   const classroomIdFilter = typeof sp.classroomId === "string" ? sp.classroomId.trim() : "";
+  const section = typeof sp.section === "string" ? sp.section : "";
 
   const created = sp.created === "1";
   const archived = sp.archived === "1";
@@ -262,6 +234,8 @@ export default async function AdminStudentsPage(props: { searchParams?: SP | Pro
   const note = typeof sp.note === "string" ? sp.note : null;
   const error = typeof sp.error === "string" ? sp.error : null;
 
+  const shouldLoadStudentList = showArchived || Boolean(classroomIdFilter);
+
   const [classes, students, counts] = await Promise.all([
     prisma.classroom.findMany({
       where: { tenantId: safe.tenantId, status: "ACTIVE" },
@@ -269,41 +243,42 @@ export default async function AdminStudentsPage(props: { searchParams?: SP | Pro
       orderBy: [{ grade: "asc" }, { name: "asc" }],
       take: 300,
     }),
-    prisma.student.findMany({
-      where: {
-        tenantId: safe.tenantId,
-        status: showArchived ? StudentStatus.ARCHIVED : StudentStatus.ACTIVE,
-        ...(classroomIdFilter ? { classroomId: classroomIdFilter } : {}),
-        ...(q
-          ? {
-              OR: [
-                { firstName: { contains: q, mode: "insensitive" } },
-                { lastName: { contains: q, mode: "insensitive" } },
-                { guardianName: { contains: q, mode: "insensitive" } },
-                { guardianPhone: { contains: q, mode: "insensitive" } },
-                { guardianPhoneNorm: { contains: q, mode: "insensitive" } },
-              ],
-            }
-          : {}),
-      },
-      select: {
-        id: true,
-        status: true,
-        firstName: true,
-        lastName: true,
-        guardianName: true,
-        guardianPhone: true,
-        guardianPhoneNorm: true,
-        guardianSmsOptIn: true,
-        healthConsentAt: true,
-        classroomId: true,
-        classroom: { select: { name: true, grade: true, arm: true } },
-        createdAt: true,
-        archivedAt: true,
-      },
-      orderBy: [{ createdAt: "desc" }],
-      take: 1000,
-    }),
+    shouldLoadStudentList
+      ? prisma.student.findMany({
+          where: {
+            tenantId: safe.tenantId,
+            status: showArchived ? StudentStatus.ARCHIVED : StudentStatus.ACTIVE,
+            ...(!showArchived && classroomIdFilter ? { classroomId: classroomIdFilter } : {}),
+            ...(q
+              ? {
+                  OR: [
+                    { firstName: { contains: q, mode: "insensitive" } },
+                    { lastName: { contains: q, mode: "insensitive" } },
+                    { guardianName: { contains: q, mode: "insensitive" } },
+                    { guardianPhone: { contains: q, mode: "insensitive" } },
+                    { guardianPhoneNorm: { contains: q, mode: "insensitive" } },
+                  ],
+                }
+              : {}),
+          },
+          select: {
+            id: true,
+            status: true,
+            firstName: true,
+            lastName: true,
+            dateOfBirth: true,
+            dob: true,
+            guardianName: true,
+            guardianPhone: true,
+            guardianPhoneNorm: true,
+            classroomId: true,
+            classroom: { select: { name: true, grade: true, arm: true } },
+            archivedAt: true,
+          },
+          orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+          take: 1000,
+        })
+      : Promise.resolve([]),
     prisma.student.groupBy({
       by: ["status"],
       where: { tenantId: safe.tenantId },
@@ -317,46 +292,55 @@ export default async function AdminStudentsPage(props: { searchParams?: SP | Pro
   const classLabel = (c: { name: string; arm: string | null; grade?: string | null }) =>
     [c.name, c.grade, c.arm ? `Arm ${c.arm}` : null].filter(Boolean).join(" · ");
 
+  const selectedClass = classes.find((c) => c.id === classroomIdFilter) ?? null;
+  const selectedClassLabel = selectedClass
+    ? classLabel({ name: selectedClass.name, grade: selectedClass.grade ?? null, arm: selectedClass.arm ?? null })
+    : null;
+
   const statusPill = (s: StudentStatus) =>
     s === StudentStatus.ACTIVE
-      ? "inline-flex rounded-full border border-emerald-300/20 bg-emerald-400/12 px-2 py-0.5 text-[11px] font-semibold text-emerald-100"
-      : "inline-flex rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-semibold text-[#D7DCE5]";
+      ? "inline-flex rounded-full border border-emerald-300/20 bg-emerald-400/12 px-2 py-0.5 text-[10px] font-semibold text-emerald-100"
+      : "inline-flex rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-[#D7DCE5]";
 
   const topHref = (nextShow: "active" | "archived") =>
     buildHref("/admin/students", {
       show: nextShow,
       q: q || null,
-      classroomId: classroomIdFilter || null,
+      classroomId: nextShow === "active" ? classroomIdFilter || null : null,
+      section: section || null,
     });
 
-  const clearFiltersHref = buildHref("/admin/students", { show: showArchived ? "archived" : "active" });
+  const clearFiltersHref = buildHref("/admin/students", {
+    show: showArchived ? "archived" : "active",
+    section: "list",
+  });
+
+  const studentListOpen = section === "list" || showArchived || Boolean(classroomIdFilter);
+  const todayIso = studentDateOfBirthIso(new Date()) ?? undefined;
 
   return (
-    <div className="space-y-6 text-[#F7F4ED]">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+    <div className="space-y-4 text-[#F7F4ED]">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-[#F7F4ED]">Students</h1>
           <p className="mt-1 max-w-3xl text-sm text-[#C9CDD6]">
-            Create learners, assign classes, enable guardian SMS, and set health consent.
+            Keep learner records clear, class-organized and ready for attendance. Essential Alerts use their own consent authority.
             <span className="font-medium text-[#F7F4ED]"> Archive removes the learner from attendance rosters.</span>
           </p>
 
-          <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-[#D7DCE5]">
+          <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-[#D7DCE5]">
             <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
               Active: <b>{activeCount}</b>
             </span>
             <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
               Archived: <b>{archivedCount}</b>
             </span>
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
-              Showing: <b>{students.length}</b>
-            </span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <a
-            className={`rounded-xl border px-3 py-2 text-sm transition ${
+            className={`rounded-lg border px-3 py-2 text-sm transition ${
               !showArchived
                 ? "border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] text-[#071A3D]"
                 : "border-white/10 bg-white/5 text-[#F7F4ED] hover:bg-white/10"
@@ -366,7 +350,7 @@ export default async function AdminStudentsPage(props: { searchParams?: SP | Pro
             Active
           </a>
           <a
-            className={`rounded-xl border px-3 py-2 text-sm transition ${
+            className={`rounded-lg border px-3 py-2 text-sm transition ${
               showArchived
                 ? "border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] text-[#071A3D]"
                 : "border-white/10 bg-white/5 text-[#F7F4ED] hover:bg-white/10"
@@ -379,117 +363,57 @@ export default async function AdminStudentsPage(props: { searchParams?: SP | Pro
       </div>
 
       {created ? (
-        <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-3 text-sm text-emerald-100">
+        <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-2.5 text-sm text-emerald-100">
           Student created{note === "DUPLICATE_BLOCKED" ? " (duplicate blocked)" : ""}.
         </div>
       ) : null}
-
       {archived ? (
-        <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-3 text-sm text-emerald-100">
+        <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-2.5 text-sm text-emerald-100">
           Student archived (removed from roster + attendance).
         </div>
       ) : null}
-
       {restored ? (
-        <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-3 text-sm text-emerald-100">
-          Student restored (now ACTIVE). Reassign a class if needed.
+        <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-2.5 text-sm text-emerald-100">
+          Student restored. Reassign a class if needed.
         </div>
       ) : null}
-
       {saved ? (
-        <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-3 text-sm text-emerald-100">
-          Saved.
-        </div>
+        <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-2.5 text-sm text-emerald-100">Saved.</div>
       ) : null}
-
       {error ? (
-        <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-sm text-rose-100">
+        <div className="rounded-xl border border-rose-300/20 bg-rose-400/12 px-4 py-2.5 text-sm text-rose-100">
           Error: {error}
         </div>
       ) : null}
 
-      <div className={`${shellCardClass()} p-5`}>
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <form className="flex flex-col gap-3 md:flex-row md:items-end" action="/admin/students" method="get">
-            <input type="hidden" name="show" value={showArchived ? "archived" : "active"} />
-
-            <div>
-              <label className="text-sm text-[#C9CDD6]">Search</label>
-              <input
-                name="q"
-                defaultValue={q}
-                className={`${inputClass()} md:w-72`}
-                placeholder="Name, guardian, phone…"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm text-[#C9CDD6]">Class</label>
-              <select
-                name="classroomId"
-                defaultValue={classroomIdFilter}
-                className={`${selectClass()} md:w-72`}
-              >
-                <option value="">All classes</option>
-                {classes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {classLabel({ name: c.name, arm: c.arm ?? null, grade: c.grade ?? null })}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <button className={primaryBtnClass()}>Apply</button>
-          </form>
-
-          <a className="text-sm text-[#C9CDD6] underline underline-offset-4" href={clearFiltersHref}>
-            Clear filters
-          </a>
-        </div>
-      </div>
-
       {!showArchived ? (
-        <StudentBulkImportCard
-          classes={classes.map((c) => ({
-            id: c.id,
-            name: c.name,
-            grade: c.grade ?? null,
-            arm: c.arm ?? null,
-          }))}
-        />
-      ) : null}
-
-      {!showArchived ? (
-        <form action={createStudent} className={`${shellCardClass()} p-6 space-y-4`}>
-          <h2 className="text-sm font-semibold text-[#F7F4ED]">Add student</h2>
-
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <form
+          action={createStudent}
+          className="rounded-[26px] border border-[#D4AF37]/35 bg-[linear-gradient(180deg,rgba(212,175,55,0.12),rgba(255,255,255,0.035))] p-5 shadow-[0_22px_70px_rgba(0,0,0,0.2)]"
+        >
+          <div className="flex flex-wrap items-end justify-between gap-2">
             <div>
-              <label className="text-sm text-[#C9CDD6]">First name</label>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">Main action</p>
+              <h2 className="mt-1 text-lg font-semibold text-[#F7F4ED]">Add student</h2>
+            </div>
+            <p className="text-xs text-[#AAB3C2]">DOB is optional and stored as a separate learner record.</p>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div>
+              <label className="text-xs font-medium text-[#C9CDD6]">First name</label>
               <input name="firstName" className={inputClass()} required />
             </div>
             <div>
-              <label className="text-sm text-[#C9CDD6]">Last name</label>
+              <label className="text-xs font-medium text-[#C9CDD6]">Last name</label>
               <input name="lastName" className={inputClass()} required />
             </div>
             <div>
-              <label className="text-sm text-[#C9CDD6]">Guardian name</label>
-              <input name="guardianName" className={inputClass()} />
+              <label className="text-xs font-medium text-[#C9CDD6]">Date of birth (optional)</label>
+              <input type="date" name="dateOfBirth" max={todayIso} className={inputClass()} />
             </div>
             <div>
-              <label className="text-sm text-[#C9CDD6]">Guardian phone (GH)</label>
-              <input
-                name="guardianPhone"
-                className={inputClass()}
-                placeholder="e.g. 0241234567"
-              />
-              <p className="mt-1 text-[11px] text-[#8F98A8]">If entered, it must normalize to +233…</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-            <div>
-              <label className="text-sm text-[#C9CDD6]">Class (optional)</label>
+              <label className="text-xs font-medium text-[#C9CDD6]">Class (optional)</label>
               <select name="classroomId" className={selectClass()}>
                 <option value="">— Unassigned —</option>
                 {classes.map((c) => (
@@ -499,155 +423,194 @@ export default async function AdminStudentsPage(props: { searchParams?: SP | Pro
                 ))}
               </select>
             </div>
-
             <div>
-              <label className="text-sm text-[#C9CDD6]">Gender (optional)</label>
+              <label className="text-xs font-medium text-[#C9CDD6]">Guardian name</label>
+              <input name="guardianName" className={inputClass()} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-[#C9CDD6]">Guardian phone (GH)</label>
+              <input name="guardianPhone" className={inputClass()} placeholder="e.g. 0241234567" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-[#C9CDD6]">Gender (optional)</label>
               <select name="gender" className={selectClass()}>
                 <option value="">—</option>
                 <option value="Female">Female</option>
                 <option value="Male">Male</option>
               </select>
             </div>
-
-            <div className="md:col-span-2">
-              <label className="text-sm text-[#C9CDD6]">Note (optional)</label>
+            <div>
+              <label className="text-xs font-medium text-[#C9CDD6]">Note (optional)</label>
               <input name="note" className={inputClass()} />
             </div>
           </div>
 
-          <button className={primaryBtnClass()}>Create</button>
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <p className="text-[11px] text-[#8F98A8]">Guardian phone, when entered, must normalize to +233…</p>
+            <button className={primaryBtnClass()}>Create student</button>
+          </div>
         </form>
       ) : (
-        <div className={`${shellCardClass()} p-6 text-sm text-[#D7DCE5]`}>
+        <div className={`${shellCardClass()} p-4 text-sm text-[#D7DCE5]`}>
           You’re viewing archived students. Switch to <b className="text-[#F7F4ED]">Active</b> to create new learners.
         </div>
       )}
 
-      <section className={`${shellCardClass()} p-6`}>
-        <h2 className="text-sm font-semibold text-[#F7F4ED]">Student list</h2>
-        <p className="mt-1 text-sm text-[#C9CDD6]">
-          {students.length} student(s){q || classroomIdFilter ? " (filtered)" : ""}.
-        </p>
+      <div className={`${shellCardClass()} p-3`}>
+        <form className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto]" action="/admin/students" method="get">
+          <input type="hidden" name="show" value={showArchived ? "archived" : "active"} />
+          <input type="hidden" name="section" value="list" />
 
-        <div className="mt-4 space-y-3">
-          {students.length === 0 ? (
+          <label className="sr-only" htmlFor="student-search">Search students</label>
+          <input
+            id="student-search"
+            name="q"
+            defaultValue={q}
+            className={compactInputClass()}
+            placeholder={showArchived ? "Search archived students…" : "Search within selected class…"}
+          />
+
+          {!showArchived ? (
+            <>
+              <label className="sr-only" htmlFor="student-class-filter">Class</label>
+              <select
+                id="student-class-filter"
+                name="classroomId"
+                defaultValue={classroomIdFilter}
+                className={compactSelectClass()}
+                required
+              >
+                <option value="">Choose class…</option>
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {classLabel({ name: c.name, arm: c.arm ?? null, grade: c.grade ?? null })}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : (
+            <div className="hidden sm:block" />
+          )}
+
+          <button className={primaryBtnClass()}>Find</button>
+          <a className={`${outlineBtnClass()} text-center`} href={clearFiltersHref}>Clear</a>
+        </form>
+      </div>
+
+      {!showArchived ? <StudentEssentialAlertsCard /> : null}
+
+      {!showArchived ? (
+        <details className={`${shellCardClass()} overflow-hidden`}>
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold marker:hidden">
+            <span>Bulk Import</span>
+            <span className="text-xs font-normal text-[#AAB3C2]">Excel-friendly · optional DOB</span>
+          </summary>
+          <div className="border-t border-white/10 p-3 sm:p-4">
+            <StudentBulkImportCard
+              embedded
+              classes={classes.map((c) => ({
+                id: c.id,
+                name: c.name,
+                grade: c.grade ?? null,
+                arm: c.arm ?? null,
+              }))}
+            />
+          </div>
+        </details>
+      ) : null}
+
+      <details className={`${shellCardClass()} overflow-hidden`} open={studentListOpen}>
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold marker:hidden">
+          <span>Student List</span>
+          <span className="text-xs font-normal text-[#AAB3C2]">
+            {showArchived
+              ? `${students.length} archived`
+              : selectedClassLabel
+                ? `${selectedClassLabel} · ${students.length}`
+                : "Choose a class first"}
+          </span>
+        </summary>
+
+        <div className="border-t border-white/10 p-3 sm:p-4">
+          {!showArchived && !classroomIdFilter ? (
+            <div className="rounded-xl border border-white/10 bg-[#07111F]/70 px-4 py-4 text-sm text-[#C9CDD6]">
+              Choose a class in the compact search bar to view only that class’s students.
+            </div>
+          ) : students.length === 0 ? (
             <p className="text-sm text-[#8F98A8]">No students found.</p>
           ) : (
-            students.map((s) => {
-              const fullName = `${s.firstName ?? ""} ${s.lastName ?? ""}`.trim();
-              const classText = s.classroom
-                ? classLabel({ name: s.classroom.name, arm: s.classroom.arm ?? null, grade: s.classroom.grade ?? null })
-                : "Unassigned";
-              const needsPhoneNorm = !!s.guardianPhone && !s.guardianPhoneNorm;
+            <div className="space-y-2">
+              {students.map((s) => {
+                const fullName = `${s.firstName ?? ""} ${s.lastName ?? ""}`.trim();
+                const dateOfBirth = s.dateOfBirth ?? s.dob;
+                const classText = s.classroom
+                  ? classLabel({ name: s.classroom.name, arm: s.classroom.arm ?? null, grade: s.classroom.grade ?? null })
+                  : "Unassigned";
+                const needsPhoneNorm = Boolean(s.guardianPhone && !s.guardianPhoneNorm);
 
-              return (
-                <div key={s.id} className="rounded-2xl border border-white/10 bg-[#07111F]/80 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="truncate text-sm font-semibold text-[#F7F4ED]">{fullName || "Unnamed"}</p>
-                        <span className={statusPill(s.status)}>{s.status}</span>
-                        {needsPhoneNorm ? (
-                          <span className="inline-flex rounded-full border border-amber-300/20 bg-amber-400/12 px-2 py-0.5 text-[11px] font-semibold text-amber-100">
-                            Phone not normalized
-                          </span>
+                return (
+                  <article key={s.id} className="rounded-xl border border-white/10 bg-[#07111F]/80 p-3">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <h3 className="truncate text-sm font-semibold text-[#F7F4ED]">{fullName || "Unnamed"}</h3>
+                          <span className="text-[11px] text-[#AAB3C2]">DOB: {studentDateOfBirthLabel(dateOfBirth)}</span>
+                          <span className={statusPill(s.status)}>{s.status}</span>
+                          {needsPhoneNorm ? (
+                            <span className="rounded-full border border-amber-300/20 bg-amber-400/12 px-2 py-0.5 text-[10px] font-semibold text-amber-100">
+                              Phone needs correction
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="mt-1 text-xs text-[#C9CDD6]">
+                          {classText} · Guardian: {s.guardianName ?? "—"} · {s.guardianPhone ?? "No phone"}
+                        </p>
+                        {s.status === StudentStatus.ARCHIVED && s.archivedAt ? (
+                          <p className="mt-1 text-[10px] text-[#738095]">
+                            Archived {new Date(s.archivedAt).toLocaleString()}
+                          </p>
                         ) : null}
                       </div>
 
-                      <p className="mt-1 truncate text-xs text-[#C9CDD6]">
-                        Class: <span className="font-medium text-[#F7F4ED]">{classText}</span>
-                      </p>
-
-                      <p className="mt-1 truncate text-xs text-[#8F98A8]">
-                        Guardian: {s.guardianName ?? "—"} · {s.guardianPhone ?? "—"}
-                        {s.guardianPhoneNorm ? ` · ${s.guardianPhoneNorm}` : ""}
-                      </p>
-
-                      <p className="mt-1 truncate font-mono text-[11px] text-[#738095]">ID: {s.id}</p>
-
-                      {s.status === StudentStatus.ARCHIVED && s.archivedAt ? (
-                        <p className="mt-1 text-[11px] text-[#8F98A8]">
-                          Archived at: {new Date(s.archivedAt).toLocaleString()}
-                        </p>
-                      ) : null}
+                      {!showArchived ? (
+                        <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto_auto] gap-2 lg:w-[520px]">
+                          <form action={updateStudentClass} className="contents">
+                            <input type="hidden" name="studentId" value={s.id} />
+                            <select name="classroomId" defaultValue={s.classroomId ?? ""} className={compactSelectClass()}>
+                              <option value="">— Unassigned —</option>
+                              {classes.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                  {classLabel({ name: c.name, arm: c.arm ?? null, grade: c.grade ?? null })}
+                                </option>
+                              ))}
+                            </select>
+                            <button className={outlineBtnClass()}>Save</button>
+                          </form>
+                          <form action={archiveStudent}>
+                            <input type="hidden" name="studentId" value={s.id} />
+                            <button className="h-full rounded-lg border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-xs font-semibold text-rose-100 transition hover:bg-rose-400/18">
+                              Archive
+                            </button>
+                          </form>
+                        </div>
+                      ) : (
+                        <form action={restoreStudent} className="shrink-0">
+                          <input type="hidden" name="studentId" value={s.id} />
+                          <button className={outlineBtnClass()}>Restore to ACTIVE</button>
+                        </form>
+                      )}
                     </div>
-
-                    <div className="space-y-1 text-right">
-                      <div>
-                        <p className="text-xs text-[#8F98A8]">SMS</p>
-                        <p className="text-sm font-medium text-[#F7F4ED]">{s.guardianSmsOptIn ? "ON" : "OFF"}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-[#8F98A8]">Health consent</p>
-                        <p className="text-sm font-medium text-[#F7F4ED]">{s.healthConsentAt ? "ON" : "OFF"}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-4">
-                    {!showArchived ? (
-                      <>
-                        <form action={updateStudentClass} className="flex items-center gap-2 md:col-span-2">
-                          <input type="hidden" name="studentId" value={s.id} />
-                          <select
-                            name="classroomId"
-                            defaultValue={s.classroomId ?? ""}
-                            className="w-full rounded-xl border border-white/10 bg-[#05070B] px-3 py-2 text-sm text-[#F7F4ED]"
-                            disabled={s.status === StudentStatus.ARCHIVED}
-                          >
-                            <option value="">— Unassigned —</option>
-                            {classes.map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {classLabel({ name: c.name, arm: c.arm ?? null, grade: c.grade ?? null })}
-                              </option>
-                            ))}
-                          </select>
-                          <button className={outlineBtnClass()} disabled={s.status === StudentStatus.ARCHIVED}>
-                            Save
-                          </button>
-                        </form>
-
-                        <form action={toggleGuardianSms}>
-                          <input type="hidden" name="studentId" value={s.id} />
-                          <button className={`w-full ${outlineBtnClass()}`} disabled={s.status === StudentStatus.ARCHIVED}>
-                            Toggle SMS
-                          </button>
-                        </form>
-
-                        <form action={toggleHealthConsent}>
-                          <input type="hidden" name="studentId" value={s.id} />
-                          <button className={`w-full ${outlineBtnClass()}`} disabled={s.status === StudentStatus.ARCHIVED}>
-                            Toggle Health Consent
-                          </button>
-                        </form>
-
-                        <form action={archiveStudent} className="md:col-span-4">
-                          <input type="hidden" name="studentId" value={s.id} />
-                          <button
-                            className="w-full rounded-xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-sm text-rose-100 transition hover:bg-rose-400/18"
-                            disabled={s.status === StudentStatus.ARCHIVED}
-                          >
-                            Archive (removes from attendance)
-                          </button>
-                        </form>
-                      </>
-                    ) : (
-                      <form action={restoreStudent} className="md:col-span-4">
-                        <input type="hidden" name="studentId" value={s.id} />
-                        <button className={`w-full ${outlineBtnClass()}`}>Restore to ACTIVE</button>
-                      </form>
-                    )}
-
-                    <div className="md:col-span-4 flex items-center text-xs text-[#8F98A8]">
-                      Attendance rosters exclude ARCHIVED learners. Archive also clears class assignment to prevent stale rosters.
-                    </div>
-                  </div>
-                </div>
-              );
-            })
+                  </article>
+                );
+              })}
+            </div>
           )}
+
+          <p className="mt-3 text-[11px] text-[#738095]">
+            Active learner lists are class-first. Archived learners have no class assignment because archiving deliberately removes them from attendance rosters.
+          </p>
         </div>
-      </section>
+      </details>
     </div>
   );
 }
