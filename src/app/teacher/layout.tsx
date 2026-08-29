@@ -55,7 +55,6 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
     { href: "/teacher/dashboard", label: "Dashboard", show: true },
     { href: "/teacher/notices", label: "Notices", show: isTeacherOnly },
     { href: "/teacher/attendance", label: "Attendance", show: true },
-    { href: "/teacher/health", label: "Health", show: true },
     { href: "/teacher/lesson-notes", label: "Lesson Notes", show: true },
     { href: "/admin/dashboard", label: "Admin", show: showAdmin },
   ].filter((item) => item.show);
