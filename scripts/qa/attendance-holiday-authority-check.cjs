@@ -110,6 +110,9 @@ hasAll(
     "holidayDeclaredByUserId: safe.userId",
     "ATTENDANCE_HOLIDAY_DECLARED",
     "ATTENDANCE_CERTIFIED_DAY_SUPERSEDED_AS_HOLIDAY",
+    "ATTENDANCE_HOLIDAY_REQUESTED",
+    "pendingApproval: true",
+    "existingAttendancePreserved: true",
     "originalEvidencePreserved: true",
     "Prisma.TransactionIsolationLevel.Serializable",
   ],
@@ -127,6 +130,8 @@ hasAll(
     "holidayAuthority",
     "canDeclareBeforeCertification",
     "canSupersedeCertified",
+    "ATTENDANCE_HOLIDAY_REQUESTED",
+    "holidayRequest:",
   ],
   "Session GET holiday contract",
 );
@@ -201,6 +206,8 @@ hasAll(
     "Holiday / school closed",
     "Save Holiday",
     "Correct to Holiday",
+    "Request Holiday",
+    "Holiday request pending:",
     "/api/teacher/attendance/sessions/holiday",
     "Original certified learner marks remain preserved as audit evidence.",
     "Holiday sessions do not send attendance notifications.",
@@ -216,7 +223,8 @@ console.log("BBC holiday UI: GREEN");
 
 console.log("Schema migration: NEW EXPLICIT MIGRATION");
 console.log("Legacy attendance_mvp migration: UNTOUCHED");
-console.log("Existing learner marks: NOT REWRITTEN");
+console.log("Migration existing learner marks: NOT REWRITTEN");
+console.log("Teacher marked-day Holiday: HEADTEACHER APPROVAL REQUEST");
 console.log("Certified evidence preservation: REQUIRED");
 console.log("Provider calls from QA: 0");
 console.log("Database writes from QA: 0");

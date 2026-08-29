@@ -188,6 +188,7 @@ export async function POST(req: NextRequest) {
       where: {
         tenantId: safe.tenantId,
         date: { gte: range.start, lt: range.end },
+        isHoliday: false,
       },
       orderBy: [{ date: "asc" }],
       select: {
@@ -304,6 +305,7 @@ export async function POST(req: NextRequest) {
             id: { in: eligibleIds },
             isClosed: true,
             certifiedAt: null,
+            isHoliday: false,
           },
           data: {
             certifiedAt: now,

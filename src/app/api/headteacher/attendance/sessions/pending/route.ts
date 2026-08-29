@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
         tenantId: ctx.tenantId,
         isClosed: true,
         certifiedAt: null,
+        isHoliday: false,
         date: {
           gte: new Date(`${range.start}T00:00:00.000Z`),
           lte: new Date(`${range.end}T23:59:59.999Z`),

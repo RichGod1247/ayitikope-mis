@@ -126,6 +126,15 @@ type PhysicalRegisterDTO = {
   learners: PhysicalRegisterLearnerDTO[];
 };
 
+type HolidayRequestDTO = {
+  id: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  pending: boolean;
+  reason: string | null;
+  decisionReason: string | null;
+  at: string;
+};
+
 type GetOk = {
   ok: true;
   mode?: string;
@@ -139,6 +148,7 @@ type GetOk = {
     canDeclareBeforeCertification: boolean;
     canSupersedeCertified: boolean;
   };
+  holidayRequest?: HolidayRequestDTO | null;
   summary?: SessionSummaryDTO;
   physicalRegister: PhysicalRegisterDTO;
   students: StudentRowDTO[];
@@ -162,8 +172,13 @@ type MutateResponse = MutateOk | ApiErr;
 
 type HolidayOk = {
   ok: true;
-  alreadyHoliday: boolean;
-  supersededCertifiedAttendance: boolean;
+  pendingApproval?: boolean;
+  alreadyPending?: boolean;
+  requestId?: string;
+  requestedAt?: string;
+  reason?: string;
+  alreadyHoliday?: boolean;
+  supersededCertifiedAttendance?: boolean;
   officialAttendanceExcluded: boolean;
   notificationExcluded: boolean;
   session: SessionDTO;
@@ -412,6 +427,7 @@ export default function AttendanceSessionClient(props: {
     canDeclareBeforeCertification: false,
     canSupersedeCertified: false,
   });
+  const [holidayRequest, setHolidayRequest] = useState<HolidayRequestDTO | null>(null);
   const [marks, setMarks] = useState<Record<string, MarkState>>({});
   const baselineMarksRef = useRef<Record<string, MarkState>>({});
 
@@ -479,6 +495,7 @@ export default function AttendanceSessionClient(props: {
           canSupersedeCertified: false,
         },
       );
+      setHolidayRequest(j.holidayRequest ?? null);
       setStudents(Array.isArray(j.students) ? j.students : []);
       setPhysicalRegister(j.physicalRegister ?? null);
 
@@ -694,9 +711,12 @@ export default function AttendanceSessionClient(props: {
     !saveErr &&
     alertPreview.total > 0;
 
+  const holidayRequestPending = holidayRequest?.pending === true;
+
   const canStartHoliday =
     !!session &&
     !isHoliday &&
+    !holidayRequestPending &&
     academicCalendar?.allowed === true &&
     !loading &&
     !holidaySaving &&
@@ -705,21 +725,21 @@ export default function AttendanceSessionClient(props: {
     !notifying &&
     !dirty &&
     (isCertified
-      ? holidayAuthority.canSupersedeCertified
-      : holidayAuthority.canDeclareBeforeCertification && counts.marked === 0);
+      ? holidayAuthority.canSupersedeCertified ||
+        holidayAuthority.canDeclareBeforeCertification
+      : holidayAuthority.canDeclareBeforeCertification);
 
   const holidayDisabledReason = (() => {
     if (!session) return "Session not loaded.";
     if (isHoliday) return "Holiday already recorded.";
+    if (holidayRequestPending) return "Holiday request is waiting for Headteacher review.";
     if (calendarMutationLocked)
       return academicCalendar?.message || "Academic calendar does not allow changes to this register.";
-    if (isCertified && !holidayAuthority.canSupersedeCertified)
-      return "Only the Headteacher or an authorized school administrator can correct a certified day to a holiday.";
+    if (isCertified && !holidayAuthority.canSupersedeCertified && !holidayAuthority.canDeclareBeforeCertification)
+      return "You cannot request a Holiday correction for this session.";
     if (!isCertified && !holidayAuthority.canDeclareBeforeCertification)
       return "You cannot declare Holiday for this session.";
-    if (!isCertified && counts.marked > 0)
-      return "Clear or correct learner marks before declaring Holiday.";
-    if (dirty) return "Clear unsaved learner changes before declaring Holiday.";
+    if (dirty) return "Save or clear unsaved learner changes before requesting Holiday.";
     if (holidaySaving || saving || mutating || notifying) return "Another attendance action is in progress.";
     return null;
   })();
@@ -964,25 +984,12 @@ export default function AttendanceSessionClient(props: {
         throw new Error("Enter a clear holiday reason.");
       }
 
-      if (!isCertified) {
-        if (dirty) {
-          throw new Error(
-            "Unsaved learner marks exist. Clear them before saving Holiday.",
-          );
-        }
-        if (counts.marked > 0) {
-          throw new Error(
-            "Holiday can be saved before certification only when there are no learner marks.",
-          );
-        }
-      } else if (!holidayAuthority.canSupersedeCertified) {
-        throw new Error(
-          "Only the Headteacher or an authorized school administrator can correct a certified day to a holiday.",
-        );
+      if (dirty) {
+        throw new Error("Save or clear unsaved learner changes before requesting Holiday.");
       }
 
       let confirmCertifiedSupersession = false;
-      if (isCertified) {
+      if (isCertified && holidayAuthority.canSupersedeCertified) {
         confirmCertifiedSupersession = window.confirm(
           "Correct this certified day to Holiday? Original learner marks and certification will be preserved as evidence, but the day will be excluded from official attendance totals and future attendance notifications.",
         );
@@ -1008,6 +1015,16 @@ export default function AttendanceSessionClient(props: {
       }));
 
       if (!r.ok || !j.ok) throw new Error(j.ok ? `HTTP ${r.status}` : j.error);
+
+      if (j.pendingApproval) {
+        await load();
+        setHolidayMsg(
+          j.alreadyPending
+            ? "Holiday request is already waiting for Headteacher review. Existing attendance remains unchanged."
+            : "Holiday request sent to the Headteacher. Existing attendance remains unchanged until it is approved.",
+        );
+        return true;
+      }
 
       setSession(j.session);
       const successMessage = j.supersededCertifiedAttendance
@@ -1270,6 +1287,11 @@ export default function AttendanceSessionClient(props: {
       {mutMsg ? <Banner tone="info">{mutMsg}</Banner> : null}
       {holidayErr ? <Banner tone="error">{holidayErr}</Banner> : null}
       {holidayMsg ? <Banner tone="ok">{holidayMsg}</Banner> : null}
+      {holidayRequestPending ? (
+        <Banner tone="info">
+          <b>Holiday request pending:</b> {holidayRequest?.reason || "Holiday / school closed."} Existing attendance remains authoritative until the Headteacher approves it.
+        </Banner>
+      ) : null}
       {isHoliday && session ? (
         <Banner tone="info">
           <b>Holiday:</b> {session.holidayReason || "School closed."} This day is excluded from Times Opened, official attendance totals and future attendance notifications.
@@ -1405,8 +1427,12 @@ export default function AttendanceSessionClient(props: {
                   maxLength={500}
                   placeholder={
                     isCertified
-                      ? "Reason for correcting this certified day to Holiday"
-                      : "Reason, e.g. Public holiday"
+                      ? holidayAuthority.canSupersedeCertified
+                        ? "Reason for correcting this certified day to Holiday"
+                        : "Reason for requesting Holiday approval"
+                      : counts.marked > 0
+                        ? "Reason for requesting Holiday approval"
+                        : "Reason, e.g. Public holiday"
                   }
                   className={`${tinyFieldClass} flex-1`}
                   disabled={holidaySaving}
@@ -1424,9 +1450,12 @@ export default function AttendanceSessionClient(props: {
                 >
                   {holidaySaving
                     ? "Saving…"
-                    : isCertified
-                      ? "Correct to Holiday"
-                      : "Save Holiday"}
+                    : (isCertified && !holidayAuthority.canSupersedeCertified) ||
+                        (!isCertified && counts.marked > 0 && !holidayAuthority.canSupersedeCertified)
+                      ? "Request Holiday"
+                      : isCertified || counts.marked > 0
+                        ? "Correct to Holiday"
+                        : "Save Holiday"}
                 </button>
               </div>
             ) : null}

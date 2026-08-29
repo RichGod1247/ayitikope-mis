@@ -78,6 +78,12 @@ function canSupersedeCertifiedHoliday(value: unknown) {
   return CERTIFIED_HOLIDAY_ROLES.has(normalizeRoleName(value));
 }
 
+function metadataString(metadata: unknown, key: string): string | null {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
+  const value = (metadata as Record<string, unknown>)[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
 export async function GET(req: Request) {
   try {
     const ctx = await requireTenantContext();
@@ -141,7 +147,7 @@ export async function GET(req: Request) {
       classroomId: session.classroomId,
     });
 
-    const [[students, marks], academicCalendar, membership] = await Promise.all([
+    const [[students, marks], academicCalendar, membership, latestHolidayRequestEvent] = await Promise.all([
       prisma.$transaction([
         prisma.student.findMany({
           where: {
@@ -183,6 +189,27 @@ export async function GET(req: Request) {
           status: "ACTIVE",
         },
         select: { role: { select: { name: true } } },
+      }),
+      prisma.auditLog.findFirst({
+        where: {
+          tenantId: safe.tenantId,
+          resource: "AttendanceSession",
+          resourceId: session.id,
+          action: {
+            in: [
+              "ATTENDANCE_HOLIDAY_REQUESTED",
+              "ATTENDANCE_HOLIDAY_REQUEST_APPROVED",
+              "ATTENDANCE_HOLIDAY_REQUEST_REJECTED",
+            ],
+          },
+        },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        select: {
+          id: true,
+          action: true,
+          createdAt: true,
+          metadata: true,
+        },
       }),
     ]);
 
@@ -336,6 +363,25 @@ export async function GET(req: Request) {
           canDeclarePreCertHoliday(roleName) && ownerOrAdmin && !session.certifiedAt,
         canSupersedeCertified: certifiedHolidayAuthority && !!session.certifiedAt,
       },
+      holidayRequest: latestHolidayRequestEvent
+        ? {
+            id: latestHolidayRequestEvent.id,
+            status:
+              latestHolidayRequestEvent.action === "ATTENDANCE_HOLIDAY_REQUESTED"
+                ? "PENDING"
+                : latestHolidayRequestEvent.action === "ATTENDANCE_HOLIDAY_REQUEST_APPROVED"
+                  ? "APPROVED"
+                  : "REJECTED",
+            pending:
+              latestHolidayRequestEvent.action === "ATTENDANCE_HOLIDAY_REQUESTED",
+            reason:
+              metadataString(latestHolidayRequestEvent.metadata, "reason") ??
+              metadataString(latestHolidayRequestEvent.metadata, "requestReason"),
+            decisionReason:
+              metadataString(latestHolidayRequestEvent.metadata, "decisionReason"),
+            at: latestHolidayRequestEvent.createdAt.toISOString(),
+          }
+        : null,
       classroom,
       classLabel,
       academicCalendar: {

@@ -241,16 +241,106 @@ export async function POST(req: Request) {
         }
 
         const isCertified = !!session.certifiedAt;
+        const adminLike = certifiedCorrectionAuthorized;
 
-        if (isCertified) {
-          if (!certifiedCorrectionAuthorized) {
+        if (!canDeclareBeforeCertification(roleName)) {
+          return {
+            kind: "error" as const,
+            status: 403,
+            error: "Only the assigned teacher, Headteacher or authorized school administrator can declare or request a holiday for attendance.",
+          };
+        }
+
+        if (
+          !adminLike &&
+          session.takenByUserId &&
+          session.takenByUserId !== safe.userId
+        ) {
+          return {
+            kind: "error" as const,
+            status: 403,
+            error: "This session is owned by another user.",
+          };
+        }
+
+        const markCount = await tx.attendanceMark.count({
+          where: { sessionId: session.id },
+        });
+
+        const teacherNeedsApproval =
+          !adminLike && (isCertified || markCount > 0);
+
+        if (teacherNeedsApproval) {
+          const latestRequestEvent = await tx.auditLog.findFirst({
+            where: {
+              tenantId: safe.tenantId,
+              resource: "AttendanceSession",
+              resourceId: session.id,
+              action: {
+                in: [
+                  "ATTENDANCE_HOLIDAY_REQUESTED",
+                  "ATTENDANCE_HOLIDAY_REQUEST_APPROVED",
+                  "ATTENDANCE_HOLIDAY_REQUEST_REJECTED",
+                ],
+              },
+            },
+            orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+            select: {
+              id: true,
+              action: true,
+              createdAt: true,
+              metadata: true,
+            },
+          });
+
+          if (latestRequestEvent?.action === "ATTENDANCE_HOLIDAY_REQUESTED") {
             return {
-              kind: "error" as const,
-              status: 403,
-              error: "Only the Headteacher or an authorized school administrator can correct a certified day to a holiday.",
+              kind: "pending" as const,
+              alreadyPending: true,
+              requestId: latestRequestEvent.id,
+              requestedAt: latestRequestEvent.createdAt,
+              reason,
+              session,
             };
           }
 
+          const requestEvent = await tx.auditLog.create({
+            data: {
+              tenantId: safe.tenantId,
+              userId: safe.userId,
+              action: "ATTENDANCE_HOLIDAY_REQUESTED",
+              resource: "AttendanceSession",
+              resourceId: session.id,
+              ip: clientIp(req) ?? undefined,
+              userAgent: userAgent(req) ?? undefined,
+              metadata: {
+                reason,
+                roleName,
+                classroomId: session.classroomId,
+                dateISO: session.date.toISOString().slice(0, 10),
+                markedLearners: markCount,
+                certifiedAt: isoOrNull(session.certifiedAt),
+                existingAttendancePreserved: true,
+                requiresHeadteacherApproval: true,
+              } satisfies Prisma.JsonObject,
+            },
+            select: {
+              id: true,
+              createdAt: true,
+            },
+          });
+
+          return {
+            kind: "pending" as const,
+            alreadyPending: false,
+            requestId: requestEvent.id,
+            requestedAt: requestEvent.createdAt,
+            reason,
+            session,
+          };
+        }
+
+        if (isCertified) {
           if (confirmCertifiedSupersession !== true) {
             return {
               kind: "error" as const,
@@ -258,39 +348,12 @@ export async function POST(req: Request) {
               error: "Certified holiday correction requires explicit confirmation.",
             };
           }
-        } else {
-          if (!canDeclareBeforeCertification(roleName)) {
-            return {
-              kind: "error" as const,
-              status: 403,
-              error: "Only the assigned teacher, Headteacher or authorized school administrator can declare a holiday for attendance.",
-            };
-          }
-
-          const adminLike = certifiedCorrectionAuthorized;
-          if (
-            !adminLike &&
-            session.takenByUserId &&
-            session.takenByUserId !== safe.userId
-          ) {
-            return {
-              kind: "error" as const,
-              status: 403,
-              error: "This session is owned by another user.",
-            };
-          }
-
-          const markCount = await tx.attendanceMark.count({
-            where: { sessionId: session.id },
-          });
-
-          if (markCount > 0) {
-            return {
-              kind: "error" as const,
-              status: 409,
-              error: "Holiday can be saved before certification only when there are no learner marks. Clear or correct the marks first.",
-            };
-          }
+        } else if (markCount > 0) {
+          return {
+            kind: "error" as const,
+            status: 409,
+            error: "Attendance evidence exists. Use Headteacher Attendance Command to reconcile this class to Holiday.",
+          };
         }
 
         const updatedCount = await tx.attendanceSession.updateMany({
@@ -392,8 +455,23 @@ export async function POST(req: Request) {
       return noStoreJson(result.status, { ok: false, error: result.error });
     }
 
+    if (result.kind === "pending") {
+      return noStoreJson(202, {
+        ok: true,
+        pendingApproval: true,
+        alreadyPending: result.alreadyPending,
+        requestId: result.requestId,
+        requestedAt: result.requestedAt.toISOString(),
+        reason: result.reason,
+        officialAttendanceExcluded: false,
+        notificationExcluded: false,
+        session: toApiSession(result.session),
+      });
+    }
+
     return noStoreJson(200, {
       ok: true,
+      pendingApproval: false,
       alreadyHoliday: result.alreadyHoliday,
       supersededCertifiedAttendance: result.supersededCertifiedAttendance,
       officialAttendanceExcluded: true,

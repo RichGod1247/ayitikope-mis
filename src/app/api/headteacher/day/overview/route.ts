@@ -8,7 +8,7 @@ import { requireServerUserContext } from "@/lib/serverAuth";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type SessionState = "NO_SESSION" | "OPEN" | "CLOSED" | "CERTIFIED";
+type SessionState = "NO_SESSION" | "OPEN" | "CLOSED" | "CERTIFIED" | "HOLIDAY" | "HOLIDAY_REQUEST";
 
 const querySchema = z.object({
   date: z.string().optional(),
@@ -84,6 +84,24 @@ function classLabel(c: { name?: string | null; grade?: string | null; arm?: stri
 function pct(n: number, d: number) {
   if (!d) return 0;
   return Math.round((n / d) * 100);
+}
+
+function metadataString(metadata: unknown, key: string): string | null {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
+  const value = (metadata as Record<string, unknown>)[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function actorName(user: {
+  name?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+} | null | undefined) {
+  return (
+    clean(user?.name) ||
+    [clean(user?.firstName), clean(user?.lastName)].filter(Boolean).join(" ") ||
+    null
+  );
 }
 
 function emptyCounts(): Record<AttendanceStatus, number> {
@@ -185,6 +203,17 @@ export async function GET(req: NextRequest) {
               notifiedAt: true,
               notifiedByUserId: true,
               takenByUserId: true,
+              isHoliday: true,
+              holidayReason: true,
+              holidayDeclaredAt: true,
+              holidayDeclaredByUserId: true,
+              holidayDeclaredBy: {
+                select: {
+                  name: true,
+                  firstName: true,
+                  lastName: true,
+                },
+              },
             },
           })
         : Promise.resolve([]),
@@ -193,6 +222,75 @@ export async function GET(req: NextRequest) {
     const studentCountByClass = new Map(studentCounts.map((row) => [row.classroomId, row._count._all]));
     const sessionByClass = new Map(sessions.map((session) => [session.classroomId, session]));
     const sessionIds = sessions.map((session) => session.id);
+    const holidayDeclarerIds = Array.from(
+      new Set(
+        sessions
+          .map((session) => session.holidayDeclaredByUserId)
+          .filter((value): value is string => !!value),
+      ),
+    );
+
+    const [requestEvents, holidayDeclarerMemberships] = await Promise.all([
+      sessionIds.length
+        ? prisma.auditLog.findMany({
+            where: {
+              tenantId: safe.tenantId,
+              resource: "AttendanceSession",
+              resourceId: { in: sessionIds },
+              action: {
+                in: [
+                  "ATTENDANCE_HOLIDAY_REQUESTED",
+                  "ATTENDANCE_HOLIDAY_REQUEST_APPROVED",
+                  "ATTENDANCE_HOLIDAY_REQUEST_REJECTED",
+                ],
+              },
+            },
+            orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+            select: {
+              id: true,
+              resourceId: true,
+              userId: true,
+              action: true,
+              createdAt: true,
+              metadata: true,
+              user: {
+                select: {
+                  name: true,
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
+          })
+        : Promise.resolve([]),
+      holidayDeclarerIds.length
+        ? prisma.membership.findMany({
+            where: {
+              tenantId: safe.tenantId,
+              userId: { in: holidayDeclarerIds },
+              status: "ACTIVE",
+            },
+            select: {
+              userId: true,
+              role: { select: { name: true } },
+            },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const latestRequestBySession = new Map<string, (typeof requestEvents)[number]>();
+    for (const event of requestEvents) {
+      if (event.resourceId && !latestRequestBySession.has(event.resourceId)) {
+        latestRequestBySession.set(event.resourceId, event);
+      }
+    }
+
+    const declarerRoleByUserId = new Map<string, string>();
+    for (const membership of holidayDeclarerMemberships) {
+      if (!declarerRoleByUserId.has(membership.userId)) {
+        declarerRoleByUserId.set(membership.userId, normRole(membership.role?.name));
+      }
+    }
 
     const groupedMarks = sessionIds.length
       ? await prisma.attendanceMark.groupBy({
@@ -223,7 +321,25 @@ export async function GET(req: NextRequest) {
       const total = studentCountByClass.get(classroom.id) ?? 0;
       const marked = counts.PRESENT + counts.ABSENT + counts.LATE + counts.EXCUSED;
       const unmarked = Math.max(0, total - marked);
-      const status = stateOf(session);
+      const requestEvent = session ? latestRequestBySession.get(session.id) ?? null : null;
+      const requestPending =
+        requestEvent?.action === "ATTENDANCE_HOLIDAY_REQUESTED";
+      const status: SessionState = session?.isHoliday
+        ? "HOLIDAY"
+        : requestPending
+          ? "HOLIDAY_REQUEST"
+          : stateOf(session);
+      const holidayDeclarerRole = session?.holidayDeclaredByUserId
+        ? declarerRoleByUserId.get(session.holidayDeclaredByUserId) ?? ""
+        : "";
+      const holidaySource =
+        status === "HOLIDAY"
+          ? holidayDeclarerRole === "TEACHER"
+            ? "TEACHER"
+            : holidayDeclarerRole
+              ? "HEADTEACHER"
+              : "UNKNOWN"
+          : null;
 
       return {
         classroomId: classroom.id,
@@ -247,10 +363,31 @@ export async function GET(req: NextRequest) {
         notifiedAt: session?.notifiedAt ? session.notifiedAt.toISOString() : null,
         notifiedByUserId: session?.notifiedByUserId ?? null,
         takenByUserId: session?.takenByUserId ?? null,
+        isHoliday: session?.isHoliday ?? false,
+        holidayReason: session?.holidayReason ?? null,
+        holidayDeclaredAt: session?.holidayDeclaredAt
+          ? session.holidayDeclaredAt.toISOString()
+          : null,
+        holidayDeclaredByUserId: session?.holidayDeclaredByUserId ?? null,
+        holidayDeclaredByName: actorName(session?.holidayDeclaredBy),
+        holidaySource,
+        holidayRequest:
+          requestPending && requestEvent
+            ? {
+                id: requestEvent.id,
+                reason:
+                  metadataString(requestEvent.metadata, "reason") ??
+                  "Holiday / school closed.",
+                requestedAt: requestEvent.createdAt.toISOString(),
+                requestedByUserId: requestEvent.userId ?? null,
+                requestedByName: actorName(requestEvent.user),
+              }
+            : null,
         needsAction:
+          status === "HOLIDAY_REQUEST" ||
           status === "NO_SESSION" ||
           status === "OPEN" ||
-          unmarked > 0 ||
+          (status !== "HOLIDAY" && unmarked > 0) ||
           (status === "CLOSED" && !session?.certifiedAt),
       };
     });
@@ -287,6 +424,8 @@ export async function GET(req: NextRequest) {
         OPEN: 0,
         CLOSED: 0,
         CERTIFIED: 0,
+        HOLIDAY: 0,
+        HOLIDAY_REQUEST: 0,
         learners: 0,
         marked: 0,
         unmarked: 0,
