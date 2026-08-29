@@ -77,6 +77,31 @@ assertIncludes(schemeDetail, "Prepare Lesson Note", "Scheme detail approved CTA"
 assertIncludes(schemeDetail, "Continue Scheme", "Scheme detail draft action");
 assertIncludes(schemeDetail, "Resubmit for Approval", "Scheme detail returned action");
 assertIncludes(schemeDetail, "Waiting for approval", "Scheme detail submitted state");
+assertIncludes(
+  schemeDetail,
+  'scheme.status === "APPROVED"',
+  "approved Headteacher-comment status branch",
+);
+assertIncludes(
+  schemeDetail,
+  '"border-emerald-300/20 bg-emerald-400/12 text-emerald-100"',
+  "approved Headteacher-comment success tone",
+);
+assertIncludes(
+  schemeDetail,
+  'scheme.status === "RETURNED"',
+  "returned Headteacher-comment status branch",
+);
+assertIncludes(
+  schemeDetail,
+  '"border-rose-300/20 bg-rose-400/12 text-rose-100"',
+  "returned Headteacher-comment correction tone",
+);
+assertExcludes(
+  schemeDetail,
+  '<div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-sm leading-7 text-rose-100 print:hidden">',
+  "unconditional Headteacher-comment warning tone",
+);
 assertExcludes(schemeDetail, "Open in Studio", "Scheme detail technical Studio wording");
 
 // Scheme preparation reuses existing calls but removes the extra summary/poll-like readiness fetch.
@@ -120,6 +145,7 @@ assertExcludes(studioClient, "Use manual mode", "Studio manual-mode CTA");
 console.log("SCHEME GUIDED JOURNEY CONTRACT: GREEN");
 console.log("- NONE/DRAFT/SUBMITTED/RETURNED/APPROVED states are progressively disclosed");
 console.log("- Lesson Note creation is revealed only from an APPROVED Scheme");
+console.log("- Headteacher comments use approval-green and return-red status semantics");
 console.log("- returned/draft Scheme editing carries exact scheme context back to preparation");
 console.log("- Lesson Notes list preserves historical work and routes new preparation to Scheme");
 console.log("- direct Studio entry without a Scheme item returns to the Scheme journey");

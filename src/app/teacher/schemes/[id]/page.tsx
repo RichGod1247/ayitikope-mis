@@ -494,7 +494,16 @@ export default function SchemeDetailPage({
         )}
 
         {scheme?.headteacherComment && (
-          <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-sm leading-7 text-rose-100 print:hidden">
+          <div
+            className={cx(
+              "rounded-2xl border px-4 py-3 text-sm leading-7 print:hidden",
+              scheme.status === "APPROVED"
+                ? "border-emerald-300/20 bg-emerald-400/12 text-emerald-100"
+                : scheme.status === "RETURNED"
+                  ? "border-rose-300/20 bg-rose-400/12 text-rose-100"
+                  : "border-amber-300/20 bg-amber-400/12 text-amber-100",
+            )}
+          >
             <span className="font-bold">Headteacher comment: </span>
             {scheme.headteacherComment}
           </div>
