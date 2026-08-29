@@ -34,6 +34,7 @@ function hasNone(text, markers, label) {
 }
 
 const headHoliday = read("src/app/api/headteacher/day/holiday/route.ts");
+const academicCalendar = read("src/lib/server/attendanceAcademicCalendar.ts");
 const dayOverview = read("src/app/api/headteacher/day/overview/route.ts");
 const dayPage = read("src/app/headteacher/day/page.tsx");
 const teacherHoliday = read("src/app/api/teacher/attendance/sessions/holiday/route.ts");
@@ -104,6 +105,34 @@ hasAll(
   "Headteacher Holiday authority",
 );
 console.log("Headteacher Holiday authority: GREEN");
+
+
+hasAll(
+  academicCalendar,
+  [
+    'type CalendarReader = Pick<Prisma.TransactionClient, "tenantSettings">;',
+    "db?: CalendarReader;",
+    "args.db ?? prisma",
+  ],
+  "Attendance academic calendar transaction injection",
+);
+
+assert(
+  (headHoliday.match(/\bdb:\s*tx,/g) || []).length === 2,
+  "Headteacher Holiday transaction calendar validation must use the same transaction client exactly twice",
+  { count: (headHoliday.match(/\bdb:\s*tx,/g) || []).length },
+);
+
+hasNone(
+  headHoliday,
+  [
+    "timeout:",
+    "maxWait:",
+  ],
+  "Holiday transaction timeout escalation",
+);
+
+console.log("Holiday transaction calendar reads: SAME TX / GREEN");
 
 hasAll(
   dayOverview,

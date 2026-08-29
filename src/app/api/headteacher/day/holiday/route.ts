@@ -626,6 +626,7 @@ export async function POST(req: Request) {
           await assertAttendanceDateInCurrentTerm({
             tenantId: safe.tenantId,
             date: session.date,
+            db: tx,
           });
 
           const requestEvent = await latestHolidayRequest(
@@ -759,6 +760,7 @@ export async function POST(req: Request) {
         await assertAttendanceDateInCurrentTerm({
           tenantId: safe.tenantId,
           date: session.date,
+          db: tx,
         });
 
         if (!session.isHoliday) {
