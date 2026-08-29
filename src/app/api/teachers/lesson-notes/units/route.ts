@@ -275,6 +275,7 @@ export async function GET(req: NextRequest) {
   const schemeWhere: any = {
     tenantId: ctx.tenantId,
     teacherUserId: ctx.userId,
+    status: "APPROVED",
     AND: [{ OR: subjOr }, { OR: yearOr }, { OR: levelOr }, { OR: termOr }],
   };
 
@@ -360,7 +361,7 @@ export async function GET(req: NextRequest) {
     ok: true,
     widened: ignoreWeek,
     schemeApplied: false,
-    reason: "NO_SCHEME_MATCH",
+    reason: "NO_APPROVED_SCHEME_MATCH",
     items: [],
     debug,
   });

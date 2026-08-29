@@ -4,6 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
 import { notifyLessonNoteSubmitted } from "@/lib/lessonNotes/submitNotifications";
 import { resolveUserClassroomAccess } from "@/lib/teacherAccess";
+import {
+  approvedSchemeItemMatchesScope,
+  findApprovedSchemeItemForScope,
+  loadOwnedSchemeItem,
+} from "@/lib/lessonNotes/approvedScheme";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -200,23 +205,60 @@ if (note.classroomId && note.subject) {
     let schemeYear = "";
 
     if (hasSchemeItem) {
-      const si = await prisma.schemeOfWorkItem.findFirst({
-        where: {
-          id: note.schemeOfWorkItemId as string,
-          scheme: { tenantId: ctx.tenantId, teacherUserId: ctx.userId },
-        },
-        select: {
-          id: true,
-          weekNumber: true,
-          indicatorCode: true,
-          scheme: { select: { term: true, academicYear: true, status: true } },
-        },
+      const si = await loadOwnedSchemeItem({
+        tenantId: ctx.tenantId,
+        teacherUserId: ctx.userId,
+        schemeItemId: note.schemeOfWorkItemId as string,
       });
 
-      if (!si || !si.scheme) {
+      if (!si?.scheme) {
         return jsonNoStore(
           { ok: false, error: "Scheme link is invalid: scheme item not found for this teacher." },
           { status: 400 }
+        );
+      }
+
+      if (String(si.scheme.status ?? "").toUpperCase() !== "APPROVED") {
+        return jsonNoStore(
+          {
+            ok: false,
+            code: "APPROVED_SCHEME_REQUIRED",
+            error: "An approved Scheme of Work is required before this lesson note can be submitted.",
+          },
+          { status: 409 }
+        );
+      }
+
+      if (!note.subject || !note.level || !note.term || !note.academicYear || !note.weekNumber) {
+        return jsonNoStore(
+          {
+            ok: false,
+            code: "APPROVED_SCHEME_REQUIRED",
+            error: "This lesson note is missing the scope needed to verify its approved Scheme of Work.",
+          },
+          { status: 409 }
+        );
+      }
+
+      if (
+        !approvedSchemeItemMatchesScope(si, {
+          tenantId: ctx.tenantId,
+          teacherUserId: ctx.userId,
+          classroomId: note.classroomId,
+          subject: note.subject,
+          level: note.level,
+          term: note.term,
+          academicYear: note.academicYear,
+          weekNumber: note.weekNumber,
+        })
+      ) {
+        return jsonNoStore(
+          {
+            ok: false,
+            code: "APPROVED_SCHEME_REQUIRED",
+            error: "The approved Scheme item linked to this lesson note does not match its teaching scope.",
+          },
+          { status: 409 }
         );
       }
 
@@ -247,51 +289,43 @@ if (note.classroomId && note.subject) {
       }
     } else {
       const unit = note.curriculumUnit;
-      const scheme = await prisma.schemeOfWork.findFirst({
-        where: {
-          tenantId: ctx.tenantId,
-          teacherUserId: ctx.userId,
-          subject: unit?.subject ?? safeTrim(note.subject),
-          level: unit?.level ?? safeTrim(note.level),
-          term: safeTrim(note.term),
-          academicYear: safeTrim(note.academicYear),
-          status: { in: ["DRAFT", "SUBMITTED", "APPROVED"] },
-        },
-        select: {
-          id: true,
-          status: true,
-          items: {
-            where: { weekNumber: note.weekNumber ?? undefined },
-            select: { weekNumber: true, indicatorCode: true },
-            take: 1,
+
+      if (!note.subject || !note.level || !note.term || !note.academicYear || !note.weekNumber) {
+        return jsonNoStore(
+          {
+            ok: false,
+            code: "APPROVED_SCHEME_REQUIRED",
+            error: "This lesson note is missing the scope needed to verify an approved Scheme of Work.",
           },
-        },
+          { status: 409 }
+        );
+      }
+
+      const approvedItem = await findApprovedSchemeItemForScope({
+        tenantId: ctx.tenantId,
+        teacherUserId: ctx.userId,
+        classroomId: note.classroomId,
+        subject: unit?.subject ?? note.subject,
+        level: unit?.level ?? note.level,
+        term: note.term,
+        academicYear: note.academicYear,
+        weekNumber: note.weekNumber,
+        indicatorCode: unit?.indicatorCode ?? null,
       });
 
-      if (!scheme) {
+      if (!approvedItem) {
         return jsonNoStore(
           {
             ok: false,
+            code: "APPROVED_SCHEME_REQUIRED",
             error:
-              "Scheme of Work required: create your Scheme of Work for this subject/level/term/year before submitting.",
+              "An approved Scheme of Work is required for this subject, class, term, year and week before submitting the lesson note.",
           },
-          { status: 400 }
+          { status: 409 }
         );
       }
 
-      const item = scheme.items?.[0] ?? null;
-      if (!item) {
-        return jsonNoStore(
-          {
-            ok: false,
-            error:
-              "Scheme of Work required: your scheme has no item for this week. Add the week plan first, then submit the lesson note.",
-          },
-          { status: 400 }
-        );
-      }
-
-      schemeIndicatorCode = normCode(item.indicatorCode);
+      schemeIndicatorCode = normCode(approvedItem.indicatorCode);
     }
 
     if (hasCurriculum) {

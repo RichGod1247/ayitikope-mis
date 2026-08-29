@@ -2,6 +2,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
+import {
+  approvedSchemeItemMatchesScope,
+  findApprovedSchemeItemForScope,
+  loadOwnedSchemeItem,
+} from "@/lib/lessonNotes/approvedScheme";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -410,6 +415,37 @@ export async function POST(req: NextRequest) {
     classroomIdForCreate = null;
   }
 
+  if (!level) {
+    return json(409, {
+      ok: false,
+      code: "APPROVED_SCHEME_REQUIRED",
+      error:
+        "An approved Scheme of Work is required before preparing lesson notes. Open Scheme of Work and complete the approval step first.",
+    });
+  }
+
+  const approvedScope = {
+    tenantId: ctx.tenantId,
+    teacherUserId: ctx.userId,
+    classroomId: classroomIdForCreate,
+    subject,
+    level,
+    term,
+    academicYear,
+    weekNumber,
+  };
+
+  const approvedSchemeItem = await findApprovedSchemeItemForScope(approvedScope);
+
+  if (!approvedSchemeItem) {
+    return json(409, {
+      ok: false,
+      code: "APPROVED_SCHEME_REQUIRED",
+      error:
+        "No approved Scheme of Work covers this subject, class, term and week yet. Submit the Scheme of Work and wait for Headteacher approval before preparing the lesson note.",
+    });
+  }
+
   const termCandidates = [term, legacyTerm(term)];
   const now = new Date();
   const twoMinAgo = new Date(now.getTime() - 2 * 60 * 1000);
@@ -426,11 +462,31 @@ export async function POST(req: NextRequest) {
       status: "DRAFT",
       createdAt: { gte: twoMinAgo },
     } as any,
-    select: { id: true },
+    select: { id: true, schemeOfWorkItemId: true },
   });
 
   if (existing?.id) {
-    return json(200, { ok: true, lessonNoteId: existing.id });
+    if (existing.schemeOfWorkItemId) {
+      const existingSchemeItem = await loadOwnedSchemeItem({
+        tenantId: ctx.tenantId,
+        teacherUserId: ctx.userId,
+        schemeItemId: existing.schemeOfWorkItemId,
+      });
+
+      if (existingSchemeItem && approvedSchemeItemMatchesScope(existingSchemeItem, approvedScope)) {
+        return json(200, { ok: true, lessonNoteId: existing.id });
+      }
+      // Do not rewrite an existing Scheme relationship. A fresh approved-backed draft
+      // is safer than silently changing the evidence anchor of an older draft.
+    } else {
+      await prisma.lessonNote.update({
+        where: { id: existing.id },
+        data: { schemeOfWorkItemId: approvedSchemeItem.id },
+        select: { id: true },
+      });
+
+      return json(200, { ok: true, lessonNoteId: existing.id });
+    }
   }
 
   try {
@@ -445,6 +501,7 @@ export async function POST(req: NextRequest) {
         term,
         academicYear,
         weekNumber,
+        schemeOfWorkItemId: approvedSchemeItem.id,
         strand: "",
         substrand: "",
         status: "DRAFT",

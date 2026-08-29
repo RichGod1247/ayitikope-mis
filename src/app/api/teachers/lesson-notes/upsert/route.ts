@@ -4,6 +4,11 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
 import { resolveUserClassroomAccess } from "@/lib/teacherAccess";
+import {
+  approvedSchemeItemMatchesScope,
+  findApprovedSchemeItemForScope,
+  loadOwnedSchemeItem,
+} from "@/lib/lessonNotes/approvedScheme";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -291,6 +296,10 @@ select: {
 
   classroomId: true,
   subject: true,
+  level: true,
+  term: true,
+  academicYear: true,
+  weekNumber: true,
 
   curriculumUnitId: true,
   schemeOfWorkItemId: true,
@@ -382,6 +391,100 @@ if (existing.classroomId && effectiveSubjectForAccess) {
   }
 }  
 
+    const effectiveSubject =
+      subject !== undefined && subject !== null ? subject : existing.subject;
+    const effectiveLevel =
+      level !== undefined && level !== null ? level : existing.level;
+    const effectiveTerm =
+      term !== undefined && term !== null ? term : existing.term;
+    const effectiveAcademicYear =
+      academicYear !== undefined && academicYear !== null ? academicYear : existing.academicYear;
+    const effectiveWeekNumber =
+      weekNumber !== undefined && weekNumber !== null ? weekNumber : existing.weekNumber;
+
+    let effectiveUnitIndicatorCode: string | null = null;
+
+    if (effectiveUnitId) {
+      const effectiveUnit = await prisma.curriculumUnit.findFirst({
+        where: {
+          id: effectiveUnitId,
+          OR: [{ tenantId: ctx.tenantId }, { tenantId: null }],
+        },
+        select: { indicatorCode: true },
+      });
+
+      if (!effectiveUnit) {
+        return jsonNoStore({ ok: false, error: "Selected curriculum unit not found." }, { status: 400 });
+      }
+
+      effectiveUnitIndicatorCode = effectiveUnit.indicatorCode ?? null;
+    }
+
+    if (!effectiveSubject || !effectiveLevel || !effectiveTerm || !effectiveAcademicYear || !effectiveWeekNumber) {
+      return jsonNoStore(
+        {
+          ok: false,
+          code: "APPROVED_SCHEME_REQUIRED",
+          error:
+            "This lesson note is missing the class, subject, term, year or week needed to verify an approved Scheme of Work.",
+        },
+        { status: 409 }
+      );
+    }
+
+    const approvedScope = {
+      tenantId: ctx.tenantId,
+      teacherUserId: ctx.userId,
+      classroomId: existing.classroomId,
+      subject: effectiveSubject,
+      level: effectiveLevel,
+      term: effectiveTerm,
+      academicYear: effectiveAcademicYear,
+      weekNumber: effectiveWeekNumber,
+      indicatorCode: effectiveUnitIndicatorCode,
+    };
+
+    if (effectiveSchemeItemId) {
+      const ownedItem = await loadOwnedSchemeItem({
+        tenantId: ctx.tenantId,
+        teacherUserId: ctx.userId,
+        schemeItemId: effectiveSchemeItemId,
+      });
+
+      if (!ownedItem) {
+        return jsonNoStore({ ok: false, error: "Selected scheme item not found." }, { status: 400 });
+      }
+
+      if (
+        String(ownedItem.scheme.status ?? "").toUpperCase() !== "APPROVED" ||
+        !approvedSchemeItemMatchesScope(ownedItem, approvedScope)
+      ) {
+        return jsonNoStore(
+          {
+            ok: false,
+            code: "APPROVED_SCHEME_REQUIRED",
+            error:
+              "This lesson note is not linked to an approved Scheme of Work for the same class, subject, term, year and week.",
+          },
+          { status: 409 }
+        );
+      }
+    } else {
+      const approvedItem = await findApprovedSchemeItemForScope(approvedScope);
+
+      if (!approvedItem) {
+        return jsonNoStore(
+          {
+            ok: false,
+            code: "APPROVED_SCHEME_REQUIRED",
+            error:
+              "An approved Scheme of Work is required before this lesson note can be prepared. Submit the Scheme of Work and wait for Headteacher approval first.",
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     // Derive NaCCA slice from either SchemeOfWorkItem or CurriculumUnit (server-trusted)
     let derived:
       | {
@@ -398,7 +501,7 @@ if (existing.classroomId && effectiveSubjectForAccess) {
       const item = await prisma.schemeOfWorkItem.findFirst({
         where: {
           id: effectiveSchemeItemId,
-          scheme: { tenantId: ctx.tenantId, teacherUserId: ctx.userId },
+          scheme: { tenantId: ctx.tenantId, teacherUserId: ctx.userId, status: "APPROVED" },
                 },
         select: {
           weekNumber: true,

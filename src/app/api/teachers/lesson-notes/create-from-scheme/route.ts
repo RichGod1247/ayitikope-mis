@@ -6,6 +6,7 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { normalizeLevelToken } from "@/lib/teacherScope";
 import { resolveUserClassroomAccess } from "@/lib/teacherAccess";
+import { loadOwnedSchemeItem } from "@/lib/lessonNotes/approvedScheme";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -240,28 +241,24 @@ const membership = await prisma.membership.findUnique({
 
   const schemeItemId = parsed.data.schemeItemId.trim();
 
-  const item = await prisma.schemeOfWorkItem.findFirst({
-    where: {
-      id: schemeItemId,
-      scheme: { tenantId: ctx.tenantId, teacherUserId: ctx.userId },
-    },
-    select: {
-      id: true,
-      weekNumber: true,
-      strandTitle: true,
-      subStrandTitle: true,
-      contentStandardCode: true,
-      contentStandardDescription: true,
-      indicatorId: true,
-      indicatorCode: true,
-      indicatorDescription: true,
-      scheme: {
-        select: { id: true, subject: true, level: true, term: true, academicYear: true, classroomId: true },
-      },
-    },
+  const item = await loadOwnedSchemeItem({
+    tenantId: ctx.tenantId,
+    teacherUserId: ctx.userId,
+    schemeItemId,
   });
 
-  if (!item || !item.scheme) return json(404, { ok: false, error: "Scheme item not found." });
+  if (!item?.scheme) {
+    return json(404, { ok: false, error: "Scheme item not found." });
+  }
+
+  if (String(item.scheme.status ?? "").toUpperCase() !== "APPROVED") {
+    return json(409, {
+      ok: false,
+      code: "APPROVED_SCHEME_REQUIRED",
+      error:
+        "An approved Scheme of Work is required before preparing this lesson note. Submit the Scheme of Work and wait for Headteacher approval first.",
+    });
+  }
 
   const scheme = item.scheme;
   const weekNumber = Number(item.weekNumber);

@@ -2,6 +2,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
+import {
+  approvedSchemeItemMatchesScope,
+  findApprovedSchemeItemForScope,
+  loadOwnedSchemeItem,
+} from "@/lib/lessonNotes/approvedScheme";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -95,26 +100,6 @@ function subjectOrFilters(subject: string) {
     { subject: { equals: s, mode: "insensitive" as const } },
     { subject: { endsWith: s, mode: "insensitive" as const } },
   ];
-}
-
-async function loadSchemeItem(args: { tenantId: string; userId: string; schemeItemId: string }) {
-  return prisma.schemeOfWorkItem.findFirst({
-    where: {
-      id: args.schemeItemId,
-      scheme: { tenantId: args.tenantId, teacherUserId: args.userId },
-    } as any,
-    select: {
-      id: true,
-      weekNumber: true,
-      strandTitle: true,
-      subStrandTitle: true,
-      contentStandardCode: true,
-      contentStandardDescription: true,
-      indicatorCode: true,
-      indicatorDescription: true,
-      scheme: { select: { subject: true, level: true, term: true } },
-    },
-  });
 }
 
 function normText(v: unknown) {
@@ -274,7 +259,17 @@ export async function POST(req: NextRequest) {
 
   const note = await prisma.lessonNote.findFirst({
     where: { id: lessonNoteId, tenantId: ctx.tenantId, teacherUserId: ctx.userId },
-    select: { id: true, status: true, lessonTitle: true },
+    select: {
+      id: true,
+      status: true,
+      lessonTitle: true,
+      classroomId: true,
+      subject: true,
+      level: true,
+      term: true,
+      academicYear: true,
+      weekNumber: true,
+    },
   });
   if (!note) return Notice(404, { ok: false, error: "Lesson note not found." });
 
@@ -287,15 +282,51 @@ export async function POST(req: NextRequest) {
   if (directUnitId) {
     const unit = await prisma.curriculumUnit.findFirst({
       where: { id: directUnitId, OR: [{ tenantId: ctx.tenantId }, { tenantId: null }] } as any,
-      select: { id: true, strand: true, substrand: true, contentStandard: true, indicator: true },
+      select: {
+        id: true,
+        strand: true,
+        substrand: true,
+        contentStandard: true,
+        indicatorCode: true,
+        indicator: true,
+      },
     });
     if (!unit) return Notice(404, { ok: false, error: "Curriculum unit not found." });
+
+    if (!note.subject || !note.level || !note.term || !note.academicYear || !note.weekNumber) {
+      return Notice(409, {
+        ok: false,
+        code: "APPROVED_SCHEME_REQUIRED",
+        error: "This lesson note is missing the scope needed to verify an approved Scheme of Work.",
+      });
+    }
+
+    const approvedItem = await findApprovedSchemeItemForScope({
+      tenantId: ctx.tenantId,
+      teacherUserId: ctx.userId,
+      classroomId: note.classroomId,
+      subject: note.subject,
+      level: note.level,
+      term: note.term,
+      academicYear: note.academicYear,
+      weekNumber: note.weekNumber,
+      indicatorCode: unit.indicatorCode,
+    });
+
+    if (!approvedItem) {
+      return Notice(409, {
+        ok: false,
+        code: "APPROVED_SCHEME_REQUIRED",
+        error:
+          "This curriculum unit is not covered by an approved Scheme of Work for the same class, subject, term, year and week.",
+      });
+    }
 
     await prisma.lessonNote.update({
       where: { id: lessonNoteId },
       data: {
         curriculumUnitId: unit.id,
-        schemeOfWorkItemId: null,
+        schemeOfWorkItemId: approvedItem.id,
         strand: cleanStr(unit.strand) || "",
         substrand: cleanStr(unit.substrand) || "",
         contentStandard: cleanStr(unit.contentStandard) || null,
@@ -307,14 +338,62 @@ export async function POST(req: NextRequest) {
       select: { id: true },
     });
 
-    return Notice(200, { ok: true, lessonNoteId, curriculumUnitId: unit.id });
+    return Notice(200, {
+      ok: true,
+      lessonNoteId,
+      curriculumUnitId: unit.id,
+      schemeOfWorkItemId: approvedItem.id,
+    });
   }
 
   const schemeItemId = cleanStr(parsed.data.schemeOfWorkItemId || parsed.data.schemeItemId);
   if (!schemeItemId) return Notice(400, { ok: false, error: "Provide curriculumUnitId or schemeOfWorkItemId." });
 
-  const item = await loadSchemeItem({ tenantId: ctx.tenantId, userId: ctx.userId, schemeItemId });
-  if (!item?.scheme) return Notice(404, { ok: false, error: "Scheme item not found." });
+  const item = await loadOwnedSchemeItem({
+    tenantId: ctx.tenantId,
+    teacherUserId: ctx.userId,
+    schemeItemId,
+  });
+
+  if (!item?.scheme) {
+    return Notice(404, { ok: false, error: "Scheme item not found." });
+  }
+
+  if (String(item.scheme.status ?? "").toUpperCase() !== "APPROVED") {
+    return Notice(409, {
+      ok: false,
+      code: "APPROVED_SCHEME_REQUIRED",
+      error: "Only items from an approved Scheme of Work can be linked to a lesson note.",
+    });
+  }
+
+  if (!note.subject || !note.level || !note.term || !note.academicYear || !note.weekNumber) {
+    return Notice(409, {
+      ok: false,
+      code: "APPROVED_SCHEME_REQUIRED",
+      error: "This lesson note is missing the scope needed to verify the approved Scheme of Work.",
+    });
+  }
+
+  if (
+    !approvedSchemeItemMatchesScope(item, {
+      tenantId: ctx.tenantId,
+      teacherUserId: ctx.userId,
+      classroomId: note.classroomId,
+      subject: note.subject,
+      level: note.level,
+      term: note.term,
+      academicYear: note.academicYear,
+      weekNumber: note.weekNumber,
+      indicatorCode: item.indicatorCode,
+    })
+  ) {
+    return Notice(409, {
+      ok: false,
+      code: "APPROVED_SCHEME_REQUIRED",
+      error: "The selected approved Scheme item does not match this lesson note scope.",
+    });
+  }
 
   const schemeSubjectRaw = normalizeSpaces(cleanStr(item.scheme.subject));
   const subject = stripLeadingLevelFromSubject(schemeSubjectRaw) || schemeSubjectRaw;

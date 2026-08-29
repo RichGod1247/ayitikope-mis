@@ -3,6 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
 import { resolveUserClassroomAccess } from "@/lib/teacherAccess";
+import {
+  approvedSchemeItemMatchesScope,
+  findApprovedSchemeItemForScope,
+  loadOwnedSchemeItem,
+} from "@/lib/lessonNotes/approvedScheme";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -163,22 +168,6 @@ function stripLeadingLevelFromSubject(raw: string) {
   return s.replace(/^(JHS\s*[1-3]|JHS[1-3]|Basic\s*\d+|Basic\d+|B\s*\d+|B\d+|KG\s*[12]|KG[12])\s+/i, "").trim();
 }
 
-function subjectOrFilters(rawSubject: string) {
-  const s = normalizeSpaces(rawSubject);
-  const core = stripLeadingLevelFromSubject(s) || s;
-
-  const out: any[] = [];
-  if (s) {
-    out.push({ subject: { equals: s, mode: "insensitive" as const } });
-    out.push({ subject: { endsWith: s, mode: "insensitive" as const } });
-  }
-  if (core && core.toLowerCase() !== s.toLowerCase()) {
-    out.push({ subject: { equals: core, mode: "insensitive" as const } });
-    out.push({ subject: { endsWith: core, mode: "insensitive" as const } });
-  }
-  return out.length ? out : [];
-}
-
 function firstNonEmpty(...vals: Array<string | null | undefined>) {
   for (const v of vals) {
     const s = String(v ?? "").trim();
@@ -235,43 +224,6 @@ async function assertTeacherCanAccessClassroomAndSubject(opts: {
   }
 
   return { ok: true as const, classroom: access.classroom };
-}
-
-async function requireSchemePrecondition(opts: {
-  tenantId: string;
-  teacherUserId: string;
-  term: string;
-  academicYear: string;
-  subject: string;
-  level: string;
-}) {
-  const { tenantId, teacherUserId, term, academicYear, subject, level } = opts;
-
-  const scheme = await prisma.schemeOfWork.findFirst({
-    where: {
-      tenantId,
-      teacherUserId,
-      term,
-      academicYear,
-      level: { equals: level, mode: "insensitive" as any },
-      OR: subjectOrFilters(subject),
-    } as any,
-    select: { id: true, _count: { select: { items: true } } },
-    orderBy: { createdAt: "desc" },
-  });
-
-  const itemCount = scheme?._count?.items ?? 0;
-
-  if (!scheme || itemCount <= 0) {
-    return {
-      ok: false as const,
-      status: 409,
-      error:
-        "Scheme of Work is required for this subject/class/term/year before generating lesson notes. Add at least one indicator to your scheme first.",
-    };
-  }
-
-  return { ok: true as const, schemeId: scheme.id, itemCount };
 }
 
 export async function GET() {
@@ -358,16 +310,40 @@ const access = await assertTeacherCanAccessClassroomAndSubject({
     if (!access.ok) return jsonNoStore({ ok: false, error: access.error }, { status: access.status });
   }
 
-  // ✅ Server-enforced scheme gate (precondition) — now subject+level scoped
-  const schemeOk = await requireSchemePrecondition({
+  // Approved Scheme of Work + matching week is the lesson-note authoring precondition.
+  const approvedSchemeItem = await findApprovedSchemeItemForScope({
     tenantId: ctx.tenantId,
     teacherUserId: ctx.userId,
-    term: termNorm,
-    academicYear: academicYearNorm,
+    classroomId,
     subject,
     level,
+    term: termNorm,
+    academicYear: academicYearNorm,
+    weekNumber,
   });
-  if (!schemeOk.ok) return jsonNoStore({ ok: false, error: schemeOk.error }, { status: schemeOk.status });
+
+  if (!approvedSchemeItem) {
+    return jsonNoStore(
+      {
+        ok: false,
+        code: "APPROVED_SCHEME_REQUIRED",
+        error:
+          "No approved Scheme of Work covers this subject, class, term and week yet. Submit the Scheme of Work and wait for Headteacher approval before preparing the lesson note.",
+      },
+      { status: 409 }
+    );
+  }
+
+  const approvedScope = {
+    tenantId: ctx.tenantId,
+    teacherUserId: ctx.userId,
+    classroomId,
+    subject,
+    level,
+    term: termNorm,
+    academicYear: academicYearNorm,
+    weekNumber,
+  };
 
   // ✅ Universal idempotency: one note per teacher+classroom+subject+term+year+week
   const existing = await prisma.lessonNote.findFirst({
@@ -408,44 +384,53 @@ const access = await assertTeacherCanAccessClassroomAndSubject({
       );
     }
 
-    // ✅ Repair: if title is placeholder (or empty) and we have a scheme item, set it to SUBSTRAND.
-    // Also ensure schemeOfWorkItemId is anchored when possible.
-    try {
-      const weekItem = await prisma.schemeOfWorkItem.findFirst({
-        where: {
-          weekNumber,
-          scheme: { id: schemeOk.schemeId },
-        } as any,
-        select: {
-          id: true,
-          strandTitle: true,
-          subStrandTitle: true,
-          contentStandardCode: true,
-          contentStandardDescription: true,
-          indicatorCode: true,
-          indicatorDescription: true,
-        },
+    let reuseSchemeItem = approvedSchemeItem;
+    let canReuseExisting = !existing.schemeOfWorkItemId;
+
+    if (existing.schemeOfWorkItemId) {
+      const existingSchemeItem = await loadOwnedSchemeItem({
+        tenantId: ctx.tenantId,
+        teacherUserId: ctx.userId,
+        schemeItemId: existing.schemeOfWorkItemId,
       });
 
-      if (weekItem) {
-        const strand = normalizeSpaces(weekItem.strandTitle ?? "");
-        const substrand = normalizeSpaces(weekItem.subStrandTitle ?? "");
-        const cs = normalizeSpaces(firstNonEmpty(weekItem.contentStandardDescription, weekItem.contentStandardCode, ""));
-        const ind = normalizeSpaces(firstNonEmpty(weekItem.indicatorDescription, weekItem.indicatorCode, ""));
+      if (existingSchemeItem && approvedSchemeItemMatchesScope(existingSchemeItem, approvedScope)) {
+        reuseSchemeItem = existingSchemeItem;
+        canReuseExisting = true;
+      }
+    }
+
+    if (canReuseExisting) {
+      // Repair only missing presentation fields. Never replace an existing Scheme
+      // relationship; an older unapproved link falls through to a fresh approved-backed draft.
+      try {
+        const strand = normalizeSpaces(reuseSchemeItem.strandTitle ?? "");
+        const substrand = normalizeSpaces(reuseSchemeItem.subStrandTitle ?? "");
+        const cs = normalizeSpaces(
+          firstNonEmpty(reuseSchemeItem.contentStandardDescription, reuseSchemeItem.contentStandardCode, "")
+        );
+        const ind = normalizeSpaces(
+          firstNonEmpty(reuseSchemeItem.indicatorDescription, reuseSchemeItem.indicatorCode, "")
+        );
 
         const shouldFixTitle = isPlaceholderTitle(existing.lessonTitle, subject, weekNumber);
-        const shouldAnchorScheme = !existing.schemeOfWorkItemId;
-
-        // only fill missing scope fields; do not overwrite if already present
         const data: any = {};
-        if (shouldAnchorScheme) data.schemeOfWorkItemId = weekItem.id;
+
+        if (!existing.schemeOfWorkItemId) data.schemeOfWorkItemId = reuseSchemeItem.id;
         if (!normalizeSpaces(existing.strand ?? "") && strand) data.strand = strand;
         if (!normalizeSpaces(existing.substrand ?? "") && substrand) data.substrand = substrand;
         if (!normalizeSpaces(existing.contentStandard ?? "") && cs) data.contentStandard = cs;
         if (!normalizeSpaces(existing.indicator ?? "") && ind) data.indicator = ind;
 
         if (shouldFixTitle) {
-          data.lessonTitle = clampTitle(firstNonEmpty(substrand, ind, `${stripLeadingLevelFromSubject(subject) || subject} — Week ${weekNumber}`)) || null;
+          data.lessonTitle =
+            clampTitle(
+              firstNonEmpty(
+                substrand,
+                ind,
+                `${stripLeadingLevelFromSubject(subject) || subject} — Week ${weekNumber}`
+              )
+            ) || null;
         }
 
         if (Object.keys(data).length > 0) {
@@ -455,22 +440,22 @@ const access = await assertTeacherCanAccessClassroomAndSubject({
             select: { id: true },
           });
         }
+      } catch (e) {
+        // Never fail reuse because presentation repair failed.
+        console.warn("[LESSON_NOTE_REUSE_REPAIR_WARN]", e);
       }
-    } catch (e) {
-      // Never fail the request because repair failed; idempotency must remain safe.
-      console.warn("[LESSON_NOTE_REUSE_REPAIR_WARN]", e);
-    }
 
-    return jsonNoStore(
-      {
-        ok: true,
-        reused: true,
-        item: { id: existing.id },
-        note: { id: existing.id },
-        existing: { id: existing.id, status: st || "DRAFT" },
-      },
-      { status: 200 }
-    );
+      return jsonNoStore(
+        {
+          ok: true,
+          reused: true,
+          item: { id: existing.id },
+          note: { id: existing.id },
+          existing: { id: existing.id, status: st || "DRAFT" },
+        },
+        { status: 200 }
+      );
+    }
   }
 
   // ✅ If slice provided, validate it; otherwise create draft without curriculum link.
@@ -478,31 +463,7 @@ const access = await assertTeacherCanAccessClassroomAndSubject({
 
   // --- Branch A: NO SLICE (draft only) ---
   if (!isNonEmptyString(indicatorIdRaw)) {
-    // Pull scheme week item (best-effort) so lessonTitle defaults to SUBSTRAND (as you want).
-    const schemeWeekItem = await prisma.schemeOfWork.findFirst({
-      where: {
-        id: schemeOk.schemeId, // ✅ use the already-validated, subject+level-scoped scheme
-      } as any,
-      select: {
-        id: true,
-        items: {
-          where: { weekNumber },
-          take: 1,
-          select: {
-            id: true,
-            weekNumber: true,
-            strandTitle: true,
-            subStrandTitle: true,
-            contentStandardCode: true,
-            contentStandardDescription: true,
-            indicatorCode: true,
-            indicatorDescription: true,
-          },
-        },
-      },
-    });
-
-    const item = schemeWeekItem?.items?.[0] ?? null;
+    const item = approvedSchemeItem;
 
     const strand = normalizeSpaces(item?.strandTitle ?? "");
     const substrand = normalizeSpaces(item?.subStrandTitle ?? "");
@@ -686,6 +647,24 @@ const access = await assertTeacherCanAccessClassroomAndSubject({
     )
   );
 
+  const approvedIndicatorSchemeItem = await findApprovedSchemeItemForScope({
+    ...approvedScope,
+    indicatorId: indicator.id,
+    indicatorCode,
+  });
+
+  if (!approvedIndicatorSchemeItem) {
+    return jsonNoStore(
+      {
+        ok: false,
+        code: "APPROVED_SCHEME_INDICATOR_MISMATCH",
+        error:
+          "The selected curriculum indicator is not in the approved Scheme of Work for this week. Open the approved scheme and choose the planned indicator.",
+      },
+      { status: 409 }
+    );
+  }
+
   // FK-correct curriculumUnitId (must reference CurriculumUnit.id)
   const curriculumUnitId = await (async () => {
     const tenantUnit = await prisma.curriculumUnit.findFirst({
@@ -769,6 +748,7 @@ const access = await assertTeacherCanAccessClassroomAndSubject({
         phase,
         level,
         curriculumUnitId,
+        schemeOfWorkItemId: approvedIndicatorSchemeItem.id,
 
         subject,
         term: termNorm,
