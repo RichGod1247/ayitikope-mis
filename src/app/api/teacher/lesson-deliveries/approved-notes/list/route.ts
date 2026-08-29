@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
 import { isAdminLikeRole, resolveUserClassroomAccess } from "@/lib/teacherAccess";
+import {
+  subjectAllowedInTeachingScope,
+  subjectMatchesTeachingScope,
+} from "@/lib/teachingSubjectScope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,60 +27,6 @@ function isForbiddenReason(reason: string) {
 
 function cleanStr(v: unknown) {
   return String(v ?? "").trim();
-}
-
-function compactKey(v: unknown) {
-  return cleanStr(v).toUpperCase().replace(/[^A-Z0-9]/g, "");
-}
-
-function subjectAliasKeys(v: unknown) {
-  const key = compactKey(v);
-  const keys = new Set<string>();
-  if (!key) return keys;
-
-  keys.add(key);
-
-  const aliases: Record<string, string[]> = {
-    MATHS: ["MATH", "MATHEMATICS"],
-    MATH: ["MATHS", "MATHEMATICS"],
-    MATHEMATICS: ["MATH", "MATHS"],
-
-    SCIENCE: ["INTEGRATEDSCIENCE", "INTSCIENCE"],
-    INTEGRATEDSCIENCE: ["SCIENCE", "INTSCIENCE"],
-    INTSCIENCE: ["SCIENCE", "INTEGRATEDSCIENCE"],
-
-    ENGLISH: ["ENGLISHLANGUAGE"],
-    ENGLISHLANGUAGE: ["ENGLISH"],
-
-    OWOP: ["OURWORLDOURPEOPLE"],
-    OURWORLDOURPEOPLE: ["OWOP"],
-
-    RME: ["RELIGIOUSANDMORALEDUCATION"],
-    RELIGIOUSANDMORALEDUCATION: ["RME"],
-
-    ICT: ["COMPUTING"],
-    COMPUTING: ["ICT"],
-  };
-
-  for (const alias of aliases[key] ?? []) keys.add(alias);
-  return keys;
-}
-
-function sameSubjectLoose(a: unknown, b: unknown) {
-  const aKeys = subjectAliasKeys(a);
-  const bKeys = subjectAliasKeys(b);
-
-  for (const k of aKeys) {
-    if (bKeys.has(k)) return true;
-  }
-
-  return false;
-}
-
-function subjectAllowedInScope(subject: unknown, allowedSubjects: string[] | null) {
-  if (!Array.isArray(allowedSubjects)) return true;
-  if (allowedSubjects.length === 0) return false;
-  return allowedSubjects.some((s) => sameSubjectLoose(s, subject));
 }
 
 function normalizeLevelToken(raw: unknown): string | null {
@@ -141,6 +91,7 @@ function filterRowsByTruthScope<T extends { classroomId: string | null; level: s
     classroomId: string;
     classroom: any;
     allowedSubjects: string[] | null;
+    scopeLevel: string | null;
     preferredSubject?: string | null;
   }
 ) {
@@ -149,13 +100,15 @@ function filterRowsByTruthScope<T extends { classroomId: string | null; level: s
   );
 
   const subjectScoped = classroomScoped.filter((r) =>
-    subjectAllowedInScope(r.subject, args.allowedSubjects)
+    subjectAllowedInTeachingScope(r.subject, args.allowedSubjects, args.scopeLevel)
   );
 
   const preferred = cleanStr(args.preferredSubject);
   if (!preferred) return subjectScoped;
 
-  const preferredRows = subjectScoped.filter((r) => sameSubjectLoose(r.subject, preferred));
+  const preferredRows = subjectScoped.filter((r) =>
+    subjectMatchesTeachingScope(r.subject, preferred, args.scopeLevel)
+  );
 
   return preferredRows.length > 0 ? preferredRows : subjectScoped;
 }
@@ -234,6 +187,7 @@ export async function GET(req: Request) {
     classroomId,
     classroom: access.classroom,
     allowedSubjects: isAdminLikeRole(ctx.roleName) ? null : access.allowedSubjects,
+    scopeLevel: access.normalizedClassLevel,
     preferredSubject: subject,
   });
 

@@ -1,5 +1,6 @@
 //src/lib/teacherAccess.ts
 import { prisma } from "@/lib/prisma";
+import { subjectMatchesTeachingScope } from "@/lib/teachingSubjectScope";
 
 type ClassroomLite = {
   id: string;
@@ -560,7 +561,9 @@ export async function resolveUserClassroomAccess(args: {
   if (allowedSubjects.length > 0) {
     if (
       requestedSubject &&
-      !allowedSubjects.some((s) => subjectEquals(s, requestedSubject))
+      !allowedSubjects.some((s) =>
+        subjectMatchesTeachingScope(s, requestedSubject, normalizedClassLevel)
+      )
     ) {
       return {
         ok: false,

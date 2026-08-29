@@ -5,8 +5,8 @@ import { requireApiUserContext } from "@/lib/serverAuth";
 import {
   isAdminLikeRole,
   resolveUserClassroomAccess,
-  subjectEquals,
 } from "@/lib/teacherAccess";
+import { subjectMatchesTeachingScope } from "@/lib/teachingSubjectScope";
 import {
   findPolicyComponent,
   getTenantAssessmentPolicyLite as getTenantAssessmentPolicy,
@@ -198,7 +198,13 @@ const componentCodeFromBody = clean(body?.componentCode)
       return noStore(400, { ok: false, error: "DELIVERY_CLASSROOM_MISMATCH" });
     }
 
-    if (!subjectEquals(delivery.subject, subject)) {
+    if (
+      !subjectMatchesTeachingScope(
+        delivery.subject,
+        subject,
+        deliveryAccess.normalizedClassLevel
+      )
+    ) {
       return noStore(400, { ok: false, error: "DELIVERY_SUBJECT_MISMATCH" });
     }
 
@@ -212,6 +218,10 @@ const componentCodeFromBody = clean(body?.componentCode)
 
     resolvedCurriculumUnitId = delivery.curriculumUnitId ?? null;
   }
+
+  // A linked delivery is the durable teaching-evidence authority.
+  // Preserve its curriculum-qualified subject instead of persisting a generic alias.
+  const effectiveSubject = delivery?.subject || subject;
 
   try {
     if (id) {
@@ -282,7 +292,7 @@ const componentCodeFromBody = clean(body?.componentCode)
         where: { id },
         data: {
           classroomId,
-          subject,
+          subject: effectiveSubject,
           term,
           academicYear,
           title,
@@ -294,7 +304,7 @@ const componentCodeFromBody = clean(body?.componentCode)
           assessmentPolicyId: resolvedPolicyId,
           policyComponentId: resolvedComponentId,
           componentCode: resolvedComponentCode,
-          templateKey: `${term}:${academicYear}:${subject}:${resolvedComponentCode}`,
+          templateKey: `${term}:${academicYear}:${effectiveSubject}:${resolvedComponentCode}`,
           sortOrder: component?.orderIndex ?? 0,
           isRequired: component?.required ?? true,
           lessonDeliveryId: lessonDeliveryId || null,
@@ -335,7 +345,7 @@ const componentCodeFromBody = clean(body?.componentCode)
       data: {
         tenantId: ctx.tenantId,
         classroomId,
-        subject,
+        subject: effectiveSubject,
         term,
         academicYear,
         title,
@@ -347,7 +357,7 @@ const componentCodeFromBody = clean(body?.componentCode)
         assessmentPolicyId: resolvedPolicyId,
         policyComponentId: resolvedComponentId,
         componentCode: resolvedComponentCode,
-        templateKey: `${term}:${academicYear}:${subject}:${resolvedComponentCode}`,
+        templateKey: `${term}:${academicYear}:${effectiveSubject}:${resolvedComponentCode}`,
         sortOrder: component?.orderIndex ?? 0,
         isRequired: component?.required ?? true,
         lessonDeliveryId: lessonDeliveryId || null,

@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
 import { isAdminLikeRole, resolveUserClassroomAccess } from "@/lib/teacherAccess";
+import {
+  subjectAllowedInTeachingScope,
+  subjectMatchesTeachingScope,
+} from "@/lib/teachingSubjectScope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,71 +22,22 @@ function cleanStr(v: unknown) {
   return String(v ?? "").trim();
 }
 
-function subjectKey(v: unknown) {
-  return cleanStr(v).toUpperCase().replace(/[^A-Z0-9]/g, "");
-}
-
-function subjectAliasKeys(v: unknown) {
-  const key = subjectKey(v);
-  const keys = new Set<string>();
-  if (!key) return keys;
-
-  keys.add(key);
-
-  const aliases: Record<string, string[]> = {
-    MATHS: ["MATH", "MATHEMATICS"],
-    MATH: ["MATHS", "MATHEMATICS"],
-    MATHEMATICS: ["MATH", "MATHS"],
-
-    SCIENCE: ["INTEGRATEDSCIENCE", "INTSCIENCE"],
-    INTEGRATEDSCIENCE: ["SCIENCE", "INTSCIENCE"],
-    INTSCIENCE: ["SCIENCE", "INTEGRATEDSCIENCE"],
-
-    ENGLISH: ["ENGLISHLANGUAGE"],
-    ENGLISHLANGUAGE: ["ENGLISH"],
-
-    OWOP: ["OURWORLDOURPEOPLE"],
-    OURWORLDOURPEOPLE: ["OWOP"],
-
-    RME: ["RELIGIOUSANDMORALEDUCATION"],
-    RELIGIOUSANDMORALEDUCATION: ["RME"],
-
-    ICT: ["COMPUTING"],
-    COMPUTING: ["ICT"],
-  };
-
-  for (const alias of aliases[key] ?? []) keys.add(alias);
-  return keys;
-}
-
-function sameSubjectLoose(a: unknown, b: unknown) {
-  const aKeys = subjectAliasKeys(a);
-  const bKeys = subjectAliasKeys(b);
-
-  for (const k of aKeys) {
-    if (bKeys.has(k)) return true;
-  }
-
-  return false;
-}
-
-function subjectAllowedInScope(subject: unknown, allowedSubjects: string[] | null) {
-  if (!Array.isArray(allowedSubjects)) return true;
-  if (allowedSubjects.length === 0) return false;
-  return allowedSubjects.some((s) => sameSubjectLoose(s, subject));
-}
-
 function filterRowsBySubjectScope<T extends { subject: string | null }>(
   rows: T[],
   allowedSubjects: string[] | null,
+  scopeLevel: string | null,
   preferredSubject?: string | null
 ) {
-  const allowedRows = rows.filter((r) => subjectAllowedInScope(r.subject, allowedSubjects));
+  const allowedRows = rows.filter((r) =>
+    subjectAllowedInTeachingScope(r.subject, allowedSubjects, scopeLevel)
+  );
 
   const preferred = cleanStr(preferredSubject);
   if (!preferred) return allowedRows;
 
-  const preferredRows = allowedRows.filter((r) => sameSubjectLoose(r.subject, preferred));
+  const preferredRows = allowedRows.filter((r) =>
+    subjectMatchesTeachingScope(r.subject, preferred, scopeLevel)
+  );
 
   // The selected subject is a helper filter. It must not create false-zero.
   return preferredRows.length > 0 ? preferredRows : allowedRows;
@@ -179,6 +134,7 @@ export async function GET(req: Request) {
   const rows = filterRowsBySubjectScope(
     rowsRaw,
     isAdminLikeRole(ctx.roleName) ? null : access.allowedSubjects,
+    access.normalizedClassLevel,
     subject
   );
 

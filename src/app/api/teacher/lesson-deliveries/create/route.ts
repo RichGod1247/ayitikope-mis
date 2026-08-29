@@ -5,9 +5,10 @@ import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
 import {
   isAdminLikeRole,
+  normalizeSchoolLevel,
   resolveUserClassroomAccess,
-  subjectEquals,
 } from "@/lib/teacherAccess";
+import { subjectMatchesTeachingScope } from "@/lib/teachingSubjectScope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -148,6 +149,7 @@ export async function POST(req: Request) {
       status: true,
       teacherUserId: true,
       classroomId: true,
+      level: true,
       subject: true,
       term: true,
       academicYear: true,
@@ -170,13 +172,27 @@ export async function POST(req: Request) {
   if (note.classroomId && note.classroomId !== classroomId) {
     return noStore(400, { ok: false, error: "LESSON_NOTE_CLASSROOM_MISMATCH" });
   }
+  if (
+    note.level &&
+    access.normalizedClassLevel &&
+    normalizeSchoolLevel(note.level) !== access.normalizedClassLevel
+  ) {
+    return noStore(400, { ok: false, error: "LESSON_NOTE_LEVEL_MISMATCH" });
+  }
   if (note.term && clean(note.term) !== term) {
     return noStore(400, { ok: false, error: "LESSON_NOTE_TERM_MISMATCH" });
   }
   if (note.academicYear && clean(note.academicYear) !== academicYear) {
     return noStore(400, { ok: false, error: "LESSON_NOTE_YEAR_MISMATCH" });
   }
-  if (note.subject && !subjectEquals(note.subject, requestedSubject)) {
+  if (
+    note.subject &&
+    !subjectMatchesTeachingScope(
+      note.subject,
+      requestedSubject,
+      access.normalizedClassLevel
+    )
+  ) {
     return noStore(400, { ok: false, error: "LESSON_NOTE_SUBJECT_MISMATCH" });
   }
 

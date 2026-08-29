@@ -5,8 +5,8 @@ import { requireApiUserContext } from "@/lib/serverAuth";
 import {
   isAdminLikeRole,
   resolveUserClassroomAccess,
-  subjectEquals,
 } from "@/lib/teacherAccess";
+import { subjectMatchesTeachingScope } from "@/lib/teachingSubjectScope";
 import { getTenantAssessmentPolicyLite } from "@/lib/assessments/policy";
 import { buildSubjectBroadsheet } from "@/lib/assessments/broadsheet";
 
@@ -35,38 +35,6 @@ function uniqueSorted(xs: string[]) {
   return Array.from(new Set(xs.map(clean).filter(Boolean))).sort((a, b) =>
     a.localeCompare(b)
   );
-}
-
-function buildSubjectWhere(args: {
-  roleName: string | null;
-  allowedSubjects: string[] | null;
-  requestedSubject: string | null;
-}) {
-  if (args.requestedSubject) {
-    return {
-      subject: {
-        equals: args.requestedSubject,
-        mode: "insensitive" as const,
-      },
-    };
-  }
-
-  if (isAdminLikeRole(args.roleName)) return {};
-
-  if (args.allowedSubjects?.length) {
-    return {
-      OR: args.allowedSubjects.map((s) => ({
-        subject: {
-          equals: s,
-          mode: "insensitive" as const,
-        },
-      })),
-    };
-  }
-
-  return {
-    id: "__NO_ACCESS__",
-  };
 }
 
 export async function GET(req: NextRequest) {
@@ -134,13 +102,7 @@ export async function GET(req: NextRequest) {
       classroom: access.classroom,
     });
 
-    const subjectWhere = buildSubjectWhere({
-      roleName: ctx.roleName,
-      allowedSubjects: access.allowedSubjects,
-      requestedSubject: subjectParam || null,
-    });
-
-    const items = await prisma.assessmentItem.findMany({
+    const itemsRaw = await prisma.assessmentItem.findMany({
       where: {
         tenantId: ctx.tenantId,
         classroomId,
@@ -151,8 +113,6 @@ export async function GET(req: NextRequest) {
         // Normal 30/70 broadsheet must never mix BECE Mock evidence.
         // Mock will have its own dedicated broadsheet/analyzer.
         type: { not: "MOCK" },
-
-        ...subjectWhere,
       },
       select: {
         id: true,
@@ -173,6 +133,28 @@ export async function GET(req: NextRequest) {
         { title: "asc" },
         { createdAt: "asc" },
       ],
+    });
+
+    const items = itemsRaw.filter((item) => {
+      if (subjectParam) {
+        return subjectMatchesTeachingScope(
+          item.subject,
+          subjectParam,
+          access.normalizedClassLevel
+        );
+      }
+
+      if (isAdminLikeRole(ctx.roleName) || access.allowedSubjects == null) {
+        return true;
+      }
+
+      return access.allowedSubjects.some((allowed) =>
+        subjectMatchesTeachingScope(
+          item.subject,
+          allowed,
+          access.normalizedClassLevel
+        )
+      );
     });
 
     const itemIds = items.map((item) => item.id);
@@ -198,28 +180,38 @@ export async function GET(req: NextRequest) {
       subjectParam && subjectParam.length > 0
         ? [subjectParam]
         : access.allowedSubjects?.length
-          ? uniqueSorted([
-              ...access.allowedSubjects,
-              ...subjectsFromItems.filter((s) =>
-                access.allowedSubjects?.some((allowed) => subjectEquals(allowed, s))
-              ),
-            ])
+          ? uniqueSorted(access.allowedSubjects)
           : subjectsFromItems;
 
-    const broadsheets = subjects.map((subject) =>
-      buildSubjectBroadsheet({
+    const scoreInputs = scores.map((score) => ({
+      itemId: score.itemId,
+      studentId: score.studentId,
+      score: Number(score.score ?? 0),
+      comment: score.comment ?? null,
+    }));
+
+    const broadsheets = subjects.map((subject) => {
+      // buildSubjectBroadsheet groups by exact stored subject. Re-label only the
+      // already-authorized equivalent rows in memory so curriculum-qualified
+      // subjects and generic teacher-assignment labels feed one subject sheet.
+      const subjectItems = items
+        .filter((item) =>
+          subjectMatchesTeachingScope(
+            item.subject,
+            subject,
+            access.normalizedClassLevel
+          )
+        )
+        .map((item) => ({ ...item, subject }));
+
+      return buildSubjectBroadsheet({
         policy,
         subject,
         students,
-        items,
-        scores: scores.map((score) => ({
-          itemId: score.itemId,
-          studentId: score.studentId,
-          score: Number(score.score ?? 0),
-          comment: score.comment ?? null,
-        })),
-      })
-    );
+        items: subjectItems,
+        scores: scoreInputs,
+      });
+    });
 
     const blockedSubjects = broadsheets.filter(
       (sheet) => sheet.readiness.status === "BLOCKED"
