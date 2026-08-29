@@ -149,15 +149,17 @@ async function apiJson<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-function Badge({ tone, children }: { tone: "ok" | "warn" | "info" | "muted"; children: React.ReactNode }) {
+function Badge({ tone, children }: { tone: "ok" | "warn" | "error" | "info" | "muted"; children: React.ReactNode }) {
   const cls =
     tone === "ok"
       ? "border-emerald-300/20 bg-emerald-400/12 text-emerald-100"
-      : tone === "warn"
-        ? "border-amber-300/20 bg-amber-400/12 text-amber-100"
-        : tone === "info"
-          ? "border-sky-300/20 bg-sky-400/12 text-sky-100"
-          : "border-white/10 bg-white/5 text-[#D0D6E2]";
+      : tone === "error"
+        ? "border-rose-300/20 bg-rose-400/12 text-rose-100"
+        : tone === "warn"
+          ? "border-amber-300/20 bg-amber-400/12 text-amber-100"
+          : tone === "info"
+            ? "border-sky-300/20 bg-sky-400/12 text-sky-100"
+            : "border-white/10 bg-white/5 text-[#D0D6E2]";
   return <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] ${cls}`}>{children}</span>;
 }
 
@@ -493,6 +495,14 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
       pushToast({ tone: "warn", title: "Locked", message: "This note is locked while submitted/approved." });
       return;
     }
+    if (dirty) {
+      pushToast({
+        tone: "warn",
+        title: "Save your changes first",
+        message: "Save this Lesson Note, then submit the saved version to the Headteacher.",
+      });
+      return;
+    }
     if (!submitChecks.canSubmit) {
       pushToast({
         tone: "warn",
@@ -714,9 +724,78 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
 
   if (!note) return <div className="p-6 text-sm text-[#C9CDD6]">Not found.</div>;
 
-  const statusTone =
-    note.status === "APPROVED" ? "ok" : note.status === "SUBMITTED" ? "info" : note.status === "REJECTED" ? "warn" : "muted";
+  const isSubmitted = note.status === "SUBMITTED";
+  const isApproved = note.status === "APPROVED";
+  const isRejected = note.status === "REJECTED";
 
+  const statusTone = isApproved ? "ok" : isSubmitted ? "info" : isRejected ? "error" : "muted";
+
+  const checklistItems = [
+    { ok: submitChecks.hasUnit, label: "Approved Scheme linked" },
+    { ok: submitChecks.hasIndicator, label: "Curriculum indicator ready" },
+    { ok: submitChecks.hasObjectives, label: "Objectives complete" },
+    { ok: submitChecks.hasDev, label: "Lesson development complete" },
+    { ok: submitChecks.hasAssessment, label: "Assessment complete" },
+  ];
+  const completedRequirements = checklistItems.filter((item) => item.ok).length;
+  const remainingRequirements = checklistItems.length - completedRequirements;
+
+  const guide = isSubmitted
+    ? {
+        eyebrow: "WAITING FOR HEADTEACHER",
+        title: "Lesson Note submitted",
+        body: "No action is needed now. This Lesson Note is locked while the Headteacher reviews it.",
+        tone: "border-sky-300/20 bg-sky-400/10",
+      }
+    : isApproved
+      ? {
+          eyebrow: "APPROVED",
+          title: "Lesson Note complete",
+          body: "The Headteacher has approved this Lesson Note. Keep it as the official record and print it when needed.",
+          tone: "border-emerald-300/20 bg-emerald-400/10",
+        }
+      : isRejected
+        ? {
+            eyebrow: "CORRECTION REQUIRED",
+            title: "Correct and resubmit this Lesson Note",
+            body: submitChecks.canSubmit
+              ? dirty
+                ? "Your correction is ready. Save the changes first, then resubmit to the Headteacher."
+                : "The required sections are complete. Resubmit this corrected Lesson Note to the Headteacher."
+              : `Complete the ${remainingRequirements} remaining requirement${remainingRequirements === 1 ? "" : "s"}, save your correction, then resubmit.`,
+            tone: "border-rose-300/20 bg-rose-400/10",
+          }
+        : submitChecks.canSubmit
+          ? {
+              eyebrow: "READY TO SUBMIT",
+              title: dirty ? "Save your final changes" : "Send this Lesson Note to the Headteacher",
+              body: dirty
+                ? "All required sections are complete. Save the current changes so the Headteacher receives the latest version."
+                : "All required sections are complete. Submit when you are ready for Headteacher review.",
+              tone: "border-emerald-300/20 bg-emerald-400/10",
+            }
+          : {
+              eyebrow: "NEXT STEP",
+              title: "Finish this Lesson Note",
+              body: `${completedRequirements} of ${checklistItems.length} submission requirements are complete. Finish the ${remainingRequirements} remaining requirement${remainingRequirements === 1 ? "" : "s"}.`,
+              tone: "border-amber-300/20 bg-amber-400/10",
+            };
+
+  const commentToneClass = isApproved
+    ? "border-emerald-300/20 bg-emerald-400/12 text-emerald-100"
+    : isRejected
+      ? "border-rose-300/20 bg-rose-400/12 text-rose-100"
+      : "border-amber-300/20 bg-amber-400/12 text-amber-100";
+
+  const submitLabel = isRejected ? "Resubmit to Headteacher" : "Submit to Headteacher";
+  const statusLabel = isApproved
+    ? "Approved"
+    : isSubmitted
+      ? "Waiting for Headteacher"
+      : isRejected
+        ? "Correction required"
+        : "Draft";
+  const pageTitle = isApproved || isSubmitted ? "Lesson Note" : isRejected ? "Correct Lesson Note" : "Prepare Lesson Note";
   const unitQueryPreview = buildUnitsQueryString(unitMode);
 
   const lessonTitlePlaceholder =
@@ -730,9 +809,9 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
 
       <ConfirmDialog
         open={confirmOpen}
-        title="Submit lesson note?"
-        message="After submission, the lesson note becomes locked until it is returned or approved."
-        confirmText="Submit"
+        title={isRejected ? "Resubmit corrected Lesson Note?" : "Submit Lesson Note?"}
+        message="After submission, the Lesson Note becomes locked until the Headteacher returns or approves it."
+        confirmText={isRejected ? "Resubmit" : "Submit"}
         cancelText="Cancel"
         onConfirm={() => void submitNow()}
         onClose={() => setConfirmOpen(false)}
@@ -747,21 +826,15 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-xs uppercase tracking-[0.18em] text-[#E8C96A]">EduLife OS · Teacher</p>
-              <Badge tone={statusTone}>{note.status}</Badge>
+              <Badge tone={statusTone}>{statusLabel}</Badge>
               {dirty ? <Badge tone="warn">Unsaved changes</Badge> : <Badge tone="muted">All changes saved</Badge>}
             </div>
 
             <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-[#F7F4ED] md:text-3xl">
-              Lesson Note Editor
+              {pageTitle}
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-7 text-[#C9CDD6]">{context}</p>
 
-            {note.headteacherComment ? (
-              <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-400/12 px-4 py-3 text-sm text-amber-100">
-                <div className="font-semibold">Headteacher comment</div>
-                <div className="mt-1 whitespace-pre-wrap">{note.headteacherComment}</div>
-              </div>
-            ) : null}
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -769,63 +842,78 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
               className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-[#F7F4ED] hover:bg-white/10"
               onClick={() => router.push("/teacher/lesson-notes")}
             >
-              Back
+              Back to Lesson Notes
             </button>
 
             <button
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-[#F7F4ED] hover:bg-white/10"
+              className={
+                isApproved
+                  ? "rounded-xl bg-[linear-gradient(135deg,#34D399,#A7F3D0)] px-3 py-2 text-sm font-semibold text-[#052E24] shadow-[0_18px_50px_rgba(52,211,153,0.18)]"
+                  : "rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-[#F7F4ED] hover:bg-white/10"
+              }
               onClick={() => router.push(`/teacher/lesson-notes/${note.id}/print`)}
             >
-              Print
+              {isApproved ? "Print Approved Lesson Note" : "Print"}
             </button>
 
-            <button
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-[#F7F4ED] hover:bg-white/10 disabled:opacity-60"
-              disabled={locked || saving}
-              onClick={() => void saveDraft()}
-              title={locked ? "Locked while submitted/approved." : "Ctrl+S"}
-            >
-              {saving ? "Saving…" : "Save draft"}
-            </button>
-
-            <button
-              className="rounded-xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-3 py-2 text-sm font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] disabled:opacity-60"
-              disabled={locked || !submitChecks.canSubmit || submitting}
-              onClick={() => setConfirmOpen(true)}
-              title={
-                locked
-                  ? "Locked while submitted/approved."
-                  : submitChecks.canSubmit
-                    ? ""
-                    : "Link a unit and fill objectives/indicators, lesson development, assessment."
-              }
-            >
-              {submitting ? "Submitting…" : "Submit"}
-            </button>
+            {!locked ? (
+              dirty ? (
+                <button
+                  className="rounded-xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-3 py-2 text-sm font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] disabled:opacity-60"
+                  disabled={saving}
+                  onClick={() => void saveDraft()}
+                >
+                  {saving ? "Saving…" : isRejected ? "Save corrections" : "Save changes"}
+                </button>
+              ) : submitChecks.canSubmit ? (
+                <button
+                  className="rounded-xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-3 py-2 text-sm font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] disabled:opacity-60"
+                  disabled={submitting}
+                  onClick={() => setConfirmOpen(true)}
+                >
+                  {submitting ? "Submitting…" : submitLabel}
+                </button>
+              ) : (
+                <button
+                  className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-[#C9CDD6]"
+                  onClick={() => document.getElementById("lesson-note-fields")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                >
+                  Continue below
+                </button>
+              )
+            ) : null}
           </div>
         </div>
       </section>
 
-      <section className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
+      <section className={`rounded-[28px] border p-4 shadow-[0_18px_60px_rgba(0,0,0,0.16)] md:p-5 ${guide.tone}`}>
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
-            <div className="text-sm font-semibold text-[#F7F4ED]">Submission checklist</div>
-            <div className="mt-1 text-xs text-[#8F98A8]">Submit is only enabled when all required items are satisfied.</div>
+            <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#E8C96A]">{guide.eyebrow}</div>
+            <div className="mt-1 text-lg font-bold text-[#F7F4ED]">{guide.title}</div>
+            <div className="mt-1 max-w-3xl text-sm leading-6 text-[#C9CDD6]">{guide.body}</div>
           </div>
-          <div>{submitChecks.canSubmit ? <Badge tone="ok">Ready to submit</Badge> : <Badge tone="warn">Not ready</Badge>}</div>
+          {!locked ? (
+            <div className="shrink-0">
+              <Badge tone={submitChecks.canSubmit ? "ok" : "warn"}>
+                {completedRequirements}/{checklistItems.length} ready
+              </Badge>
+            </div>
+          ) : null}
         </div>
 
-        <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
-          <ChecklistItem ok={submitChecks.hasUnit} label="Unit linked (scheme-backed)" />
-          <ChecklistItem ok={submitChecks.hasIndicator} label="Indicator present" />
-          <ChecklistItem ok={submitChecks.hasObjectives} label="Objectives/Indicators filled" />
-          <ChecklistItem ok={submitChecks.hasDev} label="Lesson development filled" />
-          <ChecklistItem ok={submitChecks.hasAssessment} label="Assessment filled" />
-        </div>
+        {note.headteacherComment ? (
+          <div className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${commentToneClass}`}>
+            <div className="font-semibold">{isRejected ? "Headteacher correction" : "Headteacher comment"}</div>
+            <div className="mt-1 whitespace-pre-wrap">{note.headteacherComment}</div>
+          </div>
+        ) : null}
 
-        {!submitChecks.canSubmit ? (
-          <div className="mt-3 text-xs text-[#C9CDD6]">
-            Fix the unchecked items. Most importantly: <span className="font-medium text-[#F7F4ED]">Link the correct unit</span>.
+        {!locked ? (
+          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
+            {checklistItems.map((item) => (
+              <ChecklistItem key={item.label} ok={item.ok} label={item.label} />
+            ))}
           </div>
         ) : null}
       </section>
@@ -833,8 +921,8 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
       <section className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <div className="text-sm font-semibold text-[#F7F4ED]">NaCCA link</div>
-            <div className="mt-1 text-xs text-[#8F98A8]">Pulled from your Scheme of Work (term/year/subject/level scoped).</div>
+            <div className="text-sm font-semibold text-[#F7F4ED]">From your approved Scheme</div>
+            <div className="mt-1 text-xs text-[#8F98A8]">The curriculum details below come from the Scheme item selected for this Lesson Note.</div>
           </div>
 
           <button
@@ -842,7 +930,7 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
             disabled={locked}
             onClick={() => setUnitOpen(true)}
           >
-            {note.curriculumUnitId ? "Change unit" : "Link unit"}
+            {note.curriculumUnitId || note.schemeOfWorkItemId ? "Change Scheme item" : "Choose Scheme item"}
           </button>
         </div>
 
@@ -856,7 +944,7 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
         {unitOpen ? (
           <div className="mt-4 rounded-[24px] border border-white/10 bg-[#07111F]/80 p-3">
             <div className="flex items-center justify-between gap-2">
-              <div className="text-sm font-semibold text-[#F7F4ED]">Pick unit from scheme</div>
+              <div className="text-sm font-semibold text-[#F7F4ED]">Choose indicator from approved Scheme</div>
               <button
                 className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-[#F7F4ED] hover:bg-white/10"
                 onClick={() => setUnitOpen(false)}
@@ -868,7 +956,7 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
             <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-[1fr_auto]">
               <input
                 className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-950 shadow-inner placeholder:text-slate-500 focus:border-[#D4AF37] focus:outline-none focus:ring-4 focus:ring-[#D4AF37]/20"
-                placeholder="Search indicator code / text..."
+                placeholder="Search indicator code or description…"
                 value={unitQ}
                 onChange={(e) => setUnitQ(e.target.value)}
               />
@@ -881,42 +969,37 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
               </button>
             </div>
 
-            <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3">
-              <div className="text-xs font-semibold text-[#F7F4ED]">Filters used</div>
-              <div className="mt-1 break-all text-[11px] text-[#AEB6C4]">{unitQueryPreview || "—"}</div>
+            {unitsMeta?.widened ? (
+              <div className="mt-3">
+                <Badge tone="info">Showing other weeks from this approved Scheme</Badge>
+              </div>
+            ) : null}
 
+            <details className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3">
+              <summary className="cursor-pointer text-xs font-semibold text-[#D7DCE5]">Having trouble finding the indicator?</summary>
+              <div className="mt-3 text-[11px] leading-5 text-[#AEB6C4]">
+                EduLife normally searches this Lesson Note&apos;s week first. Use the wider search only when the indicator was placed under another week in the approved Scheme.
+              </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 <button
                   type="button"
                   className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-[#F7F4ED] hover:bg-white/10 disabled:opacity-60"
                   disabled={unitsLoading}
                   onClick={() => void loadUnits({ includeWeek: true })}
-                  title="Strict: match note week first."
                 >
-                  Strict: match week
+                  Search this week
                 </button>
-
                 <button
                   type="button"
                   className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-[#F7F4ED] hover:bg-white/10 disabled:opacity-60"
                   disabled={unitsLoading}
                   onClick={() => void loadUnits({ includeWeek: false })}
-                  title="Widen: ignore week, return all scheme items."
                 >
-                  Widen: ignore week
+                  Search other weeks
                 </button>
               </div>
-
-              <div className="mt-2 text-[11px] text-[#8F98A8]">
-                If strict finds nothing, widen. If widen finds nothing: your scheme scope doesn’t match the lesson note scope.
-              </div>
-
-              {unitsMeta?.widened ? (
-                <div className="mt-2">
-                  <Badge tone="info">Showing widened results</Badge>
-                </div>
-              ) : null}
-            </div>
+              <div className="mt-2 break-all text-[10px] text-[#788394]">Search scope: {unitQueryPreview || "—"}</div>
+            </details>
 
             {unitErr ? (
               <div className="mt-3 rounded-xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-sm text-rose-100">{unitErr}</div>
@@ -928,9 +1011,9 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
               <div className="mt-3 max-h-[380px] overflow-auto rounded-2xl border border-slate-300 bg-white text-slate-950 shadow-inner">
                 {units.length === 0 ? (
                   <div className="p-3 text-sm text-slate-700">
-                    <div className="font-semibold text-slate-950">No units found.</div>
-                    <div className="mt-1 text-xs text-[#8F98A8]">
-                      Try <span className="font-bold text-slate-950">Widen: ignore week</span>. If still none, your lesson note scope and scheme scope don’t match.
+                    <div className="font-semibold text-slate-950">No matching Scheme item found.</div>
+                    <div className="mt-1 text-xs text-slate-600">
+                      Open <span className="font-bold text-slate-950">Having trouble finding the indicator?</span> above to search other weeks. If nothing appears, return to Scheme of Work and verify the approved indicator.
                       {unitsMeta?.reason || unitsMeta?.message ? (
                         <div className="mt-2 whitespace-pre-wrap text-[11px] font-medium text-slate-600">
                           {unitsMeta.message ? unitsMeta.message : null}
@@ -987,9 +1070,12 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
       </section>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <section className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+        <section id="lesson-note-fields" className="scroll-mt-24 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="text-sm font-semibold text-[#F7F4ED]">Lesson fields</div>
+            <div>
+              <div className="text-sm font-semibold text-[#F7F4ED]">Prepare the Lesson Note</div>
+              <div className="mt-1 text-xs text-[#8F98A8]">Complete the teaching sections below. Required sections are tracked above.</div>
+            </div>
             {locked ? <Badge tone="warn">Locked</Badge> : <Badge tone="info">Editable</Badge>}
           </div>
 
@@ -1023,7 +1109,7 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
               disabled={locked || saving}
               onClick={() => void saveDraft()}
             >
-              {saving ? "Saving…" : "Save draft"}
+              {saving ? "Saving…" : isRejected ? "Save corrections" : "Save draft"}
             </button>
           </div>
         </section>
