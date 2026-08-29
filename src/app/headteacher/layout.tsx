@@ -60,16 +60,16 @@ export default async function HeadteacherLayout({ children }: { children: ReactN
       </div>
 
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[rgba(5,7,11,0.84)] backdrop-blur-xl">
-        <div className="relative mx-auto max-w-6xl overflow-hidden px-4 py-4">
+        <div className="relative mx-auto max-w-6xl overflow-visible px-4 py-2.5 sm:py-3">
           <div className="pointer-events-none absolute -left-12 top-0 h-28 w-28 rounded-full bg-[#1B66D1]/20 blur-3xl" />
           <div className="pointer-events-none absolute right-0 top-0 h-24 w-24 rounded-full bg-[#D4AF37]/14 blur-3xl" />
 
-          <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="relative flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-xs uppercase tracking-[0.18em] text-[#E8C96A]">
+              <p className="text-[10px] uppercase tracking-[0.16em] text-[#E8C96A] sm:text-xs">
                 EduLife OS · Headteacher
               </p>
-              <p className="mt-1 truncate text-sm font-semibold text-[#F7F4ED]">
+              <p className="mt-0.5 truncate text-xs font-semibold text-[#F7F4ED] sm:text-sm">
                 {tenant.name}
                 {tenant.schoolCode ? (
                   <span className="ml-1 text-[#8F98A8]">({tenant.schoolCode})</span>
@@ -77,7 +77,61 @@ export default async function HeadteacherLayout({ children }: { children: ReactN
               </p>
             </div>
 
-            <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+            <details className="relative shrink-0 xl:hidden">
+              <summary
+                aria-label="Open headteacher navigation"
+                className="flex cursor-pointer list-none items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-[#F7F4ED] transition hover:bg-white/10 [&::-webkit-details-marker]:hidden"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                >
+                  <path d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+                Menu
+              </summary>
+
+              <div className="absolute right-0 top-full z-50 mt-2 w-[min(88vw,320px)] rounded-2xl border border-white/10 bg-[#07111F] p-3 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+                <nav className="grid grid-cols-1 gap-2">
+                  <Link className={navLinkClass()} href="/headteacher/dashboard">
+                    Dashboard
+                  </Link>
+
+                  <Link className={navLinkClass()} href="/headteacher/day">
+                    Attendance Command
+                  </Link>
+
+                  <Link className={navLinkClass()} href="/headteacher/notices">
+                    Notices
+                  </Link>
+
+                  <Link className={navLinkClass()} href="/headteacher/reports">
+                    Reports
+                  </Link>
+
+                  <Link className={navLinkClass()} href="/headteacher/lesson-notes">
+                    Lesson Notes
+                  </Link>
+
+                  {showAdmin ? (
+                    <Link className={navLinkClass()} href="/admin/dashboard">
+                      Admin
+                    </Link>
+                  ) : null}
+                </nav>
+
+                <div className="mt-3 border-t border-white/10 pt-3">
+                  <LogoutButton className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-[#F7F4ED] transition hover:bg-white/10" />
+                </div>
+              </div>
+            </details>
+
+            <div className="hidden items-center gap-3 xl:flex">
               <nav className="flex flex-wrap items-center gap-2">
                 <Link className={navLinkClass()} href="/headteacher/dashboard">
                   Dashboard

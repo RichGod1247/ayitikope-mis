@@ -234,73 +234,59 @@ export default function WeeklyAttendancePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(5,7,11,0.92),rgba(7,26,61,0.94),rgba(5,7,11,0.96))] p-5 shadow-[0_26px_90px_rgba(0,0,0,0.28)] md:p-6">
-        <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:64px_64px]" />
-        <div className="absolute -left-16 top-0 h-48 w-48 rounded-full bg-[#1B66D1]/20 blur-3xl" />
-        <div className="absolute right-0 top-0 h-44 w-44 rounded-full bg-[#D4AF37]/14 blur-3xl" />
-
-        <div className="relative space-y-3">
-          <div className="inline-flex items-center rounded-full border border-emerald-300/20 bg-emerald-400/12 px-3 py-1 text-[11px] font-medium text-emerald-100">
-            EduLife OS · Head · Attendance
-          </div>
-
-          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-            <div className="space-y-1">
-              <h1 className="text-2xl font-semibold tracking-tight text-[#F7F4ED] md:text-3xl">
-                Weekly attendance pulse
-              </h1>
-              <p className="max-w-2xl text-xs text-[#C9CDD6] md:text-sm">
-                One-glance view of how faithfully classes met this week, with a
-                server-trusted explainer for decision-making.
-              </p>
-            </div>
-            <div className="text-xs text-[#AEB6C4] md:text-right">
-              <p>
-                Week: <span className="font-semibold text-[#F7F4ED]">{start || "—"} → {end || "—"}</span>
-              </p>
-              <p>
-                Scope: <span className="font-semibold text-[#F7F4ED]">Current signed-in school</span>
-              </p>
-            </div>
-          </div>
+    <div className="space-y-3 sm:space-y-4">
+      <section className="flex flex-wrap items-end justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="text-xl font-semibold tracking-tight text-[#F7F4ED] sm:text-2xl">
+            Weekly attendance
+          </h1>
+          <p className="mt-0.5 text-[11px] text-[#AEB6C4] sm:text-xs">
+            {start || "—"} → {end || "—"}
+          </p>
         </div>
+
+        <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-medium text-[#C9CDD6]">
+          Mon–Fri
+        </span>
       </section>
 
-      <section className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] px-4 py-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl md:px-5">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div className="flex w-full flex-col gap-3 md:flex-row md:items-end">
-            <div className="space-y-1">
-              <label className="text-[11px] font-medium text-[#C9CDD6]">Start (Mon)</label>
-              <input
-                type="date"
-                value={start}
-                onChange={(e) => setStart(e.target.value)}
-                className="rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-xs text-[#F7F4ED] focus:outline-none focus:ring-2 focus:ring-emerald-400/20 md:text-sm"
-              />
-            </div>
+      <section
+        aria-label="Weekly attendance controls"
+        className="rounded-2xl border border-white/10 bg-white/[0.04] p-2.5 shadow-[0_10px_34px_rgba(0,0,0,0.14)] sm:p-3"
+      >
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="grid gap-1">
+            <span className="text-[10px] font-medium text-[#AEB6C4]">Start</span>
+            <input
+              type="date"
+              value={start}
+              onChange={(e) => setStart(e.target.value)}
+              className="h-8 rounded-lg border border-white/10 bg-[#07111F] px-2 text-[11px] text-[#F7F4ED] focus:outline-none focus:ring-2 focus:ring-emerald-400/20 sm:text-xs"
+            />
+          </label>
 
-            <div className="space-y-1">
-              <label className="text-[11px] font-medium text-[#C9CDD6]">End (Fri)</label>
-              <input
-                type="date"
-                value={end}
-                onChange={(e) => setEnd(e.target.value)}
-                className="rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-xs text-[#F7F4ED] focus:outline-none focus:ring-2 focus:ring-emerald-400/20 md:text-sm"
-              />
-            </div>
-          </div>
+          <label className="grid gap-1">
+            <span className="text-[10px] font-medium text-[#AEB6C4]">End</span>
+            <input
+              type="date"
+              value={end}
+              onChange={(e) => setEnd(e.target.value)}
+              className="h-8 rounded-lg border border-white/10 bg-[#07111F] px-2 text-[11px] text-[#F7F4ED] focus:outline-none focus:ring-2 focus:ring-emerald-400/20 sm:text-xs"
+            />
+          </label>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
             <button
+              type="button"
               onClick={loadNow}
               disabled={loading || !canQuery}
-              className="inline-flex items-center justify-center rounded-xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-xs font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] disabled:opacity-50 md:text-sm"
+              className="inline-flex h-8 items-center justify-center rounded-lg bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-3 text-[11px] font-semibold text-[#071A3D] disabled:opacity-50 sm:text-xs"
             >
               {loading ? "Loading…" : "Refresh"}
             </button>
 
             <button
+              type="button"
               onClick={() => {
                 const today = new Date();
                 const mon = startOfWeekMonday(today);
@@ -310,15 +296,16 @@ export default function WeeklyAttendancePage() {
                 setEnd(fri.toISOString().slice(0, 10));
               }}
               disabled={loading}
-              className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-[#F7F4ED] transition hover:bg-white/10 md:text-sm"
+              className="inline-flex h-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 px-2.5 text-[11px] font-medium text-[#F7F4ED] transition hover:bg-white/10 disabled:opacity-50 sm:text-xs"
             >
               This week (Mon–Fri)
             </button>
 
             <button
+              type="button"
               onClick={downloadCSV}
               disabled={!canQuery}
-              className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-[#F7F4ED] transition hover:bg-white/10 md:text-sm"
+              className="inline-flex h-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 px-2.5 text-[11px] font-medium text-[#F7F4ED] transition hover:bg-white/10 disabled:opacity-50 sm:text-xs"
             >
               Download CSV
             </button>
@@ -326,95 +313,77 @@ export default function WeeklyAttendancePage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-4 md:gap-5 lg:grid-cols-[1.5fr_minmax(0,1.3fr)]">
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <KpiCard label="Classes in report" value={fmt(rows.length)} hint="Current school classes in this report." />
-          <KpiCard label="Times opened" value={fmt(totals.timesOpened)} hint="Certified, non-holiday class-days only." />
-          <KpiCard label="Present occurrences" value={fmt(totals.present)} hint="Certified present occurrences across all classes." />
-          <KpiCard
-            label="Overall present %"
-            value={`${pctOverall.toFixed(1)}%`}
-            tone={pctOverall >= 90 ? "good" : pctOverall >= 80 ? "ok" : "warn"}
-            hint="Present share of certified attendance marks."
-          />
-        </div>
-
-        <div className="rounded-[28px] border border-emerald-300/20 bg-emerald-400/12 px-4 py-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl md:px-5 md:py-5">
-          <div className="space-y-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-semibold text-emerald-100 md:text-base">Attendance explainer</h2>
-                <p className="text-[11px] text-emerald-100/90 md:text-xs">
-                  Converts the real weekly figures into a clear leadership summary.
-                </p>
-              </div>
-              <span className="inline-flex items-center rounded-full bg-emerald-950 px-3 py-1 text-[10px] font-medium text-white">
-                Head only
-              </span>
-            </div>
-
-            <button
-              type="button"
-              disabled={aiLoading || !canQuery}
-              onClick={handleAskAi}
-              className="inline-flex items-center justify-center rounded-xl bg-emerald-950 px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-emerald-900 disabled:opacity-50 md:text-sm"
-            >
-              {aiLoading ? "Explaining…" : "Explain this week for me"}
-            </button>
-
-            {aiError && (
-              <div className="rounded-xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-[11px] text-rose-100">
-                {aiError}
-              </div>
-            )}
-
-            {aiSummary && (
-              <div className="space-y-2">
-                <div className="whitespace-pre-line rounded-xl border border-emerald-300/20 bg-[#08111F]/80 px-3 py-2 text-[11px] text-emerald-50">
-                  {aiSummary}
-                </div>
-                {aiSuggestions && (
-                  <div className="whitespace-pre-line rounded-xl border border-emerald-300/15 bg-emerald-400/10 px-3 py-2 text-[11px] text-emerald-100">
-                    {aiSuggestions}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {rows.length > 0 && (
-              <div className="mt-2 grid grid-cols-1 gap-2 border-t border-emerald-300/15 pt-2 text-[11px] text-emerald-100 sm:grid-cols-2">
-                {bestClass && (
-                  <div className="rounded-xl border border-emerald-300/20 bg-[#08111F]/75 px-3 py-2">
-                    <div className="font-semibold">Strongest attendance</div>
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span>{bestClass.classLabel}</span>
-                      <span className="font-mono">{bestClass.pct.toFixed(1)}%</span>
-                    </div>
-                  </div>
-                )}
-                {worstClass && (
-                  <div className="rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 py-2">
-                    <div className="font-semibold">Needs attention</div>
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span>{worstClass.classLabel}</span>
-                      <span className="font-mono">{worstClass.pct.toFixed(1)}%</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+      <section
+        aria-label="Weekly attendance summary"
+        className="grid grid-cols-2 gap-2 md:grid-cols-4"
+      >
+        <KpiCard label="Classes" value={fmt(rows.length)} />
+        <KpiCard label="Times opened" value={fmt(totals.timesOpened)} hint="Certified, non-holiday class-days only." />
+        <KpiCard label="Present" value={fmt(totals.present)} />
+        <KpiCard
+          label="Present %"
+          value={`${pctOverall.toFixed(1)}%`}
+          tone={pctOverall >= 90 ? "good" : pctOverall >= 80 ? "ok" : "warn"}
+        />
       </section>
 
-      <section className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-          <h2 className="text-sm font-semibold text-[#F7F4ED]">By class (Mon–Fri)</h2>
-          <p className="text-[11px] text-[#AEB6C4]">Each row uses certified, non-holiday sessions only.</p>
+      <section className="overflow-hidden rounded-2xl border border-[#D4AF37]/30 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] shadow-[0_20px_64px_rgba(0,0,0,0.22)] backdrop-blur-xl">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-3 py-2.5 sm:px-4">
+          <div>
+            <h2 className="text-sm font-semibold text-[#F7F4ED] sm:text-base">
+              By class (Mon–Fri)
+            </h2>
+            <p className="mt-0.5 text-[10px] text-[#AEB6C4] sm:text-[11px]">
+              Certified, non-holiday sessions only.
+            </p>
+          </div>
+
+          <span className="rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/10 px-2 py-1 text-[10px] font-medium text-[#E8C96A]">
+            Main view
+          </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs md:text-sm">
+        <div className="divide-y divide-white/10 md:hidden">
+          {rows.map((r, idx) => (
+            <article key={`${r.classLabel}-${idx}`} className="p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="truncate text-sm font-semibold text-[#F7F4ED]">
+                    {r.classLabel}
+                  </h3>
+                  <p className="mt-0.5 text-[10px] text-[#AEB6C4]">
+                    Enrolled {fmt(r.enrolled)} · Opened {fmt(r.timesOpened)} times
+                  </p>
+                </div>
+
+                <span className="shrink-0 rounded-lg bg-white/5 px-2 py-1 font-mono text-xs font-semibold text-[#F7F4ED]">
+                  {r.pct.toFixed(1)}%
+                </span>
+              </div>
+
+              <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
+                <MetricLine label="Boys present" value={r.boysPresent} />
+                <MetricLine label="Boys absent" value={r.boysAbsent} />
+                <MetricLine label="Girls present" value={r.girlsPresent} />
+                <MetricLine label="Girls absent" value={r.girlsAbsent} />
+              </div>
+
+              <div className="mt-2 flex items-center justify-between border-t border-white/10 pt-2 text-[11px]">
+                <span className="text-[#AEB6C4]">Total present</span>
+                <span className="font-semibold text-[#F7F4ED]">{fmt(r.present)}</span>
+              </div>
+            </article>
+          ))}
+
+          {rows.length === 0 && !loading && (
+            <p className="px-4 py-6 text-center text-xs text-[#AEB6C4]">
+              No data in this range yet.
+            </p>
+          )}
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
+          <table className="w-full text-xs">
             <thead className="border-b border-white/10 bg-white/5">
               <tr>
                 <Th label="Class" align="left" />
@@ -430,16 +399,25 @@ export default function WeeklyAttendancePage() {
             </thead>
             <tbody>
               {rows.map((r, idx) => (
-                <tr key={`${r.classLabel}-${idx}`} className="border-b border-white/10 hover:bg-white/[0.03]">
-                  <td className="whitespace-nowrap px-3 py-2 text-left text-[#F7F4ED]">{r.classLabel}</td>
+                <tr
+                  key={`${r.classLabel}-${idx}`}
+                  className="border-b border-white/10 hover:bg-white/[0.03]"
+                >
+                  <td className="whitespace-nowrap px-3 py-2 text-left font-medium text-[#F7F4ED]">
+                    {r.classLabel}
+                  </td>
                   <td className="px-3 py-2 text-right text-[#DCE1EA]">{fmt(r.enrolled)}</td>
-                  <td className="px-3 py-2 text-right font-semibold text-[#F7F4ED]">{fmt(r.timesOpened)}</td>
+                  <td className="px-3 py-2 text-right font-semibold text-[#F7F4ED]">
+                    {fmt(r.timesOpened)}
+                  </td>
                   <td className="px-3 py-2 text-right text-[#DCE1EA]">{fmt(r.boysPresent)}</td>
                   <td className="px-3 py-2 text-right text-[#DCE1EA]">{fmt(r.boysAbsent)}</td>
                   <td className="px-3 py-2 text-right text-[#DCE1EA]">{fmt(r.girlsPresent)}</td>
                   <td className="px-3 py-2 text-right text-[#DCE1EA]">{fmt(r.girlsAbsent)}</td>
                   <td className="px-3 py-2 text-right text-[#DCE1EA]">{fmt(r.present)}</td>
-                  <td className="px-3 py-2 text-right font-mono text-[#F7F4ED]">{r.pct.toFixed(1)}%</td>
+                  <td className="px-3 py-2 text-right font-mono font-semibold text-[#F7F4ED]">
+                    {r.pct.toFixed(1)}%
+                  </td>
                 </tr>
               ))}
 
@@ -455,11 +433,79 @@ export default function WeeklyAttendancePage() {
         </div>
 
         {error && (
-          <div className="border-t border-rose-300/20 bg-rose-400/12 px-4 py-3 text-xs text-rose-100">
+          <div className="border-t border-rose-300/20 bg-rose-400/12 px-3 py-2 text-xs text-rose-100 sm:px-4">
             {error}
           </div>
         )}
       </section>
+
+      <details className="group rounded-2xl border border-emerald-300/15 bg-emerald-400/[0.08]">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-xs font-semibold text-emerald-100 [&::-webkit-details-marker]:hidden sm:px-4">
+          <span>Attendance explainer</span>
+          <span className="rounded-lg border border-emerald-300/20 bg-emerald-950/60 px-2 py-1 text-[10px] font-medium">
+            Open
+          </span>
+        </summary>
+
+        <div className="space-y-3 border-t border-emerald-300/15 px-3 py-3 sm:px-4">
+          <p className="text-[11px] text-emerald-100/90">
+            Converts the real weekly figures into a clear leadership summary.
+          </p>
+
+          <button
+            type="button"
+            disabled={aiLoading || !canQuery}
+            onClick={handleAskAi}
+            className="inline-flex items-center justify-center rounded-lg bg-emerald-950 px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-emerald-900 disabled:opacity-50"
+          >
+            {aiLoading ? "Explaining…" : "Explain this week for me"}
+          </button>
+
+          {aiError && (
+            <div className="rounded-xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-[11px] text-rose-100">
+              {aiError}
+            </div>
+          )}
+
+          {aiSummary && (
+            <div className="space-y-2">
+              <div className="whitespace-pre-line rounded-xl border border-emerald-300/20 bg-[#08111F]/80 px-3 py-2 text-[11px] text-emerald-50">
+                {aiSummary}
+              </div>
+
+              {aiSuggestions && (
+                <div className="whitespace-pre-line rounded-xl border border-emerald-300/15 bg-emerald-400/10 px-3 py-2 text-[11px] text-emerald-100">
+                  {aiSuggestions}
+                </div>
+              )}
+            </div>
+          )}
+
+          {rows.length > 0 && (
+            <div className="grid grid-cols-1 gap-2 border-t border-emerald-300/15 pt-2 text-[11px] text-emerald-100 sm:grid-cols-2">
+              {bestClass && (
+                <div className="rounded-xl border border-emerald-300/20 bg-[#08111F]/75 px-3 py-2">
+                  <div className="font-semibold">Strongest attendance</div>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span>{bestClass.classLabel}</span>
+                    <span className="font-mono">{bestClass.pct.toFixed(1)}%</span>
+                  </div>
+                </div>
+              )}
+
+              {worstClass && (
+                <div className="rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 py-2">
+                  <div className="font-semibold">Needs attention</div>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span>{worstClass.classLabel}</span>
+                    <span className="font-mono">{worstClass.pct.toFixed(1)}%</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </details>
     </div>
   );
 }
@@ -475,16 +521,31 @@ function KpiCard({
   hint?: string;
   tone?: "neutral" | "good" | "ok" | "warn";
 }) {
-  let ringClass = "border-white/10 bg-[#0C1730]/78 text-[#F7F4ED] shadow-[0_12px_36px_rgba(0,0,0,0.16)]";
-  if (tone === "good") ringClass = "border-emerald-300/20 bg-emerald-400/12 text-emerald-100 shadow-[0_12px_36px_rgba(0,0,0,0.16)]";
-  else if (tone === "ok") ringClass = "border-amber-300/20 bg-amber-400/12 text-amber-100 shadow-[0_12px_36px_rgba(0,0,0,0.16)]";
-  else if (tone === "warn") ringClass = "border-rose-300/20 bg-rose-400/12 text-rose-100 shadow-[0_12px_36px_rgba(0,0,0,0.16)]";
+  let ringClass = "border-white/10 bg-[#0C1730]/68 text-[#F7F4ED]";
+  if (tone === "good") ringClass = "border-emerald-300/20 bg-emerald-400/10 text-emerald-100";
+  else if (tone === "ok") ringClass = "border-amber-300/20 bg-amber-400/10 text-amber-100";
+  else if (tone === "warn") ringClass = "border-rose-300/20 bg-rose-400/10 text-rose-100";
 
   return (
-    <div className={`rounded-2xl border px-3 py-3 md:px-4 md:py-4 ${ringClass}`}>
-      <div className="text-[11px] font-medium text-[#AEB6C4] md:text-xs">{label}</div>
-      <div className="mt-1 text-lg font-semibold md:text-2xl">{value}</div>
-      {hint && <p className="mt-1 max-w-xs text-[10px] text-[#8F98A8]">{hint}</p>}
+    <div
+      className={`min-w-0 rounded-xl border px-2.5 py-2 ${ringClass}`}
+      aria-label={hint ? `${label}: ${value}. ${hint}` : `${label}: ${value}`}
+      title={hint}
+    >
+      <div className="truncate text-[10px] font-medium text-[#AEB6C4] sm:text-[11px]">
+        {label}
+      </div>
+      <div className="mt-0.5 text-base font-semibold leading-none sm:text-lg">{value}</div>
+      {hint ? <span className="sr-only">{hint}</span> : null}
+    </div>
+  );
+}
+
+function MetricLine({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-[#AEB6C4]">{label}</span>
+      <span className="font-semibold text-[#F7F4ED]">{fmt(value)}</span>
     </div>
   );
 }
