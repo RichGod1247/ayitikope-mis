@@ -294,6 +294,30 @@ export default function SchemeDetailPage({
     return `/teacher/lesson-notes/studio?${qs.toString()}`;
   };
 
+  const buildSchemeEditorUrl = () => {
+    if (!scheme) return "/teacher/schemes";
+
+    const subjectSlugFromApi = normalizeSubjectSlug(scheme.subjectSlug);
+    const levelFromApi = String(scheme.level ?? "").trim();
+    const fallback = inferCurriculumMetaFromSubject(scheme.subject);
+
+    const qs = new URLSearchParams();
+    qs.set("mode", "scheme");
+    qs.set("term", scheme.term);
+    qs.set("academicYear", scheme.academicYear);
+    qs.set("schemeId", scheme.id);
+    qs.set("return", `/teacher/schemes/${scheme.id}`);
+
+    const finalLevel = levelFromApi || fallback.level || "";
+    const finalSlug = subjectSlugFromApi || fallback.subjectSlug || "";
+
+    if (finalLevel) qs.set("level", finalLevel);
+    if (finalSlug) qs.set("subjectSlug", finalSlug);
+    else if (scheme.subject) qs.set("subject", scheme.subject);
+
+    return `/teacher/curriculum?${qs.toString()}`;
+  };
+
   const groupedByWeek = useMemo(() => {
     if (!scheme) return [];
 
@@ -405,10 +429,7 @@ export default function SchemeDetailPage({
               </h1>
 
               <p className="max-w-2xl text-sm leading-7 text-[#C9CDD6] print:text-slate-700">
-                This page shows a <span className="font-semibold text-[#F7F4ED] print:text-black">real Scheme of Work</span>{" "}
-                generated from NaCCA indicators. You can print it directly for your headteacher
-                or inspection, or jump into <span className="font-semibold text-[#F7F4ED] print:text-black">Lesson Note Studio</span>{" "}
-                for any indicator.
+                Review the weekly plan and follow the next step shown below. Lesson Notes are available only when this Scheme is approved.
               </p>
             </div>
 
@@ -449,16 +470,6 @@ export default function SchemeDetailPage({
                 >
                   Print Scheme of Work
                 </button>
-                {scheme && (scheme.status === "DRAFT" || scheme.status === "RETURNED") && (
-                  <button
-                    type="button"
-                    onClick={submitScheme}
-                    className={btnPrimary}
-                    disabled={submitBusy || !scheme || scheme.items.length < 1}
-                  >
-                    {submitBusy ? "Submitting…" : "Submit for Review"}
-                  </button>
-                )}
               </div>
             </div>
           </div>
@@ -490,6 +501,80 @@ export default function SchemeDetailPage({
         )}
 
         {scheme && (
+          <section className="rounded-[24px] border border-white/10 bg-white/[0.04] p-4 print:hidden">
+            {scheme.status === "DRAFT" && (
+              <div className="space-y-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-100">Next step</p>
+                  <h2 className="mt-1 text-lg font-bold text-[#F7F4ED]">Finish and submit this Scheme</h2>
+                  <p className="mt-1 text-sm leading-6 text-[#C9CDD6]">
+                    Check the weeks below. Add any missing indicators, then submit the Scheme to the Headteacher.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Link href={buildSchemeEditorUrl()} className={btnOutline}>
+                    Continue Scheme
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={submitScheme}
+                    className={btnPrimary}
+                    disabled={submitBusy || scheme.items.length < 1}
+                  >
+                    {submitBusy ? "Submitting…" : "Submit for Approval"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {scheme.status === "SUBMITTED" && (
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-100">Waiting for approval</p>
+                <h2 className="mt-1 text-lg font-bold text-[#F7F4ED]">Submitted to the Headteacher</h2>
+                <p className="mt-1 text-sm leading-6 text-[#C9CDD6]">
+                  No action is needed now. This page will show the correction step if the Scheme is returned, or Lesson Notes when it is approved.
+                </p>
+              </div>
+            )}
+
+            {scheme.status === "RETURNED" && (
+              <div className="space-y-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-rose-100">Correction required</p>
+                  <h2 className="mt-1 text-lg font-bold text-[#F7F4ED]">Correct and resubmit this Scheme</h2>
+                  <p className="mt-1 text-sm leading-6 text-[#C9CDD6]">
+                    Use the Headteacher feedback above to correct the Scheme. When the correction is complete, resubmit it for approval.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Link href={buildSchemeEditorUrl()} className={btnPrimary}>
+                    Correct Scheme
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={submitScheme}
+                    className={btnOutline}
+                    disabled={submitBusy || scheme.items.length < 1}
+                  >
+                    {submitBusy ? "Submitting…" : "Resubmit for Approval"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {scheme.status === "APPROVED" && (
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-100">Approved</p>
+                <h2 className="mt-1 text-lg font-bold text-[#F7F4ED]">Prepare your Lesson Notes</h2>
+                <p className="mt-1 text-sm leading-6 text-[#C9CDD6]">
+                  Choose the week and indicator below, then tap <span className="font-semibold text-[#F7F4ED]">Prepare Lesson Note</span>.
+                </p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {scheme && (
           <section className="space-y-4 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl print:rounded-none print:border-slate-300 print:bg-white print:shadow-none md:p-5">
             <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-2 print:border-slate-200">
               <div className="space-y-0.5">
@@ -498,8 +583,9 @@ export default function SchemeDetailPage({
                 </h2>
                 <p className="text-[11px] text-[#AEB6C4] print:text-slate-600">
                   Each row links a NaCCA indicator to a specific week, strand and sub-strand.
-                  You can now <span className="font-semibold text-[#F7F4ED] print:text-black">open Lesson Note Studio</span>{" "}
-                  directly from here.
+                  {scheme.status === "APPROVED"
+                    ? " Choose the indicator you are teaching to prepare its Lesson Note."
+                    : " Lesson Note preparation stays unavailable until Headteacher approval."}
                 </p>
               </div>
 
@@ -529,9 +615,7 @@ export default function SchemeDetailPage({
 
             {!hasItems && (
               <p className="text-xs text-[#AEB6C4] print:text-slate-600">
-                No items have been added to this Scheme of Work yet. You can add indicators from{" "}
-                <span className="font-semibold text-[#F7F4ED] print:text-black">Teacher → Curriculum</span>{" "}
-                using the “Add to Scheme of Work” button.
+                No weekly indicators have been added yet. Return to the Scheme preparation screen to add the first week.
               </p>
             )}
 
@@ -570,9 +654,11 @@ export default function SchemeDetailPage({
                             <th className="border-b border-white/10 px-3 py-2 text-left font-semibold text-[#E8C96A] print:border-slate-200 print:text-slate-700">
                               Indicator Description
                             </th>
-                            <th className="border-b border-white/10 px-3 py-2 text-left font-semibold text-[#E8C96A] print:border-slate-200 print:text-slate-700 print:hidden">
-                              Lesson Note
-                            </th>
+                            {scheme.status === "APPROVED" && (
+                              <th className="border-b border-white/10 px-3 py-2 text-left font-semibold text-[#E8C96A] print:border-slate-200 print:text-slate-700 print:hidden">
+                                Lesson Note
+                              </th>
+                            )}
                           </tr>
                         </thead>
 
@@ -607,18 +693,20 @@ export default function SchemeDetailPage({
                                 {item.indicatorDescription}
                               </td>
 
-                              <td className="whitespace-nowrap border-b border-white/10 px-3 py-2 align-top print:hidden">
-                                {item.indicatorCode ? (
-                                  <Link
-                                    href={buildLessonNoteUrl(group.weekNumber, item)}
-                                    className={btnPrimary}
-                                  >
-                                    Open in Studio
-                                  </Link>
-                                ) : (
-                                  <span className="text-[10px] text-[#8F98A8]">No indicator code</span>
-                                )}
-                              </td>
+                              {scheme.status === "APPROVED" && (
+                                <td className="whitespace-nowrap border-b border-white/10 px-3 py-2 align-top print:hidden">
+                                  {item.indicatorCode ? (
+                                    <Link
+                                      href={buildLessonNoteUrl(group.weekNumber, item)}
+                                      className={btnPrimary}
+                                    >
+                                      Prepare Lesson Note
+                                    </Link>
+                                  ) : (
+                                    <span className="text-[10px] text-[#8F98A8]">Indicator unavailable</span>
+                                  )}
+                                </td>
+                              )}
                             </tr>
                           ))}
                         </tbody>
@@ -632,15 +720,7 @@ export default function SchemeDetailPage({
         )}
 
         <section className="rounded-[24px] border border-white/10 bg-white/[0.04] px-4 py-3 text-[11px] text-[#C9CDD6] print:hidden">
-          <p>
-            From here you can now choose a week and{" "}
-            <span className="font-semibold text-[#F7F4ED]">open Lesson Note Studio</span>{" "}
-            for a specific indicator using the{" "}
-            <span className="font-semibold text-[#F7F4ED]">“Open in Studio”</span>{" "}
-            button. This keeps your{" "}
-            <span className="font-semibold text-[#F7F4ED]">Scheme of Work → Lesson Notes</span>{" "}
-            flow in one place, fully tied to the trusted NaCCA curriculum.
-          </p>
+          Prepare → Submit → Headteacher approval → Prepare Lesson Notes.
         </section>
       </div>
     </main>

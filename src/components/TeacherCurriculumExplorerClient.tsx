@@ -257,6 +257,13 @@ function toneNoticeClass(tone: Notice["tone"]) {
   return "border-rose-300/20 bg-rose-400/12 text-rose-100";
 }
 
+function looseToken(raw: unknown) {
+  return String(raw ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+}
+
 export default function TeacherCurriculumExplorerClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -266,16 +273,16 @@ export default function TeacherCurriculumExplorerClient() {
 
   const urlTerm = (searchParams.get("term") ?? "").trim();
   const urlAcademicYear = (searchParams.get("academicYear") ?? "").trim();
+  const urlLevel = (searchParams.get("level") ?? "").trim();
+  const urlSubjectSlug = (searchParams.get("subjectSlug") ?? "").trim().toLowerCase();
+  const urlSubject = (searchParams.get("subject") ?? "").trim();
+  const urlSchemeId = (searchParams.get("schemeId") ?? "").trim();
   const urlReturn = searchParams.get("return");
 
   const [schemeTerm, setSchemeTerm] = useState<string>("");
   const [schemeAcademicYear, setSchemeAcademicYear] = useState<string>("");
   const [schemeWeekNumber, setSchemeWeekNumber] = useState<string>("1");
   const [schemeNotice, setSchemeNotice] = useState<Notice | null>(null);
-
-  const [schemeSummary, setSchemeSummary] = useState<SchemeSummary[]>([]);
-  const [schemeSummaryLoading, setSchemeSummaryLoading] = useState(false);
-  const [schemeSummaryError, setSchemeSummaryError] = useState<string | null>(null);
 
   const [subjects, setSubjects] = useState<CurriculumSubjectSummary[]>([]);
   const [subjectsLoading, setSubjectsLoading] = useState(false);
@@ -300,16 +307,10 @@ export default function TeacherCurriculumExplorerClient() {
   const [selectedSchemeIdForAdd, setSelectedSchemeIdForAdd] = useState<string>("");
   const [addToSchemeSaving, setAddToSchemeSaving] = useState(false);
 
-  const schemeReturnTarget = useMemo(() => {
-    const fallback =
-      schemeTerm && schemeAcademicYear
-        ? `/teacher/lesson-notes?term=${encodeURIComponent(schemeTerm)}&academicYear=${encodeURIComponent(
-            schemeAcademicYear
-          )}`
-        : "/teacher/lesson-notes";
-
-    return safeClientInternalPath(urlReturn, fallback);
-  }, [urlReturn, schemeTerm, schemeAcademicYear]);
+  const schemeReturnTarget = useMemo(
+    () => safeClientInternalPath(urlReturn, "/teacher/schemes"),
+    [urlReturn],
+  );
 
   useEffect(() => {
     if (!schemeMode) return;
@@ -400,10 +401,17 @@ export default function TeacherCurriculumExplorerClient() {
         setSubjects(data.items);
 
         if (data.items.length > 0) {
-          const first = data.items[0];
-          setSelectedPhase(first.phase ?? "");
-          setSelectedLevel(first.level ?? "");
-          setSelectedSubjectId(first.id);
+          const requested = data.items.find((item) => {
+            const levelMatches = !urlLevel || looseToken(item.level) === looseToken(urlLevel);
+            const slugMatches = !!urlSubjectSlug && String(item.slug ?? "").trim().toLowerCase() === urlSubjectSlug;
+            const subjectMatches = !!urlSubject && looseToken(item.name) === looseToken(urlSubject);
+            return slugMatches || (subjectMatches && levelMatches);
+          });
+
+          const initial = requested ?? data.items[0];
+          setSelectedPhase(initial.phase ?? "");
+          setSelectedLevel(initial.level ?? "");
+          setSelectedSubjectId(initial.id);
         }
       } catch (err) {
         console.error("Error loading curriculum subjects", err);
@@ -418,7 +426,7 @@ export default function TeacherCurriculumExplorerClient() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [urlLevel, urlSubject, urlSubjectSlug]);
 
   const phases = useMemo(() => {
     const all = Array.from(new Set(subjects.map((s) => s.phase || "").filter((p) => p.trim().length > 0)));
@@ -584,43 +592,6 @@ export default function TeacherCurriculumExplorerClient() {
 
   const hasCurriculum = !!curriculum;
 
-  async function loadSchemeSummary() {
-    setSchemeSummaryLoading(true);
-    setSchemeSummaryError(null);
-
-    try {
-      const res = await fetch(`/api/schemes?mode=summary`, {
-        method: "GET",
-        headers: { "Cache-Control": "no-store" },
-        credentials: "include",
-      });
-
-      if (res.status === 401) return handleAuthFailure();
-
-      const data = (await readJsonSafe(res)) as SchemesListResponse;
-
-      if (res.status === 403) {
-        setSchemeSummary([]);
-        setSchemeSummaryError(pickErrorMessage(res, data, "Forbidden."));
-        return;
-      }
-
-      if (!res.ok || !data?.ok || !Array.isArray(data.items)) {
-        setSchemeSummary([]);
-        setSchemeSummaryError(data?.error ?? "Failed to load schemes summary.");
-        return;
-      }
-
-      setSchemeSummary(data.items);
-    } catch (err) {
-      console.error("Error loading scheme summary", err);
-      setSchemeSummaryError("Network or server error while loading schemes summary.");
-      setSchemeSummary([]);
-    } finally {
-      setSchemeSummaryLoading(false);
-    }
-  }
-
   async function loadSchemesForSubject() {
     if (!curriculum) return;
 
@@ -661,8 +632,15 @@ export default function TeacherCurriculumExplorerClient() {
       }
 
       setSchemes(data.items);
-      if (data.items.length > 0) setSelectedSchemeIdForAdd(data.items[0].id);
-      else setSelectedSchemeIdForAdd("");
+
+      if (data.items.length > 0) {
+        const requested = urlSchemeId && data.items.some((item) => item.id === urlSchemeId)
+          ? urlSchemeId
+          : data.items[0].id;
+        setSelectedSchemeIdForAdd(requested);
+      } else {
+        setSelectedSchemeIdForAdd("");
+      }
     } catch (err) {
       console.error("Error loading schemes", err);
       setSchemesError("Network or server error while loading schemes of work.");
@@ -673,20 +651,9 @@ export default function TeacherCurriculumExplorerClient() {
 
   useEffect(() => {
     if (!schemeMode) return;
-    void loadSchemeSummary();
-  }, [schemeMode]);
-
-  useEffect(() => {
-    if (!schemeMode) return;
     if (!curriculum) return;
     void loadSchemesForSubject();
-  }, [schemeMode, curriculum, schemeTerm, schemeAcademicYear]);
-
-  const canReturnToLessonNotes = useMemo(() => {
-    if (!schemeMode) return false;
-    if (!schemeTerm || !schemeAcademicYear) return false;
-    return schemeSummary.some((s) => s.term === schemeTerm && s.academicYear === schemeAcademicYear && getSchemeCount(s) > 0);
-  }, [schemeMode, schemeTerm, schemeAcademicYear, schemeSummary]);
+  }, [schemeMode, curriculum, schemeTerm, schemeAcademicYear, urlSchemeId]);
 
   async function handleAddSelectedIndicatorToScheme() {
     setSchemeNotice(null);
@@ -771,7 +738,7 @@ export default function TeacherCurriculumExplorerClient() {
 
       setSchemeNotice({ tone: "ok", text: "Saved. Indicator added to scheme." });
 
-      await Promise.all([loadSchemesForSubject(), loadSchemeSummary()]);
+      await loadSchemesForSubject();
     } catch (err) {
       console.error("Error adding to scheme", err);
       setSchemeNotice({ tone: "error", text: "Network or server error while adding to scheme." });
@@ -780,22 +747,7 @@ export default function TeacherCurriculumExplorerClient() {
     }
   }
 
-  function syncTermYearToUrl() {
-    if (!schemeMode) return;
 
-    const p = new URLSearchParams(searchParams.toString());
-
-    const t = normalizeTermClient(schemeTerm) || schemeTerm;
-    const y = normalizeAcademicYearClient(schemeAcademicYear);
-
-    if (t) p.set("term", t);
-    else p.delete("term");
-
-    if (y) p.set("academicYear", y);
-    else p.delete("academicYear");
-
-    router.replace(`/teacher/curriculum?${p.toString()}`);
-  }
 
   return (
     <main className="min-h-screen bg-transparent">
@@ -809,11 +761,11 @@ export default function TeacherCurriculumExplorerClient() {
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <span className={`${pillBase} border-cyan-300/20 bg-cyan-400/12 text-cyan-100`}>
-                  EduLife OS · Curriculum Explorer
+                  {schemeMode ? "EduLife OS · Teacher · Scheme of Work" : "EduLife OS · Curriculum Explorer"}
                 </span>
                 {schemeMode ? (
                   <span className={`${pillBase} border-emerald-300/20 bg-emerald-400/12 text-emerald-100`}>
-                    Mode: Scheme Builder
+                    Preparing Scheme
                   </span>
                 ) : (
                   <span className="text-[11px] text-[#AEB6C4]">
@@ -823,20 +775,21 @@ export default function TeacherCurriculumExplorerClient() {
               </div>
 
               <h1 className="text-xl font-semibold tracking-tight text-[#F7F4ED] md:text-2xl">
-                Teacher Curriculum Explorer
+                {schemeMode ? "Prepare Scheme of Work" : "Teacher Curriculum Explorer"}
               </h1>
 
               <p className="max-w-2xl text-xs text-[#C9CDD6] md:text-sm">
-                Choose a <span className="font-semibold text-[#F7F4ED]">phase, level</span> and{" "}
-                <span className="font-semibold text-[#F7F4ED]">subject</span>. EduLife OS will load the official NaCCA
-                structure for that subject: strands, sub-strands, content standards, indicators and exemplars.
+                {schemeMode
+                  ? "Choose your class and subject, then add the NaCCA indicators you plan to teach to the correct week."
+                  : "Choose a phase, level and subject. EduLife OS will load the official NaCCA curriculum structure."}
               </p>
             </div>
 
             <div className="max-w-xs text-[11px] text-[#AEB6C4] md:text-right">
               <p>
-                This page is the <span className="font-semibold text-[#F7F4ED]">single source of truth</span> for your
-                curriculum tree. Lesson notes and Scheme of Work tools all read from here.
+                {schemeMode
+                  ? "Save your weekly indicators here, then return to the Scheme page to review and submit."
+                  : "This is the trusted curriculum source used by Scheme of Work and Lesson Notes."}
               </p>
             </div>
           </div>
@@ -852,7 +805,9 @@ export default function TeacherCurriculumExplorerClient() {
           <div className="space-y-4">
             <div className={cx(cardShell, "p-4 md:p-5")}>
               <div className="flex items-center justify-between gap-2">
-                <h2 className={sectionTitle}>1 · Choose phase, level &amp; subject</h2>
+                <h2 className={sectionTitle}>
+                  {schemeMode ? "1 · Choose class & subject" : "1 · Choose phase, level & subject"}
+                </h2>
                 {subjectsLoading && <span className="text-[11px] text-[#8F98A8]">Loading subjects…</span>}
               </div>
 
@@ -946,7 +901,9 @@ export default function TeacherCurriculumExplorerClient() {
 
             <div className={cx(cardShell, "p-4 md:p-5")}>
               <div className="flex items-center justify-between gap-2">
-                <h2 className={sectionTitle}>2 · Curriculum tree (NaCCA)</h2>
+                <h2 className={sectionTitle}>
+                  {schemeMode ? "2 · Choose an indicator" : "2 · Curriculum tree (NaCCA)"}
+                </h2>
                 {curriculumLoading && <span className="text-[11px] text-[#8F98A8]">Loading…</span>}
               </div>
 
@@ -1092,10 +1049,10 @@ export default function TeacherCurriculumExplorerClient() {
               <div className={cx(cardShell, "p-4 md:p-5")}>
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <h2 className={sectionTitle}>Scheme Builder</h2>
+                    <h2 className={sectionTitle}>3 · Add indicator to a week</h2>
                     <p className="mt-1 text-[11px] text-[#C9CDD6]">
-                      Build your Scheme of Work for <span className="font-semibold text-[#F7F4ED]">{schemeTerm || "—"}</span>{" "}
-                      <span className="font-semibold text-[#F7F4ED]">{schemeAcademicYear || ""}</span>. Add indicators week-by-week.
+                      Preparing <span className="font-semibold text-[#F7F4ED]">{schemeTerm || "—"}</span>{" "}
+                      <span className="font-semibold text-[#F7F4ED]">{schemeAcademicYear || ""}</span>. Choose the week, then save the selected indicator.
                     </p>
                   </div>
 
@@ -1103,10 +1060,8 @@ export default function TeacherCurriculumExplorerClient() {
                     type="button"
                     className={btnOutline + " h-8 text-[11px]"}
                     onClick={() => router.push(schemeReturnTarget)}
-                    disabled={!canReturnToLessonNotes}
-                    title={canReturnToLessonNotes ? "Return to Lesson Notes" : "Add at least one scheme item first"}
                   >
-                    Return to Lesson Notes
+                    Back to Scheme
                   </button>
                 </div>
 
@@ -1155,17 +1110,13 @@ export default function TeacherCurriculumExplorerClient() {
                   </div>
 
                   <div className="col-span-2 flex gap-2">
-                    <button type="button" className={btnOutline} onClick={syncTermYearToUrl}>
-                      Sync term/year to URL
-                    </button>
-
                     <button
                       type="button"
                       className={btnPrimary}
                       onClick={handleAddSelectedIndicatorToScheme}
                       disabled={addToSchemeSaving || !selectedIndicator || !schemeTerm || !schemeAcademicYear}
                     >
-                      {addToSchemeSaving ? "Saving…" : "Add selected indicator"}
+                      {addToSchemeSaving ? "Saving…" : `Add to Week ${schemeWeekNumber || "—"}`}
                     </button>
                   </div>
                 </div>
@@ -1175,40 +1126,31 @@ export default function TeacherCurriculumExplorerClient() {
 
                 {!schemesLoading && !schemesError && curriculum && (
                   <div className="mt-3 rounded-2xl border border-white/10 bg-[#07111F]/80 px-3 py-3 text-[11px] text-[#C9CDD6]">
-                    <div className="flex items-center justify-between gap-2">
-                      <span>
-                        Subject schemes ({schemeTerm} {schemeAcademicYear}):{" "}
-                        <span className="font-semibold text-[#F7F4ED]">{schemes.length}</span>
-                      </span>
+                    <p>
+                      Save target: <span className="font-semibold text-[#F7F4ED]">{curriculum.name}</span> ·{" "}
+                      {schemeTerm || "Term"} · {schemeAcademicYear || "Academic year"}
+                    </p>
 
-                      {schemes.length > 0 && (
+                    {schemes.length > 1 && (
+                      <div className="mt-2">
+                        <label className={labelCls}>Scheme</label>
                         <select
-                          className="rounded-lg border border-white/10 bg-[#05070B] px-2 py-1 text-[11px] text-[#F7F4ED]"
+                          className="w-full rounded-lg border border-white/10 bg-[#05070B] px-2 py-2 text-[11px] text-[#F7F4ED]"
                           value={selectedSchemeIdForAdd}
                           onChange={(e) => setSelectedSchemeIdForAdd(e.target.value)}
                         >
                           {schemes.map((s) => (
                             <option key={s.id} value={s.id}>
-                              {(s.title ?? s.subject) + ` · items: ${getSchemeCount(s)}`}
+                              {(s.title ?? s.subject) + ` · ${getSchemeCount(s)} item${getSchemeCount(s) === 1 ? "" : "s"}`}
                             </option>
                           ))}
                         </select>
-                      )}
-                    </div>
+                      </div>
+                    )}
 
-                    <div className="mt-2 flex items-center justify-between gap-2">
-                      <span>
-                        Return status:{" "}
-                        {schemeSummaryLoading ? (
-                          <span className="font-semibold text-[#F7F4ED]">Checking…</span>
-                        ) : canReturnToLessonNotes ? (
-                          <span className="font-semibold text-emerald-100">READY</span>
-                        ) : (
-                          <span className="font-semibold text-amber-100">NOT READY</span>
-                        )}
-                      </span>
-                      {schemeSummaryError && <span className="text-rose-200">{schemeSummaryError}</span>}
-                    </div>
+                    <p className="mt-2 text-[#8F98A8]">
+                      When you finish adding weekly indicators, go back to the Scheme page to review and submit.
+                    </p>
                   </div>
                 )}
 
@@ -1222,7 +1164,7 @@ export default function TeacherCurriculumExplorerClient() {
 
             <div className={cx(cardShell, "p-4 md:p-5")}>
               <div className="flex items-center justify-between gap-2">
-                <h2 className={sectionTitle}>3 · Focus indicator &amp; details</h2>
+                <h2 className={sectionTitle}>{schemeMode ? "Selected indicator" : "3 · Focus indicator & details"}</h2>
 
                 {selectedIndicator && schemeMode && (
                   <button
@@ -1231,7 +1173,7 @@ export default function TeacherCurriculumExplorerClient() {
                     onClick={handleAddSelectedIndicatorToScheme}
                     disabled={addToSchemeSaving || !schemeTerm || !schemeAcademicYear}
                   >
-                    {addToSchemeSaving ? "Saving…" : "Add to Scheme"}
+                    {addToSchemeSaving ? "Saving…" : `Add to Week ${schemeWeekNumber || "—"}`}
                   </button>
                 )}
               </div>
@@ -1310,7 +1252,7 @@ export default function TeacherCurriculumExplorerClient() {
                   </div>
 
                   <div className="border-t border-dashed border-white/10 pt-2 text-[11px] text-[#AEB6C4]">
-                    Use <span className="font-semibold text-[#F7F4ED]">Scheme Builder</span> to attach this indicator to a week.
+                    Add this indicator to the week you plan to teach it.
                   </div>
                 </div>
               )}

@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
  *
  * GET /api/schemes?mode=summary
  *
- * Read-only summary page + canonical entry to Scheme Builder.
+ * Guided Scheme lifecycle page using persisted server status.
  */
 
 type SchemeStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "RETURNED";
@@ -18,6 +18,8 @@ type SchemeStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "RETURNED";
 type SchemeOfWorkSummary = {
   id: string;
   subject: string;
+  subjectSlug?: string | null;
+  level?: string | null;
   term: string;
   academicYear: string;
   classroomName?: string | null;
@@ -99,6 +101,13 @@ function statusClass(status: SchemeStatus) {
   return "border-white/10 bg-white/10 text-[#C9CDD6]";
 }
 
+function guideToneClass(status: SchemeStatus) {
+  if (status === "APPROVED") return "border-emerald-300/25 bg-emerald-400/12";
+  if (status === "SUBMITTED") return "border-amber-300/25 bg-amber-400/12";
+  if (status === "RETURNED") return "border-rose-300/25 bg-rose-400/12";
+  return "border-sky-300/20 bg-sky-400/10";
+}
+
 export default function TeacherSchemesPage() {
   const router = useRouter();
 
@@ -109,7 +118,6 @@ export default function TeacherSchemesPage() {
   const [selectedSchemeId, setSelectedSchemeId] = useState<string | null>(null);
 
   const [schemeNavLoading, setSchemeNavLoading] = useState(false);
-  const [submitBusyId, setSubmitBusyId] = useState<string | null>(null);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -183,35 +191,46 @@ export default function TeacherSchemesPage() {
     });
   }, [schemes]);
 
-  async function openSchemeBuilder() {
+  async function openSchemeBuilder(scheme?: SchemeOfWorkSummary | null) {
     if (schemeNavLoading) return;
     setSchemeNavLoading(true);
 
     try {
-      let t: Term | "" = "";
-      let y = "";
+      let t: Term | "" = scheme ? normalizeTerm(scheme.term) : "";
+      let y = scheme ? normalizeAcademicYear(scheme.academicYear).trim() : "";
 
-      try {
-        const res = await fetch("/api/settings/current-term-year", {
-          method: "GET",
-          cache: "no-store",
-          credentials: "include",
-        });
+      if (!scheme) {
+        try {
+          const res = await fetch("/api/settings/current-term-year", {
+            method: "GET",
+            cache: "no-store",
+            credentials: "include",
+          });
 
-        const data = (await res.json().catch(() => ({}))) as TenantTermYearResponse;
-        if (res.ok && data?.ok) {
-          if (data.term) t = normalizeTerm(data.term);
-          if (data.academicYear) y = normalizeAcademicYear(data.academicYear).trim();
+          const data = (await res.json().catch(() => ({}))) as TenantTermYearResponse;
+          if (res.ok && data?.ok) {
+            if (data.term) t = normalizeTerm(data.term);
+            if (data.academicYear) y = normalizeAcademicYear(data.academicYear).trim();
+          }
+        } catch {
+          // The preparation page can still load its own tenant defaults.
         }
-      } catch {
-        // ignore; curriculum page will still fetch defaults
       }
 
       const p = new URLSearchParams();
       p.set("mode", "scheme");
       if (t) p.set("term", t);
       if (y) p.set("academicYear", y);
-      p.set("return", "/teacher/schemes");
+
+      if (scheme) {
+        if (scheme.level) p.set("level", scheme.level);
+        if (scheme.subjectSlug) p.set("subjectSlug", scheme.subjectSlug);
+        else if (scheme.subject) p.set("subject", scheme.subject);
+        p.set("schemeId", scheme.id);
+        p.set("return", `/teacher/schemes/${scheme.id}`);
+      } else {
+        p.set("return", "/teacher/schemes");
+      }
 
       router.push(`/teacher/curriculum?${p.toString()}`);
     } finally {
@@ -219,58 +238,6 @@ export default function TeacherSchemesPage() {
     }
   }
 
-  async function submitScheme(scheme: SchemeOfWorkSummary) {
-    if (submitBusyId) return;
-
-    if (scheme.totalItems < 1) {
-      setError("Add at least one week/indicator before submitting this scheme.");
-      return;
-    }
-
-    const ok = window.confirm(
-      "Submit this scheme to the headteacher? You cannot edit it again unless it is returned."
-    );
-
-    if (!ok) return;
-
-    setSubmitBusyId(scheme.id);
-    setError(null);
-
-    try {
-      const res = await fetch("/api/schemes", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        cache: "no-store",
-        body: JSON.stringify({
-          action: "submit",
-          schemeId: scheme.id,
-        }),
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok || !data?.ok) {
-        setError(data?.error ?? "Failed to submit scheme.");
-        return;
-      }
-
-      const reload = await fetch("/api/schemes?mode=summary", {
-        method: "GET",
-        cache: "no-store",
-      });
-
-      const next = (await reload.json().catch(() => ({}))) as SchemesSummaryResponse;
-
-      if (reload.ok && next.ok && next.items) {
-        setSchemes(next.items);
-        setSelectedSchemeId(scheme.id);
-      }
-    } catch {
-      setError("Network error while submitting scheme.");
-    } finally {
-      setSubmitBusyId(null);
-    }
-  }
 
   return (
     <main className="min-h-screen">
@@ -280,52 +247,18 @@ export default function TeacherSchemesPage() {
           <div className="absolute -left-16 top-0 h-48 w-48 rounded-full bg-[#1B66D1]/20 blur-3xl" />
           <div className="absolute right-0 top-0 h-44 w-44 rounded-full bg-[#D4AF37]/14 blur-3xl" />
 
-          <div className="relative flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className={cx(pillBase, "border-emerald-300/25 bg-emerald-400/14 text-emerald-100")}>
-                  EduLife OS · Teacher · Scheme of Work
-                </span>
-                <span className="text-[11px] text-[#AEB6C4]">
-                  Canonical: Curriculum → Scheme → Lesson Notes
-                </span>
-              </div>
+          <div className="relative space-y-3">
+            <span className={cx(pillBase, "border-emerald-300/25 bg-emerald-400/14 text-emerald-100")}>
+              EduLife OS · Teacher · Scheme of Work
+            </span>
 
-              <h1 className="text-2xl font-extrabold tracking-tight text-[#F7F4ED] md:text-3xl">
-                Scheme of Work Overview
-              </h1>
+            <h1 className="text-2xl font-extrabold tracking-tight text-[#F7F4ED] md:text-3xl">
+              Scheme of Work
+            </h1>
 
-              <p className="max-w-2xl text-sm leading-7 text-[#C9CDD6]">
-                This screen shows <span className="font-semibold text-[#F7F4ED]">real Scheme of Work records</span> stored in your database.
-                Use <span className="font-semibold text-[#F7F4ED]">Prepare scheme of work</span> to add indicators week-by-week.
-              </p>
-            </div>
-
-            <div className="flex flex-col items-start gap-2 xl:items-end">
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={openSchemeBuilder}
-                  className={btnPrimary}
-                  disabled={schemeNavLoading}
-                  title="Open Curriculum Explorer in Scheme Builder mode"
-                >
-                  {schemeNavLoading ? "Opening…" : "Prepare scheme of work"}
-                </button>
-
-                <Link href="/teacher/lesson-notes" className={btnOutline}>
-                  Lesson Notes
-                </Link>
-
-                <Link href="/teacher/curriculum" className={btnOutline} title="Read-only curriculum browsing">
-                  Curriculum Explorer
-                </Link>
-              </div>
-
-              <div className="max-w-xs text-[11px] text-[#8F98A8] xl:text-right">
-                If you ever see “No schemes found…”, you’re in the old attach flow. Use Scheme Builder instead.
-              </div>
-            </div>
+            <p className="max-w-2xl text-sm leading-7 text-[#C9CDD6]">
+              EduLife shows the next step from your saved Scheme status. Lesson Notes become available only after Headteacher approval.
+            </p>
           </div>
         </header>
 
@@ -335,23 +268,140 @@ export default function TeacherSchemesPage() {
           </div>
         )}
 
+        {!error && (
+          <section className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4 md:p-5">
+            {loading ? (
+              <p className="text-sm text-[#C9CDD6]">Checking your Scheme of Work…</p>
+            ) : schemes.length === 0 ? (
+              <div className="space-y-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">Step 1</p>
+                  <h2 className="mt-1 text-lg font-bold text-[#F7F4ED]">Prepare your Scheme of Work</h2>
+                  <p className="mt-1 text-sm leading-6 text-[#C9CDD6]">
+                    No Scheme of Work has been prepared yet. Start by choosing your class, subject, week and NaCCA indicators.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openSchemeBuilder()}
+                  className={btnPrimary}
+                  disabled={schemeNavLoading}
+                >
+                  {schemeNavLoading ? "Opening…" : "Prepare Scheme of Work"}
+                </button>
+              </div>
+            ) : selectedScheme ? (
+              <div className={cx("rounded-2xl border p-4", guideToneClass(selectedScheme.status))}>
+                {selectedScheme.status === "DRAFT" && (
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-100">Current step</p>
+                      <h2 className="mt-1 text-lg font-bold text-[#F7F4ED]">
+                        {selectedScheme.totalItems > 0 ? "Review your Scheme and submit it" : "Continue preparing your Scheme"}
+                      </h2>
+                      <p className="mt-1 text-sm leading-6 text-[#C9CDD6]">
+                        Lesson Notes stay locked until this Scheme is submitted and approved by the Headteacher.
+                      </p>
+                    </div>
+                    {selectedScheme.totalItems > 0 ? (
+                      <Link href={`/teacher/schemes/${selectedScheme.id}`} className={btnPrimary}>
+                        Review &amp; Submit
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => openSchemeBuilder(selectedScheme)}
+                        className={btnPrimary}
+                        disabled={schemeNavLoading}
+                      >
+                        {schemeNavLoading ? "Opening…" : "Continue Scheme"}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {selectedScheme.status === "SUBMITTED" && (
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-100">Waiting for approval</p>
+                    <h2 className="text-lg font-bold text-[#F7F4ED]">Submitted to the Headteacher</h2>
+                    <p className="text-sm leading-6 text-[#C9CDD6]">
+                      No action is needed now. Lesson Notes will unlock after approval, or this Scheme will return here if a correction is needed.
+                    </p>
+                  </div>
+                )}
+
+                {selectedScheme.status === "RETURNED" && (
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-rose-100">Correction required</p>
+                      <h2 className="mt-1 text-lg font-bold text-[#F7F4ED]">Correct this Scheme of Work</h2>
+                      <p className="mt-1 text-sm leading-6 text-[#C9CDD6]">
+                        Read the Headteacher feedback below, correct the Scheme, then resubmit it for approval.
+                      </p>
+                    </div>
+                    {selectedScheme.headteacherComment && (
+                      <div className="rounded-xl border border-rose-300/20 bg-black/10 px-3 py-2 text-sm text-rose-50">
+                        <span className="font-semibold">Headteacher: </span>{selectedScheme.headteacherComment}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => openSchemeBuilder(selectedScheme)}
+                      className={btnPrimary}
+                      disabled={schemeNavLoading}
+                    >
+                      {schemeNavLoading ? "Opening…" : "Correct Scheme"}
+                    </button>
+                  </div>
+                )}
+
+                {selectedScheme.status === "APPROVED" && (
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-100">Approved</p>
+                      <h2 className="mt-1 text-lg font-bold text-[#F7F4ED]">Lesson Notes are now unlocked</h2>
+                      <p className="mt-1 text-sm leading-6 text-[#C9CDD6]">
+                        Open this approved Scheme, choose the week and indicator you are teaching, then prepare the Lesson Note.
+                      </p>
+                    </div>
+                    <Link href={`/teacher/schemes/${selectedScheme.id}`} className={btnPrimary}>
+                      Prepare Lesson Notes
+                    </Link>
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </section>
+        )}
+
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1.3fr)] md:gap-6">
           <div className="space-y-3">
             <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl md:p-5">
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold text-[#F7F4ED]">
-                  1 · Schemes by term &amp; academic year
-                </h2>
-                <div className="text-[11px] text-[#AEB6C4]">
-                  {loading ? "Loading schemes…" : `${schemes.length} scheme${schemes.length === 1 ? "" : "s"} found`}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-sm font-semibold text-[#F7F4ED]">
+                    Your Schemes
+                  </h2>
+                  <div className="text-[11px] text-[#AEB6C4]">
+                    {loading ? "Loading schemes…" : `${schemes.length} scheme${schemes.length === 1 ? "" : "s"} found`}
+                  </div>
                 </div>
+
+                {schemes.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => openSchemeBuilder()}
+                    className={btnOutline}
+                    disabled={schemeNavLoading}
+                  >
+                    {schemeNavLoading ? "Opening…" : "Prepare another Scheme"}
+                  </button>
+                )}
               </div>
 
               {schemes.length === 0 && !loading && !error && (
                 <p className="mt-3 text-xs text-[#AEB6C4]">
-                  No Scheme of Work records found yet. Click{" "}
-                  <span className="font-semibold text-[#F7F4ED]">Prepare scheme of work</span> to create
-                  your first one from NaCCA indicators.
+                  No Scheme of Work records found yet. Use the guided action above to prepare your first Scheme.
                 </p>
               )}
 
@@ -431,22 +481,19 @@ export default function TeacherSchemesPage() {
             </div>
 
             <div className="rounded-[24px] border border-white/10 bg-white/[0.04] px-4 py-3 text-[11px] text-[#C9CDD6]">
-              <p>
-                Canonical workflow: <span className="font-semibold text-[#F7F4ED]">Curriculum (scheme mode)</span> creates schemes + items,
-                then Lesson Notes pulls from the same SchemeOfWorkItem records.
-              </p>
+              Prepare → Submit → Headteacher approval → Lesson Notes.
             </div>
           </div>
 
           <aside className="space-y-3">
             <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl md:p-5">
               <h2 className="text-sm font-semibold text-[#F7F4ED]">
-                2 · Selected scheme details
+                Selected Scheme
               </h2>
 
               {!selectedScheme && (
                 <p className="mt-3 text-xs text-[#AEB6C4]">
-                  Select a Scheme of Work on the left to see details. Then open the full week-by-week table.
+                  Select a Scheme above to see its status, weeks and Headteacher feedback.
                 </p>
               )}
 
@@ -490,28 +537,10 @@ export default function TeacherSchemesPage() {
                     )}
                   </div>
 
-                  <div className="space-y-1.5">
-                    <p className="text-[11px] text-[#AEB6C4]">
-                      Next step: open the <span className="font-semibold text-[#F7F4ED]">full scheme table</span> and then click{" "}
-                      <span className="font-semibold text-[#F7F4ED]">Open in Studio</span> on any indicator.
-                    </p>
-
-                    <div className="flex flex-wrap gap-2">
-                      <Link href={`/teacher/schemes/${selectedScheme.id}`} className={btnOutline}>
-                        Open full scheme
-                      </Link>
-
-                      {(selectedScheme.status === "DRAFT" || selectedScheme.status === "RETURNED") && (
-                        <button
-                          type="button"
-                          onClick={() => submitScheme(selectedScheme)}
-                          className={btnPrimary}
-                          disabled={submitBusyId === selectedScheme.id}
-                        >
-                          {submitBusyId === selectedScheme.id ? "Submitting…" : "Submit for Review"}
-                        </button>
-                      )}
-                    </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Link href={`/teacher/schemes/${selectedScheme.id}`} className={btnOutline}>
+                      View Scheme
+                    </Link>
                   </div>
                 </div>
               )}

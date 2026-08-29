@@ -68,8 +68,6 @@ function toIntOrEmpty(raw: string): string {
   return String(n);
 }
 
-type TenantTermYearResponse = { ok?: boolean; term?: string | null; academicYear?: string | null };
-
 function statusBadgeClass(status: LessonNoteStatus) {
   switch (status) {
     case "DRAFT":
@@ -95,8 +93,6 @@ const outlineBtn =
   "rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-[#F7F4ED] transition hover:bg-white/10 disabled:opacity-60";
 const goldBtn =
   "rounded-xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-3 py-2 text-sm font-semibold text-[#071A3D] shadow-[0_16px_40px_rgba(212,175,55,0.22)] transition hover:brightness-105 disabled:opacity-60";
-const cyanBtn =
-  "rounded-xl border border-cyan-300/20 bg-cyan-400/12 px-3 py-2 text-sm font-medium text-cyan-100 transition hover:bg-cyan-400/18 disabled:opacity-60";
 
 export default function LessonNotesListClient() {
   const router = useRouter();
@@ -109,8 +105,6 @@ export default function LessonNotesListClient() {
   const [term, setTerm] = useState("");
   const [academicYear, setAcademicYear] = useState("");
   const [weekNumber, setWeekNumber] = useState("");
-
-  const [schemeNavLoading, setSchemeNavLoading] = useState(false);
 
   const loadSeq = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
@@ -191,51 +185,7 @@ export default function LessonNotesListClient() {
     }
   }
 
-  async function openSchemeBuilder() {
-    if (schemeNavLoading) return;
-    setSchemeNavLoading(true);
 
-    try {
-      let t = normalizeTerm(term);
-      let y = normalizeAcademicYear(academicYear).trim();
-
-      if (!t || !y) {
-        try {
-          const res = await fetch("/api/settings/current-term-year", {
-            method: "GET",
-            cache: "no-store",
-            credentials: "include",
-          });
-          const data = (await res.json().catch(() => ({}))) as TenantTermYearResponse;
-          if (res.ok && data?.ok) {
-            if (!t && data.term) t = normalizeTerm(String(data.term));
-            if (!y && data.academicYear) y = normalizeAcademicYear(String(data.academicYear)).trim();
-          }
-        } catch {
-          // ignore
-        }
-      }
-
-      const p = new URLSearchParams();
-      p.set("mode", "scheme");
-      if (t) p.set("term", t);
-      if (y) p.set("academicYear", y);
-
-      const ret = new URLSearchParams();
-      if (status) ret.set("status", status);
-      if (t) ret.set("term", t);
-      if (y) ret.set("academicYear", y);
-      const w = toIntOrEmpty(weekNumber);
-      if (w) ret.set("weekNumber", w);
-
-      const returnPath = `/teacher/lesson-notes${ret.toString() ? `?${ret.toString()}` : ""}`;
-      p.set("return", returnPath);
-
-      router.push(`/teacher/curriculum?${p.toString()}`);
-    } finally {
-      setSchemeNavLoading(false);
-    }
-  }
 
   const normalizedTerm = normalizeTerm(term);
   const normalizedYear = normalizeAcademicYear(academicYear);
@@ -254,25 +204,16 @@ export default function LessonNotesListClient() {
               Lesson Notes
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-7 text-[#C9CDD6]">
-              Draft → link NaCCA unit → fill → submit. Server-enforced, multi-tenant safe.
+              Existing Lesson Notes stay here. To prepare a new one, start from an approved Scheme of Work.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
             <button
-              className={cyanBtn}
-              onClick={openSchemeBuilder}
-              disabled={schemeNavLoading}
-              title="Open Curriculum Explorer in Scheme Builder mode"
-            >
-              {schemeNavLoading ? "Opening…" : "Prepare scheme of work"}
-            </button>
-
-            <button
               className={goldBtn}
-              onClick={() => router.push("/teacher/lesson-notes/studio")}
+              onClick={() => router.push("/teacher/schemes")}
             >
-              New lesson note
+              Prepare Lesson Note
             </button>
 
             <button className={outlineBtn} onClick={load}>
@@ -338,7 +279,7 @@ export default function LessonNotesListClient() {
                 Format: <span className="font-medium text-[#F7F4ED]">YYYY/YYYY</span>. “2025-2026” auto-normalizes.
               </div>
               {academicYear.trim() && !/^\d{4}\/\d{4}$/.test(normalizedYear) && (
-                <div className="mt-2 text-[11px] text-amber-200">Heads-up: Scheme Builder requires YYYY/YYYY.</div>
+                <div className="mt-2 text-[11px] text-amber-200">Use academic year as YYYY/YYYY.</div>
               )}
             </div>
 
@@ -370,7 +311,7 @@ export default function LessonNotesListClient() {
               </div>
             ) : items.length === 0 ? (
               <div className="mt-4 rounded-2xl border border-dashed border-white/12 bg-white/[0.04] p-4 text-sm text-[#C9CDD6]">
-                No lesson notes yet.
+                No lesson notes yet. Open Scheme of Work, get it approved, then choose the week and indicator you want to teach.
               </div>
             ) : (
               <div className="mt-4 overflow-x-auto rounded-[24px] border border-white/10 bg-[#08111F]/90 shadow-[0_20px_70px_rgba(0,0,0,0.20)]">

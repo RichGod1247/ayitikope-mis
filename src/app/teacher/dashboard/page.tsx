@@ -208,8 +208,8 @@ export default async function TeacherDashboardPage() {
     },
     {
       title: "Scheme of Work",
-      subtitle: "Weekly plan → Indicators → Studio",
-      desc: "View and manage your term scheme. Open a scheme to see week-by-week indicators and jump into Lesson Note Studio fast.",
+      subtitle: "Prepare → Submit → Approval → Lesson Notes",
+      desc: "Open Scheme of Work and EduLife will show the one next step. Lesson Notes unlock only after Headteacher approval.",
       pill: "Planning",
       icon: "🗓️",
       href: "/teacher/schemes",
@@ -220,8 +220,8 @@ export default async function TeacherDashboardPage() {
     },
     {
       title: "Lesson Notes",
-      subtitle: "Prepare scheme → Draft → Submit → Print",
-      desc: "Start from your lesson notes list. Prepare Scheme of Work and manage all lesson notes from one place.",
+      subtitle: "Approved Scheme → Prepare → Submit",
+      desc: "View existing lesson notes or start a new one from an approved Scheme of Work.",
       pill: "NaCCA-ready",
       icon: "📘",
       href: "/teacher/lesson-notes",

@@ -271,6 +271,12 @@ export default async function Page({
 
   if (!membership || membership.status !== "ACTIVE") redirect("/app/dashboard");
 
+  const initialSchemeItemId = spGet(sp, "schemeItemId").trim() || null;
+
+  if (!initialSchemeItemId) {
+    redirect("/teacher/schemes");
+  }
+
   const [me, tp, settings] = await Promise.all([
     prisma.user.findUnique({
       where: { id: ctx.userId },
@@ -307,8 +313,6 @@ export default async function Page({
     cleanStr(`${me?.firstName ?? ""} ${me?.lastName ?? ""}`) ||
     "Teacher";
   const email = cleanStr(me?.email) || "";
-
-  const initialSchemeItemId = spGet(sp, "schemeItemId").trim() || null;
 
   const prefill = {
     term: spGet(sp, "term").trim(),

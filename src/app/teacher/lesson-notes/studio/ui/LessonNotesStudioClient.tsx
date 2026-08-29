@@ -150,7 +150,7 @@ export default function LessonNotesStudioClient(props: {
   const [creating, setCreating] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const [autoMode, setAutoMode] = useState<boolean>(!!initialSchemeItemId);
+  const autoMode = !!initialSchemeItemId;
 
   const subjectsForSelectedLevel = useMemo(() => {
     if (phase !== "JHS") return t.allowedSubjects;
@@ -221,11 +221,10 @@ export default function LessonNotesStudioClient(props: {
   );
 
   useEffect(() => {
-    if (!autoMode) return;
     if (!initialSchemeItemId) return;
     void createFromSchemeItem(initialSchemeItemId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoMode, initialSchemeItemId]);
+  }, [initialSchemeItemId]);
 
   const handleCreate = useCallback(async () => {
     if (creating) return;
@@ -305,7 +304,7 @@ export default function LessonNotesStudioClient(props: {
               Lesson Notes Studio
             </h1>
             <p className="mt-2 text-sm text-[#C9CDD6]">
-              Create lesson notes inside your approved teaching scope.
+              Preparing a Lesson Note from an approved Scheme of Work.
             </p>
           </div>
           <button type="button" className={btnOutline} onClick={() => router.push("/teacher/lesson-notes")}>
@@ -347,18 +346,20 @@ export default function LessonNotesStudioClient(props: {
       </section>
 
       {initialSchemeItemId ? (
-        <div className="rounded-2xl border border-cyan-300/20 bg-cyan-400/12 px-4 py-3 text-sm text-cyan-100">
+        <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-3 text-sm text-emerald-100">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="text-xs text-cyan-100/75">Scheme item link</div>
-              <div className="font-medium break-all">{initialSchemeItemId}</div>
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-100/80">
+                Approved Scheme
+              </div>
+              <div className="mt-1 font-medium">EduLife is opening the selected week and indicator.</div>
             </div>
-            <button type="button" className={btnOutline} disabled={creating} onClick={() => setAutoMode(false)}>
-              Use manual mode
+            <button type="button" className={btnOutline} disabled={creating} onClick={() => router.push("/teacher/schemes")}>
+              Choose another Scheme
             </button>
           </div>
-          <div className="mt-2 text-xs text-cyan-100/75">
-            Studio will not trust query strings like subject/week; only the Scheme item id.
+          <div className="mt-2 text-xs text-emerald-100/75">
+            The server rechecks the approved Scheme before the Lesson Note is created.
           </div>
         </div>
       ) : null}
