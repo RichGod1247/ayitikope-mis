@@ -6,6 +6,9 @@ import { StudentStatus } from "@prisma/client";
 import { normalizeGhPhoneE164 } from "@/lib/phoneNormGH";
 import StudentBulkImportCard from "@/components/admin/StudentBulkImportCard";
 import StudentEssentialAlertsCard from "@/components/admin/StudentEssentialAlertsCard";
+import StudentClassSelect from "@/components/admin/StudentClassSelect";
+import StudentListFilterBar from "@/components/admin/StudentListFilterBar";
+import { studentClassroomDisplayLabel } from "@/lib/studentClassroomPresentation";
 import {
   parseStudentDateOfBirth,
   studentDateOfBirthIso,
@@ -55,16 +58,8 @@ function inputClass() {
   return "mt-1 w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/25";
 }
 
-function compactInputClass() {
-  return "w-full rounded-lg border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/25";
-}
-
 function selectClass() {
   return "mt-1 w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/25";
-}
-
-function compactSelectClass() {
-  return "w-full rounded-lg border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/25";
 }
 
 function outlineBtnClass() {
@@ -290,7 +285,11 @@ export default async function AdminStudentsPage(props: { searchParams?: SP | Pro
   const archivedCount = counts.find((c) => c.status === StudentStatus.ARCHIVED)?._count._all ?? 0;
 
   const classLabel = (c: { name: string; arm: string | null; grade?: string | null }) =>
-    [c.name, c.grade, c.arm ? `Arm ${c.arm}` : null].filter(Boolean).join(" · ");
+    studentClassroomDisplayLabel({
+      name: c.name,
+      grade: c.grade ?? null,
+      arm: c.arm,
+    });
 
   const selectedClass = classes.find((c) => c.id === classroomIdFilter) ?? null;
   const selectedClassLabel = selectedClass
@@ -309,11 +308,6 @@ export default async function AdminStudentsPage(props: { searchParams?: SP | Pro
       classroomId: nextShow === "active" ? classroomIdFilter || null : null,
       section: section || null,
     });
-
-  const clearFiltersHref = buildHref("/admin/students", {
-    show: showArchived ? "archived" : "active",
-    section: "list",
-  });
 
   const studentListOpen = section === "list" || showArchived || Boolean(classroomIdFilter);
   const todayIso = studentDateOfBirthIso(new Date()) ?? undefined;
@@ -414,14 +408,12 @@ export default async function AdminStudentsPage(props: { searchParams?: SP | Pro
             </div>
             <div>
               <label className="text-xs font-medium text-[#C9CDD6]">Class (optional)</label>
-              <select name="classroomId" className={selectClass()}>
-                <option value="">— Unassigned —</option>
-                {classes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {classLabel({ name: c.name, arm: c.arm ?? null, grade: c.grade ?? null })}
-                  </option>
-                ))}
-              </select>
+              <StudentClassSelect
+                classes={classes}
+                name="classroomId"
+                emptyLabel="— Unassigned —"
+                showModeHint
+              />
             </div>
             <div>
               <label className="text-xs font-medium text-[#C9CDD6]">Guardian name</label>
@@ -457,44 +449,12 @@ export default async function AdminStudentsPage(props: { searchParams?: SP | Pro
       )}
 
       <div className={`${shellCardClass()} p-3`}>
-        <form className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto]" action="/admin/students" method="get">
-          <input type="hidden" name="show" value={showArchived ? "archived" : "active"} />
-          <input type="hidden" name="section" value="list" />
-
-          <label className="sr-only" htmlFor="student-search">Search students</label>
-          <input
-            id="student-search"
-            name="q"
-            defaultValue={q}
-            className={compactInputClass()}
-            placeholder={showArchived ? "Search archived students…" : "Search within selected class…"}
-          />
-
-          {!showArchived ? (
-            <>
-              <label className="sr-only" htmlFor="student-class-filter">Class</label>
-              <select
-                id="student-class-filter"
-                name="classroomId"
-                defaultValue={classroomIdFilter}
-                className={compactSelectClass()}
-                required
-              >
-                <option value="">Choose class…</option>
-                {classes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {classLabel({ name: c.name, arm: c.arm ?? null, grade: c.grade ?? null })}
-                  </option>
-                ))}
-              </select>
-            </>
-          ) : (
-            <div className="hidden sm:block" />
-          )}
-
-          <button className={primaryBtnClass()}>Find</button>
-          <a className={`${outlineBtnClass()} text-center`} href={clearFiltersHref}>Clear</a>
-        </form>
+        <StudentListFilterBar
+          classes={classes}
+          initialQuery={q}
+          initialClassroomId={classroomIdFilter}
+          showArchived={showArchived}
+        />
       </div>
 
       {!showArchived ? <StudentEssentialAlertsCard /> : null}
@@ -576,14 +536,13 @@ export default async function AdminStudentsPage(props: { searchParams?: SP | Pro
                         <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto_auto] gap-2 lg:w-[520px]">
                           <form action={updateStudentClass} className="contents">
                             <input type="hidden" name="studentId" value={s.id} />
-                            <select name="classroomId" defaultValue={s.classroomId ?? ""} className={compactSelectClass()}>
-                              <option value="">— Unassigned —</option>
-                              {classes.map((c) => (
-                                <option key={c.id} value={c.id}>
-                                  {classLabel({ name: c.name, arm: c.arm ?? null, grade: c.grade ?? null })}
-                                </option>
-                              ))}
-                            </select>
+                            <StudentClassSelect
+                              classes={classes}
+                              name="classroomId"
+                              defaultValue={s.classroomId ?? ""}
+                              compact
+                              emptyLabel="— Unassigned —"
+                            />
                             <button className={outlineBtnClass()}>Save</button>
                           </form>
                           <form action={archiveStudent}>

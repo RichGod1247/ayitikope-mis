@@ -3,6 +3,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import StudentClassSelect from "@/components/admin/StudentClassSelect";
 import {
   previewBulkStudentImport,
   type ClassroomLite,
@@ -104,17 +105,8 @@ function downloadTextFile(filename: string, content: string, mime = "text/csv;ch
   URL.revokeObjectURL(url);
 }
 
-function classLabelHuman(c: ClassroomLite) {
-  const parts = [c.name, c.grade, c.arm ? `Arm ${c.arm}` : null].filter(Boolean);
-  return parts.join(" · ");
-}
-
 function inputClass() {
   return "w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/25";
-}
-
-function selectClass() {
-  return "w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/25";
 }
 
 function outlineBtnClass() {
@@ -139,7 +131,7 @@ export default function StudentBulkImportCard({
   const [fileName, setFileName] = useState<string | null>(null);
   const [showPaste, setShowPaste] = useState(false);
 
-  const [defaultClassLabel, setDefaultClassLabel] = useState<string>("");
+  const [defaultClassroomId, setDefaultClassroomId] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [result, setResult] = useState<ImportResult>(null);
@@ -179,11 +171,18 @@ export default function StudentBulkImportCard({
   }
 
   function rowsWithDefaults(rows: ParsedBulkStudentRow[]): ParsedBulkStudentRow[] {
-    const dl = String(defaultClassLabel ?? "").trim();
-    if (!dl) return rows;
-    return rows.map((r) => ({
-      ...r,
-      classLabel: r.classLabel && String(r.classLabel).trim() ? r.classLabel : dl,
+    const selectedClass = classes.find((cls) => cls.id === defaultClassroomId) ?? null;
+    const defaultClassLabel = selectedClass
+      ? selectedClass.arm
+        ? `${selectedClass.name} ${selectedClass.arm}`
+        : selectedClass.name
+      : "";
+
+    if (!defaultClassLabel) return rows;
+
+    return rows.map((row) => ({
+      ...row,
+      classLabel: row.classLabel && String(row.classLabel).trim() ? row.classLabel : defaultClassLabel,
     }));
   }
 
@@ -263,7 +262,7 @@ export default function StudentBulkImportCard({
             setFileName(null);
             setResult(null);
             setServerError(null);
-            setDefaultClassLabel("");
+            setDefaultClassroomId("");
             if (fileRef.current) fileRef.current.value = "";
           }}
           className={outlineBtnClass()}
@@ -297,19 +296,14 @@ export default function StudentBulkImportCard({
           If some rows have an empty <b className="text-[#F7F4ED]">class</b> cell, we can apply one class to all of them during import.
         </p>
 
-        <select
-          value={defaultClassLabel}
-          onChange={(e) => setDefaultClassLabel(e.target.value)}
-          className={selectClass()}
+        <StudentClassSelect
+          classes={classes}
+          value={defaultClassroomId}
+          onValueChange={setDefaultClassroomId}
           disabled={submitting}
-        >
-          <option value="">— No default class —</option>
-          {classes.map((c) => (
-            <option key={c.id} value={c.arm ? `${c.name} ${c.arm}` : c.name}>
-              {classLabelHuman(c)}
-            </option>
-          ))}
-        </select>
+          emptyLabel="— No default class —"
+          showModeHint
+        />
       </div>
 
       <div className="rounded-xl border border-white/10 bg-[#07111F]/80 p-3">

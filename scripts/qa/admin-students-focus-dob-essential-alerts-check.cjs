@@ -40,6 +40,9 @@ const files = {
   createRoute: "src/app/api/admin/students/create/route.ts",
   idRoute: "src/app/api/admin/students/[id]/route.ts",
   listRoute: "src/app/api/admin/students/list/route.ts",
+  classSelect: "src/components/admin/StudentClassSelect.tsx",
+  filterBar: "src/components/admin/StudentListFilterBar.tsx",
+  classPresentation: "src/lib/studentClassroomPresentation.ts",
 };
 
 const source = Object.fromEntries(Object.entries(files).map(([key, value]) => [key, read(value)]));
@@ -65,16 +68,31 @@ const bulkIndex = source.page.indexOf("<span>Bulk Import</span>");
 assert(addIndex >= 0 && bulkIndex > addIndex, "Add Student must appear before Bulk Import");
 console.log("Add Student primary / first + native DOB input: GREEN");
 
-// Search and Student List are compact and class-first for active learners.
+// Search and Student List are compact, class-first and use explicit client navigation.
 contains(source.page, 'className={`${shellCardClass()} p-3`}', "Compact search card");
-contains(source.page, 'name="classroomId"', "Class filter");
-contains(source.page, "required", "Active class filter required");
+contains(source.page, "StudentListFilterBar", "Working Student List filter client");
 contains(source.page, "shouldLoadStudentList = showArchived || Boolean(classroomIdFilter)", "Class-first active query guard");
 contains(source.page, "Choose a class first", "Class-first Student List prompt");
 contains(source.page, "<span>Student List</span>", "Student List disclosure control");
 contains(source.page, "studentDateOfBirthLabel(dateOfBirth)", "DOB rendered beside learner identity");
 contains(source.page, "const dateOfBirth = s.dateOfBirth ?? s.dob;", "Canonical DOB with read-only legacy fallback");
-console.log("Compact search + class-first disclosed Student List: GREEN");
+contains(source.filterBar, "event.preventDefault()", "Search form client submit");
+contains(source.filterBar, 'params.set("section", "list")', "Search opens Student List");
+contains(source.filterBar, 'params.set("classroomId", nextClassroomId)', "Search preserves selected class");
+contains(source.filterBar, 'params.set("q", cleanQuery)', "Search query wiring");
+contains(source.filterBar, "router.push(`/admin/students?${params.toString()}`)", "Search navigation");
+contains(source.filterBar, 'setError("Choose a class first.")', "Class-first fail-closed UI");
+console.log("Compact working search + class-first disclosed Student List: GREEN");
+
+// Existing EduLife class UX pattern: single-stream first, multistream only on explicit checkbox.
+contains(source.page, "StudentClassSelect", "Reusable class selector wiring");
+contains(source.classSelect, "Show multistream", "Multistream checkbox label");
+contains(source.classSelect, "buildSingleStreamStudentClasses", "Single-stream default reducer");
+contains(source.classSelect, "showMultiStream", "Explicit multistream state");
+contains(source.classPresentation, "pickSingleStreamRepresentative", "Single-stream representative authority");
+contains(source.classPresentation, "same = name.toUpperCase() === grade.toUpperCase()", "Duplicate class label suppression");
+contains(source.classPresentation, "if (seen.has(bucket)) return true", "Multistream detection by duplicate stage bucket");
+console.log("Single-stream default + checkbox multistream class UX: GREEN");
 
 // Visible legacy SMS and health-consent toggles are removed from this page only.
 for (const marker of [
@@ -93,6 +111,7 @@ console.log("Legacy SMS + health-consent visible UI: REMOVED");
 contains(source.page, "<span>Bulk Import</span>", "Bulk Import disclosure");
 contains(source.page, "embedded", "Compact embedded Bulk Import");
 contains(source.bulkCard, "embedded?: boolean;", "Bulk Import embedded mode");
+contains(source.bulkCard, "StudentClassSelect", "Bulk Import single/multistream class selector");
 contains(source.bulkCard, "firstName,lastName,dateOfBirth,class,guardianName,guardianPhone,gender,note", "DOB CSV template header");
 contains(source.bulkCard, "DOB uses YYYY-MM-DD", "DOB CSV guidance");
 contains(source.studentImport, "dateOfBirth: string | null;", "Parsed CSV DOB field");
