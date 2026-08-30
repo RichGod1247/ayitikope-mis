@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import AssessmentInsightsPanel from "@/components/teacher/AssessmentInsightsPanel";
 import AssessmentBroadsheetPanel from "@/components/teacher/AssessmentBroadsheetPanel";
+import { subjectMatchesTeachingScope } from "@/lib/teachingSubjectScope";
 
 type ClassroomPick = {
   id: string;
@@ -303,12 +304,8 @@ function cleanStr(v: unknown) {
   return String(v ?? "").trim();
 }
 
-function normalizeSubjectToken(v: unknown) {
-  return cleanStr(v).toUpperCase().replace(/[^A-Z0-9]/g, "");
-}
-
-function sameSubject(a: unknown, b: unknown) {
-  return normalizeSubjectToken(a) === normalizeSubjectToken(b);
+function sameSubject(a: unknown, b: unknown, scopeLevel?: unknown) {
+  return subjectMatchesTeachingScope(a, b, scopeLevel);
 }
 
 function formatDateForInput(date?: string | null): string {
@@ -759,11 +756,20 @@ const typeOptions = useMemo(() => {
     [lessonDeliveries, lessonDeliveryId]
   );
 
+  const selectedClassroomSubjectScopeLevel = useMemo(() => {
+    const current =
+      classroom ??
+      classrooms.find((c) => c.id === classroomId) ??
+      null;
+
+    return cleanStr(current?.grade) || cleanStr(current?.name) || null;
+  }, [classroom, classrooms, classroomId]);
+
   const selectedLessonDeliverySubjectMismatch = useMemo(() => {
     if (!selectedLessonDelivery) return false;
     if (!cleanStr(subject)) return false;
-    return !sameSubject(selectedLessonDelivery.subject, subject);
-  }, [selectedLessonDelivery, subject]);
+    return !sameSubject(selectedLessonDelivery.subject, subject, selectedClassroomSubjectScopeLevel);
+  }, [selectedLessonDelivery, subject, selectedClassroomSubjectScopeLevel]);
 
   const canToggleMultiStream = useMemo(() => hasDuplicateLevelTokens(classrooms), [classrooms]);
 
@@ -1048,12 +1054,12 @@ setClassroomId(def);
         setSubjectOptions(nextSubjects);
 
         setSubject((prev) => {
-          if (urlSubject && nextSubjects.some((s) => sameSubject(s, urlSubject))) {
-            return nextSubjects.find((s) => sameSubject(s, urlSubject)) || urlSubject;
+          if (urlSubject && nextSubjects.some((s) => sameSubject(s, urlSubject, selectedClassroomSubjectScopeLevel))) {
+            return nextSubjects.find((s) => sameSubject(s, urlSubject, selectedClassroomSubjectScopeLevel)) || urlSubject;
           }
 
-          if (cleanStr(prev) && nextSubjects.some((s) => sameSubject(s, prev))) {
-            return nextSubjects.find((s) => sameSubject(s, prev)) || prev;
+          if (cleanStr(prev) && nextSubjects.some((s) => sameSubject(s, prev, selectedClassroomSubjectScopeLevel))) {
+            return nextSubjects.find((s) => sameSubject(s, prev, selectedClassroomSubjectScopeLevel)) || prev;
           }
 
           return nextSubjects[0] || "";
@@ -1067,7 +1073,7 @@ setClassroomId(def);
     };
 
     loadSubjects();
-  }, [classroomId, urlSubject, shouldLoadSubjects]);
+  }, [classroomId, urlSubject, shouldLoadSubjects, selectedClassroomSubjectScopeLevel]);
 
   useEffect(() => {
     const loadLessonDeliveries = async () => {
@@ -1108,7 +1114,7 @@ setClassroomId(def);
 
             if (cleanStr(linked.subject)) {
               setSubject((prev) => {
-                if (cleanStr(prev) && sameSubject(prev, linked.subject)) return prev;
+                if (cleanStr(prev) && sameSubject(prev, linked.subject, selectedClassroomSubjectScopeLevel)) return prev;
                 return linked.subject;
               });
             }
@@ -1126,7 +1132,7 @@ setClassroomId(def);
     };
 
     loadLessonDeliveries();
-  }, [classroomId, term, academicYear, urlCurriculumUnitId, urlLessonDeliveryId, shouldLoadLessonDeliveries]);
+  }, [classroomId, term, academicYear, urlCurriculumUnitId, urlLessonDeliveryId, shouldLoadLessonDeliveries, selectedClassroomSubjectScopeLevel]);
 
 useEffect(() => {
   const loadSummary = async () => {
@@ -1237,17 +1243,17 @@ useEffect(() => {
   if (selectedItem) return;
 
   setSubject((prev) => {
-    if (urlSubject && subjectOptions.some((s) => sameSubject(s, urlSubject))) {
-      return subjectOptions.find((s) => sameSubject(s, urlSubject)) || urlSubject;
+    if (urlSubject && subjectOptions.some((s) => sameSubject(s, urlSubject, selectedClassroomSubjectScopeLevel))) {
+      return subjectOptions.find((s) => sameSubject(s, urlSubject, selectedClassroomSubjectScopeLevel)) || urlSubject;
     }
 
-    if (cleanStr(prev) && subjectOptions.some((s) => sameSubject(s, prev))) {
-      return subjectOptions.find((s) => sameSubject(s, prev)) || prev;
+    if (cleanStr(prev) && subjectOptions.some((s) => sameSubject(s, prev, selectedClassroomSubjectScopeLevel))) {
+      return subjectOptions.find((s) => sameSubject(s, prev, selectedClassroomSubjectScopeLevel)) || prev;
     }
 
     return subjectOptions[0] || prev || "";
   });
-}, [selectedItem, subjectOptions, urlSubject]);
+}, [selectedItem, subjectOptions, urlSubject, selectedClassroomSubjectScopeLevel]);
 
 
 async function handleSelectItem(itemId: string) {
@@ -1293,7 +1299,7 @@ function handleCreateEvidenceItemFromBroadsheet(args: CreateEvidenceItemArgs) {
   setSelectedItemId(null);
 
   const resolvedSubject =
-    subjectOptions.find((s) => sameSubject(s, args.subject)) ||
+    subjectOptions.find((s) => sameSubject(s, args.subject, selectedClassroomSubjectScopeLevel)) ||
     args.subject ||
     urlSubject ||
     subjectOptions[0] ||
@@ -2089,7 +2095,7 @@ setSavingScoresState("saved");
 
   setCurriculumUnitId(nextDelivery?.curriculumUnitId ?? "");
 
-  if (nextDelivery?.subject && !sameSubject(subject, nextDelivery.subject)) {
+  if (nextDelivery?.subject && !sameSubject(subject, nextDelivery.subject, selectedClassroomSubjectScopeLevel)) {
     setSubject(nextDelivery.subject);
   }
 
