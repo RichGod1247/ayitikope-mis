@@ -55,21 +55,24 @@ assert(
 
 assert(
   client.includes(
-    '<div className={assessmentEntryFocus ? "hidden" : shellCard + " px-4 py-4"}>'
-  ),
-  "General class/term assessment shell must hide during delivered-lesson assessment entry."
+    "const guidedTaskFocus = assessmentEntryFocus || postScoreSummaryOpen;"
+  ) &&
+    client.includes(
+      '<div className={guidedTaskFocus ? "hidden" : shellCard + " px-4 py-4"}>'
+    ),
+  "General class/term assessment shell must hide during delivered-lesson assessment entry and post-score Work Output focus."
 );
 
 assert(
   client.includes(
-    '<div className={assessmentEntryFocus ? "hidden" : "rounded-[28px]'
+    '<div className={guidedTaskFocus ? "hidden" : "rounded-[28px]'
   ),
-  "Journey hub must hide while the teacher is completing the assessment-entry action."
+  "Journey hub must hide while the teacher is completing either assessment entry or post-score Work Output."
 );
 
 assert(
-  client.includes("{!assessmentEntryFocus && broadsheetNotice ? ("),
-  "Broadsheet notices must not compete with focused assessment entry."
+  client.includes("{!guidedTaskFocus && broadsheetNotice ? ("),
+  "Broadsheet notices must not compete with focused assessment entry or Work Output."
 );
 
 assert(
@@ -84,12 +87,12 @@ assert(
 
 assert(
   client.includes(
-    '<div className={assessmentEntryFocus ? "hidden" : "md:hidden"}>'
+    '<div className={guidedTaskFocus ? "hidden" : "md:hidden"}>'
   ) &&
     client.includes(
-      '<div className={assessmentEntryFocus ? "hidden" : "hidden md:grid md:grid-cols-5 md:gap-2"}>'
+      '<div className={guidedTaskFocus ? "hidden" : "hidden md:grid md:grid-cols-5 md:gap-2"}>'
     ),
-  "Mobile and desktop assessment tabs must hide in focused entry."
+  "Mobile and desktop assessment tabs must hide in focused entry and Work Output."
 );
 
 assert(
@@ -115,8 +118,9 @@ assert(
 );
 
 assert(
-  client.includes("More assessment tools"),
-  "Normal assessment entry must preserve the advanced tools outside focus mode."
+  client.includes("{!guidedTaskFocus ? (") &&
+    client.includes("More assessment tools"),
+  "Normal assessment entry must preserve advanced tools outside guided focus while hiding them during Work Output."
 );
 
 assert(
@@ -128,7 +132,7 @@ transpile(clientPath, true);
 
 console.log("ASSESSMENT ENTRY FOCUS MODE CONTRACT: GREEN");
 console.log("- delivery deep links open the Assessment item task as the only primary workspace");
-console.log("- general shell, journey hub, advanced launchers and tabs are hidden during entry");
+console.log("- general shell, journey hub, advanced launchers and tabs are hidden during entry and Work Output focus");
 console.log("- duplicate lesson-note-linked copy is removed after delivery context resolves");
 console.log("- item save still advances directly to Scores");
 console.log("- normal assessment entry keeps all existing advanced tools");

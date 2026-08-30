@@ -721,6 +721,9 @@ export default function TeacherAssessmentClient() {
   const urlLessonDeliveryId = cleanStr(searchParams.get("lessonDeliveryId"));
   const urlCurriculumUnitId = cleanStr(searchParams.get("curriculumUnitId"));
   const urlLessonNoteId = cleanStr(searchParams.get("lessonNoteId"));
+  const urlAssessmentItemId = cleanStr(searchParams.get("assessmentItemId"));
+  const urlView = cleanStr(searchParams.get("view")).toLowerCase();
+  const urlWorkOutputRequested = urlView === "work-output";
 
   const hasLessonDeliveryContext = !!urlLessonDeliveryId;
   const assessmentEntryFocus = hasLessonDeliveryContext;
@@ -780,6 +783,8 @@ export default function TeacherAssessmentClient() {
     useState(false);
   const [workOutputAfterScoresError, setWorkOutputAfterScoresError] =
     useState<string | null>(null);
+
+  const guidedTaskFocus = assessmentEntryFocus || postScoreSummaryOpen;
 
   const [classAverage, setClassAverage] = useState<ClassAverageOk | null>(null);
   const [remarkSummary, setRemarkSummary] = useState<RemarkSummaryOk | null>(null);
@@ -923,6 +928,41 @@ function markBroadsheetDirty(message: string) {
   setBroadsheetNotice(message);
 }
 
+function replaceAssessmentJourneyUrl(
+  item: AssessmentItem,
+  view: "scores" | "work-output"
+) {
+  if (typeof window === "undefined") return;
+
+  const params = new URLSearchParams(window.location.search);
+  params.set("classroomId", classroomId);
+  params.set("term", term);
+  params.set("academicYear", academicYear);
+  params.set("subject", item.subject);
+  params.set("assessmentItemId", item.id);
+
+  if (item.lessonDeliveryId) {
+    params.set("lessonDeliveryId", item.lessonDeliveryId);
+  }
+
+  if (item.curriculumUnitId) {
+    params.set("curriculumUnitId", item.curriculumUnitId);
+  }
+
+  if (view === "work-output") {
+    params.set("view", "work-output");
+  } else {
+    params.delete("view");
+  }
+
+  const query = params.toString();
+  window.history.replaceState(
+    window.history.state,
+    "",
+    query ? `${window.location.pathname}?${query}` : window.location.pathname
+  );
+}
+
 async function loadWorkOutputAfterScores(item: AssessmentItem) {
   if (!classroomId || !item.lessonDeliveryId) {
     setWorkOutputAfterScores(null);
@@ -979,7 +1019,7 @@ async function loadWorkOutputAfterScores(item: AssessmentItem) {
 
     if (!itemId || currentStudents.length === 0) {
       setScoreDraft(base);
-      return;
+      return 0;
     }
 
     try {
@@ -993,7 +1033,7 @@ async function loadWorkOutputAfterScores(item: AssessmentItem) {
 
       if (!res.ok || !data?.ok || !Array.isArray(data.scores)) {
         setScoreDraft(base);
-        return;
+        return 0;
       }
 
       const withSaved = { ...base };
@@ -1006,8 +1046,10 @@ async function loadWorkOutputAfterScores(item: AssessmentItem) {
         }
       }
       setScoreDraft(withSaved);
+      return data.scores.length;
     } catch {
       setScoreDraft(base);
+      return 0;
     }
   }
 
@@ -1125,11 +1167,38 @@ setClassroomId(def);
         const assessmentData = Array.isArray(data.assessments) ? data.assessments : [];
 
         if (hasLessonDeliveryContext) {
-          setSelectedItemId(null);
+          const deepLinkedItem =
+            urlAssessmentItemId
+              ? assessmentData.find(
+                  (item) =>
+                    item.id === urlAssessmentItemId &&
+                    item.lessonDeliveryId === urlLessonDeliveryId
+                ) ?? null
+              : null;
+
           setLessonDeliveryId(urlLessonDeliveryId);
           setCurriculumUnitId(urlCurriculumUnitId);
+
+          if (deepLinkedItem) {
+            setSelectedItemId(deepLinkedItem.id);
+            await loadScoresForItem(deepLinkedItem.id, studentData);
+            setItemFormOpen(false);
+            setTab("scores");
+
+            if (urlWorkOutputRequested) {
+              setPostScoreSummaryOpen(true);
+              void loadWorkOutputAfterScores(deepLinkedItem);
+            } else {
+              setPostScoreSummaryOpen(false);
+            }
+
+            return;
+          }
+
+          setSelectedItemId(null);
           setScoreDraft(buildBlankScoreGrid(studentData));
           setItemFormOpen(true);
+          setPostScoreSummaryOpen(false);
           setTab("items");
           return;
         }
@@ -1160,8 +1229,10 @@ setClassroomId(def);
     term,
     academicYear,
     hasLessonDeliveryContext,
+    urlAssessmentItemId,
     urlCurriculumUnitId,
     urlLessonDeliveryId,
+    urlWorkOutputRequested,
   ]);
 
   useEffect(() => {
@@ -1598,6 +1669,7 @@ const body = {
 setSelectedItemId(item.id);
 setLessonDeliveryId(item.lessonDeliveryId ?? "");
 setCurriculumUnitId(item.curriculumUnitId ?? "");
+replaceAssessmentJourneyUrl(item, "scores");
 await loadScoresForItem(item.id, students);
 markBroadsheetDirty("Assessment item saved. Broadsheet evidence can now be refreshed.");
 
@@ -1658,6 +1730,7 @@ setSavingScoresState("saved");
 setPostScoreSummaryOpen(!!selectedItem.lessonDeliveryId);
 
 if (selectedItem.lessonDeliveryId) {
+  replaceAssessmentJourneyUrl(selectedItem, "work-output");
   void loadWorkOutputAfterScores(selectedItem);
 }
 
@@ -1771,10 +1844,11 @@ if (selectedItem.lessonDeliveryId) {
 
     if (pipeline.counts.linkedAssessmentsCount > 0) {
       return {
-        kind: "REVIEW" as const,
-        eyebrow: "Teaching evidence recorded",
-        title: "Review the Broadsheet before you move on.",
-        detail: "EduLife will show the strongest legitimate score evidence and any remaining gaps.",
+        kind: "WORK_OUTPUT" as const,
+        eyebrow: "Practice evidence recorded",
+        title: "Review your Work Output before you move on.",
+        detail: "See how much lesson-linked practice has been recorded, then continue to the Broadsheet.",
+        itemId: linkedTeachingItem?.id ?? null,
       };
     }
 
@@ -1845,7 +1919,7 @@ if (selectedItem.lessonDeliveryId) {
 
   return (
     <div className="space-y-4 pb-24 md:pb-6">
-      <div className={assessmentEntryFocus ? "hidden" : shellCard + " px-4 py-4"}>
+      <div className={guidedTaskFocus ? "hidden" : shellCard + " px-4 py-4"}>
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div className="space-y-1">
             <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
@@ -1953,7 +2027,7 @@ if (selectedItem.lessonDeliveryId) {
       </div>
 
 
-      <div className={assessmentEntryFocus ? "hidden" : "rounded-[28px] border border-emerald-300/20 bg-[linear-gradient(135deg,rgba(16,185,129,0.16),rgba(255,255,255,0.04))] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.16)]"}>
+      <div className={guidedTaskFocus ? "hidden" : "rounded-[28px] border border-emerald-300/20 bg-[linear-gradient(135deg,rgba(16,185,129,0.16),rgba(255,255,255,0.04))] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.16)]"}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-200">
@@ -1991,16 +2065,26 @@ if (selectedItem.lessonDeliveryId) {
               >
                 Finish scores
               </button>
-            ) : nextJourneyAction.kind === "REVIEW" ? (
+            ) : nextJourneyAction.kind === "WORK_OUTPUT" ? (
               <button
                 type="button"
                 onClick={() => {
                   setShowAssessmentTools(true);
-                  setTab("broadsheet");
+
+                  if (linkedTeachingItem) {
+                    setSelectedItemId(linkedTeachingItem.id);
+                    setItemFormOpen(false);
+                    setPostScoreSummaryOpen(true);
+                    replaceAssessmentJourneyUrl(linkedTeachingItem, "work-output");
+                    void loadScoresForItem(linkedTeachingItem.id, students);
+                    void loadWorkOutputAfterScores(linkedTeachingItem);
+                    setTab("scores");
+                  }
                 }}
+                disabled={!linkedTeachingItem}
                 className={goldButton + " justify-center"}
               >
-                Review Broadsheet
+                Review Work Output
               </button>
             ) : "href" in nextJourneyAction && nextJourneyAction.href ? (
               <Link href={nextJourneyAction.href} className={goldButton + " justify-center"}>
@@ -2032,7 +2116,7 @@ if (selectedItem.lessonDeliveryId) {
             ["Plan", pipeline?.counts.approvedNotesCount ?? 0, nextJourneyAction.kind === "PLAN"],
             ["Deliver", pipeline?.counts.deliveredLessonsCount ?? 0, nextJourneyAction.kind === "DELIVER"],
             ["Assess", pipeline?.counts.linkedAssessmentsCount ?? 0, nextJourneyAction.kind === "ASSESS"],
-            ["Scores", pipeline?.counts.scoredAssessmentsCount ?? 0, nextJourneyAction.kind === "SCORES" || nextJourneyAction.kind === "REVIEW"],
+            ["Scores", pipeline?.counts.scoredAssessmentsCount ?? 0, nextJourneyAction.kind === "SCORES" || nextJourneyAction.kind === "WORK_OUTPUT"],
           ].map(([label, value, active]) => (
             <div
               key={String(label)}
@@ -2069,7 +2153,7 @@ if (selectedItem.lessonDeliveryId) {
         </div>
       ) : null}
 
-{!assessmentEntryFocus && broadsheetNotice ? (
+{!guidedTaskFocus && broadsheetNotice ? (
   <div className="flex flex-col gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-3 text-[12px] text-emerald-100 sm:flex-row sm:items-center sm:justify-between">
     <div>{broadsheetNotice}</div>
 
@@ -2120,7 +2204,7 @@ if (selectedItem.lessonDeliveryId) {
       )}
 
       <div className={showAssessmentTools ? "space-y-4" : "hidden"}>
-        {!assessmentEntryFocus ? (
+        {!guidedTaskFocus ? (
           <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-3">
             <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F98A8]">
               More assessment tools
@@ -2146,7 +2230,7 @@ if (selectedItem.lessonDeliveryId) {
           </div>
         ) : null}
 
-      <div className={assessmentEntryFocus ? "hidden" : "md:hidden"}>
+      <div className={guidedTaskFocus ? "hidden" : "md:hidden"}>
         <div className="grid grid-cols-5 gap-2">
           <TabButton
             active={tab === "scores"}
@@ -2181,7 +2265,7 @@ if (selectedItem.lessonDeliveryId) {
         </div>
       </div>
 
-            <div className={assessmentEntryFocus ? "hidden" : "hidden md:grid md:grid-cols-5 md:gap-2"}>
+            <div className={guidedTaskFocus ? "hidden" : "hidden md:grid md:grid-cols-5 md:gap-2"}>
         <TabButton
           active={tab === "scores"}
           label="Scores"

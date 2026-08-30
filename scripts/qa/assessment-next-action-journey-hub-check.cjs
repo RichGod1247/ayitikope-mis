@@ -94,8 +94,8 @@ assert(
     client.includes('title: "Record the lesson you have taught."') &&
     client.includes('title: "Enter assessment for the lesson you already delivered."') &&
     client.includes('title: "Finish learner scores for the assessment already recorded."') &&
-    client.includes('title: "Review the Broadsheet before you move on."'),
-  "One-next-action journey states must all be present."
+    client.includes('title: "Review your Work Output before you move on."'),
+  "One-next-action journey states must all be present, with Work Output after scored teaching evidence."
 );
 
 assert(
@@ -126,6 +126,20 @@ assert(
 assert(
   client.includes("Counts come from saved teaching evidence, not a separate checklist."),
   "Hub must explain that its state is derived, not a duplicate lifecycle."
+);
+
+assert(
+  client.includes('kind: "WORK_OUTPUT" as const') &&
+    client.includes("Review Work Output") &&
+    client.includes("View Broadsheet") &&
+    client.includes("Back to Work Output"),
+  "Scored teaching evidence must lead to Work Output before the existing Broadsheet handoff."
+);
+
+assert(
+  !client.includes('kind: "REVIEW" as const') &&
+    !client.includes('title: "Review the Broadsheet before you move on."'),
+  "The normal scored-evidence journey must not skip Work Output and jump directly to Broadsheet."
 );
 
 assert(
@@ -164,6 +178,6 @@ console.log("ASSESSMENT NEXT-ACTION JOURNEY HUB CONTRACT: GREEN");
 console.log("- one lightweight persisted-evidence journey read is available on normal page entry");
 console.log("- Pipeline class-summary calls remain lazy");
 console.log("- advanced tools are secondary and preserved");
-console.log("- next action prioritizes unfinished recorded work");
+console.log("- next action prioritizes unfinished recorded work and Work Output before Broadsheet");
 console.log("- no duplicate lifecycle or completion overclaim is introduced");
 console.log("- no polling, schema change or database write is introduced");
