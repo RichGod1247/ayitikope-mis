@@ -217,6 +217,85 @@ type PipelineAnalyticsOk = {
 type PipelineAnalyticsErr = { ok: false; error: string };
 type PipelineAnalyticsResponse = PipelineAnalyticsOk | PipelineAnalyticsErr;
 
+type WorkOutputTypeCount = {
+  key: string;
+  label: string;
+  count: number;
+  scoredItemCount: number;
+  scoredEntries: number;
+};
+
+type WorkOutputProgressPoint = {
+  itemId: string;
+  title: string;
+  type: string;
+  typeLabel: string;
+  date: string | null;
+  score: number;
+  maxScore: number;
+  percent: number | null;
+};
+
+type WorkOutputLearnerProgression = {
+  studentId: string;
+  name: string;
+  points: WorkOutputProgressPoint[];
+  firstPercent: number | null;
+  latestPercent: number | null;
+  changePercent: number | null;
+  trend: "IMPROVED" | "UNCHANGED" | "DECLINED" | "INSUFFICIENT_DATA";
+};
+
+type WorkOutputCountSummary = {
+  itemCount: number;
+  scoredItemCount: number;
+  scoredEntries: number;
+  typeCounts: WorkOutputTypeCount[];
+};
+
+type WorkOutputLessonSummary = WorkOutputCountSummary & {
+  lessonDeliveryId: string;
+  lessonNoteId: string | null;
+  lessonTitle: string | null;
+  subject: string;
+  dateTaught: string;
+  items: Array<{
+    id: string;
+    title: string;
+    type: string;
+    typeLabel: string;
+    maxScore: number;
+    date: string | null;
+    scoresCount: number;
+    classAveragePercent: number | null;
+  }>;
+  progression: {
+    assessmentCount: number;
+    learnersTracked: number;
+    learnersWithRepeatedPractice: number;
+    averageFirstPercent: number | null;
+    averageLatestPercent: number | null;
+    averageChangePercent: number | null;
+    learners: WorkOutputLearnerProgression[];
+  };
+};
+
+type TeacherWorkOutputOk = {
+  ok: true;
+  workOutput: {
+    term: WorkOutputCountSummary;
+    lesson: WorkOutputLessonSummary | null;
+    legacyUnlinked: WorkOutputCountSummary;
+  };
+};
+
+type TeacherWorkOutputErr = {
+  ok: false;
+  error: string;
+};
+
+type TeacherWorkOutputResponse = TeacherWorkOutputOk | TeacherWorkOutputErr;
+
 type SaveState = "idle" | "saving" | "saved" | "error";
 
 type CreateEvidenceItemArgs = {
@@ -694,6 +773,13 @@ export default function TeacherAssessmentClient() {
   const [savingItemState, setSavingItemState] = useState<SaveState>("idle");
   const [savingScoresState, setSavingScoresState] = useState<SaveState>("idle");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [postScoreSummaryOpen, setPostScoreSummaryOpen] = useState(false);
+  const [workOutputAfterScores, setWorkOutputAfterScores] =
+    useState<TeacherWorkOutputOk | null>(null);
+  const [workOutputAfterScoresLoading, setWorkOutputAfterScoresLoading] =
+    useState(false);
+  const [workOutputAfterScoresError, setWorkOutputAfterScoresError] =
+    useState<string | null>(null);
 
   const [classAverage, setClassAverage] = useState<ClassAverageOk | null>(null);
   const [remarkSummary, setRemarkSummary] = useState<RemarkSummaryOk | null>(null);
@@ -835,6 +921,57 @@ const lessonNotesPageHref = useMemo(() => {
 function markBroadsheetDirty(message: string) {
   setBroadsheetRefreshKey((v) => v + 1);
   setBroadsheetNotice(message);
+}
+
+async function loadWorkOutputAfterScores(item: AssessmentItem) {
+  if (!classroomId || !item.lessonDeliveryId) {
+    setWorkOutputAfterScores(null);
+    setWorkOutputAfterScoresError(null);
+    setWorkOutputAfterScoresLoading(false);
+    return;
+  }
+
+  setWorkOutputAfterScoresLoading(true);
+  setWorkOutputAfterScoresError(null);
+
+  try {
+    const params = new URLSearchParams({
+      classroomId,
+      term,
+      academicYear,
+      subject: item.subject,
+      lessonDeliveryId: item.lessonDeliveryId,
+    });
+
+    const res = await fetch(
+      `/api/teacher/assessment/work-output?${params.toString()}`,
+      { cache: "no-store" }
+    );
+
+    const raw = await res.json().catch(() => null);
+    const json = safeJson<TeacherWorkOutputResponse>(raw);
+
+    if (!json) {
+      throw new Error(`Invalid work-output response (HTTP ${res.status}).`);
+    }
+
+    if (!res.ok || !json.ok) {
+      throw new Error(
+        "error" in json
+          ? json.error
+          : `Failed to load Work Output (HTTP ${res.status}).`
+      );
+    }
+
+    setWorkOutputAfterScores(json);
+  } catch (error: unknown) {
+    setWorkOutputAfterScores(null);
+    setWorkOutputAfterScoresError(
+      error instanceof Error ? error.message : "Failed to load Work Output."
+    );
+  } finally {
+    setWorkOutputAfterScoresLoading(false);
+  }
 }
 
   async function loadScoresForItem(itemId: string, currentStudents: Student[]) {
@@ -1262,6 +1399,9 @@ useEffect(() => {
 
 async function handleSelectItem(itemId: string) {
     setActionError(null);
+    setPostScoreSummaryOpen(false);
+    setWorkOutputAfterScores(null);
+    setWorkOutputAfterScoresError(null);
     setShowAssessmentTools(true);
     setSelectedItemId(itemId);
     setItemFormOpen(false);
@@ -1271,6 +1411,9 @@ async function handleSelectItem(itemId: string) {
 
   function handleNewItem() {
     setActionError(null);
+    setPostScoreSummaryOpen(false);
+    setWorkOutputAfterScores(null);
+    setWorkOutputAfterScoresError(null);
     setSelectedItemId(null);
 
     const linkedDelivery = urlLessonDeliveryId
@@ -1460,6 +1603,9 @@ markBroadsheetDirty("Assessment item saved. Broadsheet evidence can now be refre
 
       setSavingItemState("saved");
       setTimeout(() => setSavingItemState("idle"), 900);
+      setPostScoreSummaryOpen(false);
+      setWorkOutputAfterScores(null);
+      setWorkOutputAfterScoresError(null);
 
       setTab("scores");
       setItemFormOpen(false);
@@ -1509,6 +1655,12 @@ await loadScoresForItem(selectedItem.id, students);
 markBroadsheetDirty("Scores saved. Broadsheet readiness can now be refreshed.");
 
 setSavingScoresState("saved");
+setPostScoreSummaryOpen(!!selectedItem.lessonDeliveryId);
+
+if (selectedItem.lessonDeliveryId) {
+  void loadWorkOutputAfterScores(selectedItem);
+}
+
       setTimeout(() => setSavingScoresState("idle"), 900);
     } catch {
       setActionError("Unexpected error saving scores.");
@@ -1685,6 +1837,11 @@ setSavingScoresState("saved");
   }
 
   const selectedChip = selectedItem ? itemStateChip(selectedItem) : null;
+  const postScoreTermOutput = workOutputAfterScores?.workOutput.term ?? null;
+  const postScoreLessonOutput = workOutputAfterScores?.workOutput.lesson ?? null;
+  const postScoreLegacyOutput = workOutputAfterScores?.workOutput.legacyUnlinked ?? null;
+  const postScoreTypeCounts =
+    postScoreTermOutput?.typeCounts.filter((bucket) => bucket.count > 0) ?? [];
 
   return (
     <div className="space-y-4 pb-24 md:pb-6">
@@ -2058,15 +2215,28 @@ setSavingScoresState("saved");
       </div>
 
             {tab === "broadsheet" ? (
-<AssessmentBroadsheetPanel
-  classroomId={classroomId}
-  term={term}
-  academicYear={academicYear}
-  subjectOptions={subjectOptions}
-  currentSubject={subject}
-  refreshKey={broadsheetRefreshKey}
-  onCreateEvidenceItem={handleCreateEvidenceItemFromBroadsheet}
-/>
+        <>
+          {postScoreSummaryOpen && selectedItem?.lessonDeliveryId ? (
+            <div className="mb-3">
+              <button
+                type="button"
+                className={darkButton}
+                onClick={() => setTab("scores")}
+              >
+                Back to Work Output
+              </button>
+            </div>
+          ) : null}
+          <AssessmentBroadsheetPanel
+            classroomId={classroomId}
+            term={term}
+            academicYear={academicYear}
+            subjectOptions={subjectOptions}
+            currentSubject={subject}
+            refreshKey={broadsheetRefreshKey}
+            onCreateEvidenceItem={handleCreateEvidenceItemFromBroadsheet}
+          />
+        </>
       ) : null}
 
       <div className={tab === "broadsheet" ? "hidden" : "grid gap-4"}>
@@ -2578,10 +2748,20 @@ setSavingScoresState("saved");
 
           <div className={tab !== "scores" ? "hidden" : ""}>
             <SectionCard
-              title="Learner scores"
-              subtitle={selectedItem ? "Enter score for each learner, then save." : "Select an item first."}
+              title={postScoreSummaryOpen ? "Work Output" : "Learner scores"}
+              subtitle={
+                postScoreSummaryOpen
+                  ? "Practice recorded after this lesson, with the next action ready."
+                  : selectedItem
+                    ? "Enter score for each learner, then save."
+                    : "Select an item first."
+              }
               right={
-                selectedItem ? (
+                postScoreSummaryOpen ? (
+                  <span className="inline-flex rounded-full border border-emerald-300/20 bg-emerald-400/12 px-3 py-1 text-[11px] font-semibold text-emerald-100">
+                    Scores saved
+                  </span>
+                ) : selectedItem ? (
                   <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold ${selectedChip?.className ?? ""}`}>
                     {selectedChip?.label}
                   </span>
@@ -2591,6 +2771,185 @@ setSavingScoresState("saved");
               {!selectedItem ? (
                 <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.04] px-4 py-6 text-center text-[12px] text-[#C9CDD6]">
                   Select an item (or create one), then record scores.
+                </div>
+              ) : postScoreSummaryOpen ? (
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-3">
+                    <div className="text-sm font-semibold text-emerald-100">
+                      Scores saved. Work Output updated.
+                    </div>
+                    <div className="mt-1 text-[11px] leading-5 text-emerald-50/80">
+                      Work Output tracks practice after lessons so you can see whether learners are getting enough opportunities to improve. It is not a ranking.
+                    </div>
+                  </div>
+
+                  {workOutputAfterScoresLoading ? (
+                    <div className={panelCard + " px-4 py-4 text-[12px] text-[#C9CDD6]"}>
+                      Loading Work Output…
+                    </div>
+                  ) : workOutputAfterScoresError ? (
+                    <div className="rounded-2xl border border-amber-300/20 bg-amber-400/12 px-4 py-3 text-[12px] text-amber-100">
+                      <div>{workOutputAfterScoresError}</div>
+                      <button
+                        type="button"
+                        className={darkButton + " mt-3"}
+                        onClick={() => void loadWorkOutputAfterScores(selectedItem)}
+                      >
+                        Retry Work Output
+                      </button>
+                    </div>
+                  ) : postScoreTermOutput ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className={panelCard + " p-4"}>
+                          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F98A8]">
+                            This lesson
+                          </div>
+                          <div className="mt-1 text-3xl font-semibold text-[#F7F4ED]">
+                            {postScoreLessonOutput?.itemCount ?? 0}
+                          </div>
+                          <div className="mt-1 text-[11px] text-[#C9CDD6]">
+                            assessment{(postScoreLessonOutput?.itemCount ?? 0) === 1 ? "" : "s"} linked to this delivered lesson
+                          </div>
+                        </div>
+
+                        <div className={panelCard + " p-4"}>
+                          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F98A8]">
+                            This term
+                          </div>
+                          <div className="mt-1 text-3xl font-semibold text-[#F7F4ED]">
+                            {postScoreTermOutput.itemCount}
+                          </div>
+                          <div className="mt-1 text-[11px] text-[#C9CDD6]">
+                            lesson-linked assessment{postScoreTermOutput.itemCount === 1 ? "" : "s"} in this subject
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className={panelCard + " p-4"}>
+                        <div className="text-[11px] font-semibold text-[#F7F4ED]">
+                          Term practice by type
+                        </div>
+                        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                          {postScoreTypeCounts.length > 0 ? (
+                            postScoreTypeCounts.map((bucket) => (
+                              <div
+                                key={bucket.key}
+                                className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3"
+                              >
+                                <div className="text-[10px] text-[#8F98A8]">{bucket.label}</div>
+                                <div className="mt-1 text-xl font-semibold text-[#F7F4ED]">
+                                  {bucket.count}
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="col-span-2 text-[11px] text-[#8F98A8] sm:col-span-3">
+                              No lesson-linked practice recorded yet.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {postScoreLessonOutput ? (
+                        <div className={panelCard + " p-4"}>
+                          <div className="text-[11px] font-semibold text-[#F7F4ED]">
+                            Learner progress for this lesson
+                          </div>
+                          <div className="mt-1 text-[11px] leading-5 text-[#C9CDD6]">
+                            {postScoreLessonOutput.lessonTitle || postScoreLessonOutput.subject}
+                          </div>
+
+                          {postScoreLessonOutput.progression.assessmentCount < 2 ? (
+                            <div className="mt-3 rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-3 py-3 text-[11px] leading-5 text-cyan-100">
+                              One practice assessment is recorded for this lesson. Progress tracking becomes meaningful after another assessment is given and scored.
+                            </div>
+                          ) : (
+                            <>
+                              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3">
+                                  <div className="text-[10px] text-[#8F98A8]">Repeated practice</div>
+                                  <div className="mt-1 text-lg font-semibold text-[#F7F4ED]">
+                                    {postScoreLessonOutput.progression.learnersWithRepeatedPractice}
+                                  </div>
+                                  <div className="text-[10px] text-[#8F98A8]">learners with 2+ scores</div>
+                                </div>
+
+                                <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3">
+                                  <div className="text-[10px] text-[#8F98A8]">First practice avg</div>
+                                  <div className="mt-1 text-lg font-semibold text-[#F7F4ED]">
+                                    {formatPercent(postScoreLessonOutput.progression.averageFirstPercent)}
+                                  </div>
+                                </div>
+
+                                <div className="col-span-2 rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-3 sm:col-span-1">
+                                  <div className="text-[10px] text-emerald-100/70">Latest practice avg</div>
+                                  <div className="mt-1 text-lg font-semibold text-emerald-100">
+                                    {formatPercent(postScoreLessonOutput.progression.averageLatestPercent)}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <details className="mt-3 rounded-xl border border-white/10 bg-white/[0.03]">
+                                <summary className="cursor-pointer px-3 py-3 text-[11px] font-semibold text-[#F7F4ED]">
+                                  View learner-by-learner progression
+                                </summary>
+                                <div className="space-y-2 border-t border-white/10 px-3 py-3">
+                                  {postScoreLessonOutput.progression.learners
+                                    .filter((learner) => learner.points.length > 0)
+                                    .map((learner) => (
+                                      <div
+                                        key={learner.studentId}
+                                        className="rounded-xl border border-white/10 bg-[#07111F] px-3 py-2"
+                                      >
+                                        <div className="text-[11px] font-semibold text-[#F7F4ED]">
+                                          {learner.name}
+                                        </div>
+                                        <div className="mt-1 text-[11px] text-[#C9CDD6]">
+                                          {learner.points
+                                            .map((point) => formatPercent(point.percent))
+                                            .join(" → ")}
+                                        </div>
+                                      </div>
+                                    ))}
+                                </div>
+                              </details>
+                            </>
+                          )}
+                        </div>
+                      ) : null}
+
+                      {postScoreLegacyOutput && postScoreLegacyOutput.itemCount > 0 ? (
+                        <div className="rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 py-3 text-[10px] leading-5 text-amber-100">
+                          {postScoreLegacyOutput.itemCount} older unlinked assessment record{postScoreLegacyOutput.itemCount === 1 ? "" : "s"} remain preserved separately and are not counted as lesson-linked Work Output.
+                        </div>
+                      ) : null}
+                    </>
+                  ) : null}
+
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <button
+                      type="button"
+                      className={goldButton + " justify-center"}
+                      onClick={() => {
+                        setShowAssessmentTools(true);
+                        setTab("broadsheet");
+                      }}
+                    >
+                      View Broadsheet
+                    </button>
+                    <button
+                      type="button"
+                      className={darkButton + " justify-center"}
+                      onClick={() => setPostScoreSummaryOpen(false)}
+                    >
+                      Edit scores
+                    </button>
+                  </div>
+
+                  <div className="text-[10px] leading-5 text-[#8F98A8]">
+                    Work Output shows formative practice activity and progression. The Broadsheet continues to use the school&apos;s official assessment policy.
+                  </div>
                 </div>
               ) : (
                 <>
@@ -2772,7 +3131,7 @@ disabled={!!selectedItemScoreReadOnlyReason}
 
       </div>
 
-      {showAssessmentTools && tab === "scores" && selectedItem ? (
+      {showAssessmentTools && tab === "scores" && selectedItem && !postScoreSummaryOpen ? (
         <div className="fixed bottom-0 left-0 right-0 border-t border-white/10 bg-[rgba(5,7,11,0.92)] p-3 backdrop-blur-xl md:hidden">
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-1">
             <div className="min-w-0">
