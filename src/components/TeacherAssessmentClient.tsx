@@ -644,6 +644,7 @@ export default function TeacherAssessmentClient() {
   const urlLessonNoteId = cleanStr(searchParams.get("lessonNoteId"));
 
   const hasLessonDeliveryContext = !!urlLessonDeliveryId;
+  const assessmentEntryFocus = hasLessonDeliveryContext;
   const [ctxLoading, setCtxLoading] = useState(true);
   const [ctxError, setCtxError] = useState<string | null>(null);
 
@@ -1687,7 +1688,7 @@ setSavingScoresState("saved");
 
   return (
     <div className="space-y-4 pb-24 md:pb-6">
-      <div className={shellCard + " px-4 py-4"}>
+      <div className={assessmentEntryFocus ? "hidden" : shellCard + " px-4 py-4"}>
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div className="space-y-1">
             <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
@@ -1795,7 +1796,7 @@ setSavingScoresState("saved");
       </div>
 
 
-      <div className="rounded-[28px] border border-emerald-300/20 bg-[linear-gradient(135deg,rgba(16,185,129,0.16),rgba(255,255,255,0.04))] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.16)]">
+      <div className={assessmentEntryFocus ? "hidden" : "rounded-[28px] border border-emerald-300/20 bg-[linear-gradient(135deg,rgba(16,185,129,0.16),rgba(255,255,255,0.04))] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.16)]"}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-200">
@@ -1911,7 +1912,7 @@ setSavingScoresState("saved");
         </div>
       ) : null}
 
-{broadsheetNotice ? (
+{!assessmentEntryFocus && broadsheetNotice ? (
   <div className="flex flex-col gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-3 text-[12px] text-emerald-100 sm:flex-row sm:items-center sm:justify-between">
     <div>{broadsheetNotice}</div>
 
@@ -1937,7 +1938,7 @@ setSavingScoresState("saved");
 
       {hasLessonDeliveryContext ? (
         <div className="rounded-2xl border border-indigo-300/20 bg-indigo-400/12 px-4 py-3 text-[12px] text-indigo-100">
-          Creating assessment evidence from delivered lesson.
+          Assessment entry for delivered lesson.
           {selectedLessonDelivery ? (
             <span className="ml-1 font-semibold">
               {formatLessonDeliveryLabel(selectedLessonDelivery)}
@@ -1947,7 +1948,7 @@ setSavingScoresState("saved");
               Linked delivery: {urlLessonDeliveryId.slice(0, 8)}…
             </span>
           ) : null}
-          {urlLessonNoteId ? (
+          {!selectedLessonDelivery && urlLessonNoteId ? (
             <span className="ml-1 text-indigo-200">
               • Lesson note linked
             </span>
@@ -1962,31 +1963,33 @@ setSavingScoresState("saved");
       )}
 
       <div className={showAssessmentTools ? "space-y-4" : "hidden"}>
-        <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-3">
-          <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F98A8]">
-            More assessment tools
+        {!assessmentEntryFocus ? (
+          <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-3">
+            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F98A8]">
+              More assessment tools
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <button
+                type="button"
+                onClick={() => setTab("broadsheet")}
+                className={darkButton + " justify-center"}
+              >
+                Broadsheet
+              </button>
+              <Link href={mockAssessmentHref} className={darkButton + " justify-center"}>
+                BECE Mock
+              </Link>
+              <Link href={lessonDeliveriesPageHref} className={darkButton + " justify-center"}>
+                Lesson Delivery
+              </Link>
+              <Link href={termDashboardHref} className={darkButton + " justify-center"}>
+                Term Dashboard
+              </Link>
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <button
-              type="button"
-              onClick={() => setTab("broadsheet")}
-              className={darkButton + " justify-center"}
-            >
-              Broadsheet
-            </button>
-            <Link href={mockAssessmentHref} className={darkButton + " justify-center"}>
-              BECE Mock
-            </Link>
-            <Link href={lessonDeliveriesPageHref} className={darkButton + " justify-center"}>
-              Lesson Delivery
-            </Link>
-            <Link href={termDashboardHref} className={darkButton + " justify-center"}>
-              Term Dashboard
-            </Link>
-          </div>
-        </div>
+        ) : null}
 
-      <div className="md:hidden">
+      <div className={assessmentEntryFocus ? "hidden" : "md:hidden"}>
         <div className="grid grid-cols-5 gap-2">
           <TabButton
             active={tab === "scores"}
@@ -2021,7 +2024,7 @@ setSavingScoresState("saved");
         </div>
       </div>
 
-            <div className="hidden md:grid md:grid-cols-5 md:gap-2">
+            <div className={assessmentEntryFocus ? "hidden" : "hidden md:grid md:grid-cols-5 md:gap-2"}>
         <TabButton
           active={tab === "scores"}
           label="Scores"
@@ -2097,9 +2100,14 @@ setSavingScoresState("saved");
 
           <div className={tab !== "items" ? "hidden" : ""}>
             <SectionCard
-              title="Assessment items"
-              subtitle="Create class test, homework, quiz, exam, etc."
+              title={assessmentEntryFocus ? "Assessment item" : "Assessment items"}
+              subtitle={
+                assessmentEntryFocus
+                  ? "Create assessment evidence for this delivered lesson."
+                  : "Create class test, homework, quiz, exam, etc."
+              }
               right={
+                assessmentEntryFocus ? null : (
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -2118,9 +2126,12 @@ setSavingScoresState("saved");
                     Delete
                   </button>
                 </div>
+                )
               }
             >
               <div className="space-y-2">
+                {!assessmentEntryFocus ? (
+                  <>
                 {items.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.04] px-4 py-4 text-[12px] text-[#C9CDD6]">
                     No assessment items yet for this class/term/year.
@@ -2194,6 +2205,8 @@ setSavingScoresState("saved");
                     {selectedItem ? "Update details & link lesson" : "Create item"}
                   </div>
                 </div>
+                  </>
+                ) : null}
 
                 {itemFormOpen ? (
                   <form onSubmit={handleSaveItem} className={panelCard + " p-4"}>
