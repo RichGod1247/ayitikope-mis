@@ -963,6 +963,31 @@ function replaceAssessmentJourneyUrl(
   );
 }
 
+function replaceAssessmentJourneyUrlForNewItem(item: AssessmentItem) {
+  if (typeof window === "undefined" || !item.lessonDeliveryId) return;
+
+  const params = new URLSearchParams(window.location.search);
+  params.set("classroomId", classroomId);
+  params.set("term", term);
+  params.set("academicYear", academicYear);
+  params.set("subject", item.subject);
+  params.set("lessonDeliveryId", item.lessonDeliveryId);
+
+  if (item.curriculumUnitId) {
+    params.set("curriculumUnitId", item.curriculumUnitId);
+  }
+
+  params.delete("assessmentItemId");
+  params.delete("view");
+
+  const query = params.toString();
+  window.history.replaceState(
+    window.history.state,
+    "",
+    query ? `${window.location.pathname}?${query}` : window.location.pathname
+  );
+}
+
 async function loadWorkOutputAfterScores(item: AssessmentItem) {
   if (!classroomId || !item.lessonDeliveryId) {
     setWorkOutputAfterScores(null);
@@ -1511,6 +1536,13 @@ async function handleSelectItem(itemId: string) {
     setScoreDraft(buildBlankScoreGrid(students));
     setItemFormOpen(true);
     setTab("items");
+  }
+
+  function handleCreateAnotherAssessmentForLesson() {
+    if (!selectedItem?.lessonDeliveryId) return;
+
+    replaceAssessmentJourneyUrlForNewItem(selectedItem);
+    handleNewItem();
   }
 
 function handleCreateEvidenceItemFromBroadsheet(args: CreateEvidenceItemArgs) {
@@ -2884,54 +2916,58 @@ if (selectedItem.lessonDeliveryId) {
                     </div>
                   ) : postScoreTermOutput ? (
                     <>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className={panelCard + " p-4"}>
-                          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F98A8]">
+                      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+                        <div className={panelCard + " px-3 py-2.5"}>
+                          <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8F98A8]">
                             This lesson
                           </div>
-                          <div className="mt-1 text-3xl font-semibold text-[#F7F4ED]">
-                            {postScoreLessonOutput?.itemCount ?? 0}
-                          </div>
-                          <div className="mt-1 text-[11px] text-[#C9CDD6]">
-                            assessment{(postScoreLessonOutput?.itemCount ?? 0) === 1 ? "" : "s"} linked to this delivered lesson
+                          <div className="mt-0.5 flex items-baseline gap-2">
+                            <span className="text-xl font-semibold leading-none text-[#F7F4ED]">
+                              {postScoreLessonOutput?.itemCount ?? 0}
+                            </span>
+                            <span className="text-[10px] text-[#C9CDD6]">
+                              assessment{(postScoreLessonOutput?.itemCount ?? 0) === 1 ? "" : "s"}
+                            </span>
                           </div>
                         </div>
 
-                        <div className={panelCard + " p-4"}>
-                          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F98A8]">
+                        <div className={panelCard + " px-3 py-2.5"}>
+                          <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8F98A8]">
                             This term
                           </div>
-                          <div className="mt-1 text-3xl font-semibold text-[#F7F4ED]">
-                            {postScoreTermOutput.itemCount}
-                          </div>
-                          <div className="mt-1 text-[11px] text-[#C9CDD6]">
-                            lesson-linked assessment{postScoreTermOutput.itemCount === 1 ? "" : "s"} in this subject
+                          <div className="mt-0.5 flex items-baseline gap-2">
+                            <span className="text-xl font-semibold leading-none text-[#F7F4ED]">
+                              {postScoreTermOutput.itemCount}
+                            </span>
+                            <span className="text-[10px] text-[#C9CDD6]">
+                              lesson-linked
+                            </span>
                           </div>
                         </div>
-                      </div>
 
-                      <div className={panelCard + " p-4"}>
-                        <div className="text-[11px] font-semibold text-[#F7F4ED]">
-                          Term practice by type
-                        </div>
-                        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                          {postScoreTypeCounts.length > 0 ? (
-                            postScoreTypeCounts.map((bucket) => (
-                              <div
-                                key={bucket.key}
-                                className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3"
-                              >
-                                <div className="text-[10px] text-[#8F98A8]">{bucket.label}</div>
-                                <div className="mt-1 text-xl font-semibold text-[#F7F4ED]">
-                                  {bucket.count}
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="col-span-2 text-[11px] text-[#8F98A8] sm:col-span-3">
-                              No lesson-linked practice recorded yet.
-                            </div>
-                          )}
+                        <div className={panelCard + " col-span-2 px-3 py-2.5"}>
+                          <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8F98A8]">
+                            Term practice by type
+                          </div>
+                          <div className="mt-1.5 flex flex-wrap gap-1.5">
+                            {postScoreTypeCounts.length > 0 ? (
+                              postScoreTypeCounts.map((bucket) => (
+                                <span
+                                  key={bucket.key}
+                                  className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[10px] text-[#C9CDD6]"
+                                >
+                                  <span>{bucket.label}</span>
+                                  <span className="font-semibold text-[#F7F4ED]">
+                                    {bucket.count}
+                                  </span>
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-[10px] text-[#8F98A8]">
+                                No lesson-linked practice yet.
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -3011,7 +3047,7 @@ if (selectedItem.lessonDeliveryId) {
                     </>
                   ) : null}
 
-                  <div className="flex flex-col gap-2 sm:flex-row">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                     <button
                       type="button"
                       className={goldButton + " justify-center"}
@@ -3021,6 +3057,14 @@ if (selectedItem.lessonDeliveryId) {
                       }}
                     >
                       View Broadsheet
+                    </button>
+                    <button
+                      type="button"
+                      className={darkButton + " justify-center"}
+                      onClick={handleCreateAnotherAssessmentForLesson}
+                      disabled={!selectedItem.lessonDeliveryId}
+                    >
+                      Add another assessment
                     </button>
                     <button
                       type="button"
