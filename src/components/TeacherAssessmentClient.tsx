@@ -396,6 +396,113 @@ function formatPercent(value: number | null | undefined): string {
   return `${value.toFixed(1)}%`;
 }
 
+function workOutputProgressShortLabel(type: string): string {
+  const key = cleanStr(type).toUpperCase();
+
+  if (key === "EXERCISE") return "Ex.";
+  if (key === "HOMEWORK") return "H/W";
+  if (key === "QUIZ") return "Quiz";
+  if (key === "CLASS_TEST") return "C/T";
+  if (key === "GROUP_WORK") return "G/W";
+  if (key === "PROJECT") return "Proj.";
+  if (key === "PRACTICAL") return "Prac.";
+  if (key === "EXAM") return "Exam";
+  return "Other";
+}
+
+function lessonClassAveragePercent(
+  items: WorkOutputLessonSummary["items"]
+): number | null {
+  const itemAverages = items
+    .map((item) => item.classAveragePercent)
+    .filter(
+      (value): value is number =>
+        typeof value === "number" && Number.isFinite(value)
+    );
+
+  if (itemAverages.length === 0) return null;
+
+  return Number(
+    (
+      itemAverages.reduce((sum, value) => sum + value, 0) /
+      itemAverages.length
+    ).toFixed(1)
+  );
+}
+
+function scoredLessonAssessmentCount(
+  items: WorkOutputLessonSummary["items"]
+): number {
+  return items.filter(
+    (item) =>
+      typeof item.classAveragePercent === "number" &&
+      Number.isFinite(item.classAveragePercent)
+  ).length;
+}
+
+type WorkOutputProgressDisplayPoint = {
+  itemId: string;
+  label: string;
+  percent: number | null;
+};
+
+type WorkOutputProgressDisplayGroup = {
+  type: string;
+  typeLabel: string;
+  points: WorkOutputProgressDisplayPoint[];
+};
+
+function buildLearnerProgressionGroups(
+  learner: WorkOutputLearnerProgression,
+  items: WorkOutputLessonSummary["items"]
+): WorkOutputProgressDisplayGroup[] {
+  const itemLabels = new Map<
+    string,
+    { type: string; typeLabel: string; label: string }
+  >();
+  const typeOrdinals = new Map<string, number>();
+
+  for (const item of items) {
+    const type = cleanStr(item.type).toUpperCase();
+    const ordinal = (typeOrdinals.get(type) ?? 0) + 1;
+    typeOrdinals.set(type, ordinal);
+
+    itemLabels.set(item.id, {
+      type,
+      typeLabel: item.typeLabel,
+      label: `${workOutputProgressShortLabel(type)} ${ordinal}`,
+    });
+  }
+
+  const groups = new Map<string, WorkOutputProgressDisplayGroup>();
+
+  for (const point of learner.points) {
+    const itemLabel = itemLabels.get(point.itemId);
+    const type = itemLabel?.type ?? cleanStr(point.type).toUpperCase();
+    const typeLabel = itemLabel?.typeLabel ?? point.typeLabel;
+    const label = itemLabel?.label ?? workOutputProgressShortLabel(type);
+
+    const existing = groups.get(type);
+    const displayPoint = {
+      itemId: point.itemId,
+      label,
+      percent: point.percent,
+    };
+
+    if (existing) {
+      existing.points.push(displayPoint);
+    } else {
+      groups.set(type, {
+        type,
+        typeLabel,
+        points: [displayPoint],
+      });
+    }
+  }
+
+  return Array.from(groups.values());
+}
+
 function safeJson<T>(raw: unknown): T | null {
   if (!raw || typeof raw !== "object") return null;
   return raw as T;
@@ -1948,6 +2055,14 @@ if (selectedItem.lessonDeliveryId) {
   const postScoreLegacyOutput = workOutputAfterScores?.workOutput.legacyUnlinked ?? null;
   const postScoreTypeCounts =
     postScoreTermOutput?.typeCounts.filter((bucket) => bucket.count > 0) ?? [];
+  const postScoreLessonClassAverage =
+    postScoreLessonOutput
+      ? lessonClassAveragePercent(postScoreLessonOutput.items)
+      : null;
+  const postScoreLessonScoredAssessmentCount =
+    postScoreLessonOutput
+      ? scoredLessonAssessmentCount(postScoreLessonOutput.items)
+      : 0;
 
   return (
     <div className="space-y-4 pb-24 md:pb-6">
@@ -2980,61 +3095,82 @@ if (selectedItem.lessonDeliveryId) {
                             {postScoreLessonOutput.lessonTitle || postScoreLessonOutput.subject}
                           </div>
 
+                          <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                            <div>
+                              <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8F98A8]">
+                                Class average
+                              </div>
+                              <div className="mt-0.5 text-[10px] text-[#C9CDD6]">
+                                {postScoreLessonScoredAssessmentCount} scored assessment{postScoreLessonScoredAssessmentCount === 1 ? "" : "s"} for this lesson
+                              </div>
+                            </div>
+                            <div className="text-xl font-semibold text-[#F7F4ED]">
+                              {formatPercent(postScoreLessonClassAverage)}
+                            </div>
+                          </div>
+
                           {postScoreLessonOutput.progression.assessmentCount < 2 ? (
                             <div className="mt-3 rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-3 py-3 text-[11px] leading-5 text-cyan-100">
                               One practice assessment is recorded for this lesson. Progress tracking becomes meaningful after another assessment is given and scored.
                             </div>
                           ) : (
-                            <>
-                              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                                <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3">
-                                  <div className="text-[10px] text-[#8F98A8]">Repeated practice</div>
-                                  <div className="mt-1 text-lg font-semibold text-[#F7F4ED]">
-                                    {postScoreLessonOutput.progression.learnersWithRepeatedPractice}
-                                  </div>
-                                  <div className="text-[10px] text-[#8F98A8]">learners with 2+ scores</div>
-                                </div>
+                            <details className="mt-3 rounded-xl border border-white/10 bg-white/[0.03]">
+                              <summary className="cursor-pointer px-3 py-3 text-[11px] font-semibold text-[#F7F4ED]">
+                                View learner-by-learner progression
+                              </summary>
+                              <div className="space-y-2 border-t border-white/10 px-3 py-3">
+                                {postScoreLessonOutput.progression.learners
+                                  .filter((learner) => learner.points.length > 0)
+                                  .map((learner) => {
+                                    const groups = buildLearnerProgressionGroups(
+                                      learner,
+                                      postScoreLessonOutput.items
+                                    );
 
-                                <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3">
-                                  <div className="text-[10px] text-[#8F98A8]">First practice avg</div>
-                                  <div className="mt-1 text-lg font-semibold text-[#F7F4ED]">
-                                    {formatPercent(postScoreLessonOutput.progression.averageFirstPercent)}
-                                  </div>
-                                </div>
-
-                                <div className="col-span-2 rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-3 sm:col-span-1">
-                                  <div className="text-[10px] text-emerald-100/70">Latest practice avg</div>
-                                  <div className="mt-1 text-lg font-semibold text-emerald-100">
-                                    {formatPercent(postScoreLessonOutput.progression.averageLatestPercent)}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <details className="mt-3 rounded-xl border border-white/10 bg-white/[0.03]">
-                                <summary className="cursor-pointer px-3 py-3 text-[11px] font-semibold text-[#F7F4ED]">
-                                  View learner-by-learner progression
-                                </summary>
-                                <div className="space-y-2 border-t border-white/10 px-3 py-3">
-                                  {postScoreLessonOutput.progression.learners
-                                    .filter((learner) => learner.points.length > 0)
-                                    .map((learner) => (
+                                    return (
                                       <div
                                         key={learner.studentId}
-                                        className="rounded-xl border border-white/10 bg-[#07111F] px-3 py-2"
+                                        className="rounded-xl border border-white/10 bg-[#07111F] px-3 py-2.5"
                                       >
                                         <div className="text-[11px] font-semibold text-[#F7F4ED]">
                                           {learner.name}
                                         </div>
-                                        <div className="mt-1 text-[11px] text-[#C9CDD6]">
-                                          {learner.points
-                                            .map((point) => formatPercent(point.percent))
-                                            .join(" → ")}
+
+                                        <div className="mt-2 space-y-2">
+                                          {groups.map((group) => (
+                                            <div
+                                              key={group.type}
+                                              className="rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2"
+                                            >
+                                              <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8F98A8]">
+                                                {group.typeLabel}
+                                              </div>
+
+                                              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                                                {group.points.map((point, index) => (
+                                                  <React.Fragment key={point.itemId}>
+                                                    {index > 0 ? (
+                                                      <span className="text-[10px] text-[#687386]">→</span>
+                                                    ) : null}
+                                                    <span className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-[#08111C] px-2 py-1 text-[10px]">
+                                                      <span className="font-semibold text-[#C9CDD6]">
+                                                        {point.label}
+                                                      </span>
+                                                      <span className="text-[#F7F4ED]">
+                                                        {formatPercent(point.percent)}
+                                                      </span>
+                                                    </span>
+                                                  </React.Fragment>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          ))}
                                         </div>
                                       </div>
-                                    ))}
-                                </div>
-                              </details>
-                            </>
+                                    );
+                                  })}
+                              </div>
+                            </details>
                           )}
                         </div>
                       ) : null}
@@ -3073,6 +3209,12 @@ if (selectedItem.lessonDeliveryId) {
                     >
                       Edit scores
                     </button>
+                    <Link
+                      href={lessonDeliveriesPageHref}
+                      className={darkButton + " justify-center"}
+                    >
+                      Assessment Home
+                    </Link>
                   </div>
 
                   <div className="text-[10px] leading-5 text-[#8F98A8]">

@@ -238,8 +238,12 @@ assert(
 
 assert(
   clientSource.includes("View learner-by-learner progression") &&
-    clientSource.includes('.join(" → ")'),
-  "Teacher must be able to inspect chronological learner practice progression."
+    clientSource.includes("buildLearnerProgressionGroups(") &&
+    clientSource.includes("group.typeLabel") &&
+    clientSource.includes("point.label") &&
+    clientSource.includes("formatPercent(point.percent)") &&
+    !clientSource.includes('.join(" → ")'),
+  "Teacher must be able to inspect chronological learner progression grouped by comparable assessment type with familiar item labels."
 );
 
 assert(
@@ -262,7 +266,7 @@ console.log("TEACHER WORK OUTPUT + POST-SCORE HANDOFF CONTRACT: GREEN");
 console.log("- canonical Work Output counts lesson-linked non-Mock practice only");
 console.log("- legacy unlinked evidence is preserved separately");
 console.log("- assessment types remain distinct, including Quiz, Project and Practical");
-console.log("- learner progression is chronological and normalized per assessment max score");
+console.log("- learner progression remains chronological and normalized, with teacher UI grouped by comparable assessment type");
 console.log("- Work Output is explicitly formative and non-ranking");
 console.log("- successful linked score save reveals Work Output and the Broadsheet next action");
 console.log("- existing Broadsheet authority remains separate and untouched");
