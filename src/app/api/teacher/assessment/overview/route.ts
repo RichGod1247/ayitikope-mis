@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
 import { isAdminLikeRole, resolveUserClassroomAccess } from "@/lib/teacherAccess";
+import { subjectAllowedInTeachingScope } from "@/lib/teachingSubjectScope";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -16,18 +17,6 @@ function jsonNoStore(status: number, payload: any) {
 
 function isForbiddenReason(reason: string) {
   return reason === "OUT_OF_SCOPE" || reason === "SUBJECT_OUT_OF_SCOPE";
-}
-
-function buildSubjectWhere(args: { roleName: string | null; allowedSubjects: string[] | null }) {
-  if (isAdminLikeRole(args.roleName)) return {};
-  if (args.allowedSubjects?.length) {
-    return {
-      OR: args.allowedSubjects.map((s) => ({
-        subject: { equals: s, mode: "insensitive" as const },
-      })),
-    };
-  }
-  return {};
 }
 
 export async function GET(req: Request) {
@@ -75,12 +64,11 @@ export async function GET(req: Request) {
     guardianPhone: s.guardianPhone ?? null,
   }));
 
-  const subjectWhere = buildSubjectWhere({
-    roleName: ctx.roleName,
-    allowedSubjects: access.allowedSubjects,
-  });
+  const scopeSubjects = isAdminLikeRole(ctx.roleName)
+    ? null
+    : access.allowedSubjects;
 
-  const assessments = await prisma.assessmentItem.findMany({
+  const assessmentsRaw = await prisma.assessmentItem.findMany({
     where: {
       tenantId: ctx.tenantId,
       classroomId,
@@ -91,9 +79,7 @@ export async function GET(req: Request) {
       // BECE Mock belongs to its own score-entry and broadsheet engine.
       // Do not mix it into ordinary 30/70 assessment entry.
       type: { not: "MOCK" },
-
-      ...subjectWhere,
-    } as any,
+    },
     orderBy: [{ date: "asc" }, { createdAt: "asc" }],
     select: {
       id: true,
@@ -121,6 +107,14 @@ export async function GET(req: Request) {
       isRequired: true,
     },
   });
+
+  const assessments = assessmentsRaw.filter((assessment) =>
+    subjectAllowedInTeachingScope(
+      assessment.subject,
+      scopeSubjects,
+      access.normalizedClassLevel
+    )
+  );
 
   return jsonNoStore(200, {
     ok: true,
