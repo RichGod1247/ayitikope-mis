@@ -104,9 +104,11 @@ assert(
 );
 
 assert(
-  client.includes("href={lessonDeliveriesPageHref}") &&
+  client.includes("const assessmentHomeHref = useMemo(() => {") &&
+    client.includes('return query ? `/teacher/assessment?${query}` : "/teacher/assessment";') &&
+    client.includes("href={assessmentHomeHref}") &&
     client.includes("Assessment Home"),
-  "Assessment Home must route to the existing Lesson Delivery workspace."
+  "Assessment Home must return to the normal Assessment journey while preserving class/term/year context."
 );
 
 assert(
@@ -130,6 +132,6 @@ console.log("- familiar assessment labels appear beside each percentage");
 console.log("- Repeated practice / First practice avg / Latest practice avg cards are removed from teacher UI");
 console.log("- one compact neutral Class Average replaces those analytics cards");
 console.log("- Class Average equally averages the server-provided class average of each scored assessment item");
-console.log("- Assessment Home returns to the existing Lesson Delivery workspace with class/term/year context");
+console.log("- Assessment Home returns to the normal Assessment journey with class/term/year context");
 console.log("- View Broadsheet, Add another assessment and Edit scores remain available");
 console.log("- no polling, schema change or database write is introduced");

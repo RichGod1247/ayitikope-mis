@@ -48,9 +48,12 @@ function transpile(relativePath, jsx) {
 }
 
 const clientPath = "src/components/TeacherAssessmentClient.tsx";
+const lessonDeliveryClientPath =
+  "src/components/teacher/TeacherLessonDeliveriesClient.tsx";
 const authorityPath = "src/lib/teachingSubjectScope.ts";
 
 const client = read(clientPath);
+const lessonDeliveryClient = read(lessonDeliveryClientPath);
 const authority = read(authorityPath);
 
 assert(
@@ -146,12 +149,39 @@ assert(
   client.includes('More assessment tools') &&
     client.includes('BECE Mock') &&
     client.includes('Lesson Delivery') &&
-    client.includes('Term Dashboard') &&
+    client.includes('openWorkOutputForItem(workOutputLaunchItem)') &&
+    client.includes('Work Output') &&
+    !client.includes('Term Dashboard') &&
     client.includes('label="Broadsheet"') &&
     client.includes('label="Items"') &&
     client.includes('label="Insights"') &&
     client.includes('label="Pipeline"'),
-  "Existing advanced tools must remain available as secondary controls."
+  "Advanced tools must preserve Broadsheet, BECE Mock and Lesson Delivery while replacing the redundant Term Dashboard launcher with persistent Work Output."
+);
+
+assert(
+  client.includes("const assessmentHomeHref = useMemo(() => {") &&
+    client.includes('return query ? `/teacher/assessment?${query}` : "/teacher/assessment";') &&
+    client.includes("href={assessmentHomeHref}") &&
+    client.includes("Assessment Home"),
+  "Assessment Home must return to the normal Assessment journey, not directly to Lesson Delivery."
+);
+
+assert(
+  client.includes("const pendingNote = pipeline.orphanNotes[0] ?? null;") &&
+    client.includes("lessonNoteId: pendingNote.id") &&
+    client.includes('href: `/teacher/lesson-deliveries?${params.toString()}`'),
+  "When the next action is delivery, the Assessment journey must hand the exact undelivered approved note to Lesson Delivery."
+);
+
+assert(
+  lessonDeliveryClient.includes('searchParams.get("lessonNoteId")') &&
+    lessonDeliveryClient.includes("const pendingApprovedNotes = useMemo(") &&
+    lessonDeliveryClient.includes("!deliveredLessonNoteIds.has(note.id)") &&
+    lessonDeliveryClient.includes("return initialLessonNoteId;") &&
+    lessonDeliveryClient.includes("No approved notes awaiting delivery") &&
+    lessonDeliveryClient.includes("Recorded deliveries"),
+  "Lesson Delivery must auto-focus the requested undelivered approved note, exclude already-delivered notes from the entry picker, and retain recorded deliveries as evidence."
 );
 
 assert(
@@ -173,11 +203,12 @@ assert(
 
 transpile(authorityPath, false);
 transpile(clientPath, true);
+transpile(lessonDeliveryClientPath, true);
 
 console.log("ASSESSMENT NEXT-ACTION JOURNEY HUB CONTRACT: GREEN");
 console.log("- one lightweight persisted-evidence journey read is available on normal page entry");
 console.log("- Pipeline class-summary calls remain lazy");
-console.log("- advanced tools are secondary and preserved");
-console.log("- next action prioritizes unfinished recorded work and Work Output before Broadsheet");
-console.log("- no duplicate lifecycle or completion overclaim is introduced");
+console.log("- advanced tools preserve BECE Mock and replace redundant Term Dashboard access with persistent Work Output");
+console.log("- next action prioritizes unfinished recorded work; the next undelivered approved note is handed exactly to Lesson Delivery");
+console.log("- Assessment Home returns to the normal journey and recorded deliveries remain evidence rather than re-entry candidates");
 console.log("- no polling, schema change or database write is introduced");

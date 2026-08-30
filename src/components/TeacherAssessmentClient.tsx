@@ -994,10 +994,16 @@ const typeOptions = useMemo(() => {
     return "Default view is single-stream for KG, Primary, and JHS. Turn multi-stream on only when you need all streams.";
   }, [teacherPhase]);
 
-const termDashboardHref = useMemo(() => {
-  if (!classroomId) return "/teacher/assessment/term-dashboard";
-  const params = new URLSearchParams({ classroomId, term, academicYear });
-  return `/teacher/assessment/term-dashboard?${params.toString()}`;
+const assessmentHomeHref = useMemo(() => {
+  const params = new URLSearchParams();
+
+  if (classroomId) params.set("classroomId", classroomId);
+  if (term) params.set("term", term);
+  if (academicYear) params.set("academicYear", academicYear);
+
+  const query = params.toString();
+
+  return query ? `/teacher/assessment?${query}` : "/teacher/assessment";
 }, [classroomId, term, academicYear]);
 
 const mockAssessmentHref = useMemo(() => {
@@ -1144,6 +1150,17 @@ async function loadWorkOutputAfterScores(item: AssessmentItem) {
   } finally {
     setWorkOutputAfterScoresLoading(false);
   }
+}
+
+function openWorkOutputForItem(item: AssessmentItem) {
+  setShowAssessmentTools(true);
+  setSelectedItemId(item.id);
+  setItemFormOpen(false);
+  setPostScoreSummaryOpen(true);
+  replaceAssessmentJourneyUrl(item, "work-output");
+  void loadScoresForItem(item.id, students);
+  void loadWorkOutputAfterScores(item);
+  setTab("scores");
 }
 
   async function loadScoresForItem(itemId: string, currentStudents: Student[]) {
@@ -1890,6 +1907,17 @@ if (selectedItem.lessonDeliveryId) {
     [items]
   );
 
+  const workOutputLaunchItem = useMemo(() => {
+    if (
+      selectedItem?.lessonDeliveryId &&
+      cleanStr(selectedItem.type).toUpperCase() !== "MOCK"
+    ) {
+      return selectedItem;
+    }
+
+    return linkedTeachingItem;
+  }, [linkedTeachingItem, selectedItem]);
+
   const nextJourneyAction = useMemo(() => {
     if (!classroomId) {
       return {
@@ -1962,12 +1990,19 @@ if (selectedItem.lessonDeliveryId) {
 
     const pendingNote = pipeline.orphanNotes[0] ?? null;
     if (pendingNote) {
+      const params = new URLSearchParams({
+        classroomId,
+        term,
+        academicYear,
+        lessonNoteId: pendingNote.id,
+      });
+
       return {
         kind: "DELIVER" as const,
         eyebrow: "Best next action",
         title: "Record the lesson you have taught.",
         detail: `${pendingNote.subject} • ${pendingNote.lessonTitle || "Approved lesson note"}`,
-        href: lessonDeliveriesPageHref,
+        href: `/teacher/lesson-deliveries?${params.toString()}`,
       };
     }
 
@@ -2219,13 +2254,7 @@ if (selectedItem.lessonDeliveryId) {
                   setShowAssessmentTools(true);
 
                   if (linkedTeachingItem) {
-                    setSelectedItemId(linkedTeachingItem.id);
-                    setItemFormOpen(false);
-                    setPostScoreSummaryOpen(true);
-                    replaceAssessmentJourneyUrl(linkedTeachingItem, "work-output");
-                    void loadScoresForItem(linkedTeachingItem.id, students);
-                    void loadWorkOutputAfterScores(linkedTeachingItem);
-                    setTab("scores");
+                    openWorkOutputForItem(linkedTeachingItem);
                   }
                 }}
                 disabled={!linkedTeachingItem}
@@ -2370,9 +2399,18 @@ if (selectedItem.lessonDeliveryId) {
               <Link href={lessonDeliveriesPageHref} className={darkButton + " justify-center"}>
                 Lesson Delivery
               </Link>
-              <Link href={termDashboardHref} className={darkButton + " justify-center"}>
-                Term Dashboard
-              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  if (workOutputLaunchItem) {
+                    openWorkOutputForItem(workOutputLaunchItem);
+                  }
+                }}
+                disabled={!workOutputLaunchItem}
+                className={darkButton + " justify-center"}
+              >
+                Work Output
+              </button>
             </div>
           </div>
         ) : null}
@@ -3210,7 +3248,7 @@ if (selectedItem.lessonDeliveryId) {
                       Edit scores
                     </button>
                     <Link
-                      href={lessonDeliveriesPageHref}
+                      href={assessmentHomeHref}
                       className={darkButton + " justify-center"}
                     >
                       Assessment Home

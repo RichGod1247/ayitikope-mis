@@ -416,6 +416,7 @@ export default function TeacherLessonDeliveriesClient() {
   const initialClassroomId = searchParams.get("classroomId") ?? "";
   const initialTerm = searchParams.get("term") ?? "";
   const initialAcademicYear = searchParams.get("academicYear") ?? "";
+  const initialLessonNoteId = searchParams.get("lessonNoteId") ?? "";
 
   const [ctxLoading, setCtxLoading] = useState(true);
   const [ctxError, setCtxError] = useState<string | null>(null);
@@ -443,9 +444,27 @@ export default function TeacherLessonDeliveriesClient() {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [actionError, setActionError] = useState<string | null>(null);
 
+  const deliveredLessonNoteIds = useMemo(
+    () =>
+      new Set(
+        deliveries
+          .map((delivery) => cleanStr(delivery.lessonNoteId))
+          .filter(Boolean)
+      ),
+    [deliveries]
+  );
+
+  const pendingApprovedNotes = useMemo(
+    () =>
+      approvedNotes.filter(
+        (note) => !deliveredLessonNoteIds.has(note.id)
+      ),
+    [approvedNotes, deliveredLessonNoteIds]
+  );
+
   const selectedNote = useMemo(
-    () => approvedNotes.find((n) => n.id === selectedNoteId) ?? null,
-    [approvedNotes, selectedNoteId]
+    () => pendingApprovedNotes.find((n) => n.id === selectedNoteId) ?? null,
+    [pendingApprovedNotes, selectedNoteId]
   );
 
   const assignmentSubjectOptions = useMemo(
@@ -579,11 +598,6 @@ const lessonNotesHref = useMemo(() => {
 
         const next = Array.isArray(json.items) ? json.items : [];
         setApprovedNotes(next);
-
-        setSelectedNoteId((prev) => {
-          if (prev && next.some((n) => n.id === prev)) return prev;
-          return next[0]?.id || "";
-        });
       } catch (err: any) {
         setApprovedNotes([]);
         setApprovedNotesError(String(err?.message || "Failed to load approved lesson notes."));
@@ -594,6 +608,30 @@ const lessonNotesHref = useMemo(() => {
 
     loadApprovedNotes();
   }, [classroomId, term, academicYear, selectedSubjectScope]);
+
+  useEffect(() => {
+    if (approvedNotesLoading || deliveriesLoading) return;
+
+    setSelectedNoteId((prev) => {
+      if (
+        initialLessonNoteId &&
+        pendingApprovedNotes.some((note) => note.id === initialLessonNoteId)
+      ) {
+        return initialLessonNoteId;
+      }
+
+      if (prev && pendingApprovedNotes.some((note) => note.id === prev)) {
+        return prev;
+      }
+
+      return pendingApprovedNotes[0]?.id || "";
+    });
+  }, [
+    approvedNotesLoading,
+    deliveriesLoading,
+    initialLessonNoteId,
+    pendingApprovedNotes,
+  ]);
 
   useEffect(() => {
     const loadDeliveries = async () => {
@@ -837,14 +875,20 @@ const refetch = await fetch(`/api/teacher/lesson-deliveries/list?${params.toStri
   style={readableFieldStyle}
   value={selectedNoteId}
   onChange={(e) => setSelectedNoteId(e.target.value)}
-  disabled={approvedNotesLoading || approvedNotes.length === 0}
+  disabled={
+    approvedNotesLoading ||
+    deliveriesLoading ||
+    pendingApprovedNotes.length === 0
+  }
 >
-                    {approvedNotes.length === 0 ? (
+                    {pendingApprovedNotes.length === 0 ? (
 <option value="" className={readableOptionClass}>
-  {approvedNotesLoading ? "Loading approved notes..." : "No approved notes found"}
+  {approvedNotesLoading || deliveriesLoading
+    ? "Checking approved notes..."
+    : "No approved notes awaiting delivery"}
 </option>
                     ) : (
-                      approvedNotes.map((n) => (
+                      pendingApprovedNotes.map((n) => (
 <option key={n.id} value={n.id} className={readableOptionClass}>
   {noteLabel(n)}
 </option>
@@ -855,15 +899,24 @@ const refetch = await fetch(`/api/teacher/lesson-deliveries/list?${params.toStri
                   {approvedNotesError ? (
                     <p className="text-[10px] text-amber-700">{approvedNotesError}</p>
                   ) : null}
-                  {!approvedNotesLoading && !approvedNotesError && approvedNotes.length === 0 ? (
+                  {!approvedNotesLoading &&
+                  !deliveriesLoading &&
+                  !approvedNotesError &&
+                  pendingApprovedNotes.length === 0 ? (
   <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
-    No approved lesson notes are available for this class, term, and academic year.
-    Lesson delivery can only be recorded from an approved lesson note.
-    <div className="mt-2">
-      <Link href={lessonNotesHref} className="font-semibold underline">
-        Create or submit a lesson note for approval
-      </Link>
+    {approvedNotes.length === 0
+      ? "No approved lesson notes are available for this class, term, and academic year."
+      : "All approved lesson notes in this scope already have delivery evidence."}
+    <div className="mt-1">
+      Recorded lessons remain listed as evidence on this page.
     </div>
+    {approvedNotes.length === 0 ? (
+      <div className="mt-2">
+        <Link href={lessonNotesHref} className="font-semibold underline">
+          Create or submit a lesson note for approval
+        </Link>
+      </div>
+    ) : null}
   </div>
 ) : null}
                 </div>
