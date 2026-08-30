@@ -294,12 +294,6 @@ const goldButton =
   "inline-flex items-center rounded-xl border border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-[12px] font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50";
 const emeraldButton =
   "inline-flex items-center rounded-xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-2 text-[12px] font-semibold text-emerald-100 transition hover:bg-emerald-400/18 disabled:cursor-not-allowed disabled:opacity-50";
-const indigoButton =
-  "inline-flex items-center rounded-xl border border-indigo-300/20 bg-indigo-400/12 px-4 py-2 text-[12px] font-semibold text-indigo-100 transition hover:bg-indigo-400/18 disabled:cursor-not-allowed disabled:opacity-50";
-
-const broadsheetButton =
-  "inline-flex items-center justify-center rounded-xl border border-[#E8C96A]/35 bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-[12px] font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.24)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50";
-
 function cleanStr(v: unknown) {
   return String(v ?? "").trim();
 }
@@ -710,13 +704,16 @@ export default function TeacherAssessmentClient() {
   const [pipelineError, setPipelineError] = useState<string | null>(null);
 
   const [tab, setTab] = useState<MobileTab>("scores");
+  const [showAssessmentTools, setShowAssessmentTools] = useState<boolean>(hasLessonDeliveryContext);
+  const [journeyRefreshKey, setJourneyRefreshKey] = useState(0);
   const [itemFormOpen, setItemFormOpen] = useState<boolean>(true);
   const [learnerQuery, setLearnerQuery] = useState<string>("");
 const [broadsheetRefreshKey, setBroadsheetRefreshKey] = useState(0);
 const [broadsheetNotice, setBroadsheetNotice] = useState<string | null>(null);
 
 const shouldLoadInsights = tab === "insights";
-const shouldLoadPipeline = tab === "pipeline";
+const shouldLoadPipelineDetails = tab === "pipeline";
+const shouldLoadJourney = !!classroomId;
 const shouldLoadSubjects = tab === "items" || tab === "broadsheet" || hasLessonDeliveryContext;
 const shouldLoadLessonDeliveries = tab === "items" || hasLessonDeliveryContext;
 
@@ -820,6 +817,12 @@ const lessonDeliveriesPageHref = useMemo(() => {
   if (!classroomId) return "/teacher/lesson-deliveries";
   const params = new URLSearchParams({ classroomId, term, academicYear });
   return `/teacher/lesson-deliveries?${params.toString()}`;
+}, [classroomId, term, academicYear]);
+
+const lessonNotesPageHref = useMemo(() => {
+  if (!classroomId) return "/teacher/lesson-notes";
+  const params = new URLSearchParams({ classroomId, term, academicYear });
+  return `/teacher/lesson-notes?${params.toString()}`;
 }, [classroomId, term, academicYear]);
 
   function buildBlankScoreGrid(currentStudents: Student[]) {
@@ -1136,7 +1139,7 @@ setClassroomId(def);
 
 useEffect(() => {
   const loadSummary = async () => {
-    if (!classroomId || !shouldLoadPipeline) {
+    if (!classroomId || !shouldLoadPipelineDetails) {
       setSummaryLoading(false);
       return;
     }
@@ -1186,11 +1189,11 @@ useEffect(() => {
     };
 
     loadSummary();
-}, [classroomId, term, academicYear, shouldLoadPipeline]);
+}, [classroomId, term, academicYear, shouldLoadPipelineDetails]);
 
 useEffect(() => {
   const loadPipeline = async () => {
-    if (!classroomId || !shouldLoadPipeline) {
+    if (!classroomId || !shouldLoadJourney) {
       setPipelineLoading(false);
       return;
     }
@@ -1218,7 +1221,7 @@ useEffect(() => {
     };
 
     loadPipeline();
-}, [classroomId, term, academicYear, shouldLoadPipeline]);
+}, [classroomId, term, academicYear, shouldLoadJourney, journeyRefreshKey]);
 
 useEffect(() => {
   if (!selectedItem) return;
@@ -1258,6 +1261,7 @@ useEffect(() => {
 
 async function handleSelectItem(itemId: string) {
     setActionError(null);
+    setShowAssessmentTools(true);
     setSelectedItemId(itemId);
     setItemFormOpen(false);
     await loadScoresForItem(itemId, students);
@@ -1511,6 +1515,134 @@ setSavingScoresState("saved");
     }
   }
 
+  const linkedTeachingItem = useMemo(
+    () =>
+      items.find(
+        (item) =>
+          !!item.lessonDeliveryId &&
+          cleanStr(item.type).toUpperCase() !== "MOCK"
+      ) ?? null,
+    [items]
+  );
+
+  const nextJourneyAction = useMemo(() => {
+    if (!classroomId) {
+      return {
+        kind: "WAIT" as const,
+        eyebrow: "Choose a class",
+        title: "Select the class you are working with.",
+        detail: "EduLife will then show the next legitimate teaching action.",
+      };
+    }
+
+    if (pipelineError) {
+      return {
+        kind: "RETRY" as const,
+        eyebrow: "Progress check needs attention",
+        title: "EduLife could not check the teaching chain.",
+        detail: "Retry the progress check before recording more evidence.",
+      };
+    }
+
+    if (!pipeline) {
+      return {
+        kind: "WAIT" as const,
+        eyebrow: "Checking your teaching progress",
+        title: "Finding the next legitimate action...",
+        detail: "This uses the approved-note, delivery and assessment records already saved.",
+      };
+    }
+
+    const hasDefinitelyUnscoredLinkedAssessment =
+      pipeline.counts.orphanAssessmentsCount === 0 &&
+      pipeline.counts.linkedAssessmentsCount > pipeline.counts.scoredAssessmentsCount;
+
+    if (hasDefinitelyUnscoredLinkedAssessment) {
+      return {
+        kind: "SCORES" as const,
+        eyebrow: "Best next action",
+        title: "Finish learner scores for the assessment already recorded.",
+        detail: linkedTeachingItem
+          ? `${linkedTeachingItem.subject} • ${linkedTeachingItem.title}`
+          : "Assessment evidence is linked to the teaching chain.",
+        itemId: linkedTeachingItem?.id ?? null,
+      };
+    }
+
+    const pendingDelivery = pipeline.orphanDeliveries[0] ?? null;
+    if (pendingDelivery) {
+      const params = new URLSearchParams({
+        classroomId,
+        term,
+        academicYear,
+        subject: pendingDelivery.subject,
+        lessonDeliveryId: pendingDelivery.id,
+      });
+
+      if (pendingDelivery.curriculumUnitId) {
+        params.set("curriculumUnitId", pendingDelivery.curriculumUnitId);
+      }
+      if (pendingDelivery.lessonNoteId) {
+        params.set("lessonNoteId", pendingDelivery.lessonNoteId);
+      }
+
+      return {
+        kind: "ASSESS" as const,
+        eyebrow: "Best next action",
+        title: "Enter assessment for the lesson you already delivered.",
+        detail: `${pendingDelivery.subject} • ${formatDateForInput(pendingDelivery.dateTaught) || "Delivered lesson"}`,
+        href: `/teacher/assessment?${params.toString()}`,
+      };
+    }
+
+    const pendingNote = pipeline.orphanNotes[0] ?? null;
+    if (pendingNote) {
+      return {
+        kind: "DELIVER" as const,
+        eyebrow: "Best next action",
+        title: "Record the lesson you have taught.",
+        detail: `${pendingNote.subject} • ${pendingNote.lessonTitle || "Approved lesson note"}`,
+        href: lessonDeliveriesPageHref,
+      };
+    }
+
+    if (pipeline.counts.approvedNotesCount === 0) {
+      return {
+        kind: "PLAN" as const,
+        eyebrow: "Best next action",
+        title: "Prepare and submit your Lesson Note.",
+        detail: "Assessment begins after the relevant Scheme and Lesson Note are approved.",
+        href: lessonNotesPageHref,
+      };
+    }
+
+    if (pipeline.counts.linkedAssessmentsCount > 0) {
+      return {
+        kind: "REVIEW" as const,
+        eyebrow: "Teaching evidence recorded",
+        title: "Review the Broadsheet before you move on.",
+        detail: "EduLife will show the strongest legitimate score evidence and any remaining gaps.",
+      };
+    }
+
+    return {
+      kind: "ASSESS" as const,
+      eyebrow: "Best next action",
+      title: "Create assessment evidence for the delivered lesson.",
+      detail: "Open Lesson Delivery and continue from the delivered lesson record.",
+      href: lessonDeliveriesPageHref,
+    };
+  }, [
+    classroomId,
+    term,
+    academicYear,
+    pipeline,
+    pipelineError,
+    linkedTeachingItem,
+    lessonDeliveriesPageHref,
+    lessonNotesPageHref,
+  ]);
+
   const zeroPipeline =
     !!pipeline &&
     pipeline.counts.approvedNotesCount === 0 &&
@@ -1588,31 +1720,6 @@ setSavingScoresState("saved");
             </div>
           </div>
 
-<div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
-  <button
-    type="button"
-    onClick={() => setTab("broadsheet")}
-    className={
-      (tab === "broadsheet"
-        ? `${broadsheetButton} ring-2 ring-[#E8C96A]/35`
-        : broadsheetButton) + " w-full justify-center px-3 py-2 sm:w-auto"
-    }
-  >
-    Broadsheet
-  </button>
-
-  <Link href={mockAssessmentHref} className={goldButton + " w-full justify-center px-3 py-2 sm:w-auto"}>
-    BECE Mock
-  </Link>
-
-  <Link href={lessonDeliveriesPageHref} className={emeraldButton + " w-full justify-center px-3 py-2 sm:w-auto"}>
-    Lesson Delivery
-  </Link>
-
-  <Link href={termDashboardHref} className={indigoButton + " w-full justify-center px-3 py-2 sm:w-auto"}>
-    Term Dashboard
-  </Link>
-</div>
         </div>
 
         <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.025] p-3">
@@ -1687,6 +1794,117 @@ setSavingScoresState("saved");
         </div>
       </div>
 
+
+      <div className="rounded-[28px] border border-emerald-300/20 bg-[linear-gradient(135deg,rgba(16,185,129,0.16),rgba(255,255,255,0.04))] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.16)]">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-200">
+              {nextJourneyAction.eyebrow}
+            </div>
+            <div className="mt-1 text-base font-semibold text-[#F7F4ED]">
+              {nextJourneyAction.title}
+            </div>
+            <div className="mt-1 text-[12px] leading-5 text-[#C9CDD6]">
+              {nextJourneyAction.detail}
+            </div>
+          </div>
+
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+            {nextJourneyAction.kind === "RETRY" ? (
+              <button
+                type="button"
+                onClick={() => setJourneyRefreshKey((value) => value + 1)}
+                className={emeraldButton + " justify-center"}
+              >
+                Retry progress check
+              </button>
+            ) : nextJourneyAction.kind === "SCORES" ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAssessmentTools(true);
+                  if (nextJourneyAction.itemId) {
+                    void handleSelectItem(nextJourneyAction.itemId);
+                  } else {
+                    setTab("scores");
+                  }
+                }}
+                className={goldButton + " justify-center"}
+              >
+                Finish scores
+              </button>
+            ) : nextJourneyAction.kind === "REVIEW" ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAssessmentTools(true);
+                  setTab("broadsheet");
+                }}
+                className={goldButton + " justify-center"}
+              >
+                Review Broadsheet
+              </button>
+            ) : "href" in nextJourneyAction && nextJourneyAction.href ? (
+              <Link href={nextJourneyAction.href} className={goldButton + " justify-center"}>
+                {nextJourneyAction.kind === "PLAN"
+                  ? "Prepare Lesson Note"
+                  : nextJourneyAction.kind === "DELIVER"
+                    ? "Record Lesson Delivery"
+                    : "Enter Assessment"}
+              </Link>
+            ) : (
+              <button type="button" disabled className={darkButton + " justify-center"}>
+                {pipelineLoading ? "Checking..." : "Choose class"}
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setJourneyRefreshKey((value) => value + 1)}
+              disabled={pipelineLoading}
+              className={darkButton + " justify-center"}
+            >
+              {pipelineLoading ? "Checking..." : "Refresh"}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-4 gap-2">
+          {[
+            ["Plan", pipeline?.counts.approvedNotesCount ?? 0, nextJourneyAction.kind === "PLAN"],
+            ["Deliver", pipeline?.counts.deliveredLessonsCount ?? 0, nextJourneyAction.kind === "DELIVER"],
+            ["Assess", pipeline?.counts.linkedAssessmentsCount ?? 0, nextJourneyAction.kind === "ASSESS"],
+            ["Scores", pipeline?.counts.scoredAssessmentsCount ?? 0, nextJourneyAction.kind === "SCORES" || nextJourneyAction.kind === "REVIEW"],
+          ].map(([label, value, active]) => (
+            <div
+              key={String(label)}
+              className={
+                "rounded-xl border px-2 py-2 text-center " +
+                (active
+                  ? "border-[#E8C96A]/45 bg-[#E8C96A]/12"
+                  : "border-white/10 bg-white/[0.04]")
+              }
+            >
+              <div className="text-[10px] font-semibold text-[#C9CDD6]">{label}</div>
+              <div className="mt-0.5 text-sm font-semibold text-[#F7F4ED]">{value}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/10 pt-3">
+          <div className="text-[11px] text-[#8F98A8]">
+            Counts come from saved teaching evidence, not a separate checklist.
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowAssessmentTools((value) => !value)}
+            className="shrink-0 text-[11px] font-semibold text-[#E8C96A] hover:text-[#F3D97F]"
+          >
+            {showAssessmentTools ? "Hide tools" : "More assessment tools"}
+          </button>
+        </div>
+      </div>
+
       {actionError ? (
         <div className="rounded-2xl border border-amber-300/20 bg-amber-400/12 px-4 py-3 text-[12px] text-amber-100">
           {actionError}
@@ -1742,6 +1960,31 @@ setSavingScoresState("saved");
           {selectedItemNotice}
         </div>
       )}
+
+      <div className={showAssessmentTools ? "space-y-4" : "hidden"}>
+        <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-3">
+          <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F98A8]">
+            More assessment tools
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <button
+              type="button"
+              onClick={() => setTab("broadsheet")}
+              className={darkButton + " justify-center"}
+            >
+              Broadsheet
+            </button>
+            <Link href={mockAssessmentHref} className={darkButton + " justify-center"}>
+              BECE Mock
+            </Link>
+            <Link href={lessonDeliveriesPageHref} className={darkButton + " justify-center"}>
+              Lesson Delivery
+            </Link>
+            <Link href={termDashboardHref} className={darkButton + " justify-center"}>
+              Term Dashboard
+            </Link>
+          </div>
+        </div>
 
       <div className="md:hidden">
         <div className="grid grid-cols-5 gap-2">
@@ -2514,7 +2757,9 @@ disabled={!!selectedItemScoreReadOnlyReason}
         </div>
       </div>
 
-      {tab === "scores" && selectedItem ? (
+      </div>
+
+      {showAssessmentTools && tab === "scores" && selectedItem ? (
         <div className="fixed bottom-0 left-0 right-0 border-t border-white/10 bg-[rgba(5,7,11,0.92)] p-3 backdrop-blur-xl md:hidden">
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-1">
             <div className="min-w-0">
