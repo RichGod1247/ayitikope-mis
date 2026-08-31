@@ -50,6 +50,7 @@ export type WorkOutputTypeCount = {
   count: number;
   scoredItemCount: number;
   scoredEntries: number;
+  averagePercent: number | null;
 };
 
 export type WorkOutputItemSummary = {
@@ -233,6 +234,22 @@ function buildTypeCounts(items: WorkOutputItemInput[]): WorkOutputTypeCount[] {
       (item) => normalizeWorkOutputType(item.type) === key
     );
 
+    let scoreSum = 0;
+    let maxSum = 0;
+
+    for (const item of typedItems) {
+      const maxScore = Number(item.maxScore ?? 0);
+      if (!Number.isFinite(maxScore) || maxScore <= 0) continue;
+
+      for (const score of item.scores) {
+        const numericScore = Number(score.score ?? 0);
+        if (!Number.isFinite(numericScore)) continue;
+
+        scoreSum += numericScore;
+        maxSum += maxScore;
+      }
+    }
+
     return {
       key,
       label: workOutputTypeLabel(key),
@@ -242,6 +259,8 @@ function buildTypeCounts(items: WorkOutputItemInput[]): WorkOutputTypeCount[] {
         (sum, item) => sum + item.scores.length,
         0
       ),
+      averagePercent:
+        maxSum > 0 ? round1((scoreSum / maxSum) * 100) : null,
     };
   });
 }

@@ -9,6 +9,12 @@ import {
 } from "@/lib/teacherAccess";
 import { getTenantAssessmentPolicyLite } from "@/lib/assessments/policy";
 import { buildSubjectBroadsheet } from "@/lib/assessments/broadsheet";
+import { subjectMatchesTeachingScope } from "@/lib/teachingSubjectScope";
+import {
+  buildWorkOutputSnapshot,
+  type WorkOutputDeliveryInput,
+  type WorkOutputItemInput,
+} from "@/lib/assessments/workOutput";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,54 +75,6 @@ function clean(v: unknown) {
 
 function uniq(xs: string[]) {
   return Array.from(new Set(xs.map(clean).filter(Boolean)));
-}
-
-function subjectKey(v: unknown) {
-  return clean(v).toUpperCase().replace(/[^A-Z0-9]/g, "");
-}
-
-function subjectAliasKeys(v: unknown) {
-  const key = subjectKey(v);
-  const keys = new Set<string>();
-  if (!key) return keys;
-
-  keys.add(key);
-
-  const aliases: Record<string, string[]> = {
-    MATHS: ["MATH", "MATHEMATICS"],
-    MATH: ["MATHS", "MATHEMATICS"],
-    MATHEMATICS: ["MATH", "MATHS"],
-
-    SCIENCE: ["INTEGRATEDSCIENCE", "INTSCIENCE"],
-    INTEGRATEDSCIENCE: ["SCIENCE", "INTSCIENCE"],
-    INTSCIENCE: ["SCIENCE", "INTEGRATEDSCIENCE"],
-
-    ENGLISH: ["ENGLISHLANGUAGE"],
-    ENGLISHLANGUAGE: ["ENGLISH"],
-
-    OWOP: ["OURWORLDOURPEOPLE"],
-    OURWORLDOURPEOPLE: ["OWOP"],
-
-    RME: ["RELIGIOUSANDMORALEDUCATION"],
-    RELIGIOUSANDMORALEDUCATION: ["RME"],
-
-    ICT: ["COMPUTING"],
-    COMPUTING: ["ICT"],
-  };
-
-  for (const alias of aliases[key] ?? []) keys.add(alias);
-  return keys;
-}
-
-function sameSubjectLoose(a: unknown, b: unknown) {
-  const aKeys = subjectAliasKeys(a);
-  const bKeys = subjectAliasKeys(b);
-
-  for (const key of aKeys) {
-    if (bKeys.has(key)) return true;
-  }
-
-  return false;
 }
 
 function classLabel(c: ClassroomLite | null | undefined) {
@@ -197,45 +155,6 @@ function profileMatchesClass(profile: TeacherProfileLite | null, classroom: Clas
   }
 
   return { allSubjects: false, subjects: [] as string[] };
-}
-
-function assessmentBucket(raw: unknown) {
-  const s = clean(raw).toUpperCase().replace(/[^A-Z0-9]/g, "_");
-  const compact = s.replace(/_/g, "");
-
-  if (s.includes("HOMEWORK") || s.includes("ASSIGNMENT") || compact === "HW") {
-    return "HOMEWORK";
-  }
-
-  if (
-    s.includes("CLASS_TEST") ||
-    (s.includes("CLASS") && s.includes("TEST")) ||
-    s.includes("TEST") ||
-    s.includes("QUIZ") ||
-    /^CT[0-9]*$/.test(compact)
-  ) {
-    return "CLASS_TEST";
-  }
-
-  if (
-    s.includes("EXERCISE") ||
-    s.includes("CLASSWORK") ||
-    s.includes("CLASS_WORK") ||
-    s.includes("CLASS_ACTIVITY") ||
-    compact === "CW" ||
-    compact === "EX"
-  ) {
-    return "EXERCISE";
-  }
-
-  return "OTHER";
-}
-
-function bucketLabel(key: string) {
-  if (key === "EXERCISE") return "Exercises";
-  if (key === "CLASS_TEST") return "Class tests";
-  if (key === "HOMEWORK") return "Homework";
-  return "Other";
 }
 
 type CurriculumSubjectLite = {
@@ -575,9 +494,11 @@ function scopeAllows(args: {
   const teacher = args.scopes.find((t) => t.userId === args.teacherUserId) ?? null;
   const classroom = teacher?.classes.find((c) => c.classroomId === args.classroomId) ?? null;
   const subject =
-  classroom?.subjects.find(
-    (s) => subjectEquals(s, args.subject) || sameSubjectLoose(s, args.subject)
-  ) ?? null;
+    classroom?.subjects.find(
+      (s) =>
+        subjectEquals(s, args.subject) ||
+        subjectMatchesTeachingScope(s, args.subject, classroom.stageBucket)
+    ) ?? null;
   return { teacher, classroom, subject };
 }
 
@@ -616,6 +537,8 @@ export async function GET(req: NextRequest) {
       return jsonNoStore(403, { ok: false, error: "TEACHER_SUBJECT_OUT_OF_SCOPE" });
     }
 
+    const allowedStageBucket = allowed.classroom.stageBucket;
+
     const classroom = await prisma.classroom.findFirst({
       where: { id: classroomId, tenantId: ctx.tenantId, status: "ACTIVE" },
       select: { id: true, name: true, grade: true, arm: true },
@@ -642,7 +565,16 @@ export async function GET(req: NextRequest) {
         id: true,
         subject: true,
         dateTaught: true,
+        lessonNoteId: true,
+        lessonNote: {
+          select: {
+            lessonTitle: true,
+          },
+        },
         assessmentItems: {
+          where: {
+            type: { not: "MOCK" },
+          },
           orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
           select: {
             id: true,
@@ -668,10 +600,44 @@ export async function GET(req: NextRequest) {
       take: 20000,
     });
 
-    const linkedItems = deliveryRows
-      .filter((delivery) => sameSubjectLoose(delivery.subject, allowed.subject))
-      .flatMap((delivery) => delivery.assessmentItems)
-      .filter((item) => clean(item.type).toUpperCase() !== "MOCK");
+    const deliveries: WorkOutputDeliveryInput[] = deliveryRows
+      .filter((delivery) =>
+        subjectMatchesTeachingScope(
+          delivery.subject,
+          allowed.subject,
+          allowedStageBucket
+        )
+      )
+      .map((delivery) => ({
+        id: delivery.id,
+        subject: delivery.subject,
+        dateTaught: delivery.dateTaught,
+        lessonNoteId: delivery.lessonNoteId ?? null,
+        lessonTitle: delivery.lessonNote?.lessonTitle ?? null,
+        items: delivery.assessmentItems
+          .filter((item) =>
+            subjectMatchesTeachingScope(
+              item.subject,
+              allowed.subject,
+              allowedStageBucket
+            )
+          )
+          .map(
+            (item): WorkOutputItemInput => ({
+              id: item.id,
+              title: item.title,
+              type: item.type,
+              maxScore: Number(item.maxScore ?? 0),
+              date: item.date,
+              createdAt: item.createdAt,
+              lessonDeliveryId: item.lessonDeliveryId ?? null,
+              scores: item.scores.map((score) => ({
+                studentId: score.studentId,
+                score: Number(score.score ?? 0),
+              })),
+            })
+          ),
+      }));
 
     const fallbackItems = await prisma.assessmentItem.findMany({
       where: {
@@ -681,6 +647,7 @@ export async function GET(req: NextRequest) {
         academicYear,
         type: { not: "MOCK" },
         createdByUserId: teacherUserId,
+        lessonDeliveryId: null,
       },
       select: {
         id: true,
@@ -704,58 +671,56 @@ export async function GET(req: NextRequest) {
       take: 20000,
     });
 
-    const itemMap = new Map<string, (typeof linkedItems)[number]>();
+    const legacyUnlinkedItems: WorkOutputItemInput[] = fallbackItems
+      .filter((item) =>
+        subjectMatchesTeachingScope(
+          item.subject,
+          allowed.subject,
+          allowedStageBucket
+        )
+      )
+      .map((item) => ({
+        id: item.id,
+        title: item.title,
+        type: item.type,
+        maxScore: Number(item.maxScore ?? 0),
+        date: item.date,
+        createdAt: item.createdAt,
+        lessonDeliveryId: null,
+        scores: item.scores.map((score) => ({
+          studentId: score.studentId,
+          score: Number(score.score ?? 0),
+        })),
+      }));
 
-    for (const item of linkedItems) {
-      if (sameSubjectLoose(item.subject, allowed.subject)) {
-        itemMap.set(item.id, item);
-      }
-    }
-
-    for (const item of fallbackItems) {
-      if (sameSubjectLoose(item.subject, allowed.subject)) {
-        itemMap.set(item.id, item);
-      }
-    }
-
-    const items = Array.from(itemMap.values()).sort((a, b) => {
-      const aTime = new Date(a.date ?? a.createdAt).getTime();
-      const bTime = new Date(b.date ?? b.createdAt).getTime();
-
-      if (Number.isFinite(aTime) && Number.isFinite(bTime) && aTime !== bTime) {
-        return aTime - bTime;
-      }
-
-      return clean(a.title).localeCompare(clean(b.title));
+    const workOutput = buildWorkOutputSnapshot({
+      deliveries,
+      legacyUnlinkedItems,
+      students: students.map((student) => ({
+        id: student.id,
+        name:
+          `${student.firstName ?? ""} ${student.lastName ?? ""}`.trim() ||
+          "Learner",
+      })),
     });
 
-    const buckets = ["EXERCISE", "CLASS_TEST", "HOMEWORK"].map((key) => {
-      const bucketItems = items.filter((item) => assessmentBucket(item.type) === key);
-      let scoreSum = 0;
-      let maxSum = 0;
-      let scoreCount = 0;
+    const linkedItemIds = new Set(
+      deliveries.flatMap((delivery) => delivery.items.map((item) => item.id))
+    );
 
-      for (const item of bucketItems) {
-        const max = Number(item.maxScore ?? 0);
-        if (max <= 0) continue;
+    const linkedItems = deliveryRows
+      .flatMap((delivery) => delivery.assessmentItems)
+      .filter((item) => linkedItemIds.has(item.id));
 
-        for (const score of item.scores) {
-          scoreSum += Number(score.score ?? 0);
-          maxSum += max;
-          scoreCount += 1;
-        }
-      }
+    const broadsheetItems = [...linkedItems, ...fallbackItems].filter((item) =>
+      subjectMatchesTeachingScope(
+        item.subject,
+        allowed.subject,
+        allowedStageBucket
+      )
+    );
 
-      return {
-        key,
-        label: bucketLabel(key),
-        count: bucketItems.length,
-        scoredCount: scoreCount,
-        averagePercent: maxSum > 0 ? Number(((scoreSum / maxSum) * 100).toFixed(1)) : null,
-      };
-    });
-
-    const scoreRows = items.flatMap((item) =>
+    const scoreRows = broadsheetItems.flatMap((item) =>
       item.scores.map((score) => ({
         itemId: item.id,
         studentId: score.studentId,
@@ -774,7 +739,7 @@ export async function GET(req: NextRequest) {
         lastName: s.lastName ?? "",
         sex: s.sex ?? s.gender ?? "",
       })),
-      items: items.map((item) => ({
+      items: broadsheetItems.map((item) => ({
         id: item.id,
         subject: item.subject,
         title: item.title,
@@ -801,12 +766,19 @@ export async function GET(req: NextRequest) {
       },
       subject: allowed.subject,
       workOutput: {
-        itemCount: items.length,
+        itemCount: workOutput.term.itemCount,
         learnerCount: students.length,
-        scoredEntries: scoreRows.length,
-        buckets,
+        scoredEntries: workOutput.term.scoredEntries,
+        legacyUnlinkedItemCount: workOutput.legacyUnlinked.itemCount,
+        buckets: workOutput.term.typeCounts.map((bucket) => ({
+          key: bucket.key,
+          label: bucket.label,
+          count: bucket.count,
+          scoredCount: bucket.scoredEntries,
+          averagePercent: bucket.averagePercent,
+        })),
       },
-      items: items.map((item) => ({
+      items: linkedItems.map((item) => ({
         id: item.id,
         title: item.title,
         type: item.type,
@@ -814,6 +786,12 @@ export async function GET(req: NextRequest) {
         status: item.status,
         scoresCount: item.scores.length,
       })),
+      interpretation: {
+        purpose: "FORMATIVE_PRACTICE_SUPPORT",
+        ranking: false,
+        punitive: false,
+        canonicalEvidence: "LESSON_DELIVERY_LINKED_NON_MOCK",
+      },
       broadsheet: {
         readiness: sheet.readiness,
         rows: sheet.rows,

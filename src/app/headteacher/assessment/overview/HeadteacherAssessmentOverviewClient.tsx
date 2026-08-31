@@ -151,6 +151,7 @@ type SbaOutputOk = {
     itemCount: number;
     learnerCount: number;
     scoredEntries: number;
+    legacyUnlinkedItemCount: number;
     buckets: SbaBucket[];
   };
   items: Array<{
@@ -1703,8 +1704,13 @@ const buckets = props.output?.workOutput.buckets ?? [];
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-[11px] leading-6 text-[#C9CDD6]">
   {props.output.teacher.name} • {props.output.classroom.classLabel} • {props.output.subject} — {formatNumber(props.output.workOutput.itemCount)} items, {formatNumber(props.output.workOutput.scoredEntries)} score entries.
   <div className="mt-1 text-[#8F98A8]">
-    Work Output uses raw score averages. Broadsheet uses official weighted SBA policy.
+    Work Output counts non-Mock assessment practice linked to lessons delivered. Use it to encourage enough learner practice and follow progress — not to rank or punish teachers. Broadsheet uses the official weighted SBA policy.
   </div>
+  {props.output.workOutput.legacyUnlinkedItemCount > 0 ? (
+    <div className="mt-2 rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 py-2 text-[10px] leading-5 text-amber-100">
+      {formatNumber(props.output.workOutput.legacyUnlinkedItemCount)} older assessment item(s) are preserved outside Work Output because they are not linked to a recorded lesson delivery.
+    </div>
+  ) : null}
 </div>
 
           {props.showBroadsheet ? (
