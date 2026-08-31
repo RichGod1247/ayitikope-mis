@@ -187,8 +187,11 @@ type SbaOutputResp = SbaOutputOk | { ok: false; error: string };
 type StreamMode = "single" | "multi";
 type AssessmentSpine = "sba" | "mock";
 
-const DEFAULT_TERM = "1st Term";
-const DEFAULT_YEAR = "2025/2026";
+type TenantTermYearResponse = {
+  ok?: boolean;
+  term?: string | null;
+  academicYear?: string | null;
+};
 
 function formatPercent(value: number | null | undefined): string {
   if (value == null || Number.isNaN(value)) return "—";
@@ -498,11 +501,12 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const initialTerm = searchParams.get("term") || DEFAULT_TERM;
-  const initialYear = searchParams.get("academicYear") || DEFAULT_YEAR;
+  const initialTerm = cleanStr(searchParams.get("term"));
+  const initialYear = cleanStr(searchParams.get("academicYear"));
 
   const [term, setTerm] = useState(initialTerm);
   const [academicYear, setAcademicYear] = useState(initialYear);
+  const [scopeError, setScopeError] = useState<string | null>(null);
 
   const [overview, setOverview] = useState<HeadteacherAssessmentOverviewResponse | null>(null);
   const [governance, setGovernance] = useState<GovernanceResp | null>(null);
@@ -530,6 +534,7 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
   const [sbaOutputLoading, setSbaOutputLoading] = useState(false);
   const [sbaError, setSbaError] = useState<string | null>(null);
   const [sbaOutput, setSbaOutput] = useState<SbaOutputOk | null>(null);
+  const [showSbaWorkOutput, setShowSbaWorkOutput] = useState(false);
   const [showSbaBroadsheet, setShowSbaBroadsheet] = useState(false);
   const [sbaStreamMode, setSbaStreamMode] = useState<StreamMode>("single");
 
@@ -581,7 +586,9 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
   );
 
   const selectedSbaSubjects = selectedSbaClass?.subjects ?? [];
-  const canLoadSbaOutput = !!sbaTeacherUserId && !!sbaClassroomId && !!sbaSubject;
+  const hasAssessmentScope = !!term && !!academicYear;
+  const canLoadSbaOutput =
+    hasAssessmentScope && !!sbaTeacherUserId && !!sbaClassroomId && !!sbaSubject;
 
   function applySbaDefaults(teachers: SbaTeacherScope[]) {
     const teacher = teachers.find((t) => t.userId === sbaTeacherUserId) ?? teachers[0] ?? null;
@@ -594,6 +601,12 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
   }
 
   async function loadSbaRoster(termValue: string, yearValue: string) {
+    if (!termValue || !yearValue) {
+      setSbaTeachers([]);
+      setSbaError("Choose the current term and academic year to load assessment evidence.");
+      return;
+    }
+
     setSbaLoading(true);
     setSbaError(null);
 
@@ -621,7 +634,10 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
     }
   }
 
-  async function loadSbaWorkOutput(options?: { showBroadsheet?: boolean }) {
+  async function loadSbaWorkOutput(options?: {
+    showBroadsheet?: boolean;
+    showWorkOutput?: boolean;
+  }) {
     if (!canLoadSbaOutput) return;
 
     setSbaOutputLoading(true);
@@ -649,7 +665,12 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
       }
 
       setSbaOutput(json);
-      if (options?.showBroadsheet) setShowSbaBroadsheet(true);
+      if (options?.showWorkOutput !== undefined) {
+        setShowSbaWorkOutput(options.showWorkOutput);
+      }
+      if (options?.showBroadsheet !== undefined) {
+        setShowSbaBroadsheet(options.showBroadsheet);
+      }
     } catch {
       setSbaOutput(null);
       setSbaError("Network error while loading teacher work output.");
@@ -659,9 +680,51 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
   }
 
   useEffect(() => {
-    const params = new URLSearchParams();
-    if (term) params.set("term", term);
-    if (academicYear) params.set("academicYear", academicYear);
+    if (term && academicYear) return;
+
+    let active = true;
+
+    async function loadCurrentAssessmentScope() {
+      try {
+        const res = await fetch("/api/settings/current-term-year", {
+          method: "GET",
+          cache: "no-store",
+          credentials: "include",
+        });
+        const data = (await res.json().catch(() => ({}))) as TenantTermYearResponse;
+
+        if (!res.ok || !data?.ok) {
+          throw new Error("CURRENT_TERM_YEAR_UNAVAILABLE");
+        }
+
+        const resolvedTerm = term || cleanStr(data.term);
+        const resolvedYear = academicYear || cleanStr(data.academicYear);
+
+        if (!resolvedTerm || !resolvedYear) {
+          throw new Error("CURRENT_TERM_YEAR_INCOMPLETE");
+        }
+
+        if (!active) return;
+        if (!term) setTerm(resolvedTerm);
+        if (!academicYear) setAcademicYear(resolvedYear);
+      } catch {
+        if (!active) return;
+        setScopeError(
+          "Choose the current term and academic year to load assessment evidence."
+        );
+      }
+    }
+
+    void loadCurrentAssessmentScope();
+
+    return () => {
+      active = false;
+    };
+  }, [term, academicYear]);
+
+  useEffect(() => {
+    if (!term || !academicYear) return;
+    const params = new URLSearchParams({ term, academicYear });
     router.replace(`/headteacher/assessment/overview?${params.toString()}`);
   }, [term, academicYear, router]);
 
@@ -784,20 +847,24 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
   }
 
   useEffect(() => {
+    if (!term || !academicYear) return;
     void loadOverviewAndGovernance(term, academicYear);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [term, academicYear]);
 
   useEffect(() => {
     setSbaOutput(null);
+    setShowSbaWorkOutput(false);
     setShowSbaBroadsheet(false);
-    if (showSbaPanel) void loadSbaRoster(term, academicYear);
+    if (showSbaPanel && term && academicYear) {
+      void loadSbaRoster(term, academicYear);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [term, academicYear]);
 
   useEffect(() => {
     if (!showRemarkBandPanel) return;
-    if (!selectedClassroomId) return;
+    if (!selectedClassroomId || !term || !academicYear) return;
     if (remarkBandsByClassroom[selectedClassroomId]) return;
     void loadRemarkSummaryForClass(selectedClassroomId, term, academicYear);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -916,8 +983,12 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
               <select
                 className="rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-[11px] text-[#F7F4ED] focus:border-[#D4AF37]/40 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/20"
                 value={term}
-                onChange={(e) => setTerm(e.target.value)}
+                onChange={(e) => {
+                  setScopeError(null);
+                  setTerm(e.target.value);
+                }}
               >
+                <option value="">Choose term</option>
                 <option value="1st Term">1st Term</option>
                 <option value="2nd Term">2nd Term</option>
                 <option value="3rd Term">3rd Term</option>
@@ -929,7 +1000,10 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
               <input
                 className="w-32 rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-[11px] text-[#F7F4ED] placeholder:text-[#7E8796] focus:border-[#D4AF37]/40 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/20"
                 value={academicYear}
-                onChange={(e) => setAcademicYear(e.target.value)}
+                onChange={(e) => {
+                  setScopeError(null);
+                  setAcademicYear(e.target.value);
+                }}
                 placeholder="2025/2026"
               />
             </div>
@@ -940,13 +1014,19 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
                 void loadOverviewAndGovernance(term, academicYear);
                 if (showGovernancePanel) void loadGovernance(term, academicYear);
               }}
-              disabled={loading}
+              disabled={loading || !hasAssessmentScope}
               className="inline-flex items-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-medium text-[#F7F4ED] transition hover:bg-white/10 disabled:opacity-60"
             >
               {loading ? "Refreshing…" : "Refresh"}
             </button>
           </div>
         </div>
+
+        {scopeError ? (
+          <div className="relative mt-3 rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 py-2 text-[11px] text-amber-100">
+            {scopeError}
+          </div>
+        ) : null}
       </section>
 
       <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-3 text-[11px] text-emerald-100">
@@ -960,7 +1040,9 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
           onClick={() => {
             setSelectedSpine("sba");
             setShowSbaPanel(true);
-            if (!sbaTeachers.length) void loadSbaRoster(term, academicYear);
+            if (!sbaTeachers.length && term && academicYear) {
+              void loadSbaRoster(term, academicYear);
+            }
           }}
           className={[
             "rounded-[24px] border p-4 text-left shadow-[0_14px_42px_rgba(0,0,0,0.18)] transition",
@@ -1024,6 +1106,7 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
           loadingOutput={sbaOutputLoading}
           error={sbaError}
           output={sbaOutput}
+          showWorkOutput={showSbaWorkOutput}
           showBroadsheet={showSbaBroadsheet}
           canLoadOutput={canLoadSbaOutput}
           onRefreshRoster={() => void loadSbaRoster(term, academicYear)}
@@ -1036,6 +1119,7 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
             setSbaClassroomId(cls?.classroomId ?? "");
             setSbaSubject(cls?.subjects[0] ?? "");
             setSbaOutput(null);
+            setShowSbaWorkOutput(false);
             setShowSbaBroadsheet(false);
           }}
           onClassChange={(classroomId) => {
@@ -1046,6 +1130,7 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
             setSbaClassroomId(classroomId);
             setSbaSubject(cls?.subjects[0] ?? "");
             setSbaOutput(null);
+            setShowSbaWorkOutput(false);
             setShowSbaBroadsheet(false);
           }}
           onStreamModeChange={(mode) => {
@@ -1062,17 +1147,32 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
               cls?.subjects.find((x) => x === sbaSubject) ?? cls?.subjects[0] ?? ""
             );
             setSbaOutput(null);
+            setShowSbaWorkOutput(false);
             setShowSbaBroadsheet(false);
           }}
           onSubjectChange={(nextSubject) => {
             setSbaSubject(nextSubject);
             setSbaOutput(null);
+            setShowSbaWorkOutput(false);
             setShowSbaBroadsheet(false);
           }}
-          onLoadOutput={() => void loadSbaWorkOutput()}
+          onToggleWorkOutput={() => {
+            if (!sbaOutput) {
+              void loadSbaWorkOutput({
+                showWorkOutput: true,
+                showBroadsheet: false,
+              });
+              return;
+            }
+
+            setShowSbaWorkOutput((prev) => !prev);
+          }}
           onToggleBroadsheet={() => {
             if (!sbaOutput) {
-              void loadSbaWorkOutput({ showBroadsheet: true });
+              void loadSbaWorkOutput({
+                showWorkOutput: false,
+                showBroadsheet: true,
+              });
               return;
             }
 
@@ -1539,6 +1639,7 @@ function SbaWorkOutputPanel(props: {
   loadingOutput: boolean;
   error: string | null;
   output: SbaOutputOk | null;
+  showWorkOutput: boolean;
   showBroadsheet: boolean;
   canLoadOutput: boolean;
   onRefreshRoster: () => void;
@@ -1547,7 +1648,7 @@ function SbaWorkOutputPanel(props: {
   onClassChange: (classroomId: string) => void;
   onStreamModeChange: (mode: StreamMode) => void;
   onSubjectChange: (subject: string) => void;
-  onLoadOutput: () => void;
+  onToggleWorkOutput: () => void;
   onToggleBroadsheet: () => void;
 }) {
 const buckets = props.output?.workOutput.buckets ?? [];
@@ -1662,11 +1763,15 @@ const buckets = props.output?.workOutput.buckets ?? [];
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
         <button
           type="button"
-          onClick={props.onLoadOutput}
+          onClick={props.onToggleWorkOutput}
           disabled={!props.canLoadOutput || props.loadingOutput}
           className="rounded-xl border border-emerald-300/25 bg-emerald-400/12 px-4 py-2 text-[12px] font-semibold text-emerald-100 transition hover:bg-emerald-400/18 disabled:cursor-not-allowed disabled:opacity-55"
         >
-          {props.loadingOutput ? "Loading work…" : "Work Output"}
+          {props.loadingOutput
+            ? "Loading work…"
+            : props.showWorkOutput
+              ? "Hide Work Output"
+              : "Work Output"}
         </button>
         <button
           type="button"
@@ -1678,40 +1783,52 @@ const buckets = props.output?.workOutput.buckets ?? [];
         </button>
       </div>
 
-      {props.output ? (
-        <div className="mt-4 space-y-4">
-          <div className="grid gap-3 md:grid-cols-3">
-            {buckets.map((bucket) => (
-              <div key={bucket.key} className="rounded-[22px] border border-white/10 bg-[#0C1730]/78 p-3">
-                <div className="text-[11px] font-semibold text-[#F7F4ED]">{bucket.label}</div>
-                <div className="mt-2 flex items-end justify-between gap-3">
-                  <div>
-                    <div className="text-2xl font-semibold text-[#F7F4ED]">{formatNumber(bucket.count)}</div>
-<div className="text-[10px] text-[#8F98A8]">items</div>
-<div className="mt-1 text-[10px] text-[#8F98A8]">
-  {formatNumber(bucket.scoredCount)} scores
-</div>
+      {props.output && (props.showWorkOutput || props.showBroadsheet) ? (
+        <div className="mt-4 space-y-3">
+          {props.showWorkOutput ? (
+            <>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9">
+                {buckets.map((bucket) => (
+                  <div
+                    key={bucket.key}
+                    className="rounded-xl border border-white/10 bg-[#0C1730]/78 px-2.5 py-2"
+                  >
+                    <div className="truncate text-[10px] font-semibold text-[#F7F4ED]">
+                      {bucket.label}
+                    </div>
+                    <div className="mt-1 flex items-end justify-between gap-2">
+                      <div>
+                        <div className="text-lg font-semibold leading-none text-[#F7F4ED]">
+                          {formatNumber(bucket.count)}
+                        </div>
+                        <div className="mt-1 text-[9px] text-[#8F98A8]">
+                          {formatNumber(bucket.scoredCount)} scores
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[10px] font-semibold text-emerald-100">
+                          {formatPercent(bucket.averagePercent)}
+                        </div>
+                        <div className="text-[9px] text-[#8F98A8]">avg</div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm font-semibold text-emerald-100">{formatPercent(bucket.averagePercent)}</div>
-                    <div className="text-[10px] text-[#8F98A8]">score avg</div>
-                  </div>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-[11px] leading-6 text-[#C9CDD6]">
-  {props.output.teacher.name} • {props.output.classroom.classLabel} • {props.output.subject} — {formatNumber(props.output.workOutput.itemCount)} items, {formatNumber(props.output.workOutput.scoredEntries)} score entries.
-  <div className="mt-1 text-[#8F98A8]">
-    Work Output counts non-Mock assessment practice linked to lessons delivered. Use it to encourage enough learner practice and follow progress — not to rank or punish teachers. Broadsheet uses the official weighted SBA policy.
-  </div>
-  {props.output.workOutput.legacyUnlinkedItemCount > 0 ? (
-    <div className="mt-2 rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 py-2 text-[10px] leading-5 text-amber-100">
-      {formatNumber(props.output.workOutput.legacyUnlinkedItemCount)} older assessment item(s) are preserved outside Work Output because they are not linked to a recorded lesson delivery.
-    </div>
-  ) : null}
-</div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] leading-5 text-[#C9CDD6]">
+                {props.output.teacher.name} • {props.output.classroom.classLabel} • {props.output.subject} — {formatNumber(props.output.workOutput.itemCount)} items, {formatNumber(props.output.workOutput.scoredEntries)} score entries.
+                <div className="mt-1 text-[#8F98A8]">
+                  Work Output counts non-Mock assessment practice linked to lessons delivered. Use it to encourage enough learner practice and follow progress — not to rank or punish teachers. Broadsheet uses the official weighted SBA policy.
+                </div>
+                {props.output.workOutput.legacyUnlinkedItemCount > 0 ? (
+                  <div className="mt-2 rounded-lg border border-amber-300/20 bg-amber-400/10 px-2.5 py-1.5 text-[9px] leading-4 text-amber-100">
+                    {formatNumber(props.output.workOutput.legacyUnlinkedItemCount)} older assessment item(s) are preserved outside Work Output because they are not linked to a recorded lesson delivery.
+                  </div>
+                ) : null}
+              </div>
+            </>
+          ) : null}
 
           {props.showBroadsheet ? (
   <div className="mt-2">
