@@ -6,6 +6,8 @@ import { resolveUserClassroomAccess } from "@/lib/teacherAccess";
 import { subjectMatchesTeachingScope } from "@/lib/teachingSubjectScope";
 import {
   buildWorkOutputSnapshot,
+  normalizeWorkOutputType,
+  workOutputTypeLabel,
   type WorkOutputDeliveryInput,
   type WorkOutputItemInput,
 } from "@/lib/assessments/workOutput";
@@ -25,6 +27,12 @@ function jsonNoStore(status: number, payload: unknown) {
 
 function clean(value: unknown) {
   return String(value ?? "").trim();
+}
+
+function toIso(value: Date | string | null | undefined) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : null;
 }
 
 function isForbiddenReason(reason: string) {
@@ -218,6 +226,31 @@ export async function GET(req: NextRequest) {
           ),
       }));
 
+    const deliverySummaries = deliveries.map((delivery) => ({
+      id: delivery.id,
+      subject: delivery.subject,
+      lessonNoteId: delivery.lessonNoteId ?? null,
+      lessonTitle: delivery.lessonTitle ?? null,
+      dateTaught: toIso(delivery.dateTaught),
+      assessmentCount: delivery.items.length,
+      scoredAssessmentCount: delivery.items.filter(
+        (item) => item.scores.length > 0
+      ).length,
+      items: delivery.items.map((item) => {
+        const normalizedType = normalizeWorkOutputType(item.type);
+
+        return {
+          id: item.id,
+          title: item.title,
+          type: normalizedType,
+          typeLabel: workOutputTypeLabel(normalizedType),
+          maxScore: Number(item.maxScore ?? 0),
+          date: toIso(item.date ?? item.createdAt ?? null),
+          scoresCount: item.scores.length,
+        };
+      }),
+    }));
+
     if (
       lessonDeliveryId &&
       !deliveries.some((delivery) => delivery.id === lessonDeliveryId)
@@ -270,6 +303,7 @@ export async function GET(req: NextRequest) {
         academicYear,
         normalizedClassLevel: access.normalizedClassLevel,
       },
+      deliveries: deliverySummaries,
       workOutput,
       interpretation: {
         purpose: "FORMATIVE_PRACTICE_PROGRESS",

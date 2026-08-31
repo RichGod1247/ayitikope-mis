@@ -43,7 +43,9 @@ function transpile(relativePath, jsx) {
 }
 
 const clientPath = "src/components/TeacherAssessmentClient.tsx";
+const routePath = "src/app/api/teacher/assessment/work-output/route.ts";
 const client = read(clientPath);
+const route = read(routePath);
 
 assert(
   client.includes('if (key === "EXERCISE") return "Ex.";') &&
@@ -104,11 +106,36 @@ assert(
 );
 
 assert(
-  client.includes("const assessmentHomeHref = useMemo(() => {") &&
-    client.includes('return query ? `/teacher/assessment?${query}` : "/teacher/assessment";') &&
+  client.includes('const assessmentHomeHref = "/teacher/assessment";') &&
     client.includes("href={assessmentHomeHref}") &&
-    client.includes("Assessment Home"),
-  "Assessment Home must return to the normal Assessment journey while preserving class/term/year context."
+    !client.includes('return query ? `/teacher/assessment?${query}` : "/teacher/assessment";'),
+  "Assessment Home must return to exact /teacher/assessment with completed task context cleared."
+);
+
+assert(
+  client.includes("Assigned subjects") &&
+    client.includes("subjectOptions.map((subjectOption)") &&
+    client.includes("openWorkOutputSubject(subjectOption)") &&
+    client.includes("Delivered lessons") &&
+    client.includes("oldest to newest") &&
+    client.includes("openWorkOutputDelivery("),
+  "Persistent Work Output must browse the teacher's assigned subjects, then delivered lessons in delivery order."
+);
+
+assert(
+  route.includes("const deliverySummaries = deliveries.map((delivery)") &&
+    route.includes("items: delivery.items.map((item)") &&
+    route.includes("deliveries: deliverySummaries") &&
+    route.includes('{ dateTaught: "asc" }') &&
+    route.includes('{ createdAt: "asc" }'),
+  "Teacher Work Output API must return subject-scoped delivered lessons and their assessment records in chronological delivery order."
+);
+
+assert(
+  client.includes("postScoreLessonOutput.lessonTitle || postScoreLessonOutput.subject") &&
+    client.includes("buildLearnerProgressionGroups(") &&
+    client.includes("postScoreLessonOutput.items"),
+  "Learner progress must remain scoped to the currently selected delivered lesson."
 );
 
 assert(
@@ -132,6 +159,9 @@ console.log("- familiar assessment labels appear beside each percentage");
 console.log("- Repeated practice / First practice avg / Latest practice avg cards are removed from teacher UI");
 console.log("- one compact neutral Class Average replaces those analytics cards");
 console.log("- Class Average equally averages the server-provided class average of each scored assessment item");
-console.log("- Assessment Home returns to the normal Assessment journey with class/term/year context");
-console.log("- View Broadsheet, Add another assessment and Edit scores remain available");
+console.log("- Assessment Home returns to exact /teacher/assessment with completed task context cleared");
+console.log("- assigned subjects open subject-scoped Work Output");
+console.log("- delivered lessons and their assessment records remain ordered by delivery");
+console.log("- learner progress follows the currently selected delivered lesson");
+console.log("- View Broadsheet remains available; lesson actions appear when a delivered lesson is selected");
 console.log("- no polling, schema change or database write is introduced");

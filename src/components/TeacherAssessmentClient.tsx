@@ -280,8 +280,34 @@ type WorkOutputLessonSummary = WorkOutputCountSummary & {
   };
 };
 
+type WorkOutputDeliverySummary = {
+  id: string;
+  subject: string;
+  lessonNoteId: string | null;
+  lessonTitle: string | null;
+  dateTaught: string | null;
+  assessmentCount: number;
+  scoredAssessmentCount: number;
+  items: Array<{
+    id: string;
+    title: string;
+    type: string;
+    typeLabel: string;
+    maxScore: number;
+    date: string | null;
+    scoresCount: number;
+  }>;
+};
+
 type TeacherWorkOutputOk = {
   ok: true;
+  scope: {
+    classroomId: string;
+    subject: string;
+    term: string;
+    academicYear: string;
+  };
+  deliveries: WorkOutputDeliverySummary[];
   workOutput: {
     term: WorkOutputCountSummary;
     lesson: WorkOutputLessonSummary | null;
@@ -913,7 +939,12 @@ const [broadsheetNotice, setBroadsheetNotice] = useState<string | null>(null);
 const shouldLoadInsights = tab === "insights";
 const shouldLoadPipelineDetails = tab === "pipeline";
 const shouldLoadJourney = !!classroomId;
-const shouldLoadSubjects = tab === "items" || tab === "broadsheet" || hasLessonDeliveryContext;
+const shouldLoadSubjects =
+  tab === "items" ||
+  tab === "broadsheet" ||
+  hasLessonDeliveryContext ||
+  postScoreSummaryOpen ||
+  urlWorkOutputRequested;
 const shouldLoadLessonDeliveries = tab === "items" || hasLessonDeliveryContext;
 
   const selectedItem = useMemo(() => items.find((i) => i.id === selectedItemId) ?? null, [items, selectedItemId]);
@@ -994,17 +1025,7 @@ const typeOptions = useMemo(() => {
     return "Default view is single-stream for KG, Primary, and JHS. Turn multi-stream on only when you need all streams.";
   }, [teacherPhase]);
 
-const assessmentHomeHref = useMemo(() => {
-  const params = new URLSearchParams();
-
-  if (classroomId) params.set("classroomId", classroomId);
-  if (term) params.set("term", term);
-  if (academicYear) params.set("academicYear", academicYear);
-
-  const query = params.toString();
-
-  return query ? `/teacher/assessment?${query}` : "/teacher/assessment";
-}, [classroomId, term, academicYear]);
+const assessmentHomeHref = "/teacher/assessment";
 
 const mockAssessmentHref = useMemo(() => {
   const params = new URLSearchParams();
@@ -1101,8 +1122,35 @@ function replaceAssessmentJourneyUrlForNewItem(item: AssessmentItem) {
   );
 }
 
-async function loadWorkOutputAfterScores(item: AssessmentItem) {
-  if (!classroomId || !item.lessonDeliveryId) {
+function replaceWorkOutputBrowserUrl(
+  workOutputSubject: string,
+  requestedLessonDeliveryId?: string | null
+) {
+  if (typeof window === "undefined") return;
+
+  const params = new URLSearchParams();
+  params.set("classroomId", classroomId);
+  params.set("term", term);
+  params.set("academicYear", academicYear);
+  params.set("subject", workOutputSubject);
+  params.set("view", "work-output");
+
+  if (requestedLessonDeliveryId) {
+    params.set("lessonDeliveryId", requestedLessonDeliveryId);
+  }
+
+  window.history.replaceState(
+    window.history.state,
+    "",
+    `${window.location.pathname}?${params.toString()}`
+  );
+}
+
+async function loadWorkOutputForScope(
+  workOutputSubject: string,
+  requestedLessonDeliveryId?: string | null
+) {
+  if (!classroomId || !cleanStr(workOutputSubject)) {
     setWorkOutputAfterScores(null);
     setWorkOutputAfterScoresError(null);
     setWorkOutputAfterScoresLoading(false);
@@ -1117,9 +1165,12 @@ async function loadWorkOutputAfterScores(item: AssessmentItem) {
       classroomId,
       term,
       academicYear,
-      subject: item.subject,
-      lessonDeliveryId: item.lessonDeliveryId,
+      subject: workOutputSubject,
     });
+
+    if (requestedLessonDeliveryId) {
+      params.set("lessonDeliveryId", requestedLessonDeliveryId);
+    }
 
     const res = await fetch(
       `/api/teacher/assessment/work-output?${params.toString()}`,
@@ -1152,6 +1203,15 @@ async function loadWorkOutputAfterScores(item: AssessmentItem) {
   }
 }
 
+async function loadWorkOutputAfterScores(item: AssessmentItem) {
+  if (!item.lessonDeliveryId) {
+    setWorkOutputAfterScores(null);
+    return;
+  }
+
+  return loadWorkOutputForScope(item.subject, item.lessonDeliveryId);
+}
+
 function openWorkOutputForItem(item: AssessmentItem) {
   setShowAssessmentTools(true);
   setSelectedItemId(item.id);
@@ -1161,6 +1221,62 @@ function openWorkOutputForItem(item: AssessmentItem) {
   void loadScoresForItem(item.id, students);
   void loadWorkOutputAfterScores(item);
   setTab("scores");
+}
+
+function openPersistentWorkOutput() {
+  const initialSubject =
+    cleanStr(subject) ||
+    cleanStr(workOutputLaunchItem?.subject) ||
+    cleanStr(subjectOptions[0]);
+
+  if (!initialSubject) return;
+
+  setShowAssessmentTools(true);
+  setItemFormOpen(false);
+  setPostScoreSummaryOpen(true);
+  setSubject(initialSubject);
+  replaceWorkOutputBrowserUrl(initialSubject, null);
+  void loadWorkOutputForScope(initialSubject, null);
+  setTab("scores");
+}
+
+function openWorkOutputSubject(workOutputSubject: string) {
+  const nextSubject = cleanStr(workOutputSubject);
+  if (!nextSubject) return;
+
+  setSubject(nextSubject);
+  setSelectedItemId(null);
+  setLessonDeliveryId("");
+  setCurriculumUnitId("");
+  setScoreDraft(buildBlankScoreGrid(students));
+  replaceWorkOutputBrowserUrl(nextSubject, null);
+  void loadWorkOutputForScope(nextSubject, null);
+}
+
+function openWorkOutputDelivery(
+  workOutputSubject: string,
+  delivery: WorkOutputDeliverySummary
+) {
+  const linkedItem =
+    items.find(
+      (item) =>
+        item.lessonDeliveryId === delivery.id &&
+        cleanStr(item.type).toUpperCase() !== "MOCK"
+    ) ?? null;
+
+  setSubject(workOutputSubject);
+  setSelectedItemId(linkedItem?.id ?? null);
+  setLessonDeliveryId(delivery.id);
+  setCurriculumUnitId(linkedItem?.curriculumUnitId ?? "");
+
+  if (linkedItem) {
+    void loadScoresForItem(linkedItem.id, students);
+  } else {
+    setScoreDraft(buildBlankScoreGrid(students));
+  }
+
+  replaceWorkOutputBrowserUrl(workOutputSubject, delivery.id);
+  void loadWorkOutputForScope(workOutputSubject, delivery.id);
 }
 
   async function loadScoresForItem(itemId: string, currentStudents: Student[]) {
@@ -1315,6 +1431,44 @@ setClassroomId(def);
         const studentData = Array.isArray(data.students) ? data.students : [];
         const assessmentData = Array.isArray(data.assessments) ? data.assessments : [];
 
+        if (urlWorkOutputRequested && urlSubject) {
+          const workOutputItem =
+            assessmentData.find(
+              (item) =>
+                !!item.lessonDeliveryId &&
+                cleanStr(item.type).toUpperCase() !== "MOCK" &&
+                sameSubject(
+                  item.subject,
+                  urlSubject,
+                  selectedClassroomSubjectScopeLevel
+                ) &&
+                (!urlLessonDeliveryId ||
+                  item.lessonDeliveryId === urlLessonDeliveryId)
+            ) ?? null;
+
+          setSelectedItemId(workOutputItem?.id ?? null);
+
+          if (workOutputItem) {
+            await loadScoresForItem(workOutputItem.id, studentData);
+          } else {
+            setScoreDraft(buildBlankScoreGrid(studentData));
+          }
+
+          setSubject(urlSubject);
+          setLessonDeliveryId(urlLessonDeliveryId);
+          setCurriculumUnitId(
+            workOutputItem?.curriculumUnitId ?? urlCurriculumUnitId
+          );
+          setItemFormOpen(false);
+          setPostScoreSummaryOpen(true);
+          setTab("scores");
+          void loadWorkOutputForScope(
+            urlSubject,
+            urlLessonDeliveryId || null
+          );
+          return;
+        }
+
         if (hasLessonDeliveryContext) {
           const deepLinkedItem =
             urlAssessmentItemId
@@ -1381,7 +1535,9 @@ setClassroomId(def);
     urlAssessmentItemId,
     urlCurriculumUnitId,
     urlLessonDeliveryId,
+    urlSubject,
     urlWorkOutputRequested,
+    selectedClassroomSubjectScopeLevel,
   ]);
 
   useEffect(() => {
@@ -2088,6 +2244,9 @@ if (selectedItem.lessonDeliveryId) {
   const postScoreTermOutput = workOutputAfterScores?.workOutput.term ?? null;
   const postScoreLessonOutput = workOutputAfterScores?.workOutput.lesson ?? null;
   const postScoreLegacyOutput = workOutputAfterScores?.workOutput.legacyUnlinked ?? null;
+  const postScoreScopeSubject =
+    cleanStr(workOutputAfterScores?.scope.subject) || cleanStr(subject);
+  const postScoreDeliveries = workOutputAfterScores?.deliveries ?? [];
   const postScoreTypeCounts =
     postScoreTermOutput?.typeCounts.filter((bucket) => bucket.count > 0) ?? [];
   const postScoreLessonClassAverage =
@@ -2401,12 +2560,8 @@ if (selectedItem.lessonDeliveryId) {
               </Link>
               <button
                 type="button"
-                onClick={() => {
-                  if (workOutputLaunchItem) {
-                    openWorkOutputForItem(workOutputLaunchItem);
-                  }
-                }}
-                disabled={!workOutputLaunchItem}
+                onClick={openPersistentWorkOutput}
+                disabled={!workOutputLaunchItem && subjectOptions.length === 0}
                 className={darkButton + " justify-center"}
               >
                 Work Output
@@ -3037,11 +3192,7 @@ if (selectedItem.lessonDeliveryId) {
                 ) : null
               }
             >
-              {!selectedItem ? (
-                <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.04] px-4 py-6 text-center text-[12px] text-[#C9CDD6]">
-                  Select an item (or create one), then record scores.
-                </div>
-              ) : postScoreSummaryOpen ? (
+              {postScoreSummaryOpen ? (
                 <div className="space-y-4">
                   <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-3">
                     <div className="text-sm font-semibold text-emerald-100">
@@ -3050,6 +3201,52 @@ if (selectedItem.lessonDeliveryId) {
                     <div className="mt-1 text-[11px] leading-5 text-emerald-50/80">
                       Work Output tracks practice after lessons so you can see whether learners are getting enough opportunities to improve. It is not a ranking.
                     </div>
+                  </div>
+
+                  <div className={panelCard + " px-3 py-3"}>
+                    <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8F98A8]">
+                      Assigned subjects
+                    </div>
+
+                    {subjectOptionsLoading ? (
+                      <div className="mt-2 text-[10px] text-[#8F98A8]">
+                        Loading assigned subjects…
+                      </div>
+                    ) : subjectOptionsError ? (
+                      <div className="mt-2 text-[10px] text-amber-100">
+                        {subjectOptionsError}
+                      </div>
+                    ) : subjectOptions.length > 0 ? (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {subjectOptions.map((subjectOption) => {
+                          const active = sameSubject(
+                            subjectOption,
+                            postScoreScopeSubject,
+                            selectedClassroomSubjectScopeLevel
+                          );
+
+                          return (
+                            <button
+                              key={subjectOption}
+                              type="button"
+                              onClick={() => openWorkOutputSubject(subjectOption)}
+                              className={[
+                                "rounded-lg border px-3 py-1.5 text-[10px] font-semibold transition",
+                                active
+                                  ? "border-emerald-300/30 bg-emerald-400/12 text-emerald-100"
+                                  : "border-white/10 bg-white/[0.04] text-[#C9CDD6] hover:bg-white/[0.08]",
+                              ].join(" ")}
+                            >
+                              {subjectOption}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="mt-2 text-[10px] text-[#8F98A8]">
+                        No assigned subjects are available for this class.
+                      </div>
+                    )}
                   </div>
 
                   {workOutputAfterScoresLoading ? (
@@ -3062,7 +3259,12 @@ if (selectedItem.lessonDeliveryId) {
                       <button
                         type="button"
                         className={darkButton + " mt-3"}
-                        onClick={() => void loadWorkOutputAfterScores(selectedItem)}
+                        onClick={() =>
+                          void loadWorkOutputForScope(
+                            postScoreScopeSubject,
+                            postScoreLessonOutput?.lessonDeliveryId ?? null
+                          )
+                        }
                       >
                         Retry Work Output
                       </button>
@@ -3072,35 +3274,37 @@ if (selectedItem.lessonDeliveryId) {
                       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
                         <div className={panelCard + " px-3 py-2.5"}>
                           <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8F98A8]">
-                            This lesson
+                            {postScoreLessonOutput ? "This lesson" : "Delivered lessons"}
                           </div>
                           <div className="mt-0.5 flex items-baseline gap-2">
                             <span className="text-xl font-semibold leading-none text-[#F7F4ED]">
-                              {postScoreLessonOutput?.itemCount ?? 0}
+                              {postScoreLessonOutput?.itemCount ?? postScoreDeliveries.length}
                             </span>
                             <span className="text-[10px] text-[#C9CDD6]">
-                              assessment{(postScoreLessonOutput?.itemCount ?? 0) === 1 ? "" : "s"}
+                              {postScoreLessonOutput
+                                ? `assessment${postScoreLessonOutput.itemCount === 1 ? "" : "s"}`
+                                : `recorded lesson${postScoreDeliveries.length === 1 ? "" : "s"}`}
                             </span>
                           </div>
                         </div>
 
                         <div className={panelCard + " px-3 py-2.5"}>
                           <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8F98A8]">
-                            This term
+                            This subject
                           </div>
                           <div className="mt-0.5 flex items-baseline gap-2">
                             <span className="text-xl font-semibold leading-none text-[#F7F4ED]">
                               {postScoreTermOutput.itemCount}
                             </span>
                             <span className="text-[10px] text-[#C9CDD6]">
-                              lesson-linked
+                              lesson-linked assessments
                             </span>
                           </div>
                         </div>
 
                         <div className={panelCard + " col-span-2 px-3 py-2.5"}>
                           <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8F98A8]">
-                            Term practice by type
+                            Subject practice by type
                           </div>
                           <div className="mt-1.5 flex flex-wrap gap-1.5">
                             {postScoreTypeCounts.length > 0 ? (
@@ -3122,6 +3326,85 @@ if (selectedItem.lessonDeliveryId) {
                             )}
                           </div>
                         </div>
+                      </div>
+
+                      <div className={panelCard + " p-3"}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="text-[11px] font-semibold text-[#F7F4ED]">
+                              Delivered lessons
+                            </div>
+                            <div className="mt-0.5 text-[10px] text-[#8F98A8]">
+                              {postScoreScopeSubject || "Selected subject"} • oldest to newest
+                            </div>
+                          </div>
+                          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-[#C9CDD6]">
+                            {postScoreDeliveries.length}
+                          </span>
+                        </div>
+
+                        {postScoreDeliveries.length > 0 ? (
+                          <div className="mt-3 space-y-2">
+                            {postScoreDeliveries.map((delivery, index) => {
+                              const selectedDelivery =
+                                postScoreLessonOutput?.lessonDeliveryId === delivery.id;
+
+                              return (
+                                <button
+                                  key={delivery.id}
+                                  type="button"
+                                  onClick={() =>
+                                    openWorkOutputDelivery(
+                                      postScoreScopeSubject || delivery.subject,
+                                      delivery
+                                    )
+                                  }
+                                  className={[
+                                    "w-full rounded-xl border px-3 py-2.5 text-left transition",
+                                    selectedDelivery
+                                      ? "border-emerald-300/30 bg-emerald-400/10"
+                                      : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]",
+                                  ].join(" ")}
+                                >
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8F98A8]">
+                                        Lesson {index + 1} • {formatDateForInput(delivery.dateTaught)}
+                                      </div>
+                                      <div className="mt-1 text-[11px] font-semibold text-[#F7F4ED]">
+                                        {delivery.lessonTitle || delivery.subject}
+                                      </div>
+                                    </div>
+                                    <div className="shrink-0 text-[10px] text-[#C9CDD6]">
+                                      {delivery.assessmentCount} assessment{delivery.assessmentCount === 1 ? "" : "s"}
+                                    </div>
+                                  </div>
+
+                                  <div className="mt-2 flex flex-wrap gap-1.5">
+                                    {delivery.items.length > 0 ? (
+                                      delivery.items.map((item) => (
+                                        <span
+                                          key={item.id}
+                                          className="inline-flex rounded-md border border-white/10 bg-[#08111C] px-2 py-1 text-[9px] text-[#C9CDD6]"
+                                        >
+                                          {item.typeLabel}: {item.title}
+                                        </span>
+                                      ))
+                                    ) : (
+                                      <span className="text-[9px] text-[#8F98A8]">
+                                        No assessment records linked yet.
+                                      </span>
+                                    )}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="mt-3 rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-3 py-3 text-[10px] text-[#8F98A8]">
+                            No delivered lessons with Work Output are recorded for this assigned subject yet.
+                          </div>
+                        )}
                       </div>
 
                       {postScoreLessonOutput ? (
@@ -3211,7 +3494,11 @@ if (selectedItem.lessonDeliveryId) {
                             </details>
                           )}
                         </div>
-                      ) : null}
+                      ) : (
+                        <div className="rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-3 py-3 text-[11px] leading-5 text-cyan-100">
+                          Choose a delivered lesson above to inspect its assessment records and learner progress.
+                        </div>
+                      )}
 
                       {postScoreLegacyOutput && postScoreLegacyOutput.itemCount > 0 ? (
                         <div className="rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 py-3 text-[10px] leading-5 text-amber-100">
@@ -3232,21 +3519,24 @@ if (selectedItem.lessonDeliveryId) {
                     >
                       View Broadsheet
                     </button>
-                    <button
-                      type="button"
-                      className={darkButton + " justify-center"}
-                      onClick={handleCreateAnotherAssessmentForLesson}
-                      disabled={!selectedItem.lessonDeliveryId}
-                    >
-                      Add another assessment
-                    </button>
-                    <button
-                      type="button"
-                      className={darkButton + " justify-center"}
-                      onClick={() => setPostScoreSummaryOpen(false)}
-                    >
-                      Edit scores
-                    </button>
+                    {postScoreLessonOutput && selectedItem?.lessonDeliveryId ? (
+                      <>
+                        <button
+                          type="button"
+                          className={darkButton + " justify-center"}
+                          onClick={handleCreateAnotherAssessmentForLesson}
+                        >
+                          Add another assessment
+                        </button>
+                        <button
+                          type="button"
+                          className={darkButton + " justify-center"}
+                          onClick={() => setPostScoreSummaryOpen(false)}
+                        >
+                          Edit scores
+                        </button>
+                      </>
+                    ) : null}
                     <Link
                       href={assessmentHomeHref}
                       className={darkButton + " justify-center"}
@@ -3258,6 +3548,10 @@ if (selectedItem.lessonDeliveryId) {
                   <div className="text-[10px] leading-5 text-[#8F98A8]">
                     Work Output shows formative practice activity and progression. The Broadsheet continues to use the school&apos;s official assessment policy.
                   </div>
+                </div>
+              ) : !selectedItem ? (
+                <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.04] px-4 py-6 text-center text-[12px] text-[#C9CDD6]">
+                  Select an item (or create one), then record scores.
                 </div>
               ) : (
                 <>

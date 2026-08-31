@@ -48,15 +48,17 @@ const client = read(clientPath);
 assert(
   client.includes('className="grid grid-cols-2 gap-2 lg:grid-cols-4"') &&
     client.includes('panelCard + " px-3 py-2.5"') &&
-    client.includes('panelCard + " col-span-2 px-3 py-2.5"'),
-  "This lesson, This term and Term practice by type must use the compact responsive summary grid."
+    client.includes('panelCard + " col-span-2 px-3 py-2.5"') &&
+    client.includes("This subject") &&
+    client.includes("Subject practice by type"),
+  "Lesson/delivery count, subject count and subject practice by type must use the compact responsive summary grid."
 );
 
 assert(
-  client.includes("Term practice by type") &&
+  client.includes("Subject practice by type") &&
     client.includes('className="mt-1.5 flex flex-wrap gap-1.5"') &&
     client.includes('rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5'),
-  "Term practice types must render as compact inline chips instead of large nested cards."
+  "Subject-scoped practice types must render as compact inline chips instead of large nested cards."
 );
 
 assert(
@@ -77,8 +79,8 @@ assert(
 assert(
   client.includes("Add another assessment") &&
     client.includes("onClick={handleCreateAnotherAssessmentForLesson}") &&
-    client.includes("disabled={!selectedItem.lessonDeliveryId}"),
-  "Work Output must expose a guarded Add another assessment action."
+    client.includes("postScoreLessonOutput && selectedItem?.lessonDeliveryId ?"),
+  "Work Output must expose Add another assessment only when a delivered lesson is actively selected."
 );
 
 assert(
@@ -96,8 +98,8 @@ assert(
 transpile(clientPath, true);
 
 console.log("WORK OUTPUT COMPACT SUMMARY + REPEAT PRACTICE CONTRACT: GREEN");
-console.log("- This lesson and This term are reduced to compact count cards");
-console.log("- Term practice by type is compact and shares the same responsive row where space allows");
+console.log("- lesson/delivery and subject totals remain compact count cards");
+console.log("- Subject practice by type is compact and shares the same responsive row where space allows");
 console.log("- assessment types render as small inline chips rather than large nested cards");
 console.log("- Work Output offers Add another assessment for the same delivered lesson");
 console.log("- repeat practice clears the old item/view URL state but preserves lesson linkage");

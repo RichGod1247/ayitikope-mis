@@ -149,7 +149,7 @@ assert(
   client.includes('More assessment tools') &&
     client.includes('BECE Mock') &&
     client.includes('Lesson Delivery') &&
-    client.includes('openWorkOutputForItem(workOutputLaunchItem)') &&
+    client.includes('onClick={openPersistentWorkOutput}') &&
     client.includes('Work Output') &&
     !client.includes('Term Dashboard') &&
     client.includes('label="Broadsheet"') &&
@@ -160,11 +160,19 @@ assert(
 );
 
 assert(
-  client.includes("const assessmentHomeHref = useMemo(() => {") &&
-    client.includes('return query ? `/teacher/assessment?${query}` : "/teacher/assessment";') &&
+  client.includes('const assessmentHomeHref = "/teacher/assessment";') &&
     client.includes("href={assessmentHomeHref}") &&
-    client.includes("Assessment Home"),
-  "Assessment Home must return to the normal Assessment journey, not directly to Lesson Delivery."
+    client.includes("Assessment Home") &&
+    !client.includes('return query ? `/teacher/assessment?${query}` : "/teacher/assessment";'),
+  "Assessment Home must return to the exact /teacher/assessment home URL without carrying class, term, year, lesson or item context."
+);
+
+assert(
+  client.includes("async function loadWorkOutputForScope(") &&
+    client.includes("function openPersistentWorkOutput()") &&
+    client.includes("urlWorkOutputRequested && urlSubject") &&
+    client.includes("replaceWorkOutputBrowserUrl(initialSubject, null)"),
+  "Persistent Work Output must reopen independently of the completed lesson-item journey and remain refresh-safe."
 );
 
 assert(
@@ -208,7 +216,7 @@ transpile(lessonDeliveryClientPath, true);
 console.log("ASSESSMENT NEXT-ACTION JOURNEY HUB CONTRACT: GREEN");
 console.log("- one lightweight persisted-evidence journey read is available on normal page entry");
 console.log("- Pipeline class-summary calls remain lazy");
-console.log("- advanced tools preserve BECE Mock and replace redundant Term Dashboard access with persistent Work Output");
+console.log("- advanced tools preserve BECE Mock and use a refresh-safe persistent Work Output browser");
 console.log("- next action prioritizes unfinished recorded work; the next undelivered approved note is handed exactly to Lesson Delivery");
-console.log("- Assessment Home returns to the normal journey and recorded deliveries remain evidence rather than re-entry candidates");
+console.log("- Assessment Home returns to exact /teacher/assessment with task-specific URL context cleared");
 console.log("- no polling, schema change or database write is introduced");
