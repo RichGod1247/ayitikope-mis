@@ -73,10 +73,21 @@ function apiJson(status: number, payload: any) {
 async function loadActiveMembership(userId: string, tenantId: string) {
   const m = await prisma.membership.findUnique({
     where: { userId_tenantId: { userId, tenantId } },
-    select: { status: true, staffId: true, role: { select: { name: true } } },
+    select: {
+      status: true,
+      staffId: true,
+      role: { select: { name: true } },
+      tenant: { select: { status: true } },
+    },
   });
 
-  if (!m || String(m.status) !== "ACTIVE") return null;
+  if (
+    !m ||
+    String(m.status) !== "ACTIVE" ||
+    String(m.tenant?.status ?? "") !== "ACTIVE"
+  ) {
+    return null;
+  }
 
   const roleName = effectiveRole(m.role?.name ?? "") || null;
   return { roleName, staffId: (m.staffId ?? null) as string | null };
@@ -97,13 +108,22 @@ export async function getServerUserContextOrNull(opts?: {
   const tenantId = (u.tenantId ?? null) as string | null;
   if (requireTenant && !tenantId) return null;
 
-  const effRole = u.roleName ? effectiveRole(u.roleName) : null;
+  let roleName = u.roleName ? effectiveRole(u.roleName) : null;
+  let staffId = (u.staffId ?? null) as string | null;
+
+  // Any tenant-bearing server context must be current DB truth, not JWT truth.
+  if (requireTenant) {
+    const mem = await loadActiveMembership(String(u.id), String(tenantId ?? ""));
+    if (!mem) return null;
+    roleName = mem.roleName;
+    staffId = mem.staffId;
+  }
 
   return {
     userId: String(u.id),
     tenantId: String(tenantId ?? ""),
-    roleName: effRole || null, // may be overwritten by requireServerUserContext
-    staffId: (u.staffId ?? null) as string | null,
+    roleName: roleName || null,
+    staffId,
     email: String(u.email),
     name: (u.name ?? null) as string | null,
     teacherScope: (u.teacherScope ?? null) as unknown | null,
@@ -129,18 +149,7 @@ export async function requireServerUserContext(opts?: {
     redirect(toSignInUrl({ callbackUrl: redirectTo, error: "NO_ACTIVE_TENANT" }));
   }
 
-  // ✅ Always verify ACTIVE membership when a tenant is required (even if no roleNames passed).
-  if (requireTenant) {
-    const tenantId = String(ctx!.tenantId ?? "");
-    const mem = await loadActiveMembership(ctx!.userId, tenantId);
-
-    if (!mem) {
-      redirect(toSignInUrl({ callbackUrl: redirectTo, error: "FORBIDDEN" }));
-    }
-
-    ctx!.roleName = mem!.roleName;
-    ctx!.staffId = mem!.staffId;
-  }
+  // Tenant-required contexts were already revalidated against current DB truth above.
 
   // 🔒 If roles required, enforce DB-truth role
   if (requireRoleNames?.length) {

@@ -64,26 +64,35 @@ export async function requireApiUserContext(opts?: {
     name: (u.name ?? null) as string | null,
   };
 
-  // Role-gated routes must be verified against DB (ACTIVE membership)
-  if (requireRoleNames?.length) {
+  // Any tenant-bearing or role-gated API context must be revalidated against current DB authority.
+  const mustRevalidateTenant = requireTenant || Boolean(requireRoleNames?.length);
+  if (mustRevalidateTenant) {
     const tId = ctx.tenantId;
     if (!tId) return { ok: false, res: jsonFail(401, "NO_ACTIVE_TENANT") };
 
     const m = await prisma.membership.findUnique({
       where: { userId_tenantId: { userId: ctx.userId, tenantId: tId } },
-      select: { status: true, role: { select: { name: true } } },
+      select: {
+        status: true,
+        role: { select: { name: true } },
+        tenant: { select: { status: true } },
+      },
     });
 
-    if (!m || m.status !== "ACTIVE") {
+    if (
+      !m ||
+      m.status !== "ACTIVE" ||
+      String(m.tenant?.status ?? "") !== "ACTIVE"
+    ) {
       return { ok: false, res: jsonFail(403, "FORBIDDEN") };
     }
 
     const dbRole = roleEffective(m.role?.name ?? "");
-    if (!roleInAllowed(dbRole, requireRoleNames)) {
+    if (requireRoleNames?.length && !roleInAllowed(dbRole, requireRoleNames)) {
       return { ok: false, res: jsonFail(403, "FORBIDDEN") };
     }
 
-    // Align ctx role with DB truth
+    // Align ctx role with DB truth.
     ctx.roleName = dbRole || null;
   }
 

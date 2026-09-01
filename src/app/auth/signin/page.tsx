@@ -25,7 +25,7 @@ function mapError(raw: string | null): string | null {
   const e = clean(raw);
   if (!e) return null;
 
-  if (e === "NO_ACTIVE_TENANT") return "Select your school (School Code) to continue.";
+  if (e === "NO_ACTIVE_TENANT") return "Your account does not currently have access to an active school.";
   if (e === "FORBIDDEN") return "You don’t have access to this workspace.";
   if (e === "UNAUTHORIZED") return "Please sign in to continue.";
   if (e === "CredentialsSignin") return "Invalid email/Staff ID or password.";
@@ -73,23 +73,21 @@ const callbackUrl = isGovernanceMode
     ? safeCb
     : buildAppCallbackUrl(safeCb);
 
-  const tenantPrefill = isGovernanceMode
-    ? ""
-    : clean(sp.get("tenant") || sp.get("tenantId") || sp.get("school") || "");
-
   const initialErr = mapError(sp.get("error"));
 
-  const [tenant, setTenant] = useState(tenantPrefill);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
+  const [showOtp, setShowOtp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(initialErr);
 
-  const canSubmit = useMemo(
-    () => identifier.trim().length >= 3 && password.length >= 6 && !loading,
-    [identifier, password, loading]
-  );
+  const canSubmit = useMemo(() => {
+    const baseReady = identifier.trim().length >= 3 && password.length >= 6 && !loading;
+    if (!baseReady) return false;
+    if (!showOtp) return true;
+    return otp.replace(/\D/g, "").length === 6;
+  }, [identifier, password, otp, showOtp, loading]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -98,8 +96,6 @@ const callbackUrl = isGovernanceMode
 
     const res = await signIn("credentials", {
       redirect: false,
-      // Critical: governance officers must not submit school/tenant input.
-      tenant: isGovernanceMode ? undefined : tenant.trim() || undefined,
       identifier: identifier.trim(),
       password,
       otp: otp.trim() || undefined,
@@ -114,35 +110,44 @@ const callbackUrl = isGovernanceMode
     }
 
     if (res.error) {
-      if (isGovernanceMode && (res.error === "TENANT_REQUIRED" || res.error === "INVALID_TENANT")) {
+      if (res.error === "TENANT_REQUIRED") {
         return setErr(
-          "This governance account could not be matched to an active officer assignment. Ask Superadmin to verify your invite and assignment."
+          "This account is linked to more than one active school. Contact EduLife OS support so the correct school can be confirmed securely."
         );
       }
 
-      if (res.error === "TENANT_REQUIRED") {
-        return setErr("Enter your School Code to continue.");
-      }
-
       if (res.error === "INVALID_TENANT") {
-        return setErr("School Code not found. Use the current School Code from your administrator.");
+        return setErr(
+          "This account could not be matched to an active school or current governance assignment."
+        );
       }
 
       if (res.error === "OTP_REQUIRED") {
-        return setErr("2FA is enabled. Enter your one-time code (OTP) and sign in again.");
+        setShowOtp(true);
+        setOtp("");
+        return setErr(
+          "Extra security is enabled for this account. Enter your 6-digit security code to continue."
+        );
       }
 
       if (res.error === "OTP_INVALID") {
-        return setErr("Invalid one-time code (OTP). Try again.");
+        setShowOtp(true);
+        return setErr("That security code is not valid. Check the 6-digit code and try again.");
       }
 
       if (res.error === "OTP_MISCONFIGURED") {
-        return setErr("2FA is misconfigured on this account. Contact the administrator.");
+        setShowOtp(true);
+        return setErr(
+          "Extra security is not configured correctly on this account. Contact EduLife OS support."
+        );
       }
 
       if (res.error.startsWith("OTP_LOCKED:")) {
+        setShowOtp(true);
         const secs = Number(res.error.split(":")[1] || "60");
-        return setErr(`OTP temporarily locked. Try again in ${minutesFromSeconds(secs)} minute(s).`);
+        return setErr(
+          `Security-code attempts are temporarily locked. Try again in ${minutesFromSeconds(secs)} minute(s).`
+        );
       }
 
       if (res.error.startsWith("RATE_LIMIT:")) {
@@ -197,7 +202,7 @@ const callbackUrl = isGovernanceMode
               : [
                   "Tenant-scoped school access",
                   "Role-based workspace routing",
-                  "OTP-ready secure sign-in",
+                  "Extra security only when enabled",
                 ]
             ).map((item) => (
               <div
@@ -222,32 +227,23 @@ const callbackUrl = isGovernanceMode
           {err ? <div className="os-error-banner mb-4 rounded-2xl px-4 py-3 text-sm">{err}</div> : null}
 
           <form onSubmit={onSubmit} className="space-y-4">
-            {!isGovernanceMode ? (
-              <div className="space-y-2">
-                <label className="os-label">
-                  School Code{" "}
-                  <span className="os-helper">(required for Staff ID or multi-school accounts)</span>
-                </label>
-                <input
-                  value={tenant}
-                  onChange={(e) => setTenant(e.target.value)}
-                  className="os-input"
-                  placeholder="e.g. SCH-AC4633 or ayitikope-basic"
-                  autoComplete="organization"
-                />
-              </div>
-            ) : (
+            {isGovernanceMode ? (
               <div className="rounded-2xl border border-[#E8C96A]/25 bg-[#E8C96A]/10 px-4 py-3 text-xs leading-6 text-[#E8C96A]">
-                Governance officers do not need a School Code. Your dashboard access comes from
-                your accepted jurisdiction assignment.
+                Your access is matched securely from your current governance assignment.
               </div>
-            )}
+            ) : null}
 
             <div className="space-y-2">
               <label className="os-label">{isGovernanceMode ? "Official Email" : "Staff ID or Email"}</label>
               <input
                 value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
+                onChange={(e) => {
+                  setIdentifier(e.target.value);
+                  if (showOtp) {
+                    setShowOtp(false);
+                    setOtp("");
+                  }
+                }}
                 className="os-input"
                 placeholder={isGovernanceMode ? "officer@district.ges.gov.gh" : "e.g. AYI-TCH-001 or name@school.com"}
                 autoComplete="username"
@@ -259,7 +255,13 @@ const callbackUrl = isGovernanceMode
               <label className="os-label">Password</label>
               <input
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (showOtp) {
+                    setShowOtp(false);
+                    setOtp("");
+                  }
+                }}
                 className="os-input"
                 placeholder="Your password"
                 type="password"
@@ -268,22 +270,35 @@ const callbackUrl = isGovernanceMode
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="os-label">
-                One-Time Code (OTP) <span className="os-helper">(only if enabled)</span>
-              </label>
-              <input
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                className="os-input"
-                placeholder="123456"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-              />
-            </div>
+            {showOtp ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <label className="os-label">Security code</label>
+                  <span className="rounded-full border border-[#E8C96A]/25 bg-[#E8C96A]/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#E8C96A]">
+                    2FA
+                  </span>
+                </div>
+                <p className="os-helper">Enter the 6-digit code from your authenticator app.</p>
+                <input
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  className="os-input"
+                  placeholder="123456"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                />
+              </div>
+            ) : null}
 
             <button type="submit" disabled={!canSubmit} className="os-btn-primary w-full px-4 py-3 text-sm">
-              {loading ? "Signing in..." : "Sign in"}
+              {loading
+                ? showOtp
+                  ? "Verifying..."
+                  : "Signing in..."
+                : showOtp
+                  ? "Verify & sign in"
+                  : "Sign in"}
             </button>
 
             {!isGovernanceMode ? (

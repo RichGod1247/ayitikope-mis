@@ -32,7 +32,12 @@ function isPlausibleId(id: string) {
 async function isActiveMemberOfTenant(tenantId: string, userId: string): Promise<boolean> {
   if (!tenantId || !userId) return false;
   const m = await prisma.membership.findFirst({
-    where: { tenantId, userId, status: "ACTIVE" },
+    where: {
+      tenantId,
+      userId,
+      status: "ACTIVE",
+      tenant: { status: "ACTIVE" },
+    },
     select: { id: true },
   });
   return !!m?.id;
@@ -81,7 +86,11 @@ export async function resolveUserIdForTenant(
 
   // 3) Dev fallback (dev-only, gated): pick any active member in this tenant
   const m = await prisma.membership.findFirst({
-    where: { tenantId, status: "ACTIVE" },
+    where: {
+      tenantId,
+      status: "ACTIVE",
+      tenant: { status: "ACTIVE" },
+    },
     orderBy: { createdAt: "asc" },
     select: { userId: true },
   });
@@ -104,6 +113,7 @@ export async function requirePermOrThrow(tenantId: string, userId: string, permN
       tenantId,
       userId,
       status: "ACTIVE",
+      tenant: { status: "ACTIVE" },
       role: {
         rolePerms: {
           some: {

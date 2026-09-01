@@ -135,6 +135,7 @@ async function resolveTenantIdOrNull(raw: string | null | undefined) {
   try {
     const t = await prisma.tenant.findFirst({
       where: {
+        status: "ACTIVE",
         OR: [
           { id: v },
           { schoolCode: { equals: v, mode: "insensitive" } },
@@ -213,7 +214,12 @@ async function pickMembershipForUserStrict(
   // 1) Preferred tenant, if valid and ACTIVE
   if (preferredTenantId) {
     const m = await prisma.membership.findFirst({
-      where: { userId, tenantId: preferredTenantId, status: "ACTIVE" },
+      where: {
+        userId,
+        tenantId: preferredTenantId,
+        status: "ACTIVE",
+        tenant: { status: "ACTIVE" },
+      },
       select: { tenantId: true, staffId: true, role: { select: { name: true } } },
     });
     if (m) return m as PickedMembership;
@@ -221,7 +227,11 @@ async function pickMembershipForUserStrict(
 
   // 2) Fallback: ONLY when exactly one ACTIVE membership exists.
   const ms = await prisma.membership.findMany({
-    where: { userId, status: "ACTIVE" },
+    where: {
+      userId,
+      status: "ACTIVE",
+      tenant: { status: "ACTIVE" },
+    },
     select: { tenantId: true, staffId: true, role: { select: { name: true } } },
     take: 2,
   });
@@ -269,6 +279,7 @@ async function pickByStaffIdGlobally(args: {
   const hits = await prisma.membership.findMany({
     where: {
       status: "ACTIVE",
+      tenant: { status: "ACTIVE" },
       OR: [
         { staffIdNorm },
         { staffId: { equals: staffIdRaw, mode: "insensitive" } },
@@ -580,6 +591,7 @@ export const authOptions: NextAuthOptions = {
               where: {
                 tenantId: tenantIdHint,
                 status: "ACTIVE",
+                tenant: { status: "ACTIVE" },
                 OR: [{ staffIdNorm }, { staffId: { equals: staffIdRaw, mode: "insensitive" } }],
               },
               select: {
@@ -919,10 +931,15 @@ export const authOptions: NextAuthOptions = {
               status: true,
               staffId: true,
               role: { select: { name: true } },
+              tenant: { select: { status: true } },
             },
           });
 
-          if (m && m.status === "ACTIVE") {
+          if (
+            m &&
+            m.status === "ACTIVE" &&
+            String(m.tenant?.status ?? "") === "ACTIVE"
+          ) {
             t.tenantId = desiredTenantIdRaw;
             t.staffId = m.staffId ?? null;
             t.roleName = m.role?.name ?? null;

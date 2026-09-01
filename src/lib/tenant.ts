@@ -48,11 +48,26 @@ export async function getCurrentTenantOrThrow() {
     select: {
       id: true,
       status: true,
-      tenant: { select: { id: true, name: true, slug: true, timezone: true, locale: true } },
+      tenant: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          timezone: true,
+          locale: true,
+          status: true,
+        },
+      },
     },
   });
 
-  if (!membership || membership.status !== "ACTIVE") throw errWithStatus("Forbidden", 403);
+  if (
+    !membership ||
+    membership.status !== "ACTIVE" ||
+    String(membership.tenant?.status ?? "") !== "ACTIVE"
+  ) {
+    throw errWithStatus("Forbidden", 403);
+  }
 
   const t = membership.tenant;
   if (!t) throw errWithStatus("Tenant not found", 404);
@@ -84,7 +99,11 @@ export async function getActiveTenantByCookie() {
  */
 export async function getActiveTenantSlug(userId: string): Promise<string | null> {
   const m = await prisma.membership.findFirst({
-    where: { userId, status: "ACTIVE" },
+    where: {
+      userId,
+      status: "ACTIVE",
+      tenant: { status: "ACTIVE" },
+    },
     select: { tenant: { select: { slug: true } } },
     orderBy: { createdAt: "asc" },
   });

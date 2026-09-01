@@ -1,6 +1,8 @@
 // src/lib/server/tenantScope.ts
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { effectiveRole } from "@/lib/roleRouting";
 
 export type TenantContext = {
   userId: string;
@@ -34,11 +36,31 @@ export async function requireTenantContext(): Promise<TenantContext> {
     throw err;
   }
 
+  const membership = await prisma.membership.findUnique({
+    where: { userId_tenantId: { userId: user.id, tenantId: user.tenantId } },
+    select: {
+      status: true,
+      staffId: true,
+      role: { select: { name: true } },
+      tenant: { select: { status: true } },
+    },
+  });
+
+  if (
+    !membership ||
+    membership.status !== "ACTIVE" ||
+    String(membership.tenant?.status ?? "") !== "ACTIVE"
+  ) {
+    const err = new Error("FORBIDDEN");
+    (err as any).status = 403;
+    throw err;
+  }
+
   return {
     userId: user.id,
     tenantId: user.tenantId,
-    roleName: user.roleName ?? null,
-    staffId: user.staffId ?? null,
+    roleName: effectiveRole(membership.role?.name ?? "") || null,
+    staffId: membership.staffId ?? null,
     teacherScope: user.teacherScope ?? null,
   };
 }

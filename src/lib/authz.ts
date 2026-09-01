@@ -31,10 +31,17 @@ export async function getCurrentUserOrThrow() {
 export async function requireMembershipOrThrow(userId: string, tenantId: string) {
   const membership = await prisma.membership.findUnique({
     where: { userId_tenantId: { userId, tenantId } },
-    include: { role: true },
+    include: {
+      role: true,
+      tenant: { select: { status: true } },
+    },
   });
 
-  if (!membership || membership.status !== "ACTIVE") {
+  if (
+    !membership ||
+    membership.status !== "ACTIVE" ||
+    String(membership.tenant?.status ?? "") !== "ACTIVE"
+  ) {
     throw errWithStatus("Forbidden", 403);
   }
 
