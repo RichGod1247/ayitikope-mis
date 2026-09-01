@@ -4,19 +4,14 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 const STAFF = [
   {
-    name: "Mr. Senu Peter — Head Teacher",
-    phone: "0508021572",
-    wa: "233508021572",
+    name: "Product Lead",
+    phone: "0242914353",
+    wa: "233242914353",
   },
   {
-    name: "Mr. Angellus Anyigba Atsu — Asst. Head (JHS)",
-    phone: "0245444861",
-    wa: "233245444861",
-  },
-  {
-    name: "Mrs. Magbele Janet — Asst. Head (Primary)",
-    phone: "0243381907",
-    wa: "233243381907",
+    name: "Institutional Partnerships Lead",
+    phone: "0547899418",
+    wa: "233547899418",
   },
 ];
 

@@ -14,6 +14,7 @@ type Contact = {
   label: string;
   phone: string;
   wa: string;
+  focus: string;
 };
 
 type Intent = {
@@ -23,38 +24,37 @@ type Intent = {
   message: string;
 };
 
+const SUPPORT_EMAIL = "support@edulifeos.com";
+
 const CONTACTS: Contact[] = [
   {
-    label: "Mr. Senu Peter — Head Teacher",
-    phone: "0508021572",
-    wa: "233508021572",
+    label: "Product Lead",
+    phone: "0242914353",
+    wa: "233242914353",
+    focus: "Product direction, institutional demos, implementation guidance, adoption, and client success.",
   },
   {
-    label: "Mr. Angellus Anyigba Atsu — Asst. Head (JHS)",
-    phone: "0245444861",
-    wa: "233245444861",
-  },
-  {
-    label: "Mrs. Magbele Janet — Asst. Head (Primary)",
-    phone: "0243381907",
-    wa: "233243381907",
+    label: "Institutional Partnerships Lead",
+    phone: "0547899418",
+    wa: "233547899418",
+    focus: "Schools, circuits, districts, partnerships, rollout conversations, adoption, and client success.",
   },
 ];
 
 const INTENTS: Intent[] = [
   {
     slug: "demo",
-    title: "Book a School Demo",
-    relation: "School Leader / Headteacher",
+    title: "Book an Institutional Demo",
+    relation: "School / Governance Leader",
     message:
-      "Hello EduLife OS team, I would like to book a school demo to see how EduLife OS can support teaching, leadership oversight, parent communication, and school performance.",
+      "Hello EduLife OS team, I would like to book an institutional demo to see how EduLife OS can support teaching, school leadership, educational governance, family communication, and accountable follow-up.",
   },
   {
     slug: "pilot",
     title: "Request a Pilot",
-    relation: "School Leader / Headteacher",
+    relation: "School / Governance Leader",
     message:
-      "Hello EduLife OS team, I would like to discuss a pilot rollout for our school and understand the best starting workflow for implementation.",
+      "Hello EduLife OS team, I would like to discuss a focused rollout and understand the best starting workflow for our school or education context.",
   },
   {
     slug: "partner",
@@ -90,7 +90,7 @@ export default function ContactPageClient() {
   const [form, setForm] = useState<Form>({
     name: "",
     phone: "",
-    relation: "School Leader / Headteacher",
+    relation: "School / Governance Leader",
     message: "",
   });
   const [busy, setBusy] = useState(false);
@@ -170,7 +170,7 @@ export default function ContactPageClient() {
       setForm({
         name: "",
         phone: "",
-        relation: "School Leader / Headteacher",
+        relation: "School / Governance Leader",
         message: "",
       });
     } catch {
@@ -197,19 +197,19 @@ export default function ContactPageClient() {
               <span className="bg-[linear-gradient(135deg,#D4AF37,#E8C96A,#F7F4ED)] bg-clip-text text-transparent">
                 demos, pilots,
               </span>{" "}
-              and school rollout.
+              and institutional rollout.
             </h1>
 
             <p className="mt-6 max-w-3xl text-base leading-8 text-[#C9CDD6] sm:text-lg">
-              EduLife OS is built for schools that value trust, clarity, and disciplined execution.
-              Reach out to discuss a school demo, pilot deployment, or partnership conversation.
+              EduLife OS serves schools and education leaders who value trust, clarity, and accountable execution.
+              Reach out to discuss an institutional demo, focused rollout, partnership, adoption, or implementation support.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
               {[
-                "Structured rollout thinking",
-                "Built for Ghanaian school reality",
-                "Teacher, leadership, and parent trust in one system",
+                "Clear institutional rollout",
+                "Built for Ghanaian education reality",
+                "Teaching, governance, and family trust in one system",
               ].map((item) => (
                 <div
                   key={item}
@@ -302,9 +302,11 @@ export default function ContactPageClient() {
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-[#081326] px-4 py-3 text-[#F7F4ED] outline-none transition focus:border-[#E8C96A]/35"
                 required
               >
-                <option>School Leader / Headteacher</option>
+                <option>School / Governance Leader</option>
+                <option>Headteacher / School Leader</option>
+                <option>Governance Officer</option>
                 <option>Teacher / Staff</option>
-                <option>Prospective Parent</option>
+                <option>Parent / Guardian</option>
                 <option>Partner / NGO</option>
                 <option>Other</option>
               </select>
@@ -371,8 +373,8 @@ export default function ContactPageClient() {
               </div>
               <div className="mt-5 space-y-4">
                 {[
-                  "We understand the school need first.",
-                  "We recommend the right starting workflow for rollout.",
+                  "We understand your institution and responsibility first.",
+                  "We recommend the right starting workflow and adoption path.",
                   "We guide the next step clearly — demo, pilot, or partnership discussion.",
                 ].map((item, idx) => (
                   <div
@@ -388,47 +390,78 @@ export default function ContactPageClient() {
 
             <div className="rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.10),rgba(255,255,255,0.04))] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.24)]">
               <div className="text-xs uppercase tracking-[0.18em] text-[#E8C96A]">
-                Current Contact Points
+                Speak with the EduLife OS team
               </div>
+
+              <h2 className="mt-3 text-2xl font-semibold text-[#F7F4ED]">
+                Reach the responsibility closest to your need.
+              </h2>
+
+              <p className="mt-3 text-sm leading-7 text-[#C9CDD6]">
+                Both contact points can support adoption and client success. For email enquiries, use{" "}
+                <a
+                  href={"mailto:" + SUPPORT_EMAIL}
+                  className="font-medium text-[#F4D97F] hover:text-white"
+                >
+                  {SUPPORT_EMAIL}
+                </a>.
+              </p>
+
               <div className="mt-5 space-y-4">
                 {CONTACTS.map((c) => (
                   <div
                     key={c.wa}
                     className="rounded-2xl border border-white/8 bg-[#081326] p-4"
                   >
-                    <div className="text-sm font-semibold text-[#F7F4ED]">{c.label}</div>
-                    <div className="mt-1 text-sm text-[#C9CDD6]">Phone: {c.phone}</div>
+                    <div className="text-sm font-semibold text-[#F7F4ED]">
+                      {c.label}
+                    </div>
+
+                    <p className="mt-2 text-sm leading-6 text-[#BFC7D4]">
+                      {c.focus}
+                    </p>
+
+                    <div className="mt-2 text-sm text-[#C9CDD6]">
+                      Phone: {c.phone}
+                    </div>
 
                     <div className="mt-4 flex flex-wrap gap-2">
                       <a
-                        href={`tel:${c.phone}`}
+                        href={"tel:" + c.phone}
                         className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-[#F7F4ED] transition hover:bg-white/10"
                       >
                         Call
                       </a>
+
                       <a
-                        href={`https://wa.me/${c.wa}`}
+                        href={"https://wa.me/" + c.wa}
                         target="_blank"
                         rel="noreferrer"
                         className="rounded-full bg-green-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-700"
                       >
                         WhatsApp
                       </a>
+
+                      <a
+                        href={"mailto:" + SUPPORT_EMAIL}
+                        className="rounded-full border border-[#E8C96A]/20 bg-[#E8C96A]/8 px-4 py-2 text-sm font-medium text-[#F4D97F] transition hover:bg-[#E8C96A]/12"
+                      >
+                        Email
+                      </a>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-
             <div className="rounded-[32px] border border-[#E8C96A]/20 bg-[linear-gradient(135deg,rgba(212,175,55,0.12),rgba(11,61,145,0.10),rgba(5,7,11,0.92))] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.24)]">
               <div className="text-xs uppercase tracking-[0.18em] text-[#E8C96A]">
-                Why schools reach out
+                Why institutions reach out
               </div>
               <div className="mt-4 space-y-3">
                 {[
-                  "To book a serious product demonstration",
-                  "To discuss a disciplined pilot rollout",
-                  "To explore partnership or institutional support",
+                  "To see EduLife OS in the context of their institution",
+                  "To plan a focused school or governance rollout",
+                  "To explore partnership, adoption, or implementation support",
                 ].map((item) => (
                   <div
                     key={item}

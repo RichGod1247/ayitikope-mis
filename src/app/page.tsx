@@ -1,442 +1,517 @@
-//src/app/page.tsx
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import HeroMedia from "@/components/HeroMedia";
-import RoleSwitchDemo from "@/components/RoleSwitchDemo";
-import ProofSection from "@/components/ProofSection";
-import ProductShowcase from "@/components/ProductShowcase";
-import PilotPath from "@/components/PilotPath";
 
-const trustItems = [
-  "NaCCA-aligned workflows",
-  "Teacher, Headteacher, Parent portals",
-  "Attendance, health, assessment, reporting",
-  "Role-based access control",
-  "Built for Ghanaian school reality",
+const evidenceChain = [
+  ["01", "Scheme", "Term intent becomes visible before classroom delivery."],
+  ["02", "Lesson Note", "Preparation becomes reviewable evidence."],
+  ["03", "Lesson Delivery", "Approved planning connects to what was actually taught."],
+  ["04", "Work Output & Assessment", "Practice and learner performance become measurable."],
+  ["05", "Appraisal", "Professional review can reference the evidence behind the work."],
+  ["06", "Governance Action", "Authorized officers can follow risk, accountability, and improvement."],
+  ["07", "Family Visibility", "Parents receive the information they are meant to see, when it is ready."],
 ];
 
-const pillars = [
+const audiences = [
   {
-    title: "Teach with Structure",
+    eyebrow: "Governance Officers",
+    title: "See the institution beyond a single dashboard.",
     body:
-      "Lesson notes, schemes, attendance, health capture, assessments, and classroom execution in one disciplined teacher workflow.",
+      "Circuit and district leaders can work from authorized school scope, supervision signals, appraisal evidence, official notices, attendance truth, assessment evidence, and follow-up accountability.",
+    points: ["Circuit & district command", "Appraisal workflows", "Official notice accountability", "School evidence drilldown"],
+    tone: "from-emerald-400/15 via-teal-400/8 to-transparent",
   },
   {
-    title: "Lead with Clarity",
+    eyebrow: "Headteachers",
+    title: "Turn leadership into a visible operating rhythm.",
     body:
-      "Headteachers see approvals, attendance certification, governance control, risk signals, and schoolwide performance without chasing paperwork.",
+      "Approvals, schemes, lesson-note review, teacher attendance certification, assessment oversight, reports, appraisals, and school follow-up sit inside one leadership environment.",
+    points: ["Approval & vetting", "Certified attendance", "Assessment oversight", "Teacher appraisal evidence"],
+    tone: "from-sky-400/15 via-blue-400/8 to-transparent",
   },
   {
-    title: "Build Parent Trust",
+    eyebrow: "Teachers",
+    title: "Move through the work in the order the work belongs.",
     body:
-      "Parents see what matters, when it matters — from attendance and health to controlled result release and learner progress visibility.",
+      "Curriculum, schemes, lesson notes, lesson delivery, attendance, assessment, Work Output, and appraisal feedback connect into a guided professional workflow.",
+    points: ["Curriculum to scheme", "Lesson-note workflow", "Delivery evidence", "Assessment & Work Output"],
+    tone: "from-violet-400/15 via-indigo-400/8 to-transparent",
+  },
+  {
+    eyebrow: "Parents & Guardians",
+    title: "Receive clarity around the learner without unnecessary noise.",
+    body:
+      "Families can access attendance, released results, reports, receipts, fee information, notifications, and important school alerts through protected parent-facing surfaces.",
+    points: ["Attendance visibility", "Released results & reports", "Receipts & fee information", "Important school alerts"],
+    tone: "from-amber-300/15 via-orange-400/8 to-transparent",
+  },
+  {
+    eyebrow: "School Community",
+    title: "Create shared confidence in how the school is run.",
+    body:
+      "School administration, educators, families, and governance officers operate from clearer roles, clearer evidence, and clearer responsibility.",
+    points: ["Role-scoped access", "Evidence before action", "Accountable communication", "Institutional continuity"],
+    tone: "from-rose-300/12 via-fuchsia-400/7 to-transparent",
   },
 ];
 
-const features = [
-  {
-    name: "Lesson Note Studio",
-    text: "Move from scattered planning to structured, reviewable teaching execution.",
-  },
-  {
-    name: "Attendance & Health Tracking",
-    text: "Capture the daily reality of the learner, not just academic records.",
-  },
-  {
-    name: "Headteacher Governance Copilot",
-    text: "Turn leadership from reactive administration into measurable school control.",
-  },
-  {
-    name: "Parent Results Release",
-    text: "Release outcomes with discipline, timing, and trust — not confusion.",
-  },
-  {
-    name: "Schoolwide Risk Board",
-    text: "See operational weak points early before they become institutional problems.",
-  },
+const governanceSignals = [
+  "Authorized circuit and district scope",
+  "Certified teacher-attendance evidence",
+  "Teacher and Headteacher appraisal workflows",
+  "Scheme-vetting and lesson-delivery signals",
+  "Teacher Work Output visibility for SISSO",
+  "Official notices, acknowledgements, and follow-up evidence",
 ];
 
-const rolloutConfidence = [
-  {
-    title: "Start with a guided demo",
-    text:
-      "See the platform clearly first. No rushed commitment, no forced rollout, no software theatre.",
-  },
-  {
-    title: "Begin with a pilot workflow",
-    text:
-      "Schools can begin with the highest-value loop first — teaching flow, leadership control, or parent-facing trust.",
-  },
-  {
-    title: "Expand with confidence",
-    text:
-      "Adoption becomes stronger when the first steps are clear, disciplined, and suited to the school’s real operating rhythm.",
-  },
+const teachingSignals = [
+  "Curriculum and Scheme of Work",
+  "Lesson-note preparation and review",
+  "Recorded lesson delivery",
+  "Assessment and learner scores",
+  "Work Output after delivered lessons",
+  "Evidence available for professional appraisal",
 ];
 
-const finalConfidencePills = [
-  "Guided conversation before rollout",
-  "Pilot-first implementation path",
-  "Built for real school operations",
+const familySignals = [
+  "Attendance visibility",
+  "Released learner results",
+  "Term reports",
+  "Fees and receipts",
+  "Notifications",
+  "Important school alerts",
+];
+
+const proofSignals = [
+  "Teacher workspace",
+  "Headteacher command",
+  "SISSO circuit command",
+  "District governance command",
+  "Parent portal",
+  "Teacher & Headteacher appraisal",
+  "Work Output",
+  "Official notices",
+  "Attendance",
+  "Assessment & reports",
 ];
 
 function fadeUp(delay = 0) {
   return {
-    initial: { opacity: 0, y: 22 },
-    whileInView: { opacity: 1, y: 0 },
-    viewport: { once: true, amount: 0.16 },
+    initial: { opacity: 0.44, y: 12, scale: 0.996 },
+    whileInView: { opacity: 1, y: 0, scale: 1 },
+    viewport: { once: false, amount: 0.18 },
     transition: {
-      duration: 0.95,
+      duration: 1.02,
       delay,
-      ease: [0.22, 1, 0.36, 1] as const,
+      ease: [0.16, 1, 0.3, 1] as const,
     },
   };
 }
 
+function SectionIntro({
+  eyebrow,
+  title,
+  body,
+}: {
+  eyebrow: string;
+  title: string;
+  body: string;
+}) {
+  return (
+    <motion.div {...fadeUp()} className="max-w-3xl">
+      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[#E8C96A]">{eyebrow}</div>
+      <h2 className="mt-4 text-2xl font-semibold tracking-tight text-[#F7F4ED] sm:text-4xl lg:text-5xl">
+        {title}
+      </h2>
+      <p className="mt-5 text-sm leading-7 text-[#C9CDD6] sm:text-base sm:leading-8">{body}</p>
+    </motion.div>
+  );
+}
+
 export default function Home() {
   const reduceMotion = useReducedMotion();
+  const [activeEvidence, setActiveEvidence] = useState(0);
 
   return (
-    <main className="min-h-screen bg-[#05070B] text-[#F7F4ED]">
-      <section className="relative overflow-hidden border-b border-white/8">
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,#05070B_0%,#071A3D_58%,#05070B_100%)]" />
-        <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:68px_68px]" />
+    <main className="overflow-hidden bg-[#05070B] text-[#F7F4ED]">
+      <section className="relative overflow-hidden bg-[linear-gradient(145deg,#05070B_0%,#071A3D_46%,#0B2F67_72%,#07111F_100%)]">
+        <div className="pointer-events-none absolute inset-0">
+          <motion.div
+            className="absolute -left-32 top-12 h-[28rem] w-[28rem] rounded-full bg-[#1B66D1]/20 blur-3xl"
+            animate={reduceMotion ? {} : { x: [0, 34, 0], y: [0, 20, 0], opacity: [0.28, 0.46, 0.28] }}
+            transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div
+            className="absolute right-[-8rem] top-[-4rem] h-[30rem] w-[30rem] rounded-full bg-[#D4AF37]/14 blur-3xl"
+            animate={reduceMotion ? {} : { x: [0, -22, 0], y: [0, 28, 0], opacity: [0.18, 0.34, 0.18] }}
+            transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:72px_72px]" />
+        </div>
 
-        <motion.div
-          className="absolute -left-20 top-10 h-[20rem] w-[20rem] rounded-full bg-[#1B66D1]/20 blur-3xl sm:h-[24rem] sm:w-[24rem]"
-          animate={
-            reduceMotion
-              ? {}
-              : {
-                  x: [0, 24, 0],
-                  y: [0, 18, 0],
-                  opacity: [0.35, 0.52, 0.35],
-                  scale: [1, 1.06, 1],
-                }
-          }
-          transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
-        />
-
-        <motion.div
-          className="absolute right-0 top-0 h-[18rem] w-[18rem] rounded-full bg-[#D4AF37]/14 blur-3xl sm:h-[22rem] sm:w-[22rem]"
-          animate={
-            reduceMotion
-              ? {}
-              : {
-                  x: [0, -20, 0],
-                  y: [0, 14, 0],
-                  opacity: [0.2, 0.32, 0.2],
-                  scale: [1, 1.04, 1],
-                }
-          }
-          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-        />
-
-        <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 py-10 sm:gap-12 sm:px-6 sm:py-14 md:py-20 lg:grid-cols-[0.92fr_1.08fr] lg:gap-16 lg:px-8 lg:py-28">
-          <motion.div {...fadeUp(0)} className="max-w-3xl">
-            <div className="inline-flex items-center rounded-full border border-[#E8C96A]/25 bg-white/6 px-4 py-2 text-[11px] uppercase tracking-[0.18em] text-[#E8C96A] sm:text-xs sm:tracking-[0.2em]">
-              The Operating System for Human Potential
+        <div className="relative mx-auto grid max-w-7xl gap-10 px-4 pb-16 pt-14 sm:px-6 sm:pb-20 sm:pt-20 lg:grid-cols-[1.02fr_0.98fr] lg:items-center lg:px-8 lg:pb-24 lg:pt-24">
+          <motion.div {...fadeUp()}>
+            <div className="inline-flex flex-wrap items-center gap-2 rounded-full border border-[#E8C96A]/25 bg-[#E8C96A]/8 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#F4D97F]">
+              Educational Governance
+              <span className="text-white/30">•</span>
+              School Operations
+              <span className="text-white/30">•</span>
+              Family Trust
             </div>
 
-            <h1 className="mt-6 text-4xl font-semibold leading-[1.02] sm:mt-8 sm:text-5xl lg:text-7xl">
-              Run Your School Like a{" "}
-              <span className="bg-[linear-gradient(135deg,#D4AF37,#E8C96A,#F7F4ED)] bg-clip-text text-transparent">
-                World-Class
-              </span>{" "}
-              Institution
+            <h1 className="mt-6 max-w-4xl text-4xl font-semibold tracking-[-0.035em] text-white sm:text-6xl lg:text-[4.3rem] lg:leading-[1.02]">
+              One operating system for the life of the school.
             </h1>
 
-            <p className="mt-5 max-w-2xl text-sm leading-7 text-[#C9CDD6] sm:mt-6 sm:text-lg sm:leading-8">
-              EduLife OS helps schools unify teaching, leadership, attendance,
-              assessments, parent communication, and school performance in one
-              disciplined system built for measurable growth.
+            <p className="mt-6 max-w-2xl text-base leading-8 text-[#D8DEE9] sm:text-lg">
+              EduLife OS connects the evidence of teaching with the people responsible for improving it.
+              Teachers, school leaders, governance officers, and families work from one accountable rhythm
+              spanning planning, attendance, lesson delivery, assessment, appraisal, communication, and follow-up.
             </p>
 
-            <div className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row">
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
                 href="/contact?intent=demo"
-                className="inline-flex items-center justify-center rounded-full bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-6 py-3 text-sm font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] transition hover:scale-[1.02]"
+                className="inline-flex items-center justify-center rounded-full bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-6 py-3.5 text-sm font-semibold text-[#071A3D] shadow-[0_20px_60px_rgba(212,175,55,0.22)] hover:brightness-105"
               >
-                Book a School Demo
+                Book an Institutional Demo
               </Link>
               <Link
-                href="/#roles"
-                className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/5 px-6 py-3 text-sm font-medium text-[#F7F4ED] transition hover:bg-white/10"
+                href="/#evidence-chain"
+                className="inline-flex items-center justify-center rounded-full border border-white/14 bg-white/6 px-6 py-3.5 text-sm font-medium text-white hover:bg-white/10"
               >
-                Explore the Platform
+                See How EduLife Works
               </Link>
             </div>
 
-            <div className="mt-4 text-sm leading-7 text-[#AEB6C4]">
-              For headteachers, proprietors, school leaders, and implementation partners.
-            </div>
-
-            <Link
-              href="/#platform"
-              className="mt-4 inline-block text-sm text-[#C9CDD6] transition hover:text-white"
-            >
-              See how it works →
-            </Link>
-
-            <div className="mt-8 grid gap-3 sm:mt-10 sm:grid-cols-3">
-              {[
-                { label: "Teaching", value: "Structured" },
-                { label: "Leadership", value: "Disciplined" },
-                { label: "Parent Trust", value: "Connected" },
-              ].map((item, idx) => (
-                <motion.div
-                  key={item.label}
-                  {...fadeUp(0.1 + idx * 0.06)}
-                  whileHover={reduceMotion ? {} : { y: -4 }}
-                  className="rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.10),rgba(255,255,255,0.04))] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.18)]"
-                >
-                  <div className="text-xs uppercase tracking-[0.16em] text-[#8F98A8]">
-                    {item.label}
-                  </div>
-                  <div className="mt-2 text-lg font-semibold text-[#F7F4ED]">
-                    {item.value}
-                  </div>
-                </motion.div>
+            <div className="mt-8 flex flex-wrap gap-2">
+              {["Role-scoped access", "Evidence-led workflows", "Ghana-ready", "Low-network conscious"].map((item) => (
+                <span key={item} className="rounded-full border border-white/10 bg-black/10 px-3 py-1.5 text-xs text-[#D6DCE7]">
+                  {item}
+                </span>
               ))}
             </div>
           </motion.div>
 
-          <motion.div {...fadeUp(0.16)} className="relative">
-            <div className="pointer-events-none absolute -left-6 top-12 hidden rounded-full border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#D9DEE8] shadow-[0_18px_50px_rgba(0,0,0,0.22)] md:block">
-              Governance control
+          <motion.div {...fadeUp(0.08)} className="relative">
+            <div className="absolute -inset-6 rounded-[44px] bg-[radial-gradient(circle_at_center,rgba(14,165,233,0.16),transparent_55%)] blur-2xl" />
+            <div className="relative">
+              <HeroMedia />
             </div>
-
-            <div className="pointer-events-none absolute right-0 top-28 hidden rounded-full border border-[#E8C96A]/20 bg-[#D4AF37]/10 px-4 py-3 text-sm text-[#F7F4ED] shadow-[0_18px_50px_rgba(0,0,0,0.22)] md:block">
-              Parent trust loop
-            </div>
-
-            <div className="pointer-events-none absolute -left-2 bottom-16 hidden rounded-full border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#D9DEE8] shadow-[0_18px_50px_rgba(0,0,0,0.22)] md:block">
-              Attendance + health
-            </div>
-
-            <div className="pointer-events-none absolute right-6 bottom-10 hidden rounded-full border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#D9DEE8] shadow-[0_18px_50px_rgba(0,0,0,0.22)] md:block">
-              Built for Ghana
-            </div>
-
-            <HeroMedia />
           </motion.div>
+        </div>
+
+        <div className="relative border-t border-white/10 bg-black/10">
+          <div className="mx-auto grid max-w-7xl grid-cols-2 gap-px px-4 py-5 sm:px-6 md:grid-cols-4 lg:px-8">
+            {[
+              ["Governance", "See across authorized schools"],
+              ["Headteachers", "Lead from verified evidence"],
+              ["Teachers", "Follow one connected workflow"],
+              ["Families", "Receive the right information"],
+            ].map(([label, text]) => (
+              <div key={label} className="px-3 py-3">
+                <div className="text-sm font-semibold text-[#F4D97F]">{label}</div>
+                <div className="mt-1 text-xs leading-5 text-[#B9C1CF]">{text}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      <section className="border-y border-white/8 bg-[#07111F]">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-5 lg:px-8">
-          <div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar sm:flex-wrap">
-            {trustItems.map((item, idx) => (
+      <section
+        id="evidence-chain"
+        className="relative overflow-hidden bg-[linear-gradient(145deg,#06121F_0%,#082A43_46%,#063B46_74%,#07111F_100%)] py-16 sm:py-20 lg:py-24"
+      >
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_88%_18%,rgba(34,211,238,0.12),transparent_30%),radial-gradient(circle_at_8%_72%,rgba(59,130,246,0.12),transparent_30%)]" />
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <SectionIntro
+            eyebrow="The EduLife Evidence Chain"
+            title="One evidence chain. Clear responsibility at every level."
+            body="EduLife OS carries the story of the work forward. What is planned can be reviewed, what is taught can be evidenced, what is assessed can be interpreted, and what needs attention can reach the responsible leader."
+          />
+
+          <div className="mt-8 sm:hidden">
+            <div className="grid grid-cols-2 gap-2" aria-label="EduLife evidence chain">
+              {evidenceChain.map(([num, title], index) => {
+                const selected = activeEvidence === index;
+
+                return (
+                  <motion.button
+                    key={title}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setActiveEvidence(index)}
+                    whileTap={reduceMotion ? {} : { scale: 0.985 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                    className={
+                      selected
+                        ? "min-h-[60px] rounded-[18px] border border-cyan-200/28 bg-cyan-100/[0.11] p-3 text-left outline-none shadow-[0_10px_36px_rgba(34,211,238,0.10)] transition"
+                        : "min-h-[60px] rounded-[18px] border border-cyan-100/10 bg-white/[0.045] p-3 text-left outline-none transition"
+                    }
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <span className="mt-0.5 text-[11px] font-semibold text-cyan-200/80">{num}</span>
+                      <span className="text-sm font-semibold leading-5 text-white">{title}</span>
+                    </div>
+                  </motion.button>
+                );
+              })}
+            </div>
+
+            <motion.div
+              key={activeEvidence}
+              initial={reduceMotion ? false : { opacity: 0.55, y: 6, scale: 0.994 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              className="mt-3 rounded-[20px] border border-cyan-100/12 bg-black/10 px-4 py-3.5"
+              aria-live="polite"
+            >
+              <div className="text-sm font-semibold text-cyan-100">
+                {evidenceChain[activeEvidence][1]}
+              </div>
+              <p className="mt-1.5 text-sm leading-6 text-[#C8D6DF]">
+                {evidenceChain[activeEvidence][2]}
+              </p>
+              <div className="mt-2 text-xs text-cyan-100/60">
+                Tap another step to follow the chain.
+              </div>
+            </motion.div>
+          </div>
+
+          <div className="mt-10 hidden gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-7">
+            {evidenceChain.map(([num, title, text], index) => (
               <motion.div
-                key={item}
-                {...fadeUp(0.04 * idx)}
-                className="shrink-0 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-[#D8DDE7]"
+                key={title}
+                {...fadeUp(index * 0.035)}
+                whileHover={reduceMotion ? {} : { y: -3, scale: 0.992 }}
+                className="relative rounded-[24px] border border-cyan-100/10 bg-white/[0.055] p-4 backdrop-blur-sm"
               >
-                {item}
+                <div className="text-xs font-semibold text-cyan-200/80">{num}</div>
+                <div className="mt-3 text-sm font-semibold text-white">{title}</div>
+                <p className="mt-2 text-xs leading-6 text-[#C8D6DF]">{text}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      <section id="platform" className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
-        <motion.div {...fadeUp(0)} className="max-w-3xl">
-          <div className="text-xs uppercase tracking-[0.2em] text-[#E8C96A]">
-            Why EduLife OS
+      <section
+        id="roles"
+        className="relative overflow-hidden bg-[linear-gradient(145deg,#0B1022_0%,#21134A_42%,#172554_72%,#07111F_100%)] py-16 sm:py-20 lg:py-24"
+      >
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_14%_20%,rgba(168,85,247,0.14),transparent_28%),radial-gradient(circle_at_84%_62%,rgba(59,130,246,0.12),transparent_30%)]" />
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <SectionIntro
+            eyebrow="Who EduLife Serves"
+            title="Every role sees the part of the truth it is responsible for."
+            body="The platform is designed around responsibility. Each person gets a clearer next action while the institution keeps a coherent evidence trail."
+          />
+
+          <div className="mt-10 grid gap-4 lg:grid-cols-2">
+            {audiences.map((item, idx) => (
+              <motion.article
+                key={item.eyebrow}
+                {...fadeUp(idx * 0.04)}
+                whileHover={reduceMotion ? {} : { y: -4 }}
+                className={`relative overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-br ${item.tone} p-5 shadow-[0_24px_70px_rgba(0,0,0,0.18)] sm:p-6`}
+              >
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#E8C96A]">{item.eyebrow}</div>
+                <h3 className="mt-3 text-xl font-semibold text-white sm:text-2xl">{item.title}</h3>
+                <p className="mt-4 text-sm leading-7 text-[#D0D6E0]">{item.body}</p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {item.points.map((point) => (
+                    <span key={point} className="rounded-full border border-white/10 bg-black/10 px-3 py-1.5 text-xs text-[#E4E8EF]">
+                      {point}
+                    </span>
+                  ))}
+                </div>
+              </motion.article>
+            ))}
           </div>
-          <h2 className="mt-4 text-2xl font-semibold sm:text-4xl lg:text-5xl">
-            More than a website. More than a dashboard. An execution system.
-          </h2>
-          <p className="mt-5 text-sm leading-7 text-[#C9CDD6] sm:text-base sm:leading-8">
-            Most school websites are brochureware. Most MIS tools are fragmented.
-            EduLife OS is being built to unify the real operating rhythm of the school.
-          </p>
-        </motion.div>
-
-        {/* Mobile: horizontal cards */}
-        <div className="mt-8 flex gap-4 overflow-x-auto pb-2 no-scrollbar lg:hidden">
-          {pillars.map((pillar, idx) => (
-            <motion.div
-              key={pillar.title}
-              {...fadeUp(0.05 * idx)}
-              className="min-w-[85%] rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.09),rgba(255,255,255,0.03))] p-5 shadow-[0_25px_90px_rgba(0,0,0,0.20)]"
-            >
-              <div className="h-11 w-11 rounded-2xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] shadow-[0_0_24px_rgba(212,175,55,0.24)]" />
-              <h3 className="mt-5 text-xl font-semibold">{pillar.title}</h3>
-              <p className="mt-4 text-sm leading-7 text-[#C9CDD6]">{pillar.body}</p>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Desktop */}
-        <div className="mt-12 hidden gap-6 lg:grid lg:grid-cols-3">
-          {pillars.map((pillar, idx) => (
-            <motion.div
-              key={pillar.title}
-              {...fadeUp(0.08 + idx * 0.06)}
-              whileHover={reduceMotion ? {} : { y: -6 }}
-              className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.09),rgba(255,255,255,0.03))] p-6 shadow-[0_25px_90px_rgba(0,0,0,0.20)]"
-            >
-              <div className="h-11 w-11 rounded-2xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] shadow-[0_0_24px_rgba(212,175,55,0.24)]" />
-              <h3 className="mt-5 text-xl font-semibold">{pillar.title}</h3>
-              <p className="mt-4 text-sm leading-7 text-[#C9CDD6]">{pillar.body}</p>
-            </motion.div>
-          ))}
         </div>
       </section>
 
-      <ProofSection />
-      <RoleSwitchDemo />
-      <ProductShowcase />
+      <section
+        id="governance"
+        className="relative overflow-hidden bg-[linear-gradient(145deg,#04140F_0%,#063B2F_42%,#0F4C5C_73%,#07111F_100%)] py-16 sm:py-20 lg:py-24"
+      >
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_18%,rgba(52,211,153,0.15),transparent_26%),radial-gradient(circle_at_10%_76%,rgba(34,211,238,0.10),transparent_30%)]" />
+        <div className="relative mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[0.92fr_1.08fr] lg:items-center lg:px-8">
+          <SectionIntro
+            eyebrow="Governance Spine"
+            title="See what needs attention. Act from evidence."
+            body="EduLife OS extends the operating rhythm beyond the school office. Authorized governance officers can work across their assigned scope while school-level evidence remains connected to the action that follows."
+          />
 
-      <section id="features" className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
-        <motion.div {...fadeUp(0)} className="max-w-3xl">
-          <div className="text-xs uppercase tracking-[0.2em] text-[#E8C96A]">
-            Flagship Features
-          </div>
-          <h2 className="mt-4 text-2xl font-semibold sm:text-4xl lg:text-5xl">
-            Built for school discipline, not digital decoration.
-          </h2>
-        </motion.div>
-
-        <div className="mt-8 grid gap-4 sm:mt-10 lg:grid-cols-2 lg:gap-6">
-          {features.map((feature, idx) => (
-            <motion.div
-              key={feature.name}
-              {...fadeUp(0.08 + idx * 0.05)}
-              whileHover={reduceMotion ? {} : { y: -5 }}
-              className="rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-5 sm:rounded-[28px] sm:p-6"
-            >
-              <div className="text-sm uppercase tracking-[0.16em] text-[#E8C96A]">
-                {feature.name}
+          <motion.div {...fadeUp(0.06)} className="grid gap-3 sm:grid-cols-2">
+            {governanceSignals.map((item) => (
+              <div key={item} className="rounded-[22px] border border-emerald-100/12 bg-emerald-50/[0.055] p-4 text-sm leading-6 text-emerald-50">
+                <span className="mr-2 text-[#E8C96A]">◆</span>
+                {item}
               </div>
-              <p className="mt-4 max-w-xl text-sm leading-7 text-[#C9CDD6]">
-                {feature.text}
-              </p>
-            </motion.div>
-          ))}
+            ))}
+          </motion.div>
         </div>
       </section>
 
-      <PilotPath />
+      <section className="relative overflow-hidden bg-[linear-gradient(145deg,#06122A_0%,#0B3D91_48%,#123C69_74%,#07111F_100%)] py-16 sm:py-20 lg:py-24">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(96,165,250,0.16),transparent_28%),radial-gradient(circle_at_82%_70%,rgba(34,211,238,0.10),transparent_30%)]" />
+        <div className="relative mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:items-center lg:px-8">
+          <SectionIntro
+            eyebrow="Teaching Evidence"
+            title="The classroom workflow stays connected from plan to proof."
+            body="The teacher journey links curriculum intent, preparation, delivery, assessment, and Work Output so professional effort becomes easier to follow and support."
+          />
 
-      <section id="vision" className="relative overflow-hidden bg-[#07111F] py-14 sm:py-16 lg:py-20">
-        <motion.div
-          className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(212,175,55,0.10),transparent_30%)]"
-          animate={reduceMotion ? {} : { opacity: [0.38, 0.7, 0.38] }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <motion.div
-          {...fadeUp(0)}
-          className="relative mx-auto max-w-5xl px-4 text-center sm:px-6 lg:px-8"
-        >
-          <div className="text-xs uppercase tracking-[0.2em] text-[#E8C96A]">
-            Vision
-          </div>
-          <h2 className="mt-4 text-2xl font-semibold sm:text-4xl lg:text-5xl">
-            We are building infrastructure for the next generation of African excellence.
-          </h2>
-          <p className="mx-auto mt-6 max-w-3xl text-sm leading-7 text-[#C9CDD6] sm:text-base sm:leading-8">
-            EduLife OS is being designed to help schools grow disciplined learners,
-            sharper teachers, stronger leaders, and more trusted family-school relationships —
-            all inside a system built for practical African reality and long-term human development.
-          </p>
-        </motion.div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
-        <motion.div
-          {...fadeUp(0)}
-          whileHover={reduceMotion ? {} : { y: -3 }}
-          className="rounded-[24px] border border-[#E8C96A]/20 bg-[linear-gradient(135deg,rgba(212,175,55,0.14),rgba(11,61,145,0.12),rgba(5,7,11,0.9))] p-5 shadow-[0_30px_120px_rgba(0,0,0,0.35)] sm:rounded-[36px] sm:p-8 lg:p-12"
-        >
-          <div className="max-w-3xl">
-            <div className="text-xs uppercase tracking-[0.2em] text-[#E8C96A]">
-              Final Call
-            </div>
-            <h2 className="mt-4 text-2xl font-semibold sm:text-4xl lg:text-5xl">
-              Bring world-class discipline to your school.
-            </h2>
-            <p className="mt-5 text-sm leading-7 text-[#D9DEE8] sm:text-base sm:leading-8">
-              See how EduLife OS unifies teaching, leadership, and parent trust in one premium operating system.
-            </p>
-
-            <div className="mt-6 flex gap-3 overflow-x-auto pb-1 no-scrollbar sm:mt-8 sm:flex-wrap">
-              {finalConfidencePills.map((item) => (
-                <div
-                  key={item}
-                  className="shrink-0 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-[#E5E8EF]"
-                >
-                  {item}
+          <motion.div {...fadeUp(0.06)} className="rounded-[30px] border border-blue-100/12 bg-black/12 p-5 sm:p-6">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {teachingSignals.map((item, idx) => (
+                <div key={item} className="rounded-2xl border border-white/10 bg-white/[0.055] p-4">
+                  <div className="text-xs font-semibold text-blue-200">0{idx + 1}</div>
+                  <div className="mt-2 text-sm font-medium text-white">{item}</div>
                 </div>
               ))}
             </div>
+          </motion.div>
+        </div>
+      </section>
 
-            {/* Mobile */}
-            <div className="mt-6 flex gap-4 overflow-x-auto pb-2 no-scrollbar md:hidden">
-              {rolloutConfidence.map((item, idx) => (
-                <motion.div
-                  key={item.title}
-                  initial={{ opacity: 0, y: 14 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.55, delay: 0.08 * idx }}
-                  className="min-w-[85%] rounded-[24px] border border-white/10 bg-white/5 p-5"
-                >
-                  <div className="text-sm font-semibold text-[#F7F4ED]">
-                    {item.title}
-                  </div>
-                  <p className="mt-3 text-sm leading-7 text-[#C9CDD6]">
-                    {item.text}
-                  </p>
-                </motion.div>
+      <section className="relative overflow-hidden bg-[linear-gradient(145deg,#21120B_0%,#4A2419_38%,#5B2430_66%,#111827_100%)] py-16 sm:py-20 lg:py-24">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_78%_18%,rgba(251,191,36,0.14),transparent_28%),radial-gradient(circle_at_18%_76%,rgba(244,63,94,0.10),transparent_30%)]" />
+        <div className="relative mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[1fr_0.9fr] lg:items-center lg:px-8">
+          <div>
+            <SectionIntro
+              eyebrow="Family Trust"
+              title="Give families clarity at the moments that matter."
+              body="Protected parent-facing surfaces keep attention on the learner: presence, released performance information, school communication, and financial records intended for the family."
+            />
+            <div className="mt-8 flex flex-wrap gap-2">
+              {familySignals.map((item) => (
+                <span key={item} className="rounded-full border border-amber-100/12 bg-amber-50/[0.055] px-4 py-2 text-sm text-amber-50">
+                  {item}
+                </span>
               ))}
-            </div>
-
-            {/* Desktop */}
-            <div className="mt-8 hidden gap-4 md:grid md:grid-cols-3">
-              {rolloutConfidence.map((item, idx) => (
-                <motion.div
-                  key={item.title}
-                  initial={{ opacity: 0, y: 14 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.55, delay: 0.08 * idx }}
-                  className="rounded-[24px] border border-white/10 bg-white/5 p-5"
-                >
-                  <div className="text-sm font-semibold text-[#F7F4ED]">
-                    {item.title}
-                  </div>
-                  <p className="mt-3 text-sm leading-7 text-[#C9CDD6]">
-                    {item.text}
-                  </p>
-                </motion.div>
-              ))}
-            </div>
-
-            <div className="mt-6 max-w-2xl text-sm leading-7 text-[#D9DEE8] sm:mt-8">
-              Schools do not need to commit to a full system rollout on the first conversation.
-              The right first step is a guided demo or a focused pilot conversation based on the school’s real needs.
-            </div>
-
-            <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row">
-              <Link
-                href="/contact?intent=demo"
-                className="inline-flex items-center justify-center rounded-full bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-6 py-3 text-sm font-semibold text-[#071A3D]"
-              >
-                Request a Demo
-              </Link>
-              <Link
-                href="/contact?intent=pilot"
-                className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/5 px-6 py-3 text-sm font-medium text-[#F7F4ED]"
-              >
-                Talk to Us About Deployment
-              </Link>
             </div>
           </div>
+
+          <motion.div {...fadeUp(0.08)} className="rounded-[32px] border border-[#E8C96A]/20 bg-[linear-gradient(145deg,rgba(232,201,106,0.12),rgba(255,255,255,0.035))] p-6 shadow-[0_28px_90px_rgba(0,0,0,0.28)]">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#F4D97F]">Trust principle</div>
+            <p className="mt-4 text-2xl font-semibold leading-tight text-white">
+              The right information. The right person. The right time.
+            </p>
+            <p className="mt-4 text-sm leading-7 text-[#E1D6CF]">
+              EduLife OS keeps role boundaries and controlled release at the center of family communication,
+              so visibility strengthens responsibility instead of creating noise.
+            </p>
+          </motion.div>
+        </div>
+      </section>
+
+      <section id="proof" className="relative overflow-hidden bg-[linear-gradient(145deg,#05070B_0%,#111827_48%,#1F2937_72%,#07111F_100%)] py-16 sm:py-20 lg:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <SectionIntro
+            eyebrow="Product Proof"
+            title="The value proposition is already visible in the product."
+            body="EduLife OS spans the working surfaces used by teachers, school leaders, families, and governance officers. From classroom practice to institutional decisions, evidence stays connected to the person responsible for what happens next."
+          />
+          <motion.div {...fadeUp(0.08)} className="mt-9 flex flex-wrap gap-2">
+            {proofSignals.map((item) => (
+              <span key={item} className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-[#E3E7EE]">
+                {item}
+              </span>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      <section className="relative overflow-hidden bg-[linear-gradient(145deg,#071A14_0%,#123524_40%,#3A3A1C_72%,#07111F_100%)] py-16 sm:py-20 lg:py-24">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_82%_22%,rgba(232,201,106,0.14),transparent_26%),radial-gradient(circle_at_12%_72%,rgba(74,222,128,0.10),transparent_30%)]" />
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid gap-8 rounded-[34px] border border-[#E8C96A]/18 bg-black/15 p-6 sm:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#E8C96A]">Institutional Adoption</div>
+              <h2 className="mt-4 text-2xl font-semibold text-white sm:text-4xl">
+                Start with the priorities that matter most. Expand from evidence.
+              </h2>
+              <p className="mt-5 max-w-2xl text-sm leading-7 text-[#D2DBD4] sm:text-base sm:leading-8">
+                Adoption is strongest when roles are clear, the first workflows solve a visible need,
+                and people experience value before the next layer is introduced.
+              </p>
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                <Link href="/contact?intent=demo" className="inline-flex items-center justify-center rounded-full bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-6 py-3 text-sm font-semibold text-[#071A3D]">
+                  Book an Institutional Demo
+                </Link>
+                <Link href="/contact?intent=pilot" className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/5 px-6 py-3 text-sm font-medium text-white">
+                  Discuss Adoption
+                </Link>
+              </div>
+            </div>
+
+            <div className="grid gap-3">
+              {[
+                ["01", "Align roles and authority"],
+                ["02", "Activate priority workflows"],
+                ["03", "Measure the evidence"],
+                ["04", "Expand with confidence"],
+              ].map(([num, text]) => (
+                <div key={num} className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <span className="text-xs font-semibold text-[#F4D97F]">{num}</span>
+                  <span className="text-sm font-medium text-white">{text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="vision" className="relative overflow-hidden bg-[linear-gradient(145deg,#05070B_0%,#071A3D_48%,#281B46_72%,#05070B_100%)] py-16 sm:py-20 lg:py-24">
+        <motion.div
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(212,175,55,0.13),transparent_34%)]"
+          animate={reduceMotion ? {} : { opacity: [0.42, 0.72, 0.42] }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div {...fadeUp()} className="relative mx-auto max-w-5xl px-4 text-center sm:px-6 lg:px-8">
+          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[#E8C96A]">Vision</div>
+          <h2 className="mt-4 text-3xl font-semibold tracking-tight text-white sm:text-5xl">
+            EduLife OS is infrastructure for accountable education.
+          </h2>
+          <p className="mx-auto mt-6 max-w-3xl text-sm leading-8 text-[#CDD4DF] sm:text-base">
+            Its purpose is to help education systems build stronger learners, more supported educators,
+            more capable school leadership, better-informed families, and governance that can act from evidence.
+          </p>
         </motion.div>
+      </section>
+
+      <section className="relative overflow-hidden bg-[#05070B] py-16 sm:py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <motion.div
+            {...fadeUp()}
+            className="relative overflow-hidden rounded-[34px] border border-[#E8C96A]/20 bg-[linear-gradient(135deg,#0B3D91_0%,#102D52_42%,#3B2B18_100%)] p-7 shadow-[0_30px_110px_rgba(0,0,0,0.32)] sm:p-10"
+          >
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_85%_18%,rgba(232,201,106,0.22),transparent_28%)]" />
+            <div className="relative max-w-3xl">
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#F4D97F]">See EduLife OS in context</div>
+              <h2 className="mt-4 text-3xl font-semibold text-white sm:text-5xl">
+                See how the operating system fits your institution.
+              </h2>
+              <p className="mt-5 text-sm leading-7 text-[#D9E1EC] sm:text-base sm:leading-8">
+                Start with the people, responsibilities, and workflows that matter most in your school,
+                circuit, district, or education community.
+              </p>
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                <Link href="/contact?intent=demo" className="inline-flex items-center justify-center rounded-full bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-6 py-3.5 text-sm font-semibold text-[#071A3D]">
+                  Book an Institutional Demo
+                </Link>
+                <Link href="/auth/signin" className="inline-flex items-center justify-center rounded-full border border-white/14 bg-white/7 px-6 py-3.5 text-sm font-medium text-white">
+                  Sign In to EduLife OS
+                </Link>
+              </div>
+            </div>
+          </motion.div>
+        </div>
       </section>
     </main>
   );
