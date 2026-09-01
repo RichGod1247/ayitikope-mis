@@ -45,6 +45,23 @@ const dashboardPath = path.join(
   "page.tsx",
 );
 
+const districtDashboardPath = path.join(
+  repoRoot,
+  "src",
+  "app",
+  "district",
+  "dashboard",
+  "page.tsx",
+);
+
+const commandDashboardPath = path.join(
+  repoRoot,
+  "src",
+  "components",
+  "governance",
+  "GovernanceCommandDashboardClient.tsx",
+);
+
 function fail(message, detail) {
   const suffix = detail === undefined ? "" : `\n${JSON.stringify(detail, null, 2)}`;
   throw new Error(`${message}${suffix}`);
@@ -54,7 +71,7 @@ function assert(condition, message, detail) {
   if (!condition) fail(message, detail);
 }
 
-for (const file of [routePath, clientPath, pagePath, dashboardPath]) {
+for (const file of [routePath, clientPath, pagePath, dashboardPath, districtDashboardPath, commandDashboardPath]) {
   assert(fs.existsSync(file), "Required SISSO Work Output source is missing.", file);
 }
 
@@ -62,6 +79,12 @@ const route = fs.readFileSync(routePath, "utf8");
 const client = fs.readFileSync(clientPath, "utf8");
 const page = fs.readFileSync(pagePath, "utf8");
 const dashboard = fs.readFileSync(dashboardPath, "utf8");
+const districtDashboard = fs.readFileSync(districtDashboardPath, "utf8");
+const commandDashboard = fs.readFileSync(commandDashboardPath, "utf8");
+
+function countOf(source, token) {
+  return source.split(token).length - 1;
+}
 
 assert(
   route.includes("requireGovernanceApiContext") &&
@@ -179,9 +202,44 @@ assert(
 );
 
 assert(
-  dashboard.includes('href="/circuit/work-output"') &&
-    dashboard.includes("Teacher Work Output"),
-  "SISSO Circuit Command must expose one clear Work Output launcher.",
+  !dashboard.includes('href="/circuit/work-output"') &&
+    !dashboard.includes("Teacher Work Output") &&
+    dashboard.includes('endpoint="/api/circuit/overview"'),
+  "Circuit wrapper must delegate the single Work Output doorway to the shared command surface without a duplicate launcher.",
+);
+
+assert(
+  countOf(commandDashboard, 'title="Teacher Work Output"') === 1 &&
+    commandDashboard.includes('description="Review lesson-linked practice and learner progress."') &&
+    commandDashboard.includes('window.location.assign("/circuit/work-output")'),
+  "SISSO command surface must expose the proven Teacher Work Output page as its assessment doorway.",
+);
+
+assert(
+  countOf(commandDashboard, 'title="Students Assessment"') === 1 &&
+    commandDashboard.includes('onClick={() => openPanel("students-assessment")}') &&
+    commandDashboard.includes("Students Assessment proof and scoring health"),
+  "District Students Assessment tile and its existing proof panel must remain available.",
+);
+
+const districtAssessmentTile = commandDashboard.indexOf('title="Students Assessment"');
+const circuitWorkOutputTile = commandDashboard.indexOf('title="Teacher Work Output"');
+const districtBeceMarker = commandDashboard.indexOf("Official BECE result trends and school comparisons");
+const circuitBeceMarker = commandDashboard.indexOf("Circuit-level BECE result trends and school comparisons");
+
+assert(
+  districtAssessmentTile >= 0 &&
+    circuitWorkOutputTile > districtAssessmentTile &&
+    districtBeceMarker > districtAssessmentTile &&
+    circuitBeceMarker > circuitWorkOutputTile,
+  "Teacher Work Output must replace only the later SISSO branch while the earlier District assessment branch remains intact.",
+);
+
+assert(
+  districtDashboard.includes('endpoint="/api/district/overview"') &&
+    commandDashboard.includes("Expert tools") &&
+    commandDashboard.includes('activePanel === "advanced"'),
+  "District command routing and Expert tools must remain preserved for their later dedicated cleanup.",
 );
 
 assert(
@@ -197,6 +255,8 @@ console.log("- selected-school current term/year is reused with no silent 1st-Te
 console.log("- shared lesson-linked non-Mock Work Output remains the only computation authority");
 console.log("- legacy unlinked evidence is preserved separately");
 console.log("- school -> teacher -> class -> subject flow is compact and BBC-friendly");
+console.log("- SISSO Students Assessment doorway is converged onto Teacher Work Output");
+console.log("- District Students Assessment and Expert tools remain preserved");
 console.log("- only non-zero practice types are surfaced in the compact summary");
 console.log("- delivered lessons are disclosed oldest to newest");
 console.log("- learner progression opens only for the selected delivered lesson");

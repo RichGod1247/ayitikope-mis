@@ -2495,18 +2495,11 @@ const mockCommandTile = (
 
       <CommandTile
         icon="📊"
-        title="Students Assessment"
-        description="Learner scoring and assessment proof."
-        value={
-          assessmentCompletion ? percentValue(assessmentCompletion) : "—"
-        }
-        tone={
-          assessmentCompletion && assessmentCompletion < 60
-            ? "warning"
-            : "info"
-        }
-        active={activePanel === "students-assessment"}
-        onClick={() => openPanel("students-assessment")}
+        title="Teacher Work Output"
+        description="Review lesson-linked practice and learner progress."
+        value="Open"
+        tone="info"
+        onClick={() => window.location.assign("/circuit/work-output")}
       />
 
       <CommandTile
