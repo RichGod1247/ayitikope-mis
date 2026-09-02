@@ -70,6 +70,8 @@ model User {
   attendanceBadgesRevoked             StudentAttendanceBadge[]      @relation("AttendanceBadgeRevokedBy")
   attendanceScans                     AttendanceScanEvent[]         @relation("AttendanceScanScannedBy")
   auditLogs                           AuditLog[]
+  legalAcceptances                    LegalAcceptance[]
+  onboardingWelcomes                  OnboardingWelcome[]
   invitesSent                         Invite[]                      @relation("UserInvites")
   lessonNotesAsHeadteacher            LessonNote[]                  @relation("LessonNoteHeadteacher")
   lessonNotesAsTeacher                LessonNote[]                  @relation("LessonNoteTeacher")
@@ -289,6 +291,9 @@ model Tenant {
   /// ✅ A16A1 — tenant-scoped Essential School Alerts enrollment evidence.
   essentialAlertEnrollments EssentialAlertEnrollment[]
 
+  /// ✅ UI-LEGAL-P1 — durable Teacher/Headteacher onboarding hospitality evidence.
+  onboardingWelcomes OnboardingWelcome[]
+
   @@index([status])
   @@index([schoolSector])
   @@index([schoolCode])
@@ -482,9 +487,11 @@ model Membership {
   staffId     String?
   staffIdNorm String?
 
-  role   Role   @relation(fields: [roleId], references: [id])
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-  user   User   @relation(fields: [userId], references: [id])
+  role              Role               @relation(fields: [roleId], references: [id])
+  tenant            Tenant             @relation(fields: [tenantId], references: [id])
+  user              User               @relation(fields: [userId], references: [id])
+  legalAcceptances  LegalAcceptance[]
+  onboardingWelcome OnboardingWelcome?
 
   /// ✅ One membership per user per tenant
   @@unique([userId, tenantId], name: "userId_tenantId")
@@ -577,6 +584,116 @@ model AuditLog {
   @@index([tenantId])
   @@index([userId])
   @@index([action])
+}
+
+/// *
+/// * =======================
+/// * Legal authority + onboarding evidence — UI-LEGAL-P1
+/// * =======================
+/// Immutable published Terms/Privacy content. Database triggers enforce terminal
+/// supersession and prevent content/operator/publication history from being rewritten.
+model LegalDocumentVersion {
+  id                         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  documentType               String    @db.VarChar(40)
+  version                    String    @db.VarChar(64)
+  title                      String    @db.VarChar(180)
+  contentText                String    @db.Text
+  contentHash                String    @db.VarChar(64)
+  operatorLegalName          String    @db.VarChar(240)
+  operatorRegistrationNumber String?   @db.VarChar(120)
+  operatorRegisteredAddress  String?   @db.Text
+  operatorServiceEmail       String    @db.VarChar(320)
+  productSupportEmail        String    @db.VarChar(320)
+  effectiveAt                DateTime  @db.Timestamptz(6)
+  publishedAt                DateTime  @default(now()) @db.Timestamptz(6)
+  isCurrent                  Boolean   @default(true)
+  supersededAt               DateTime? @db.Timestamptz(6)
+  createdAt                  DateTime  @default(now()) @db.Timestamptz(6)
+
+  termsAcceptances   LegalAcceptance[] @relation("LegalAcceptanceTermsDocument")
+  privacyAcceptances LegalAcceptance[] @relation("LegalAcceptancePrivacyDocument")
+
+  @@unique([documentType, version], map: "LegalDocumentVersion_type_version_unique")
+  @@index([documentType, effectiveAt(sort: Desc)], map: "LegalDocumentVersion_effective_idx")
+
+  /// DB truth also includes partial unique index LegalDocumentVersion_current_type_unique
+  /// on documentType WHERE isCurrent = true plus immutable/terminal lifecycle triggers.
+}
+
+/// Append-only evidence of agreement to the current Terms and acknowledgement of the
+/// current Privacy Notice under verified school-membership or governance authority.
+model LegalAcceptance {
+  id                         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                     String
+  termsDocumentId            String   @db.Uuid
+  privacyDocumentId          String   @db.Uuid
+  termsVersionSnapshot       String   @db.VarChar(64)
+  privacyVersionSnapshot     String   @db.VarChar(64)
+  termsContentHashSnapshot   String   @db.VarChar(64)
+  privacyContentHashSnapshot String   @db.VarChar(64)
+  authorityType              String   @db.VarChar(40)
+  authorityId                String
+  membershipId               String?
+  governanceAssignmentId     String?
+  roleSnapshot               String   @db.VarChar(80)
+  scopeType                  String   @db.VarChar(40)
+  scopeId                    String
+  acceptanceSource           String   @db.VarChar(80)
+  acceptedAt                 DateTime @default(now()) @db.Timestamptz(6)
+  evidenceJson               Json     @default("{}")
+  createdAt                  DateTime @default(now()) @db.Timestamptz(6)
+
+  user                 User                         @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "LegalAcceptance_user_fkey")
+  termsDocument        LegalDocumentVersion         @relation("LegalAcceptanceTermsDocument", fields: [termsDocumentId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "LegalAcceptance_terms_document_fkey")
+  privacyDocument      LegalDocumentVersion         @relation("LegalAcceptancePrivacyDocument", fields: [privacyDocumentId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "LegalAcceptance_privacy_document_fkey")
+  membership           Membership?                  @relation(fields: [membershipId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "LegalAcceptance_membership_fkey")
+  governanceAssignment GovernanceOfficerAssignment? @relation(fields: [governanceAssignmentId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "LegalAcceptance_governance_assignment_fkey")
+
+  @@unique([userId, termsDocumentId, privacyDocumentId, authorityType, authorityId], map: "LegalAcceptance_idempotency_unique")
+  @@index([userId, acceptedAt(sort: Desc)], map: "LegalAcceptance_user_idx")
+  @@index([authorityType, authorityId, acceptedAt(sort: Desc)], map: "LegalAcceptance_authority_idx")
+  @@index([acceptedAt(sort: Desc)], map: "LegalAcceptance_accepted_idx")
+
+  /// DB trigger derives document snapshots, role and scope from current DB authority;
+  /// LegalAcceptance rows are append-only and cannot be updated or deleted.
+}
+
+/// Exactly one initial Teacher/Headteacher welcome per school membership. Core identity,
+/// role and exact message snapshot are immutable; delivery/in-app lifecycle may advance
+/// only under database guard rules. Essential Alerts remain a separate optional consent.
+model OnboardingWelcome {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId              String
+  tenantId            String
+  membershipId        String    @unique(map: "OnboardingWelcome_idempotency_unique")
+  roleSnapshot        String    @db.VarChar(80)
+  messageVersion      String    @db.VarChar(80)
+  messageSnapshotJson Json
+  emailStatus         String    @default("PENDING") @db.VarChar(20)
+  emailAttemptCount   Int       @default(0)
+  emailLastAttemptAt  DateTime? @db.Timestamptz(6)
+  emailSentAt         DateTime? @db.Timestamptz(6)
+  emailLastError      String?   @db.Text
+  smsStatus           String    @default("PENDING") @db.VarChar(20)
+  smsAttemptCount     Int       @default(0)
+  smsLastAttemptAt    DateTime? @db.Timestamptz(6)
+  smsSentAt           DateTime? @db.Timestamptz(6)
+  smsLastError        String?   @db.Text
+  inAppVisibleAt      DateTime  @default(now()) @db.Timestamptz(6)
+  inAppSeenAt         DateTime? @db.Timestamptz(6)
+  inAppDismissedAt    DateTime? @db.Timestamptz(6)
+  createdAt           DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "OnboardingWelcome_user_fkey")
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "OnboardingWelcome_tenant_fkey")
+  membership Membership @relation(fields: [membershipId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "OnboardingWelcome_membership_fkey")
+
+  @@index([userId, tenantId, createdAt(sort: Desc)], map: "OnboardingWelcome_user_tenant_idx")
+  @@index([emailStatus, smsStatus, createdAt], map: "OnboardingWelcome_delivery_idx")
+
+  /// DB truth also includes partial index OnboardingWelcome_inapp_idx on
+  /// (userId, inAppVisibleAt DESC) WHERE inAppDismissedAt IS NULL plus evidence guards.
 }
 
 /// *
@@ -3089,6 +3206,9 @@ model GovernanceOfficerAssignment {
   appraisalReviews          AppraisalReview[]         @relation("AppraisalReviewReviewerAssignment")
   appraisalStaffFeedbackReviews AppraisalStaffFeedbackReview[] @relation("AppraisalStaffFeedbackReviewReviewerAssignment")
   appraisalIdentityAccesses AppraisalIdentityAccess[] @relation("AppraisalIdentityAccessActorAssignment")
+
+  /// ✅ UI-LEGAL-P1 — append-only Terms/Privacy acceptance evidence.
+  legalAcceptances LegalAcceptance[]
 
   @@index([userId])
   @@index([zoneId])
