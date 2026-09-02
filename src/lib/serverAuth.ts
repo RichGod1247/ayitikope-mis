@@ -4,6 +4,7 @@ import { getToken } from "next-auth/jwt";
 import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
+import { isCurrentStaffAuthVersion } from "@/lib/authVersion";
 import { prisma } from "@/lib/prisma";
 import { effectiveRole, normRole, safeInternalPath } from "@/lib/roleRouting";
 
@@ -181,11 +182,21 @@ export async function requireApiUserContext(
   try {
     const tok = await getToken({ req: req as any, secret });
     if (tok) {
-      const uidRaw = (tok as any).uid ?? (tok as any).userId ?? (tok as any).sub ?? null;
-      const emailRaw = (tok as any).email ?? null;
+      const tokenRecord = tok as Record<string, unknown>;
+      const uidRaw = tokenRecord.uid ?? tokenRecord.userId ?? tokenRecord.sub ?? null;
+      const uid = uidRaw ? String(uidRaw) : "";
+
+      if (
+        !uid ||
+        !(await isCurrentStaffAuthVersion(uid, tokenRecord.authVersion))
+      ) {
+        return { ok: false, res: apiJson(401, { ok: false, error: "UNAUTHORIZED" }) };
+      }
+
+      const emailRaw = tokenRecord.email ?? null;
 
       u = {
-        id: uidRaw ? String(uidRaw) : undefined,
+        id: uid,
         email: emailRaw ? String(emailRaw) : undefined,
         name: (tok as any).name ?? null,
         staffId: (tok as any).staffId ?? null,

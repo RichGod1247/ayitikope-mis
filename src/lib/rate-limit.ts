@@ -74,7 +74,7 @@ export async function checkRateLimit(
   const metadata = jsonSafe(input.metadata);
 
   const rows = await prisma.$queryRaw<RateLimitRow[]>`
-    insert into "ApiRateLimitBucket" (
+    insert into edulife_os."ApiRateLimitBucket" as bucket (
       "id",
       "scope",
       "keyHash",
@@ -97,16 +97,16 @@ export async function checkRateLimit(
     on conflict ("scope", "keyHash", "windowStart")
     do update set
       "count" = case
-        when "ApiRateLimitBucket"."blockedUntil" is not null
-          and "ApiRateLimitBucket"."blockedUntil" > now()
-          then "ApiRateLimitBucket"."count"
-        else "ApiRateLimitBucket"."count" + 1
+        when bucket."blockedUntil" is not null
+          and bucket."blockedUntil" > now()
+          then bucket."count"
+        else bucket."count" + 1
       end,
       "blockedUntil" = case
-        when "ApiRateLimitBucket"."blockedUntil" is not null
-          and "ApiRateLimitBucket"."blockedUntil" > now()
-          then "ApiRateLimitBucket"."blockedUntil"
-        when "ApiRateLimitBucket"."count" + 1 > ${limit}
+        when bucket."blockedUntil" is not null
+          and bucket."blockedUntil" > now()
+          then bucket."blockedUntil"
+        when bucket."count" + 1 > ${limit}
           then now() + (${String(blockSeconds)} || ' seconds')::interval
         else null
       end,

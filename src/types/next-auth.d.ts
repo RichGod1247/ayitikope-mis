@@ -26,6 +26,7 @@ declare module "next-auth" {
     tenantId?: string | null;
     roleName?: string | null;
     teacherScope?: TeacherScope | null;
+    authVersion?: number;
   }
 }
 
@@ -36,6 +37,7 @@ declare module "next-auth/jwt" {
     tenantId?: string | null;
     roleName?: string | null;
     teacherScope?: TeacherScope | null;
+    authVersion?: number;
   }
 }
 

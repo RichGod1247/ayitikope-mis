@@ -12,6 +12,7 @@ import {
 } from "@/lib/rateLimit";
 import type { Prisma } from "@prisma/client";
 import { verifyTotpWithEnvelope } from "@/lib/totp";
+import { clearStaffAuthClaims, isCurrentStaffAuthVersion } from "@/lib/authVersion";
 
 type TeacherScope = {
   phase: string | null;
@@ -27,6 +28,7 @@ type SafeUser = {
   tenantId?: string | null;
   roleName?: string | null;
   teacherScope?: TeacherScope | null;
+  authVersion: number;
 
   // ✅ Exposed for /api/me
   phone?: string | null;
@@ -41,6 +43,7 @@ type NextAuthUserLike = {
   tenantId?: string | null;
   roleName?: string | null;
   teacherScope?: TeacherScope | null;
+  authVersion?: number;
   phone?: string | null;
   phoneNumber?: string | null;
 } & Record<string, unknown>;
@@ -720,7 +723,23 @@ export const authOptions: NextAuthOptions = {
         // ---------------------------
         // 3) Password verify
         // ---------------------------
-        const okPassword = await verifyPassword(password, user.passwordHash);
+        const credentialAuthority = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { passwordHash: true, authVersion: true },
+        });
+
+        if (
+          !credentialAuthority?.passwordHash ||
+          !Number.isInteger(credentialAuthority.authVersion) ||
+          credentialAuthority.authVersion < 0
+        ) {
+          throw new Error("AUTH_VERSION_INVALID");
+        }
+
+        const okPassword = await verifyPassword(
+          password,
+          credentialAuthority.passwordHash
+        );
 
         if (!okPassword) {
           const nextCount = (user.failedLoginCount ?? 0) + 1;
@@ -862,6 +881,15 @@ export const authOptions: NextAuthOptions = {
         // ---------------------------
         // 7) ✅ Load phone (tenant-scoped TeacherProfile.phone)
         // ---------------------------
+        if (
+          !(await isCurrentStaffAuthVersion(
+            user.id,
+            credentialAuthority.authVersion
+          ))
+        ) {
+          throw new Error("AUTH_VERSION_CHANGED");
+        }
+
         const phoneBundle = await loadUserPhoneForSession({
           userId: user.id,
           tenantId: membership?.tenantId ?? null,
@@ -875,6 +903,7 @@ export const authOptions: NextAuthOptions = {
           tenantId: membership?.tenantId ?? null,
                     roleName: membership?.role?.name ?? governanceRoleName ?? null,
           teacherScope,
+          authVersion: credentialAuthority.authVersion,
           phone: phoneBundle.phone,
           phoneNumber: phoneBundle.phoneNumber,
         };
@@ -911,11 +940,21 @@ export const authOptions: NextAuthOptions = {
         t.tenantId = u.tenantId ?? null;
         t.roleName = u.roleName ?? null;
         t.teacherScope = u.teacherScope ?? null;
+        t.authVersion = u.authVersion;
 
         // ✅ NEW
         t.phone = u.phone ?? null;
         t.phoneNumber = u.phoneNumber ?? null;
 
+        return token;
+      }
+
+      const currentUid = typeof t.uid === "string" ? t.uid : null;
+      if (
+        !currentUid ||
+        !(await isCurrentStaffAuthVersion(currentUid, t.authVersion))
+      ) {
+        clearStaffAuthClaims(t);
         return token;
       }
 
@@ -996,7 +1035,11 @@ export const authOptions: NextAuthOptions = {
         phoneNumber?: string | null;
       };
 
-      if (typeof t.uid === "string") su.id = t.uid;
+      if (typeof t.uid === "string") {
+        su.id = t.uid;
+      } else {
+        delete (su as { id?: string }).id;
+      }
 
       su.staffId = typeof t.staffId === "string" ? t.staffId : null;
       su.tenantId = typeof t.tenantId === "string" ? t.tenantId : null;

@@ -270,6 +270,17 @@ const callbackUrl = isGovernanceMode
               />
             </div>
 
+            {!showOtp ? (
+              <div className="-mt-1 flex justify-end">
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-xs font-semibold text-[#E8C96A] hover:text-white"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+            ) : null}
+
             {showOtp ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-3">
