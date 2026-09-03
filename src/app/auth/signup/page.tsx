@@ -153,6 +153,7 @@ function SignupInner() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [acceptedLegalTerms, setAcceptedLegalTerms] = useState(false);
 
   const [rolePick, setRolePick] = useState<RolePick>("TEACHER");
   const [headteacherTeaches, setHeadteacherTeaches] = useState(false);
@@ -311,6 +312,10 @@ function SignupInner() {
     if (!ph) fe.phone = "Phone is required.";
     if (!cleanStr(password)) fe.password = "Password is required.";
     if (cleanStr(password).length > 0 && cleanStr(password).length < 8) fe.password = "Password must be at least 8 characters.";
+    if (!acceptedLegalTerms) {
+      fe.acceptedLegalTerms =
+        "Agree to the Terms of Service and acknowledge the Privacy Notice to continue.";
+    }
 
     if (accessMethod === "INVITE") {
       if (!cleanStr(inviteToken)) fe.inviteToken = "Invite token is required.";
@@ -379,6 +384,7 @@ function SignupInner() {
       additionalDuties: parseCommaList(additionalDutiesText),
       redirectTo,
       teaches: rolePick === "HEADTEACHER" ? !!headteacherTeaches : true,
+      acceptedLegalTerms,
     };
 
     if (showTeachingScope) {
@@ -887,6 +893,45 @@ function SignupInner() {
                   placeholder="e.g. Sports Master, ICT Coordinator (separate with commas or new lines)"
                 />
               </div>
+            </section>
+
+            <section className="os-section-card rounded-[24px] p-5">
+              <label className="flex items-start gap-3 text-sm leading-6 text-[#E5E8EF]">
+                <input
+                  id="acceptedLegalTerms"
+                  type="checkbox"
+                  checked={acceptedLegalTerms}
+                  onChange={(e) => setAcceptedLegalTerms(e.target.checked)}
+                  required
+                  className="os-check mt-1"
+                  aria-describedby={fieldErrors.acceptedLegalTerms ? "acceptedLegalTermsError" : undefined}
+                />
+                <span>
+                  I agree to the EduLife OS{" "}
+                  <Link
+                    href="/legal/terms"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-semibold text-[#E8C96A] underline underline-offset-2"
+                  >
+                    Terms of Service
+                  </Link>{" "}
+                  and acknowledge the{" "}
+                  <Link
+                    href="/legal/privacy"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-semibold text-[#E8C96A] underline underline-offset-2"
+                  >
+                    Privacy Notice
+                  </Link>{"."}
+                </span>
+              </label>
+              {fieldErrors.acceptedLegalTerms ? (
+                <p id="acceptedLegalTermsError" className="mt-2 text-xs text-red-300">
+                  {fieldErrors.acceptedLegalTerms}
+                </p>
+              ) : null}
             </section>
 
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

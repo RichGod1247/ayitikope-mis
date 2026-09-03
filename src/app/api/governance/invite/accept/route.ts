@@ -15,6 +15,7 @@ import {
   rateLimitRecord,
 } from "@/lib/rateLimit";
 import { deliverGovernanceOfficerWelcome } from "@/lib/governance/inviteDelivery";
+import { recordCurrentLegalAcceptance } from "@/lib/legal/acceptance";
 
 type Body = {
   token?: string;
@@ -22,6 +23,7 @@ type Body = {
   password?: string;
   name?: string;
   phone?: string;
+  acceptedLegalTerms?: boolean;
 };
 
 const WINDOW_SECONDS = Number(
@@ -159,6 +161,7 @@ export async function POST(req: Request) {
   const password = clean(body.password);
   const name = clean(body.name);
   const phone = cleanPhone(body.phone);
+  const acceptedLegalTerms = body.acceptedLegalTerms === true;
 
   if (!token) return json(400, { ok: false, error: "MISSING_TOKEN" });
 
@@ -172,6 +175,10 @@ export async function POST(req: Request) {
 
   if (phone && !isPhoneE164ish(phone)) {
     return json(400, { ok: false, error: "INVALID_PHONE" });
+  }
+
+  if (!acceptedLegalTerms) {
+    return json(400, { ok: false, error: "LEGAL_ACCEPTANCE_REQUIRED" });
   }
 
   const tokenHash = sha256Hex(token);
@@ -438,6 +445,18 @@ export async function POST(req: Request) {
           },
         }));
 
+      await recordCurrentLegalAcceptance({
+        tx,
+        userId,
+        authorityType: "GOVERNANCE_ASSIGNMENT",
+        authorityId: assignment.id,
+        acceptanceSource: "GOVERNANCE_INVITE_ACCEPTANCE",
+        evidence: {
+          inviteId: invite.id,
+          role: String(assignment.role),
+        },
+      });
+
       await tx.governanceOfficerInvite.update({
         where: { id: invite.id },
         data: {
@@ -473,7 +492,9 @@ export async function POST(req: Request) {
         districtName: jurisdiction.districtName,
         circuitName: jurisdiction.circuitName,
       };
-    });
+    },
+    { maxWait: 10_000, timeout: 30_000 },
+  );
   } catch (err) {
     const message = err instanceof Error ? err.message : "";
 
@@ -501,6 +522,13 @@ export async function POST(req: Request) {
         error: "EXISTING_USER_PASSWORD_MISMATCH",
         message:
           "This email already has an account. Enter the existing password to link this governance assignment, or ask Superadmin to invite a fresh official email.",
+      });
+    }
+
+    if (message.startsWith("LEGAL_ACCEPTANCE_")) {
+      return json(503, {
+        ok: false,
+        error: "LEGAL_ACCEPTANCE_UNAVAILABLE",
       });
     }
 

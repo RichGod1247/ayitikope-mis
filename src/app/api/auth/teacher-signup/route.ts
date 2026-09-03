@@ -15,6 +15,7 @@ import bcrypt from "bcryptjs";
 import { normalizeStaffIdNorm } from "@/lib/staffId";
 import { normalizeTeacherClassLevel } from "@/lib/teacherScope";
 import { replaceTeacherAssessmentAssignmentsForProfile } from "@/lib/assessments/teacherAssignmentSync";
+import { recordCurrentLegalAcceptance } from "@/lib/legal/acceptance";
 
 
 export const runtime = "nodejs";
@@ -664,6 +665,7 @@ export async function POST(req: NextRequest) {
   const redirectTo = safeInternalPath((body as any).redirectTo);
 
   const teachesFlag = parseBoolean((body as any).teaches);
+  const acceptedLegalTerms = (body as any).acceptedLegalTerms === true;
 
   const inviteToken = extractInviteTokenLoose((body as any).inviteToken);
   const inviteCode = cleanStr((body as any).inviteCode || (body as any).code);
@@ -687,6 +689,10 @@ export async function POST(req: NextRequest) {
   if (phone && !isPhoneE164ish(phone)) fe.phone = "Phone must be a valid E.164 number (e.g. +233...).";
   if (!password) fe.password = "Password is required.";
   if (password && password.length < 8) fe.password = "Password must be at least 8 characters.";
+  if (!acceptedLegalTerms) {
+    fe.acceptedLegalTerms =
+      "Agree to the Terms of Service and acknowledge the Privacy Notice to continue.";
+  }
 
   if (!usingInvite && !usingInviteCode && !(tenantIdRaw && onboardingCode)) {
     fe.onboardingCode = "Provide invite token OR invite code OR tenant + onboarding code.";
@@ -832,7 +838,10 @@ export async function POST(req: NextRequest) {
           select: { id: true, roleId: true, status: true, staffIdNorm: true, staffId: true },
         });
 
+        let membershipId: string;
+
         if (existingMembership) {
+          membershipId = existingMembership.id;
           if (existingMembership.status !== "ACTIVE") throw new Error("MEMBERSHIP_NOT_ACTIVE");
           if (existingMembership.roleId !== roleId) throw new Error("ALREADY_MEMBER_DIFFERENT_ROLE");
 
@@ -851,9 +860,11 @@ export async function POST(req: NextRequest) {
             });
           }
         } else {
-          await tx.membership.create({
+          const createdMembership = await tx.membership.create({
             data: { userId, tenantId, roleId, status: "ACTIVE", staffId, staffIdNorm },
+            select: { id: true },
           });
+          membershipId = createdMembership.id;
         }
 
         if (resolved.method === "INVITE_CODE") {
@@ -975,6 +986,18 @@ export async function POST(req: NextRequest) {
           });
         }
 
+        await recordCurrentLegalAcceptance({
+          tx,
+          userId,
+          authorityType: "SCHOOL_MEMBERSHIP",
+          authorityId: membershipId,
+          acceptanceSource: "STAFF_SIGNUP",
+          evidence: {
+            onboardingMethod: resolved.method,
+            roleName,
+          },
+        });
+
         const action = roleName === "HEADTEACHER" ? "HEADTEACHER_SIGNUP" : "TEACHER_SIGNUP";
 
         await tx.auditLog.create({
@@ -1020,6 +1043,12 @@ export async function POST(req: NextRequest) {
     if (msg === "ALREADY_MEMBER_DIFFERENT_ROLE") return jsonFail("ALREADY_MEMBER_DIFFERENT_ROLE", 403);
     if (msg === "STAFF_ID_LOCKED") return jsonFail("STAFF_ID_LOCKED", 409, { staffId: "Staff ID is already locked for this account in this school." });
     if (msg === "SCOPE_ALREADY_LOCKED") return jsonFail("SCOPE_ALREADY_LOCKED", 409);
+
+    if (msg.startsWith("LEGAL_ACCEPTANCE_")) {
+      return jsonFail("LEGAL_ACCEPTANCE_UNAVAILABLE", 503, {
+        acceptedLegalTerms: "Legal acceptance could not be recorded. Please try again.",
+      });
+    }
 
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       if (prismaTargetIncludes(err, "phoneNorm")) return jsonFail("PHONE_ALREADY_USED", 409, { phone: "This phone number is already used by another account." });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 type InspectOk = {
@@ -56,6 +57,7 @@ export default function GovernanceInviteAcceptClient({ token }: { token: string 
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [acceptedLegalTerms, setAcceptedLegalTerms] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
   const [topError, setTopError] = useState("");
@@ -138,6 +140,13 @@ export default function GovernanceInviteAcceptClient({ token }: { token: string 
       return;
     }
 
+    if (!acceptedLegalTerms) {
+      setTopError(
+        "Agree to the Terms of Service and acknowledge the Privacy Notice to continue.",
+      );
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -150,6 +159,7 @@ export default function GovernanceInviteAcceptClient({ token }: { token: string 
           name: clean(name),
           phone: clean(phone),
           password: passwordClean,
+          acceptedLegalTerms,
         }),
       });
 
@@ -176,6 +186,18 @@ export default function GovernanceInviteAcceptClient({ token }: { token: string 
 
         if (data.error === "INVALID_OR_EXPIRED_INVITE") {
           setTopError("This invite is invalid, expired, or already used.");
+          return;
+        }
+
+        if (data.error === "LEGAL_ACCEPTANCE_REQUIRED") {
+          setTopError(
+            "Agree to the Terms of Service and acknowledge the Privacy Notice to continue.",
+          );
+          return;
+        }
+
+        if (data.error === "LEGAL_ACCEPTANCE_UNAVAILABLE") {
+          setTopError("Legal acceptance could not be recorded. Please try again.");
           return;
         }
 
@@ -303,6 +325,36 @@ export default function GovernanceInviteAcceptClient({ token }: { token: string 
                     />
                   </label>
                 </div>
+
+                <label className="flex items-start gap-3 rounded-2xl border border-white/10 bg-[#05070B]/70 p-4 text-sm leading-6 text-[#E5E8EF]">
+                  <input
+                    id="acceptedLegalTerms"
+                    type="checkbox"
+                    checked={acceptedLegalTerms}
+                    onChange={(e) => setAcceptedLegalTerms(e.target.checked)}
+                    className="mt-1 h-4 w-4 shrink-0 accent-[#D4AF37]"
+                  />
+                  <span>
+                    I agree to the EduLife OS{" "}
+                    <Link
+                      href="/legal/terms"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-semibold text-[#E8C96A] underline underline-offset-2"
+                    >
+                      Terms of Service
+                    </Link>{" "}
+                    and acknowledge the{" "}
+                    <Link
+                      href="/legal/privacy"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-semibold text-[#E8C96A] underline underline-offset-2"
+                    >
+                      Privacy Notice
+                    </Link>{"."}
+                  </span>
+                </label>
 
                 {topError ? (
                   <div className="rounded-2xl border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-200">
