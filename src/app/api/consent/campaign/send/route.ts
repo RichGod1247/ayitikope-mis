@@ -15,6 +15,7 @@ import {
 } from "@/lib/essentialAlerts/enrollment";
 import { ESSENTIAL_ALERT_POLICY } from "@/lib/essentialAlerts/policy";
 import { signEssentialAlertCompactInvite } from "@/lib/essentialAlerts/tokens";
+import { staffEssentialAlertInvitationMessage } from "@/lib/essentialAlerts/staffInvitation";
 import {
   essentialAlertPublicOrigin,
   requestIp,
@@ -64,10 +65,6 @@ function guardianMessage(input: {
 }) {
   const who = input.learnerCount === 1 ? "your child" : `your ${input.learnerCount} children`;
   return `${input.schoolName}: Free first-term EduLife alerts for ${who}: attendance, fees/payments & released results. No ads. Confirm: ${input.link}`;
-}
-
-function staffMessage(input: { schoolName: string; link: string }) {
-  return `${input.schoolName}: EduLife work alerts cover lesson-note workflow & official appraisal activity. School-funded, no ads. Confirm: ${input.link}`;
 }
 
 export async function POST(req: NextRequest) {
@@ -316,7 +313,7 @@ export async function POST(req: NextRequest) {
           tenantId: auth.ctx.tenantId,
           actorId: auth.ctx.userId,
           to: invite.to,
-          message: staffMessage({ schoolName: invite.schoolName, link }),
+          message: staffEssentialAlertInvitationMessage({ schoolName: invite.schoolName, link }),
           from: ESSENTIAL_ALERT_POLICY.senderId,
           template: "ESSENTIAL_ALERT_STAFF_INVITATION",
           payload: {

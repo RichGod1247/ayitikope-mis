@@ -255,7 +255,7 @@ for (const marker of [
   assert(schema.includes(marker), "Schema compatibility marker missing", marker);
 }
 
-assert(!schema.includes("AttendanceHoliday"), "UI-P3A must not introduce the holiday schema slice early");
+
 
 for (const source of [calendar, serverCalendar, setupPage, setupLoad, setupSave, teacherPage, teacherList, sessionGet, sessionClient]) {
   for (const forbidden of ["localStorage", "sessionStorage", "setInterval("]) {

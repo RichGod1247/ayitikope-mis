@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getServerUserContextOrNull } from "@/lib/serverAuth";
 import LogoutButton from "@/components/LogoutButton";
+import StaffOnboardingWelcomeCard from "@/components/onboarding/StaffOnboardingWelcomeCard";
+import { readActiveStaffOnboardingWelcome } from "@/lib/onboarding/staffWelcome";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -46,6 +48,11 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
   });
 
   if (!tenant || tenant.status !== "ACTIVE") redirect("/pending");
+
+  const onboardingWelcome = await readActiveStaffOnboardingWelcome({
+    userId: ctx.userId,
+    tenantId: ctx.tenantId,
+  });
 
   const isTeacherOnly = role === "TEACHER";
   const showAdmin =
@@ -125,7 +132,12 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-5 md:py-8">{children}</main>
+      <main className="mx-auto max-w-6xl px-4 py-5 md:py-8">
+        {onboardingWelcome ? (
+          <StaffOnboardingWelcomeCard welcome={onboardingWelcome} />
+        ) : null}
+        {children}
+      </main>
     </div>
   );
 }

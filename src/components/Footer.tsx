@@ -88,8 +88,17 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-10 border-t border-white/10 pt-6 text-xs text-[#8F98A8]">
-          © {new Date().getFullYear()} EduLife OS. Built for accountable, future-ready education.
+        <div className="mt-10 flex flex-col gap-3 border-t border-white/10 pt-6 text-xs text-[#8F98A8] sm:flex-row sm:items-center sm:justify-between">
+          <div>© {new Date().getFullYear()} EduLife OS. Built for accountable, future-ready education.</div>
+
+          <nav aria-label="Legal" className="flex flex-wrap gap-x-4 gap-y-2">
+            <Link href="/legal/terms" className="hover:text-white">
+              Terms of Service
+            </Link>
+            <Link href="/legal/privacy" className="hover:text-white">
+              Privacy Notice
+            </Link>
+          </nav>
         </div>
       </div>
     </footer>

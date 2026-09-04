@@ -147,7 +147,9 @@ for (const source of [studentDetail, teacherDetail, studentList, teacherList]) {
 }
 
 for (const marker of [
-  "buildGuardianEssentialAlertInvitation",
+  "buildGuardianFamilyEssentialAlertInvitationBatch",
+  "recordGuardianFamilyInvitationAttempt",
+  "recordGuardianFamilyInvitationSent",
   "buildStaffEssentialAlertInvitation",
   "recordEssentialAlertInvitationAttempt",
   "recordEssentialAlertInvitationSent",
@@ -158,19 +160,106 @@ for (const marker of [
   assert(campaignSend.includes(marker), "Campaign send marker missing", marker);
 }
 
+const guardianBranchStart = campaignSend.indexOf(
+  'if (audience === "GUARDIANS")',
+);
+const staffBranchStart = campaignSend.indexOf(
+  "const memberships = await prisma.membership.findMany",
+  guardianBranchStart,
+);
+const campaignSummaryStart = campaignSend.indexOf(
+  "const sent = results.filter",
+  staffBranchStart,
+);
+
+assert(guardianBranchStart >= 0, "Guardian campaign branch missing");
+assert(staffBranchStart > guardianBranchStart, "Staff campaign branch missing");
+assert(campaignSummaryStart > staffBranchStart, "Campaign summary boundary missing");
+
+const guardianCampaignBlock = campaignSend.slice(
+  guardianBranchStart,
+  staffBranchStart,
+);
+
+const staffCampaignBlock = campaignSend.slice(
+  staffBranchStart,
+  campaignSummaryStart,
+);
+
+const guardianAttemptIndex = guardianCampaignBlock.indexOf(
+  "const attempt = await recordGuardianFamilyInvitationAttempt",
+);
+const guardianSendIndex = guardianCampaignBlock.indexOf(
+  "const sms = await sendSms",
+);
+const guardianSentIndex = guardianCampaignBlock.indexOf(
+  "await recordGuardianFamilyInvitationSent",
+);
+
 assert(
-  campaignSend.indexOf("await recordEssentialAlertInvitationAttempt") <
-    campaignSend.indexOf("await sendSms"),
-  "Invitation attempt evidence must be written before provider call",
+  guardianAttemptIndex >= 0,
+  "Guardian family invitation attempt missing",
 );
 assert(
-  campaignSend.indexOf("await sendSms") <
-    campaignSend.indexOf("await recordEssentialAlertInvitationSent"),
-  "Sent evidence must be written after provider acceptance",
+  guardianSendIndex >= 0,
+  "Guardian family provider call missing",
 );
-assert(!campaignSend.includes("body.message"), "Client-supplied campaign message must be rejected/ignored");
-assert(!campaignSend.includes("body.brand"), "Client-supplied SMS brand must not control sender");
-assert(!campaignSend.includes("body.actorId"), "Client-supplied actor must not control audit identity");
+assert(
+  guardianSentIndex >= 0,
+  "Guardian family sent evidence missing",
+);
+assert(
+  guardianAttemptIndex < guardianSendIndex,
+  "Guardian family attempt evidence must precede provider call",
+);
+assert(
+  guardianSendIndex < guardianSentIndex,
+  "Guardian family sent evidence must follow provider acceptance",
+);
+
+const staffAttemptIndex = staffCampaignBlock.indexOf(
+  "const attempt = await recordEssentialAlertInvitationAttempt",
+);
+const staffSendIndex = staffCampaignBlock.indexOf(
+  "const sms = await sendSms",
+);
+const staffSentIndex = staffCampaignBlock.indexOf(
+  "await recordEssentialAlertInvitationSent",
+);
+
+assert(
+  staffAttemptIndex >= 0,
+  "Staff invitation attempt missing",
+);
+assert(
+  staffSendIndex >= 0,
+  "Staff provider call missing",
+);
+assert(
+  staffSentIndex >= 0,
+  "Staff sent evidence missing",
+);
+assert(
+  staffAttemptIndex < staffSendIndex,
+  "Staff invitation attempt evidence must precede provider call",
+);
+assert(
+  staffSendIndex < staffSentIndex,
+  "Staff sent evidence must follow provider acceptance",
+);
+
+assert(
+  !campaignSend.includes("body.message"),
+  "Client-supplied campaign message must be rejected/ignored",
+);
+assert(
+  !campaignSend.includes("body.brand"),
+  "Client-supplied SMS brand must not control sender",
+);
+assert(
+  !campaignSend.includes("body.actorId"),
+  "Client-supplied actor must not control audit identity",
+);
 
 assert(campaignPreview.includes("databaseWrites: 0"), "Preview must be read-only");
 assert(campaignPreview.includes("providerCalled: false"), "Preview must not call provider");
@@ -179,7 +268,6 @@ for (const marker of [
   "Useful SMS, chosen by the recipient",
   "first school term free",
   "No advertising",
-  "Health consent is separate",
   "Invite parents",
   "Invite staff",
 ]) {

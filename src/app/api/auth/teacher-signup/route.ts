@@ -16,6 +16,11 @@ import { normalizeStaffIdNorm } from "@/lib/staffId";
 import { normalizeTeacherClassLevel } from "@/lib/teacherScope";
 import { replaceTeacherAssessmentAssignmentsForProfile } from "@/lib/assessments/teacherAssignmentSync";
 import { recordCurrentLegalAcceptance } from "@/lib/legal/acceptance";
+import {
+  deliverStaffOnboardingWelcome,
+  ensureStaffOnboardingWelcome,
+} from "@/lib/onboarding/staffWelcome";
+import { deliverStaffEssentialAlertInvitationAfterWelcome } from "@/lib/essentialAlerts/staffInvitation";
 
 
 export const runtime = "nodejs";
@@ -998,6 +1003,11 @@ export async function POST(req: NextRequest) {
           },
         });
 
+        const onboardingWelcome = await ensureStaffOnboardingWelcome({
+          tx,
+          membershipId,
+        });
+
         const action = roleName === "HEADTEACHER" ? "HEADTEACHER_SIGNUP" : "TEACHER_SIGNUP";
 
         await tx.auditLog.create({
@@ -1018,10 +1028,46 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        return { tenantId, roleName, userId };
+        return {
+          tenantId,
+          roleName,
+          userId,
+          membershipId,
+          onboardingWelcomeId: onboardingWelcome.id,
+        };
       },
       { maxWait: 10_000, timeout: 30_000 }
     );
+
+    try {
+      await deliverStaffOnboardingWelcome({
+        welcomeId: out.onboardingWelcomeId,
+        actorUserId: out.userId,
+      });
+    } catch (welcomeError) {
+      console.error(
+        "STAFF_ONBOARDING_WELCOME_DELIVERY_ERROR",
+        welcomeError instanceof Error ? welcomeError.message : String(welcomeError),
+      );
+    }
+
+    try {
+      await deliverStaffEssentialAlertInvitationAfterWelcome({
+        req,
+        tenantId: out.tenantId,
+        userId: out.userId,
+        actorUserId: out.userId,
+        ip,
+        userAgent,
+      });
+    } catch (essentialAlertError) {
+      console.error(
+        "STAFF_ONBOARDING_ESSENTIAL_ALERT_INVITATION_ERROR",
+        essentialAlertError instanceof Error
+          ? essentialAlertError.message
+          : String(essentialAlertError),
+      );
+    }
 
     const portalUrl = `/auth/signin?callbackUrl=${encodeURIComponent(redirectTo)}`;
     return jsonOk({ ok: true, portalUrl, tenantId: out.tenantId, userId: out.userId });

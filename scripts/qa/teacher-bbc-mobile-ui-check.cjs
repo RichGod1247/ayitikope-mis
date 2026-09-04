@@ -134,14 +134,14 @@ for (const marker of [
   'data-attendance-guide-sticky="compact-v2"',
   "top-[var(--teacher-sticky-top)]",
   "What to do",
-  "Step {guideCurrentStep} of 4",
+  "Step ${guideCurrentStep} of 4",
   "Mark learners",
   "Save marks",
   "Close register",
   "Certify",
   "showAttendanceSummary",
-  'data-attendance-summary-ui="collapsed-v2"',
-  "Attendance summary",
+  'data-attendance-summary-ui="physical-register-v1"',
+  "Register summary",
   "Notify parents",
   'data-attendance-manual-statuses="present-absent-v1"',
   '(["PRESENT", "ABSENT"] as ManualAttendanceStatus[])',
@@ -189,13 +189,13 @@ assert(
 
 assert(
   session.includes("{showAttendanceSummary ? (") &&
-    session.includes('data-attendance-summary-ui="collapsed-v2"'),
+    session.includes('data-attendance-summary-ui="physical-register-v1"'),
   "Attendance summary must remain collapsed until explicitly opened",
 );
 
 const guideStart = session.indexOf('data-attendance-bbc-guide="v1"');
 const notifyButton = session.indexOf("Notify parents", guideStart);
-const summaryPanel = session.indexOf('data-attendance-summary-ui="collapsed-v2"');
+const summaryPanel = session.indexOf('data-attendance-summary-ui="physical-register-v1"');
 
 assert(
   guideStart >= 0 && notifyButton > guideStart && summaryPanel > notifyButton,
