@@ -330,17 +330,22 @@ function MetricCard(props: {
   label: string;
   value: React.ReactNode;
   hint?: string;
+  className?: string;
 }) {
   return (
-    <div className={softPanel + " p-4"}>
-      <div className="text-[11px] uppercase tracking-[0.18em] text-[#8F98A8]">
+    <div
+      className={[softPanel, "min-w-0 p-3", props.className ?? ""].join(" ")}
+    >
+      <div className="text-[9px] uppercase tracking-[0.14em] text-[#8F98A8] sm:text-[10px]">
         {props.label}
       </div>
-      <div className="mt-2 text-2xl font-semibold text-[#F7F4ED]">
+      <div className="mt-1 text-lg font-semibold leading-tight text-[#F7F4ED] sm:text-xl">
         {props.value}
       </div>
       {props.hint ? (
-        <div className="mt-1 text-[11px] text-[#AEB6C4]">{props.hint}</div>
+        <div className="mt-1 text-[10px] leading-4 text-[#AEB6C4]">
+          {props.hint}
+        </div>
       ) : null}
     </div>
   );
@@ -621,19 +626,13 @@ export default function ParentMockReadinessClient() {
               </div>
             ) : null}
 
-            <div className="grid gap-3 md:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               <MetricCard
                 label="Placement agg."
                 value={
                   readiness.aggregates?.placement.aggregate ?? "Incomplete"
                 }
                 hint="English, Maths, Science, Social + best two"
-              />
-
-              <MetricCard
-                label="School agg."
-                value={readiness.aggregates?.school.aggregate ?? "Incomplete"}
-                hint="School/Excel-style aggregate"
               />
 
               <MetricCard
@@ -648,113 +647,11 @@ export default function ParentMockReadinessClient() {
                   readiness.summary?.classAveragePlacementAggregate,
                 )}
                 hint={`${readiness.summary?.classPlacementReadyCount ?? 0}/${readiness.summary?.classTotalStudents ?? 0} placement-ready`}
+                className="col-span-2 sm:col-span-1"
               />
             </div>
 
-{readiness.mockTrend ? (
-  <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4">
-    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-      <div>
-        <div className="text-sm font-semibold text-[#F7F4ED]">
-          Mock progress
-        </div>
-        <div className="mt-1 text-[11px] leading-5 text-[#AEB6C4]">
-          Simple comparison between released Mock reports.
-        </div>
-      </div>
 
-      <span
-        className={[
-          "inline-flex w-fit rounded-full border px-3 py-1 text-[11px] font-semibold",
-          parentTrendClass(readiness.mockTrend.label),
-        ].join(" ")}
-      >
-        {parentTrendLabel(readiness.mockTrend.label)}
-      </span>
-    </div>
-
-    {!readiness.mockTrend.available ? (
-      <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-[12px] leading-5 text-[#C9CDD6]">
-        {readiness.mockTrend.parentAction}
-      </div>
-    ) : (
-      <div className="mt-4 space-y-3">
-        <div className="grid gap-3 md:grid-cols-3">
-          <MetricCard
-            label="Compared"
-            value={`${readiness.mockTrend.previousMockLabel ?? "Previous"} → ${
-              readiness.mockTrend.latestMockLabel ?? "Latest"
-            }`}
-            hint="Released Mocks only"
-          />
-
-          <MetricCard
-            label="Aggregate"
-            value={`${formatNumber(
-              readiness.mockTrend.previousPlacementAggregate,
-            )} → ${formatNumber(
-              readiness.mockTrend.latestPlacementAggregate,
-            )}`}
-            hint={
-              readiness.mockTrend.aggregateMovement == null
-                ? "No movement yet"
-                : `${movementText(
-                    readiness.mockTrend.aggregateMovement,
-                  )} aggregate movement`
-            }
-          />
-
-          <MetricCard
-            label="Average score"
-            value={`${formatNumber(
-              readiness.mockTrend.previousAverageScore,
-            )} → ${formatNumber(readiness.mockTrend.latestAverageScore)}`}
-            hint={`${movementText(
-              readiness.mockTrend.averageScoreMovement,
-            )} score movement`}
-          />
-        </div>
-
-        <div className="grid gap-3 lg:grid-cols-2">
-          <div className="rounded-xl border border-emerald-300/15 bg-emerald-400/10 px-3 py-3 text-[12px] text-emerald-100">
-            <div className="font-semibold">Improved most</div>
-            <div className="mt-1">
-              {readiness.mockTrend.bestImprovement
-                ? `${readiness.mockTrend.bestImprovement.subject}: ${formatNumber(
-                    readiness.mockTrend.bestImprovement.previousScore,
-                  )} → ${formatNumber(
-                    readiness.mockTrend.bestImprovement.latestScore,
-                  )} (${movementText(
-                    readiness.mockTrend.bestImprovement.scoreMovement,
-                  )})`
-                : "No strong improvement signal yet."}
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-amber-300/15 bg-amber-400/10 px-3 py-3 text-[12px] text-amber-100">
-            <div className="font-semibold">Needs support</div>
-            <div className="mt-1">
-              {readiness.mockTrend.needsSupport
-                ? `${readiness.mockTrend.needsSupport.subject}: ${formatNumber(
-                    readiness.mockTrend.needsSupport.previousScore,
-                  )} → ${formatNumber(
-                    readiness.mockTrend.needsSupport.latestScore,
-                  )} (${movementText(
-                    readiness.mockTrend.needsSupport.scoreMovement,
-                  )})`
-                : "No major decline signal yet."}
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-sky-300/15 bg-sky-400/10 px-3 py-3 text-[12px] leading-5 text-sky-100">
-          <span className="font-semibold">What to do: </span>
-          {readiness.mockTrend.parentAction}
-        </div>
-      </div>
-    )}
-  </div>
-) : null}
 
             <div className="mt-4 grid gap-3 lg:grid-cols-2">
               <div className="rounded-2xl border border-emerald-300/15 bg-emerald-400/10 px-4 py-3 text-[12px] leading-5 text-emerald-100">
@@ -782,6 +679,171 @@ export default function ParentMockReadinessClient() {
               </div>
             ) : null}
           </SectionCard>
+
+          <SectionCard
+            title="Subject scores"
+            subtitle="Released Mock scores. These are parent-visible because the headteacher has released this sealed Mock."
+          >
+            <div className="overflow-auto rounded-2xl border border-white/10">
+              <table className="min-w-[760px] w-full border-collapse text-left text-[12px]">
+                <thead className="bg-white/[0.05] text-[#AEB6C4]">
+                  <tr>
+                    <th className="border-b border-white/10 px-3 py-2">
+                      Subject
+                    </th>
+                    <th className="border-b border-white/10 px-3 py-2">
+                      Score
+                    </th>
+                    <th className="border-b border-white/10 px-3 py-2">
+                      Grade
+                    </th>
+                    <th className="border-b border-white/10 px-3 py-2">
+                      Remark
+                    </th>
+                    <th className="border-b border-white/10 px-3 py-2">
+                      Next improvement
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {safeArray(readiness.scores?.subjects).map((subject) => (
+                    <tr
+                      key={`${subject.subject}:${subject.gradeLabel}`}
+                      className="border-b border-white/5"
+                    >
+                      <td className="px-3 py-2 font-semibold text-[#F7F4ED]">
+                        {subject.subject}
+                      </td>
+                      <td className="px-3 py-2 text-[#C9CDD6]">
+                        {formatNumber(subject.score)}
+                      </td>
+                      <td className="px-3 py-2 text-[#C9CDD6]">
+                        {subject.gradeLabel ?? formatNumber(subject.grade)}
+                      </td>
+                      <td className="px-3 py-2 text-[#C9CDD6]">
+                        {subject.remark ?? "—"}
+                      </td>
+                      <td className="px-3 py-2 text-[#AEB6C4]">
+                        {subject.pointsToNextGrade != null &&
+                        subject.nextGrade != null
+                          ? `${subject.pointsToNextGrade} mark(s) to Grade ${subject.nextGrade}`
+                          : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </SectionCard>
+
+          {readiness.mockTrend ? (
+            <details className={shellCard}>
+              <summary className="flex cursor-pointer list-none flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between [&::-webkit-details-marker]:hidden">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-[#F7F4ED]">
+                    See Mock progress
+                  </div>
+                  <div className="mt-0.5 text-[11px] leading-4 text-[#AEB6C4]">
+                    Compare this released Mock with the previous one.
+                  </div>
+                </div>
+
+                <span
+                  className={[
+                    "inline-flex w-fit shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold",
+                    parentTrendClass(readiness.mockTrend.label),
+                  ].join(" ")}
+                >
+                  {parentTrendLabel(readiness.mockTrend.label)}
+                </span>
+              </summary>
+
+              <div className="border-t border-white/10 px-3 py-3 sm:px-4">
+                {!readiness.mockTrend.available ? (
+                  <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-[12px] leading-5 text-[#C9CDD6]">
+                    {readiness.mockTrend.parentAction}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-3 gap-2">
+                      <MetricCard
+                        label="Compared"
+                        value={`${readiness.mockTrend.previousMockLabel ?? "Previous"} → ${
+                          readiness.mockTrend.latestMockLabel ?? "Latest"
+                        }`}
+                        hint="Released Mocks"
+                      />
+
+                      <MetricCard
+                        label="Aggregate"
+                        value={`${formatNumber(
+                          readiness.mockTrend.previousPlacementAggregate,
+                        )} → ${formatNumber(
+                          readiness.mockTrend.latestPlacementAggregate,
+                        )}`}
+                        hint={
+                          readiness.mockTrend.aggregateMovement == null
+                            ? "No movement"
+                            : `${movementText(
+                                readiness.mockTrend.aggregateMovement,
+                              )} movement`
+                        }
+                      />
+
+                      <MetricCard
+                        label="Average"
+                        value={`${formatNumber(
+                          readiness.mockTrend.previousAverageScore,
+                        )} → ${formatNumber(
+                          readiness.mockTrend.latestAverageScore,
+                        )}`}
+                        hint={`${movementText(
+                          readiness.mockTrend.averageScoreMovement,
+                        )} movement`}
+                      />
+                    </div>
+
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <div className="rounded-xl border border-emerald-300/15 bg-emerald-400/10 px-3 py-2.5 text-[11px] text-emerald-100 sm:text-[12px]">
+                        <div className="font-semibold">Improved most</div>
+                        <div className="mt-1">
+                          {readiness.mockTrend.bestImprovement
+                            ? `${readiness.mockTrend.bestImprovement.subject}: ${formatNumber(
+                                readiness.mockTrend.bestImprovement.previousScore,
+                              )} → ${formatNumber(
+                                readiness.mockTrend.bestImprovement.latestScore,
+                              )} (${movementText(
+                                readiness.mockTrend.bestImprovement.scoreMovement,
+                              )})`
+                            : "No strong improvement signal yet."}
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-amber-300/15 bg-amber-400/10 px-3 py-2.5 text-[11px] text-amber-100 sm:text-[12px]">
+                        <div className="font-semibold">Needs support</div>
+                        <div className="mt-1">
+                          {readiness.mockTrend.needsSupport
+                            ? `${readiness.mockTrend.needsSupport.subject}: ${formatNumber(
+                                readiness.mockTrend.needsSupport.previousScore,
+                              )} → ${formatNumber(
+                                readiness.mockTrend.needsSupport.latestScore,
+                              )} (${movementText(
+                                readiness.mockTrend.needsSupport.scoreMovement,
+                              )})`
+                            : "No major decline signal yet."}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-sky-300/15 bg-sky-400/10 px-3 py-2.5 text-[11px] leading-5 text-sky-100 sm:text-[12px]">
+                      <span className="font-semibold">What to do: </span>
+                      {readiness.mockTrend.parentAction}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </details>
+          ) : null}
 
           <div className="grid gap-5 lg:grid-cols-2">
             <SectionCard
@@ -852,62 +914,6 @@ export default function ParentMockReadinessClient() {
               </div>
             </SectionCard>
           </div>
-
-          <SectionCard
-            title="Subject scores"
-            subtitle="Released Mock scores. These are parent-visible because the headteacher has released this sealed Mock."
-          >
-            <div className="overflow-auto rounded-2xl border border-white/10">
-              <table className="min-w-[760px] w-full border-collapse text-left text-[12px]">
-                <thead className="bg-white/[0.05] text-[#AEB6C4]">
-                  <tr>
-                    <th className="border-b border-white/10 px-3 py-2">
-                      Subject
-                    </th>
-                    <th className="border-b border-white/10 px-3 py-2">
-                      Score
-                    </th>
-                    <th className="border-b border-white/10 px-3 py-2">
-                      Grade
-                    </th>
-                    <th className="border-b border-white/10 px-3 py-2">
-                      Remark
-                    </th>
-                    <th className="border-b border-white/10 px-3 py-2">
-                      Next improvement
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {safeArray(readiness.scores?.subjects).map((subject) => (
-                    <tr
-                      key={`${subject.subject}:${subject.gradeLabel}`}
-                      className="border-b border-white/5"
-                    >
-                      <td className="px-3 py-2 font-semibold text-[#F7F4ED]">
-                        {subject.subject}
-                      </td>
-                      <td className="px-3 py-2 text-[#C9CDD6]">
-                        {formatNumber(subject.score)}
-                      </td>
-                      <td className="px-3 py-2 text-[#C9CDD6]">
-                        {subject.gradeLabel ?? formatNumber(subject.grade)}
-                      </td>
-                      <td className="px-3 py-2 text-[#C9CDD6]">
-                        {subject.remark ?? "—"}
-                      </td>
-                      <td className="px-3 py-2 text-[#AEB6C4]">
-                        {subject.pointsToNextGrade != null &&
-                        subject.nextGrade != null
-                          ? `${subject.pointsToNextGrade} mark(s) to Grade ${subject.nextGrade}`
-                          : "—"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </SectionCard>
 
           <SectionCard
             title="Release proof"

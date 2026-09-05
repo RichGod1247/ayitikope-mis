@@ -1,4 +1,6 @@
 // src/app/api/parent/assessment/mock/readiness/pdf/route.ts
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireParentSession, digitsOnly } from "@/lib/parentSession";
@@ -152,10 +154,26 @@ function parentSafeHomeSupport(args: {
   }. Contact the school for guidance if needed.`;
 }
 
-function buildBrandMark() {
+async function loadBrandLogoDataUrl() {
+  try {
+    const logo = await readFile(
+      join(process.cwd(), "public", "edulife-os-search-icon.png"),
+    );
+
+    return `data:image/png;base64,${logo.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
+
+function buildBrandMark(logoDataUrl: string | null) {
   return `
     <div style="display:flex;align-items:center;gap:8px">
-      <div style="width:34px;height:34px;border-radius:8px;background:#071A3D;border:2px solid #D4AF37;color:#D4AF37;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:17pt;line-height:1">E</div>
+      ${
+        logoDataUrl
+          ? `<img src="${logoDataUrl}" alt="EduLife OS" style="width:38px;height:38px;object-fit:contain;display:block"/>`
+          : ""
+      }
       <div>
         <div style="font-size:8pt;font-weight:800;color:#D4AF37;text-transform:uppercase;letter-spacing:.12em">EduLife OS</div>
         <div style="font-size:7pt;color:#5f6368">Ghana Basic Education</div>
@@ -180,7 +198,7 @@ function buildMockPdfHtml(data: {
   releaseSnapshotHash: string;
   readinessStatus: string;
   readinessScore: number;
-  schoolAggregate: number | null;
+  brandLogoDataUrl: string | null;
   placementAggregate: number | null;
   averageScore: number | null;
   scoredSubjectCount: number;
@@ -270,7 +288,7 @@ function buildMockPdfHtml(data: {
 <div class="page">
   <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;border-bottom:3px solid #071A3D;padding-bottom:10px;margin-bottom:10px">
     <div style="min-width:0;flex:1">
-      ${buildBrandMark()}
+      ${buildBrandMark(data.brandLogoDataUrl)}
       <div style="margin-top:8px;font-size:13pt;font-weight:900;color:#071A3D;text-transform:uppercase;letter-spacing:.04em">${esc(data.schoolName)}</div>
       <div class="small muted" style="margin-top:2px">BECE Mock Readiness Report · ${esc(data.mockLabel)}</div>
     </div>
@@ -282,8 +300,7 @@ function buildMockPdfHtml(data: {
   </div>
 
   <div class="notice" style="border:1px solid #D4AF37;background:#fffaf0;margin-bottom:10px">
-    <strong>Important:</strong> This is a released Mock readiness report. It is not the normal 30/70 terminal report.
-    It is meant to guide BECE preparation, home support, and school follow-up.
+    This is a released Mock readiness report, not End of Term exams report.
   </div>
 
   <div class="grid-3" style="margin-bottom:10px">
@@ -311,14 +328,10 @@ function buildMockPdfHtml(data: {
     </div>
   </div>
 
-  <div class="grid-4" style="margin-bottom:10px">
+  <div class="grid-3" style="margin-bottom:10px">
     <div class="metric">
       <div class="metric-label">Placement agg.</div>
       <div class="metric-value">${esc(data.placementAggregate ?? "—")}</div>
-    </div>
-    <div class="metric">
-      <div class="metric-label">School agg.</div>
-      <div class="metric-value">${esc(data.schoolAggregate ?? "—")}</div>
     </div>
     <div class="metric">
       <div class="metric-label">Average</div>
@@ -329,6 +342,22 @@ function buildMockPdfHtml(data: {
       <div class="metric-value">${data.scoredSubjectCount}</div>
       <div class="tiny muted">Missing ${data.missingSubjectCount}</div>
     </div>
+  </div>
+
+  <div style="margin-bottom:8px">
+    <div class="section-title">Released Mock Subject Scores</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="text-align:left">Subject</th>
+          <th style="text-align:center">Score</th>
+          <th style="text-align:center">Grade</th>
+          <th style="text-align:left">Remark</th>
+          <th style="text-align:left">Next Improvement</th>
+        </tr>
+      </thead>
+      <tbody>${subjectRows}</tbody>
+    </table>
   </div>
 
   <div class="grid-2" style="margin-bottom:10px">
@@ -352,22 +381,6 @@ function buildMockPdfHtml(data: {
       <div class="section-title">Support Areas</div>
       <ul style="margin:0 0 0 16px;padding:0;line-height:1.55">${weakest}</ul>
     </div>
-  </div>
-
-  <div style="margin-bottom:8px">
-    <div class="section-title">Released Mock Subject Scores</div>
-    <table>
-      <thead>
-        <tr>
-          <th style="text-align:left">Subject</th>
-          <th style="text-align:center">Score</th>
-          <th style="text-align:center">Grade</th>
-          <th style="text-align:left">Remark</th>
-          <th style="text-align:left">Next Improvement</th>
-        </tr>
-      </thead>
-      <tbody>${subjectRows}</tbody>
-    </table>
   </div>
 
   <div class="box" style="font-size:8pt;line-height:1.45">
@@ -575,6 +588,8 @@ export async function GET(req: NextRequest) {
     cleanStr(release.releasedByUser?.email) ||
     null;
 
+  const brandLogoDataUrl = await loadBrandLogoDataUrl();
+
   const html = buildMockPdfHtml({
     schoolName: tenant.name,
     studentName: studentDisplayName(student),
@@ -591,7 +606,7 @@ export async function GET(req: NextRequest) {
     releaseSnapshotHash: release.releaseSnapshotHash,
     readinessStatus: String(release.readinessStatus),
     readinessScore: Number(release.readinessScore ?? 0),
-    schoolAggregate: row.schoolAggregate.aggregate,
+    brandLogoDataUrl,
     placementAggregate: row.placementAggregate.aggregate,
     averageScore: row.averageScore,
     scoredSubjectCount: row.scoredSubjectCount,
