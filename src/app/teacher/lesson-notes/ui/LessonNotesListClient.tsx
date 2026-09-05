@@ -343,6 +343,9 @@ export default function LessonNotesListClient() {
           </div>
 
           <div className="flex flex-wrap gap-2">
+            <button className={outlineBtn} onClick={() => router.push("/teacher/lesson-notes/settings")}>
+              Lesson Note Settings
+            </button>
             <button className={outlineBtn} onClick={() => setFiltersOpen((open) => !open)}>
               {filtersOpen ? "Hide filters" : hasActiveFilters ? "Filters · On" : "Filters"}
             </button>

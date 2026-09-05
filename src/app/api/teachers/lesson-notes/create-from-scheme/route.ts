@@ -5,7 +5,11 @@ import { requireServerUserContext } from "@/lib/serverAuth";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { normalizeLevelToken } from "@/lib/teacherScope";
-import { resolveUserClassroomAccess } from "@/lib/teacherAccess";
+import {
+  listUserAccessibleClassrooms,
+  normalizeSchoolLevel,
+  resolveUserClassroomAccess,
+} from "@/lib/teacherAccess";
 import { loadOwnedSchemeItem } from "@/lib/lessonNotes/approvedScheme";
 
 export const runtime = "nodejs";
@@ -14,6 +18,7 @@ export const dynamic = "force-dynamic";
 const BodySchema = z
   .object({
     schemeItemId: z.string().min(1, "schemeItemId is required."),
+    classroomId: z.string().trim().min(1).max(160).optional().nullable(),
   })
   .strict();
 
@@ -213,6 +218,78 @@ function shouldReplaceTitle(existingTitle: string | null | undefined) {
   return !cleanStr(existingTitle);
 }
 
+
+type LessonNoteClassroomOption = {
+  id: string;
+  name: string;
+  grade: string | null;
+  arm: string | null;
+  label: string;
+};
+
+function classroomLabel(classroom: { name: string; grade: string | null; arm: string | null }) {
+  const level =
+    normalizeSchoolLevel(classroom.grade || classroom.name) ||
+    cleanStr(classroom.grade) ||
+    cleanStr(classroom.name) ||
+    "Class";
+  const arm = cleanStr(classroom.arm);
+  return arm ? `${level} · Arm ${arm}` : level;
+}
+
+async function listLessonNoteClassroomOptions(args: {
+  tenantId: string;
+  userId: string;
+  roleName: string | null;
+  level: string;
+  subject: string;
+}): Promise<LessonNoteClassroomOption[]> {
+  const targetLevel = normalizeSchoolLevel(args.level);
+  if (!targetLevel) return [];
+
+  const accessible = await listUserAccessibleClassrooms({
+    tenantId: args.tenantId,
+    userId: args.userId,
+    roleName: args.roleName,
+  });
+
+  const out: LessonNoteClassroomOption[] = [];
+
+  for (const classroom of accessible) {
+    const classroomLevel = normalizeSchoolLevel(classroom.grade || classroom.name);
+    if (!classroomLevel || classroomLevel !== targetLevel) continue;
+
+    const access = await resolveUserClassroomAccess({
+      tenantId: args.tenantId,
+      userId: args.userId,
+      roleName: args.roleName,
+      classroomId: classroom.id,
+      subject: args.subject,
+    });
+
+    if (!access.ok) continue;
+
+    out.push({
+      id: classroom.id,
+      name: classroom.name,
+      grade: classroom.grade,
+      arm: classroom.arm,
+      label: classroomLabel(classroom),
+    });
+  }
+
+  const unique = new Map<string, LessonNoteClassroomOption>();
+  for (const classroom of out) unique.set(classroom.id, classroom);
+
+  return Array.from(unique.values()).sort((a, b) => {
+    const aArm = cleanStr(a.arm);
+    const bArm = cleanStr(b.arm);
+    if (!aArm && bArm) return -1;
+    if (aArm && !bArm) return 1;
+    return a.label.localeCompare(b.label) || a.id.localeCompare(b.id);
+  });
+}
+
 export async function POST(req: Request) {
   let ctx: { userId: string; tenantId: string };
   try {
@@ -288,48 +365,111 @@ const membership = await prisma.membership.findUnique({
     indicatorDesc = indicatorDesc || cleanStr(ind?.description);
   }
 
-  const classroomId = scheme.classroomId ?? null;
-
-const phase = phaseFromLevel(level);
-
-if (classroomId) {
-  const access = await resolveUserClassroomAccess({
+  const classroomOptions = await listLessonNoteClassroomOptions({
     tenantId: ctx.tenantId,
     userId: ctx.userId,
     roleName: membership.role?.name ?? null,
-    classroomId,
+    level,
     subject,
   });
 
-  if (!access.ok) {
-    return json(access.reason === "CLASSROOM_NOT_FOUND" ? 404 : 403, {
-      ok: false,
-      error:
-        access.reason === "SUBJECT_OUT_OF_SCOPE"
-          ? "You are not assigned to create lesson notes for this subject in this class."
-          : "You are not assigned to create lesson notes for this class.",
-      reason: access.reason,
-    });
+  const requestedClassroomId = cleanStr(parsed.data.classroomId);
+  const schemeClassroomId = cleanStr(scheme.classroomId);
+
+  let classroomId: string | null = null;
+
+  if (requestedClassroomId) {
+    const requested = classroomOptions.find((row) => row.id === requestedClassroomId);
+
+    if (!requested) {
+      return json(409, {
+        ok: false,
+        code: "CLASSROOM_OUT_OF_SCOPE",
+        error: "That class is not assigned to you for this approved Scheme and subject.",
+      });
+    }
+
+    classroomId = requested.id;
+  } else {
+    const schemeClassroom = schemeClassroomId
+      ? classroomOptions.find((row) => row.id === schemeClassroomId) ?? null
+      : null;
+
+    if (schemeClassroom) {
+      classroomId = schemeClassroom.id;
+    } else if (classroomOptions.length === 1) {
+      classroomId = classroomOptions[0].id;
+    } else if (classroomOptions.length > 1) {
+      return json(409, {
+        ok: false,
+        code: "CLASSROOM_REQUIRED",
+        error: "Choose the exact class for this Lesson Note.",
+        classrooms: classroomOptions,
+      });
+    } else {
+      return json(409, {
+        ok: false,
+        code: "CLASSROOM_SCOPE_UNAVAILABLE",
+        error: "No assigned class matches this approved Scheme and subject. Ask your school administrator to review your class assignment.",
+      });
+    }
   }
-}
+
+  const phase = phaseFromLevel(level);
 
   try {
     const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const existing = await tx.lessonNote.findFirst({
+      const noteScope = {
+        tenantId: ctx.tenantId,
+        teacherUserId: ctx.userId,
+        academicYear,
+        subject: { equals: subject, mode: "insensitive" as const },
+        weekNumber,
+        AND: [
+          { OR: termVariants(term).map((v) => ({ term: { equals: v, mode: "insensitive" as const } })) },
+          { OR: levelVariants(level).map((v) => ({ level: { equals: v, mode: "insensitive" as const } })) },
+        ],
+      };
+
+      const existingExact = await tx.lessonNote.findFirst({
         where: {
-          tenantId: ctx.tenantId,
-          teacherUserId: ctx.userId,
+          ...noteScope,
           classroomId,
-          academicYear,
-          subject: { equals: subject, mode: "insensitive" },
-          weekNumber,
-          AND: [
-            { OR: termVariants(term).map((v) => ({ term: { equals: v, mode: "insensitive" as const } })) },
-            { OR: levelVariants(level).map((v) => ({ level: { equals: v, mode: "insensitive" as const } })) },
-          ],
         } as any,
-        select: { id: true, curriculumUnitId: true, schemeOfWorkItemId: true, lessonTitle: true, status: true },
+        select: {
+          id: true,
+          classroomId: true,
+          curriculumUnitId: true,
+          schemeOfWorkItemId: true,
+          lessonTitle: true,
+          status: true,
+        },
       });
+
+      // Transitional compatibility: a pre-class-binding DRAFT/REJECTED note may
+      // legitimately exist with classroomId = null. It is still mutable evidence,
+      // so bind that draft to the teacher's explicit class instead of creating a
+      // duplicate. SUBMITTED/APPROVED legacy evidence is never rebound.
+      const legacyUnboundMutable = existingExact
+        ? null
+        : await tx.lessonNote.findFirst({
+            where: {
+              ...noteScope,
+              classroomId: null,
+              status: { in: ["DRAFT", "REJECTED"] },
+            } as any,
+            orderBy: { updatedAt: "desc" },
+            select: {
+              id: true,
+              classroomId: true,
+              curriculumUnitId: true,
+              schemeOfWorkItemId: true,
+              lessonTitle: true,
+              status: true,
+            },
+          });
+
+      const existing = existingExact ?? legacyUnboundMutable;
 
       const bestUnit = await findBestCurriculumUnit(tx, {
         tenantId: ctx.tenantId,
@@ -355,6 +495,7 @@ if (classroomId) {
           await tx.lessonNote.update({
             where: { id: existing.id },
             data: {
+              ...(existing.classroomId ? {} : { classroomId }),
               curriculumUnitId: existing.curriculumUnitId ?? bestUnit?.id ?? null,
               schemeOfWorkItemId: item.id,
               strand: strandText,

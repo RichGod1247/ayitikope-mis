@@ -76,6 +76,7 @@ model User {
   lessonNotesAsHeadteacher            LessonNote[]                  @relation("LessonNoteHeadteacher")
   lessonNotesAsTeacher                LessonNote[]                  @relation("LessonNoteTeacher")
   lessonDeliveriesAsTeacher           LessonDelivery[]              @relation("LessonDeliveryTeacher")
+  teacherLessonTimetableEntries       TeacherLessonTimetableEntry[]
   memberships                         Membership[]
   sessions                            Session[]
   passwordRecoveryTokens              PasswordRecoveryToken[]
@@ -222,6 +223,7 @@ model Tenant {
   invites                   Invite[]
   lessonNotes               LessonNote[]
   lessonDeliveries          LessonDelivery[]
+  teacherLessonTimetableEntries TeacherLessonTimetableEntry[]
   memberships               Membership[]
   roles                     Role[]
   students                  Student[]
@@ -890,6 +892,7 @@ model Classroom {
   attendanceScanEvents AttendanceScanEvent[]
   lessonNotes          LessonNote[]
   lessonDeliveries     LessonDelivery[]
+  teacherLessonTimetableEntries TeacherLessonTimetableEntry[]
 
   /// ✅ A15.4B — teacher appraisal evidence spine
   teacherAppraisals TeacherAppraisal[]
@@ -2820,6 +2823,34 @@ model LessonDelivery {
   @@index([lessonNoteId], map: "LessonDelivery_lessonNote_idx")
   @@index([curriculumUnitId], map: "LessonDelivery_curriculumUnit_idx")
   @@index([tenantId, subject, indicatorCode], map: "LessonDelivery_tenant_subject_indicator_idx")
+}
+
+/// Weekly recurring teacher timetable evidence used by Lesson Note print.
+/// One active row = one lesson period. Edits retire old rows and append replacements.
+model TeacherLessonTimetableEntry {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String
+  teacherUserId String
+  classroomId   String
+  subject       String   @db.VarChar(120)
+  subjectNorm   String   @db.VarChar(120)
+  weekday       Int      @db.SmallInt
+  startMinute   Int      @db.SmallInt
+  endMinute     Int      @db.SmallInt
+  isActive      Boolean  @default(true)
+  retiredAt     DateTime? @db.Timestamptz(6)
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "TeacherLessonTimetableEntry_tenant_fkey")
+  teacher   User      @relation(fields: [teacherUserId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "TeacherLessonTimetableEntry_teacher_fkey")
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "TeacherLessonTimetableEntry_classroom_fkey")
+
+  @@index([tenantId, teacherUserId, classroomId, subjectNorm, isActive, weekday, startMinute], map: "TeacherLessonTimetableEntry_active_lookup_idx")
+  @@index([tenantId, classroomId, isActive, weekday, startMinute, endMinute], map: "TeacherLessonTimetableEntry_class_time_idx")
+
+  /// DB truth also includes partial unique index TeacherLessonTimetableEntry_active_exact_unique
+  /// plus insert-overlap and retired-evidence guard triggers.
 }
 
 model AssessmentScore {

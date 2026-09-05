@@ -5,6 +5,11 @@ import { notFound, redirect } from "next/navigation";
 import HeadteacherReviewPanel from "./HeadteacherReviewPanel";
 import { mediaUrl } from "@/lib/media";
 import ZoomableImage from "./ZoomableImage";
+import { subjectMatchesTeachingScope } from "@/lib/teachingSubjectScope";
+import {
+  groupTimetableEntriesForPrint,
+  readTeacherTimetableEntries,
+} from "@/lib/lessonNotes/teacherTimetable";
 
 export const dynamic = "force-dynamic";
 
@@ -1534,7 +1539,7 @@ export default async function Page({ params, searchParams }: PageProps) {
     note.classroomId
       ? prisma.classroom.findUnique({
           where: { id: note.classroomId },
-          select: { name: true },
+          select: { name: true, grade: true, arm: true },
         })
       : Promise.resolve(null),
     note.curriculumUnitId
@@ -1576,6 +1581,22 @@ export default async function Page({ params, searchParams }: PageProps) {
   const substrand = note.substrand ?? unitRow?.substrand ?? "";
   const contentStandard = note.contentStandard ?? unitRow?.contentStandard ?? "";
   const indicator = note.indicator ?? unitRow?.indicator ?? "";
+
+  const timetableRows = note.classroomId
+    ? await readTeacherTimetableEntries({
+        tenantId: note.tenantId,
+        teacherUserId: note.teacherUserId,
+        classroomId: note.classroomId,
+        asOf: note.status === "APPROVED" && note.approvedAt ? note.approvedAt : null,
+      })
+    : [];
+
+  const timetableScopeLevel = note.level ?? classroomRow?.grade ?? classroomRow?.name ?? null;
+  const timetablePrintGroups = groupTimetableEntriesForPrint(
+    timetableRows.filter((row) =>
+      subjectMatchesTeachingScope(row.subject, subject, timetableScopeLevel),
+    ),
+  );
 
   const strandCode = unitRow?.strandCode ?? null;
   const contentStandardCode =
@@ -2031,7 +2052,24 @@ const weekEndingLabel = formatDate(fridayOfWeek(weekEndingSource));
             <tbody>
               <tr className="align-top">
                 <td className="border border-black px-1 py-1 font-semibold">
-                  {weekNumberLabel ? "Monday" : "Day"}
+                  {timetablePrintGroups.length ? (
+                    <div className="space-y-2">
+                      {timetablePrintGroups.map((group) => (
+                        <div key={group.weekday}>
+                          <div>{group.dayLabel}</div>
+                          <div className="mt-0.5 space-y-0.5 text-[10px] font-normal leading-tight">
+                            {group.times.map((time) => (
+                              <div key={time}>{time}</div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : weekNumberLabel ? (
+                    "Monday"
+                  ) : (
+                    "Day"
+                  )}
                 </td>
                 <td className="border border-black px-1 py-1 whitespace-pre-line break-words">
                   <p className="mb-1 font-semibold underline">LESSON OBJECTIVES</p>

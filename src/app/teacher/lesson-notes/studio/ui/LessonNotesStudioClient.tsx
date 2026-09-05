@@ -20,12 +20,25 @@ type TeacherScope = {
   defaultAcademicYear: string;
 };
 
+type LessonNoteClassroomOption = {
+  id: string;
+  name: string;
+  grade: string | null;
+  arm: string | null;
+  label: string;
+};
+
 type CreateResp =
   | { ok: true; note: { id: string } }
   | { ok: true; item: { id: string } }
   | { ok: true; lessonNoteId: string }
   | { ok: true; id: string }
-  | { ok: false; error: string };
+  | {
+      ok: false;
+      error: string;
+      code?: string;
+      classrooms?: LessonNoteClassroomOption[];
+    };
 
 async function safeJson<T>(res: Response): Promise<T> {
   return (await res.json().catch(() => ({}))) as T;
@@ -57,6 +70,15 @@ const btnOutline =
 
 function uniq(list: string[]) {
   return Array.from(new Set(list.map((x) => String(x ?? "").trim()).filter(Boolean)));
+}
+
+function hasClassArm(classroom: LessonNoteClassroomOption) {
+  return Boolean(String(classroom.arm ?? "").trim());
+}
+
+function singleStreamClassroomChoices(choices: LessonNoteClassroomOption[]) {
+  const singleStream = choices.filter((classroom) => !hasClassArm(classroom));
+  return singleStream.length ? singleStream : choices;
 }
 
 const TERM_OPTIONS = ["1st Term", "2nd Term", "3rd Term"] as const;
@@ -149,8 +171,26 @@ export default function LessonNotesStudioClient(props: {
 
   const [creating, setCreating] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [classroomChoices, setClassroomChoices] = useState<LessonNoteClassroomOption[]>([]);
+  const [selectedClassroomId, setSelectedClassroomId] = useState("");
+  const [showMultipleStreams, setShowMultipleStreams] = useState(false);
 
   const autoMode = !!initialSchemeItemId;
+
+  const singleStreamChoices = useMemo(
+    () => singleStreamClassroomChoices(classroomChoices),
+    [classroomChoices],
+  );
+
+  const visibleClassroomChoices = useMemo(
+    () => (showMultipleStreams ? classroomChoices : singleStreamChoices),
+    [classroomChoices, showMultipleStreams, singleStreamChoices],
+  );
+
+  const hasMultipleStreams = useMemo(
+    () => classroomChoices.some(hasClassArm),
+    [classroomChoices],
+  );
 
   const subjectsForSelectedLevel = useMemo(() => {
     if (phase !== "JHS") return t.allowedSubjects;
@@ -182,7 +222,7 @@ export default function LessonNotesStudioClient(props: {
   }, [term, academicYear, subject, phase, level]);
 
   const createFromSchemeItem = useCallback(
-    async (schemeItemId: string) => {
+    async (schemeItemId: string, classroomId?: string) => {
       if (!schemeItemId) return;
 
       setCreating(true);
@@ -192,17 +232,34 @@ export default function LessonNotesStudioClient(props: {
         const res = await fetch("/api/teachers/lesson-notes/from-scheme-item", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ schemeItemId }),
+          body: JSON.stringify({
+            schemeItemId,
+            ...(classroomId ? { classroomId } : {}),
+          }),
         });
 
         if (res.status === 401 || res.status === 403) return handleAuthFailure();
 
         const data = await safeJson<CreateResp>(res);
 
+        if (!data.ok && data.code === "CLASSROOM_REQUIRED" && Array.isArray(data.classrooms)) {
+          const defaultChoices = singleStreamClassroomChoices(data.classrooms);
+          const requiresStreamChoice = defaultChoices === data.classrooms;
+
+          setClassroomChoices(data.classrooms);
+          setShowMultipleStreams(requiresStreamChoice);
+          setSelectedClassroomId(defaultChoices.length === 1 ? defaultChoices[0]!.id : "");
+          return;
+        }
+
         if (!res.ok || !data.ok) {
           setErr((!data.ok && data.error) || "Failed to create from Scheme of Work. Please try again.");
           return;
         }
+
+        setClassroomChoices([]);
+        setSelectedClassroomId("");
+        setShowMultipleStreams(false);
 
         const id = extractCreatedNoteId(data);
         if (!id) {
@@ -219,6 +276,14 @@ export default function LessonNotesStudioClient(props: {
     },
     [router]
   );
+
+  function changeMultipleStreams(next: boolean) {
+    setShowMultipleStreams(next);
+
+    if (!next && !singleStreamChoices.some((classroom) => classroom.id === selectedClassroomId)) {
+      setSelectedClassroomId(singleStreamChoices.length === 1 ? singleStreamChoices[0]!.id : "");
+    }
+  }
 
   useEffect(() => {
     if (!initialSchemeItemId) return;
@@ -362,6 +427,65 @@ export default function LessonNotesStudioClient(props: {
             The server rechecks the approved Scheme before the Lesson Note is created.
           </div>
         </div>
+      ) : null}
+
+      {initialSchemeItemId && classroomChoices.length > 0 ? (
+        <section className="rounded-[28px] border border-amber-300/25 bg-amber-400/10 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.16)] md:p-5">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-100">One quick choice</p>
+            <h2 className="mt-1 text-lg font-bold text-[#F7F4ED]">Which class is this Lesson Note for?</h2>
+            <p className="mt-1 text-sm leading-6 text-[#C9CDD6]">
+              The approved Scheme can cover the level. Choose the exact class so the Lesson Note, timetable and printout stay correctly linked.
+            </p>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:max-w-md">
+            {hasMultipleStreams ? (
+              <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
+                <input
+                  className="mt-0.5 h-4 w-4 accent-[#D4AF37]"
+                  type="checkbox"
+                  checked={showMultipleStreams}
+                  onChange={(event) => changeMultipleStreams(event.target.checked)}
+                  disabled={creating}
+                />
+                <span>
+                  <span className="block text-xs font-semibold text-[#F7F4ED]">Multiple streams</span>
+                  <span className="mt-0.5 block text-[11px] leading-4 text-[#C9CDD6]">
+                    Off by default. Turn on to choose a class arm.
+                  </span>
+                </span>
+              </label>
+            ) : null}
+
+            <label className="text-xs font-medium text-[#C9CDD6]" htmlFor="lesson-note-classroom">
+              Class <span className="text-[#E8C96A]">*</span>
+            </label>
+            <select
+              id="lesson-note-classroom"
+              className={selectBase}
+              value={selectedClassroomId}
+              onChange={(e) => setSelectedClassroomId(e.target.value)}
+              disabled={creating}
+            >
+              <option value="">Select class</option>
+              {visibleClassroomChoices.map((classroom) => (
+                <option key={classroom.id} value={classroom.id}>
+                  {classroom.label}
+                </option>
+              ))}
+            </select>
+
+            <button
+              type="button"
+              className={btnPrimary}
+              disabled={!selectedClassroomId || creating}
+              onClick={() => void createFromSchemeItem(initialSchemeItemId, selectedClassroomId)}
+            >
+              {creating ? "Opening…" : "Prepare Lesson Note"}
+            </button>
+          </div>
+        </section>
       ) : null}
 
       {err && (

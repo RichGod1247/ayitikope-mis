@@ -120,7 +120,7 @@ assertIncludes(
   'onClick={() => router.push("/teacher/schemes")}',
   "Lesson Notes guided start",
 );
-assertIncludes(lessonList, "start from an approved Scheme of Work", "Lesson Notes explanation");
+assertIncludes(lessonList, "Start from Scheme of Work. EduLife will only create a Lesson Note from an approved Scheme.", "Lesson Notes explanation");
 assertExcludes(
   lessonList,
   'router.push("/teacher/lesson-notes/studio")',

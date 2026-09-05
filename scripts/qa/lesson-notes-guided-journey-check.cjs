@@ -37,8 +37,12 @@ function lacks(source, marker, label) {
 
 const listPath = "src/app/teacher/lesson-notes/ui/LessonNotesListClient.tsx";
 const editorPath = "src/app/teacher/lesson-notes/[id]/ui/LessonNoteEditorClient.tsx";
+const studioPath = "src/app/teacher/lesson-notes/studio/ui/LessonNotesStudioClient.tsx";
+const createFromSchemePath = "src/app/api/teachers/lesson-notes/create-from-scheme/route.ts";
 const list = read(listPath);
 const editor = read(editorPath);
+const studio = read(studioPath);
+const createFromScheme = read(createFromSchemePath);
 
 // Lesson Notes list: status-first guidance + low-network filter behavior.
 has(list, 'const [filtersOpen, setFiltersOpen] = useState(false);', "progressive filter disclosure");
@@ -76,11 +80,33 @@ has(editor, 'Choose indicator from approved Scheme', "BBC Scheme-item picker wor
 has(editor, '<summary className="cursor-pointer text-xs font-semibold text-[#D7DCE5]">Having trouble finding the indicator?</summary>', "advanced picker troubleshooting disclosure");
 has(editor, 'id="lesson-note-fields"', "continue-to-fields anchor");
 
-// Existing server-side authority and workflow must remain byte-identical to grounded df54691 source.
+// Approved Scheme remains level-scoped; exact classroom is bound only when a Lesson Note is created.
+has(createFromScheme, 'classroomId: z.string().trim().min(1).max(160).optional().nullable()', "optional exact classroom request");
+has(createFromScheme, "listUserAccessibleClassrooms", "existing teacher classroom authority reused");
+has(createFromScheme, "resolveUserClassroomAccess", "server-side subject/class authority revalidation");
+has(createFromScheme, "normalizeSchoolLevel", "Scheme level and classroom level canonical matching");
+has(createFromScheme, 'code: "CLASSROOM_REQUIRED"', "ambiguous multi-stream class fails closed to explicit choice");
+has(createFromScheme, 'code: "CLASSROOM_OUT_OF_SCOPE"', "forged classroom choice is rejected");
+has(createFromScheme, 'code: "CLASSROOM_SCOPE_UNAVAILABLE"', "missing assigned classroom scope fails closed");
+has(createFromScheme, 'status: { in: ["DRAFT", "REJECTED"] }', "only mutable legacy unbound notes may be rebound");
+has(createFromScheme, '...(existing.classroomId ? {} : { classroomId })', "legacy mutable draft gains exact classroom without rewriting bound evidence");
+has(createFromScheme, "classroomId,", "created Lesson Note is anchored to exact classroom");
+lacks(createFromScheme, "schemeOfWork.update", "Lesson Note classroom binding must not mutate level-scoped Scheme authority");
+has(studio, 'data.code === "CLASSROOM_REQUIRED"', "Studio handles exact-class choice response");
+has(studio, "Which class is this Lesson Note for?", "BBC exact-class prompt");
+has(studio, "The approved Scheme can cover the level.", "level-scoped Scheme explanation");
+has(studio, "singleStreamClassroomChoices", "single-stream default classroom presentation");
+has(studio, "showMultipleStreams", "progressive multi-stream state");
+has(studio, "Multiple streams", "BBC multi-stream toggle label");
+has(studio, "Off by default. Turn on to choose a class arm.", "single-stream default guidance");
+has(studio, "visibleClassroomChoices.map((classroom) =>", "only presentation-filtered server-returned options render");
+has(studio, "defaultChoices.length === 1 ? defaultChoices[0]!.id :", "single canonical class is preselected");
+has(studio, '...(classroomId ? { classroomId } : {})', "class choice is retried in the existing create POST");
+lacks(studio, '/api/teachers/classrooms/list', "exact-class bridge adds no extra classroom-list browser fetch");
+
+// Existing server-side authority and workflow must remain byte-identical except the intentional create-from-Scheme class-binding bridge.
 const protectedHashes = {
-  "prisma/schema.prisma": "212460F7EC0E6163C4C39A308BCE63266018C810463D4167D1A7099ABBEDF8B6",
   "src/lib/lessonNotes/approvedScheme.ts": "36D10F64CBA812E9C448CE9FCD4141B40CB38BD98E195D5AD66C91A1056B39E3",
-  "src/app/api/teachers/lesson-notes/create-from-scheme/route.ts": "6715EECCA60D2163A6DA6B10185A0D9783484DC44FF3320C1621ED71E3EEDCED",
   "src/app/api/teachers/lesson-notes/from-scheme-item/route.ts": "35EC18A52D63DE6BA00AFC90F9C2151B4F16B9C90A3B3765079B7F8AB3E53468",
   "src/app/api/teachers/lesson-notes/list/route.ts": "45ADEDEC1526FF0395102571AB8657C00701D041C1549E6924753E60006DA147",
   "src/app/api/teachers/lesson-notes/item/[id]/route.ts": "FC1EA0BD9CE47104902FEDF51D43A1006D8F7B8964EEA4F7EFF4D0533CD21EB6",
@@ -116,4 +142,7 @@ console.log("- DRAFT guides completion/save/submit; SUBMITTED guides waiting");
 console.log("- REJECTED guides feedback/correction/resubmission; APPROVED guides view/print");
 console.log("- Headteacher comments use status-aware success/correction tones");
 console.log("- advanced Scheme-item troubleshooting is hidden behind progressive disclosure");
-console.log("- Headteacher review, submit notifications, delete rules, schema and server authority are unchanged");
+console.log("- approved Scheme stays level-scoped; exact classroom is bound only at Lesson Note creation");
+console.log("- Lesson Note class choice defaults to the canonical single stream and progressively reveals authorized arms");
+console.log("- ambiguous multi-stream scope asks one BBC-friendly class question and validates it server-side");
+console.log("- Headteacher review, submit notifications, delete rules and remaining Lesson Note server authority are unchanged");
