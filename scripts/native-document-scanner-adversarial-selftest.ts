@@ -93,6 +93,9 @@ export const HDS_M6F4_HARNESS_VERSION =
 export const HDS_M6G1_HARNESS_VERSION =
   "HDS-M6G1-HARNESS-V1" as const;
 
+export const HDS_M6H_HARNESS_VERSION =
+  "HDS-M6H-HARNESS-V1" as const;
+
 const ONE_MEBIBYTE = 1024 * 1024;
 
 const ARCHIVE_LIMITS: NativeDocumentArchiveLimits = Object.freeze({
@@ -10060,18 +10063,34 @@ async function run() {
     "M6 execution must never grant CLEAN or completed document-trust authority.",
   );
 
+  const m6hAdversarialCertificationComplete =
+    remainingM6ThreatFamilies.length === 0 &&
+    allM6CertifiedThreatFamilies.length ===
+      THREAT_FAMILY_MANIFEST.length;
+
+  const m6hFullM6CertificationComplete =
+    m6hAdversarialCertificationComplete &&
+    m6g1CertifiedThreatFamilies.length === 1 &&
+    m6g1CertifiedThreatFamilies[0] === "FALSE_POSITIVE_CONTROL";
+
+  assert(
+    m6hAdversarialCertificationComplete &&
+      m6hFullM6CertificationComplete,
+    "M6H requires the complete bounded M6 threat-family evidence set before certification can close.",
+  );
+
   console.log(
     JSON.stringify(
       {
         ok: true,
         event:
-          "HDS_M6G1_FALSE_POSITIVE_CONTROL_CERTIFICATION_PASSED",
+          "HDS_M6H_CERTIFICATION_AUTHORITY_DECISION_PASSED",
         corpusSchemaVersion:
           HDS_M6_ADVERSARIAL_CORPUS_SCHEMA_VERSION,
         harnessVersion:
-          HDS_M6G1_HARNESS_VERSION,
+          HDS_M6H_HARNESS_VERSION,
         priorHarnessVersion:
-          HDS_M6F4_HARNESS_VERSION,
+          HDS_M6G1_HARNESS_VERSION,
         priorOoxmlHarnessVersion:
           HDS_M6C_HARNESS_VERSION,
         scannerEngine:
@@ -10437,17 +10456,26 @@ async function run() {
         m6g1OleSimpleUppercaseCompatibilityRepaired: true,
         m6g1OleV3HighDwordCompatibilityRepaired: true,
         m6g1RealWorldCorpusIncluded: false,
-        m6g1RealWorldCorpusDeferredToAuthorityReview: true,
+        m6g1RealWorldCorpusDeferredToAuthorityReview: false,
+        m6g1RealWorldCorpusDeferredBeyondM6Certification: true,
         m6g1Results: m6g1Summary,
         remainingNonPdfThreatFamilies,
         allM6CertifiedThreatFamilies,
         remainingM6ThreatFamilies,
         m6FamilyEvidenceComplete: true,
-        m6hAuthorityReviewRequired: true,
-        adversarialCertificationComplete: false,
-        fullM6CertificationComplete: false,
+        m6hAuthorityReviewRequired: false,
+        m6hAuthorityReviewComplete: true,
+        m6hAuthorityDecision:
+          "CERTIFY_BOUNDED_M6_WITHOUT_CLEAN_OR_PROMOTION_AUTHORITY",
+        fullM6CertificationScope:
+          "BOUNDED_DETERMINISTIC_GENERATED_CORPUS",
+        adversarialCertificationComplete:
+          m6hAdversarialCertificationComplete,
+        fullM6CertificationComplete:
+          m6hFullM6CertificationComplete,
         cleanAuthorityGranted: false,
         immutablePromotionAuthorityGranted: false,
+        nextMilestone: "M7_RESOURCE_MEASUREMENT",
       },
       null,
       2,
@@ -10461,11 +10489,11 @@ run().catch((error) => {
       {
         ok: false,
         event:
-          "HDS_M6G1_FALSE_POSITIVE_CONTROL_CERTIFICATION_FAILED",
+          "HDS_M6H_CERTIFICATION_AUTHORITY_DECISION_FAILED",
         errorCode:
           error instanceof Error
             ? error.message
-            : "M6G1_UNKNOWN_FAILURE",
+            : "M6H_UNKNOWN_FAILURE",
       },
       null,
       2,
