@@ -843,18 +843,6 @@ function rescuePriorityClass(priority: CandidateRescuePriority) {
   return "border-emerald-300/25 bg-emerald-400/12 text-emerald-100";
 }
 
-function subjectOwnerLine(signal: CandidateSubjectSignal) {
-  const owners = signal.ownerStatus?.owners ?? [];
-
-  if (owners.length > 0) {
-    return owners.map((owner) => cleanStr(owner.name) || "Teacher").join(", ");
-  }
-
-  if (signal.ownerStatus?.hasOwner === false) return "No assigned teacher";
-
-  return "Owner not resolved";
-}
-
 function priorityClass(priority: MockActionPriority) {
   if (priority === "CRITICAL") {
     return "border-rose-300/25 bg-rose-400/12 text-rose-100";
@@ -895,15 +883,20 @@ function MetricCard(props: {
   hint?: string;
 }) {
   return (
-    <div className={softPanel + " p-4"}>
-      <div className="text-[11px] uppercase tracking-[0.18em] text-[#8F98A8]">
+    <div
+      data-mock-metric="compact-v1"
+      className={softPanel + " min-w-0 px-3 py-2.5"}
+    >
+      <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#8F98A8] sm:text-[10px]">
         {props.label}
       </div>
-      <div className="mt-2 text-2xl font-semibold text-[#F7F4ED]">
+      <div className="mt-1 text-lg font-semibold leading-none text-[#F7F4ED] sm:text-xl">
         {props.value}
       </div>
       {props.hint ? (
-        <div className="mt-1 text-[11px] text-[#AEB6C4]">{props.hint}</div>
+        <div className="mt-1 text-[10px] leading-4 text-[#AEB6C4]">
+          {props.hint}
+        </div>
       ) : null}
     </div>
   );
@@ -913,10 +906,11 @@ function SectionCard(props: {
   title: string;
   subtitle?: string;
   right?: React.ReactNode;
+  dataUi?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className={shellCard}>
+    <div className={shellCard} data-mock-section={props.dataUi}>
       <div className="flex flex-col gap-3 border-b border-white/10 px-4 py-3 md:flex-row md:items-start md:justify-between">
         <div>
           <div className="text-sm font-semibold text-[#F7F4ED]">
@@ -932,6 +926,50 @@ function SectionCard(props: {
       </div>
       <div className="px-4 py-4">{props.children}</div>
     </div>
+  );
+}
+
+function DisclosureCard(props: {
+  title: string;
+  subtitle?: string;
+  status?: React.ReactNode;
+  dataUi: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <details
+      data-mock-disclosure={props.dataUi}
+      className={shellCard + " group"}
+    >
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 marker:hidden [&::-webkit-details-marker]:hidden sm:px-4">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="text-sm font-semibold text-[#F7F4ED]">
+              {props.title}
+            </div>
+            {props.status ? (
+              <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-1 text-[10px] font-semibold text-[#C9CDD6]">
+                {props.status}
+              </span>
+            ) : null}
+          </div>
+          {props.subtitle ? (
+            <div className="mt-1 text-[10px] leading-4 text-[#AEB6C4] sm:text-[11px]">
+              {props.subtitle}
+            </div>
+          ) : null}
+        </div>
+
+        <span className="shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-[11px] font-semibold text-[#F7F4ED] group-open:bg-white/[0.09]">
+          <span className="group-open:hidden">Open</span>
+          <span className="hidden group-open:inline">Hide</span>
+        </span>
+      </summary>
+
+      <div className="border-t border-white/10 px-3 py-3 sm:px-4">
+        {props.children}
+      </div>
+    </details>
   );
 }
 
@@ -2187,7 +2225,120 @@ async function queueMockReleaseSms(nextSessionId?: string | null) {
           </div>
         ) : (
           <>
-            <div className="grid gap-3 md:grid-cols-5">
+<SectionCard
+              dataUi="primary-broadsheet-v1"
+              title="Learner readiness broadsheet"
+              subtitle="Start here: scan every learner's scores, placement aggregate and readiness before opening the supporting tools."
+            >
+              <div className="overflow-auto rounded-2xl border border-white/10">
+                <table className="min-w-[820px] w-full border-collapse text-left text-[12px]">
+                  <thead className="bg-white/[0.05] text-[#AEB6C4]">
+                    <tr>
+                      <th className="border-b border-white/10 px-3 py-2">
+                        Learner
+                      </th>
+                      <th className="border-b border-white/10 px-3 py-2">
+                        Scored subjects
+                      </th>
+                      <th className="border-b border-white/10 px-3 py-2">
+                        Average
+                      </th>
+                      <th className="border-b border-white/10 px-3 py-2">
+                        Placement agg.
+                      </th>
+                      <th className="border-b border-white/10 px-3 py-2">
+                        Readiness
+                      </th>
+                      <th className="border-b border-white/10 px-3 py-2">
+                        Missing for placement
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {broadsheet.students.map((student) => (
+                      <tr
+                        key={student.studentId}
+                        className="border-b border-white/5"
+                      >
+                        <td className="px-3 py-2 font-semibold text-[#F7F4ED]">
+                          {student.name}
+                        </td>
+                        <td className="px-3 py-2 text-[#C9CDD6]">
+                          {student.scoredSubjectCount} scored •{" "}
+                          {student.missingSubjectCount} missing
+                        </td>
+                        <td className="px-3 py-2 text-[#C9CDD6]">
+                          {formatNumber(student.averageScore)}
+                        </td>
+                        <td className="px-3 py-2 text-[#C9CDD6]">
+                          {student.placementAggregate.aggregate ?? "Incomplete"}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span
+                            className={[
+                              "inline-flex rounded-full border px-2 py-1 text-[11px] font-semibold",
+                              readinessClass(student.readiness.code),
+                            ].join(" ")}
+                          >
+                            {student.readiness.code}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-[#AEB6C4]">
+                          {student.placementAggregate.missingSubjects?.length
+                            ? student.placementAggregate.missingSubjects.join(
+                                ", ",
+                              )
+                            : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </SectionCard>
+
+            <div
+              data-mock-bbc-guide="v1"
+              className="rounded-2xl border border-sky-300/15 bg-sky-400/10 px-3 py-3 text-[11px] text-sky-100"
+            >
+              <div className="font-semibold text-[#F7F4ED]">
+                How to use this page
+              </div>
+              <div className="mt-1 leading-5 text-sky-100/85">
+                Start with the learner broadsheet. Then open only the section you need.
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-4">
+                <div className="rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-2">
+                  <span className="font-semibold">1. Scan learners</span>
+                  <span className="block pt-0.5 text-[10px] text-sky-100/75">
+                    Check readiness and missing placement evidence.
+                  </span>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-2">
+                  <span className="font-semibold">2. Rescue first</span>
+                  <span className="block pt-0.5 text-[10px] text-sky-100/75">
+                    Open Candidate rescue only when a learner needs attention.
+                  </span>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-2">
+                  <span className="font-semibold">3. Review insights</span>
+                  <span className="block pt-0.5 text-[10px] text-sky-100/75">
+                    Open trend, subject or leadership cards when needed.
+                  </span>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-2">
+                  <span className="font-semibold">4. Finish operations</span>
+                  <span className="block pt-0.5 text-[10px] text-sky-100/75">
+                    Seal, release and notify parents only at the right stage.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div
+              data-mock-summary-metrics="compact-v1"
+              className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5"
+            >
               <MetricCard
                 label="Students"
                 value={broadsheet.summary.totalStudents}
@@ -2208,19 +2359,19 @@ async function queueMockReleaseSms(nextSessionId?: string | null) {
                 value={broadsheet.summary.placementReadyCount}
                 hint="Learners with full placement aggregate"
               />
-              <div className={softPanel + " p-4"}>
-                <div className="text-[11px] uppercase tracking-[0.18em] text-[#8F98A8]">
+              <div className={softPanel + " col-span-2 min-w-0 px-3 py-2.5 sm:col-span-1"}>
+                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#8F98A8] sm:text-[10px]">
                   Class readiness
                 </div>
                 <div
                   className={[
-                    "mt-2 inline-flex rounded-full border px-3 py-1 text-[12px] font-semibold",
+                    "mt-1 inline-flex rounded-full border px-2 py-1 text-[10px] font-semibold",
                     readinessClass(broadsheet.summary.classReadiness.code),
                   ].join(" ")}
                 >
                   {broadsheet.summary.classReadiness.label}
                 </div>
-                <div className="mt-2 text-[11px] text-[#AEB6C4]">
+                <div className="mt-1 text-[10px] leading-4 text-[#AEB6C4]">
                   {broadsheet.summary.classReadiness.action}
                 </div>
               </div>
@@ -2232,16 +2383,114 @@ async function queueMockReleaseSms(nextSessionId?: string | null) {
               </div>
             ) : null}
 
-            <SectionCard
+            <DisclosureCard
+              dataUi="candidate-rescue-v1"
+              title="Candidate rescue profiles"
+              subtitle="Open only when you need the learner rescue list. Detailed evidence stays in each learner profile."
+              status={`${broadsheet.candidateRescueProfiles.filter((profile) => profile.priority === "CRITICAL").length} critical • ${broadsheet.candidateRescueProfiles.filter((profile) => profile.priority === "HIGH").length} high`}
+            >
+              <div className="space-y-3">
+                <div
+                  data-mock-rescue-stats="compact-v1"
+                  className="grid grid-cols-2 gap-2 lg:grid-cols-4"
+                >
+                  <MetricCard
+                    label="Critical rescue"
+                    value={
+                      broadsheet.candidateRescueProfiles.filter(
+                        (profile) => profile.priority === "CRITICAL",
+                      ).length
+                    }
+                    hint="Urgent"
+                  />
+                  <MetricCard
+                    label="High rescue"
+                    value={
+                      broadsheet.candidateRescueProfiles.filter(
+                        (profile) => profile.priority === "HIGH",
+                      ).length
+                    }
+                    hint="Needs attention"
+                  />
+                  <MetricCard
+                    label="Improvement chances"
+                    value={
+                      broadsheet.candidateRescueProfiles.filter(
+                        (profile) => profile.priority === "MEDIUM",
+                      ).length
+                    }
+                    hint="Near next grade"
+                  />
+                  <MetricCard
+                    label="Stable monitor"
+                    value={
+                      broadsheet.candidateRescueProfiles.filter(
+                        (profile) => profile.priority === "LOW",
+                      ).length
+                    }
+                    hint="Monitor"
+                  />
+                </div>
+
+                <div data-mock-rescue-list="compact-v1" className="space-y-2">
+                  {broadsheet.candidateRescueProfiles.length === 0 ? (
+                    <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-4 text-center text-[12px] text-[#AEB6C4]">
+                      No candidate rescue profiles available yet.
+                    </div>
+                  ) : (
+                    broadsheet.candidateRescueProfiles.map((profile) => (
+                      <div
+                        key={profile.studentId}
+                        className="flex flex-col gap-2 rounded-xl border border-white/10 bg-[#08111C]/85 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="min-w-0">
+                          <div className="truncate text-[13px] font-semibold text-[#F7F4ED]">
+                            {profile.name}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+                          <span
+                            className={[
+                              "rounded-full border px-2 py-1 text-[10px] font-semibold",
+                              rescuePriorityClass(profile.priority),
+                            ].join(" ")}
+                          >
+                            {profile.priorityLabel}
+                          </span>
+
+                          <Link
+                            href={`/headteacher/student/${profile.studentId}?focus=mock-readiness`}
+                            className="inline-flex flex-1 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/[0.09] sm:flex-none"
+                          >
+                            Open learner profile
+                          </Link>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </DisclosureCard>
+
+            <DisclosureCard
+              dataUi="trend-intelligence-v1"
               title="Multi-Mock trend intelligence"
-              subtitle="Compares sealed Mock sessions only. This protects the headteacher from treating editable scores as official trend evidence."
+              subtitle="Open when you want sealed Mock-to-Mock movement and rescue follow-up."
+              status={
+                !broadsheet.trend
+                  ? "Waiting for trend evidence"
+                  : !broadsheet.trend.available
+                    ? `${broadsheet.trend.lockedSessionCount} sealed Mock(s) • need 2`
+                    : `${broadsheet.trend.summary.improvingCount} improving • ${broadsheet.trend.summary.decliningCount} declining`
+              }
             >
               {!broadsheet.trend ? (
                 <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-6 text-[12px] text-[#AEB6C4]">
                   Trend intelligence has not been returned for this Mock session yet.
                 </div>
               ) : !broadsheet.trend.available ? (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-4 text-[12px] leading-5 text-amber-100">
                     <div className="font-semibold">
                       Trend intelligence is not available yet.
@@ -2252,7 +2501,7 @@ async function queueMockReleaseSms(nextSessionId?: string | null) {
                     </div>
                   </div>
 
-                  <div className="grid gap-3 md:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
                     <MetricCard
                       label="Sealed mocks"
                       value={broadsheet.trend.lockedSessionCount}
@@ -2277,8 +2526,8 @@ async function queueMockReleaseSms(nextSessionId?: string | null) {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <div className="grid gap-3 md:grid-cols-5">
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
                     <MetricCard
                       label="Tracked"
                       value={broadsheet.trend.summary.trackedLearners}
@@ -2306,8 +2555,8 @@ async function queueMockReleaseSms(nextSessionId?: string | null) {
                     />
                   </div>
 
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div className={panelCard + " p-4"}>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <div className={panelCard + " p-3"}>
                       <div className="text-sm font-semibold text-[#F7F4ED]">
                         Class movement
                       </div>
@@ -2362,7 +2611,7 @@ async function queueMockReleaseSms(nextSessionId?: string | null) {
                       </div>
                     </div>
 
-                    <div className={panelCard + " p-4"}>
+                    <div className={panelCard + " p-3"}>
                       <div className="text-sm font-semibold text-[#F7F4ED]">
                         Compared sessions
                       </div>
@@ -2402,11 +2651,11 @@ async function queueMockReleaseSms(nextSessionId?: string | null) {
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
                     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                       <div>
                         <div className="text-sm font-semibold text-[#F7F4ED]">
-                                          <div className="rounded-2xl border border-white/10 bg-[#08111C]/85 p-4">
+                                          <div className="rounded-2xl border border-white/10 bg-[#08111C]/85 p-3">
                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                       <div>
                         <div className="text-sm font-semibold text-[#F7F4ED]">
@@ -2429,7 +2678,7 @@ async function queueMockReleaseSms(nextSessionId?: string | null) {
                       </div>
                     </div>
 
-                    <div className="mt-4 grid gap-3 md:grid-cols-5">
+                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
                       <MetricCard
                         label="Open"
                         value={mockInterventionBoard.openCount}
@@ -2468,8 +2717,8 @@ async function queueMockReleaseSms(nextSessionId?: string | null) {
                       />
                     </div>
 
-                    <div className="mt-4 grid gap-3 lg:grid-cols-[1.25fr_0.75fr]">
-                      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                    <div className="mt-3 grid gap-2 lg:grid-cols-[1.25fr_0.75fr]">
+                      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
                         <div className="flex items-center justify-between gap-3">
                           <div>
                             <div className="text-sm font-semibold text-[#F7F4ED]">
@@ -2550,7 +2799,7 @@ async function queueMockReleaseSms(nextSessionId?: string | null) {
                         </div>
                       </div>
 
-                      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
                         <div className="text-sm font-semibold text-[#F7F4ED]">
                           Board signals
                         </div>
@@ -3006,32 +3255,40 @@ const latestEvent = existingCase ? latestCaseEvent(existingCase) : null;
                   </div>
                 </div>
               )}
-            </SectionCard>
+            </DisclosureCard>
 
-            <SectionCard
+            <DisclosureCard
+              dataUi="mock-evidence-seal-v1"
               title="Mock evidence seal"
-              subtitle="Finalize only when required subject evidence, owner accountability, and placement readiness are complete."
-              right={
-                <button
-                  type="button"
-                  onClick={finalizeMockSession}
-                  disabled={
-                    finalizeStatus.loading ||
-                    !sealReadiness ||
-                    sealReadiness.sealed ||
-                    !sealReadiness.ready
-                  }
-                  className={goldButton}
-                >
-                  {finalizeStatus.loading
-                    ? "Finalizing..."
-                    : sealReadiness?.sealed
-                      ? "Sealed"
-                      : "Finalize Mock"}
-                </button>
+              subtitle="Open only when you are ready to finalize this Mock as official evidence."
+              status={
+                sealReadiness?.sealed
+                  ? "Sealed"
+                  : sealReadiness?.ready
+                    ? "Ready to seal"
+                    : `${sealReadiness?.blockers.length ?? 0} blocker(s)`
               }
             >
               <div className="space-y-3">
+                <div className="flex flex-wrap justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={finalizeMockSession}
+                    disabled={
+                      finalizeStatus.loading ||
+                      !sealReadiness ||
+                      sealReadiness.sealed ||
+                      !sealReadiness.ready
+                    }
+                    className={goldButton}
+                  >
+                    {finalizeStatus.loading
+                      ? "Finalizing..."
+                      : sealReadiness?.sealed
+                        ? "Sealed"
+                        : "Finalize Mock"}
+                  </button>
+                </div>
                 <div
                   className={[
                     "rounded-2xl border px-4 py-3 text-[12px] leading-5",
@@ -3086,33 +3343,43 @@ const latestEvent = existingCase ? latestCaseEvent(existingCase) : null;
                   </div>
                 ) : null}
               </div>
-            </SectionCard>
+            </DisclosureCard>
 
-            <SectionCard
+            <DisclosureCard
+              dataUi="parent-mock-release-v1"
               title="Parent Mock release"
-              subtitle="Parents can only see Mock readiness after the headteacher releases a sealed Mock session."
-              right={
-                <button
-                  type="button"
-                  onClick={releaseMockToParents}
-                  disabled={
-                    mockReleaseStatus.loading ||
-                    mockReleaseStatus.releasing ||
-                    mockReleaseStatus.alreadyReleased ||
-                    !mockReleaseStatus.canRelease ||
-                    !isSealedMockStatus(broadsheet.session.status)
-                  }
-                  className={goldButton}
-                >
-                  {mockReleaseStatus.releasing
-                    ? "Releasing..."
-                    : mockReleaseStatus.alreadyReleased
-                      ? "Released"
-                      : "Release to parents"}
-                </button>
+              subtitle="Open only when this sealed Mock is ready to be shared with parents."
+              status={
+                mockReleaseStatus.loading
+                  ? "Checking..."
+                  : mockReleaseStatus.alreadyReleased
+                    ? "Released"
+                    : mockReleaseStatus.canRelease
+                      ? "Ready to release"
+                      : "Not released"
               }
             >
               <div className="space-y-3">
+                <div className="flex flex-wrap justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={releaseMockToParents}
+                    disabled={
+                      mockReleaseStatus.loading ||
+                      mockReleaseStatus.releasing ||
+                      mockReleaseStatus.alreadyReleased ||
+                      !mockReleaseStatus.canRelease ||
+                      !isSealedMockStatus(broadsheet.session.status)
+                    }
+                    className={goldButton}
+                  >
+                    {mockReleaseStatus.releasing
+                      ? "Releasing..."
+                      : mockReleaseStatus.alreadyReleased
+                        ? "Released"
+                        : "Release to parents"}
+                  </button>
+                </div>
                 <div
                   className={[
                     "rounded-2xl border px-4 py-3 text-[12px] leading-5",
@@ -3207,17 +3474,27 @@ const latestEvent = existingCase ? latestCaseEvent(existingCase) : null;
                   </div>
                 ) : null}
               </div>
-            </SectionCard>
+            </DisclosureCard>
 
-            <SectionCard
+            <DisclosureCard
+              dataUi="parent-sms-v1"
               title="Parent SMS notification"
-              subtitle="Uses current Essential School Alerts permission. Eligible siblings in the same verified family share one SMS destination."
+              subtitle="Open only when you need to check or send the parent notification."
+              status={
+                mockNotifyStatus.loading
+                  ? "Checking..."
+                  : mockNotifyStatus.alreadyNotified
+                    ? `${mockNotifyStatus.existingJob?.sentCount ?? 0} sent`
+                    : mockNotifyStatus.canQueue
+                      ? `${mockNotifyStatus.totals?.eligibleGuardianPhones ?? 0} eligible phone(s)`
+                      : "Not sent"
+              }
             >
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {mockNotifyStatus.message ? (
                   <div
                     className={[
-                      "rounded-2xl border px-4 py-3 text-[12px]",
+                      "rounded-xl border px-3 py-2 text-[11px]",
                       mockNotifyStatus.ok === false
                         ? "border-rose-300/20 bg-rose-400/10 text-rose-100"
                         : "border-emerald-300/20 bg-emerald-400/10 text-emerald-100",
@@ -3227,7 +3504,7 @@ const latestEvent = existingCase ? latestCaseEvent(existingCase) : null;
                   </div>
                 ) : null}
 
-                <div className="grid gap-3 md:grid-cols-5">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
                   <MetricCard
                     label="Eligible phones"
                     value={mockNotifyStatus.totals?.eligibleGuardianPhones ?? "—"}
@@ -3259,7 +3536,7 @@ const latestEvent = existingCase ? latestCaseEvent(existingCase) : null;
                   />
                 </div>
 
-                <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-[12px] text-[#C9CDD6]">
+                <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[11px] text-[#C9CDD6]">
                   <div className="font-semibold text-[#F7F4ED]">
                     Notification status
                   </div>
@@ -3358,14 +3635,22 @@ const latestEvent = existingCase ? latestCaseEvent(existingCase) : null;
                   </button>
                 </div>
               </div>
-            </SectionCard>
+            </DisclosureCard>
 
-            <SectionCard
+            <DisclosureCard
+              dataUi="evidence-command-map-v1"
               title="Evidence completeness command map"
-              subtitle="Bank-grade action surface: what is missing, who owns it, and where to act next."
+              subtitle="Open when something is missing and you need to know who should act next."
+              status={
+                sealReadiness?.sealed
+                  ? "Evidence sealed"
+                  : sealReadiness?.ready
+                    ? "Evidence ready for review"
+                    : `${broadsheet.evidenceActions.headlineActions.length} action(s)`
+              }
             >
-              <div className="space-y-4">
-                <div className="grid gap-3 rounded-2xl border border-white/10 bg-[#08111C]/85 p-4 md:grid-cols-[220px_1fr]">
+              <div className="space-y-3">
+                <div className="grid gap-2 rounded-xl border border-white/10 bg-[#08111C]/85 p-3 md:grid-cols-[190px_1fr]">
                   <div>
                     <label className="mb-1 block text-[11px] font-semibold text-[#AEB6C4]">
                       Reminder deadline
@@ -3391,11 +3676,11 @@ const latestEvent = existingCase ? latestCaseEvent(existingCase) : null;
                   </div>
                 </div>
 
-                <div className="grid gap-3 lg:grid-cols-3">
+                <div className="grid gap-2 lg:grid-cols-3">
                   {broadsheet.evidenceActions.headlineActions.map((action) => (
                     <div
                       key={`${action.code}:${action.title}:${action.subject ?? action.studentId ?? ""}`}
-                      className="rounded-2xl border border-white/10 bg-[#08111C]/85 p-4"
+                      className="rounded-xl border border-white/10 bg-[#08111C]/85 p-3"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -3573,8 +3858,8 @@ const latestEvent = existingCase ? latestCaseEvent(existingCase) : null;
                   ))}
                 </div>
 
-                <div className="grid gap-3 lg:grid-cols-3">
-                  <div className={panelCard + " p-4"}>
+                <div className="grid gap-2 lg:grid-cols-3">
+                  <div className={panelCard + " p-3"}>
                     <div className="text-sm font-semibold text-[#F7F4ED]">
                       Missing core columns
                     </div>
@@ -3599,7 +3884,7 @@ const latestEvent = existingCase ? latestCaseEvent(existingCase) : null;
                     </div>
                   </div>
 
-                  <div className={panelCard + " p-4"}>
+                  <div className={panelCard + " p-3"}>
                     <div className="text-sm font-semibold text-[#F7F4ED]">
                       Missing school aggregate columns
                     </div>
@@ -3624,7 +3909,7 @@ const latestEvent = existingCase ? latestCaseEvent(existingCase) : null;
                     </div>
                   </div>
 
-                  <div className={panelCard + " p-4"}>
+                  <div className={panelCard + " p-3"}>
                     <div className="text-sm font-semibold text-[#F7F4ED]">
                       Elective sufficiency
                     </div>
@@ -3659,8 +3944,8 @@ const latestEvent = existingCase ? latestCaseEvent(existingCase) : null;
                   </div>
                 </div>
 
-                <div className="grid gap-3 lg:grid-cols-2">
-                  <div className={panelCard + " p-4"}>
+                <div className="grid gap-2 lg:grid-cols-2">
+                  <div className={panelCard + " p-3"}>
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="text-sm font-semibold text-[#F7F4ED]">
@@ -3707,7 +3992,7 @@ const latestEvent = existingCase ? latestCaseEvent(existingCase) : null;
                     </div>
                   </div>
 
-                  <div className={panelCard + " p-4"}>
+                  <div className={panelCard + " p-3"}>
                     <div className="text-sm font-semibold text-[#F7F4ED]">
                       Learner evidence gaps
                     </div>
@@ -3757,7 +4042,7 @@ const latestEvent = existingCase ? latestCaseEvent(existingCase) : null;
                   </div>
                 </div>
 
-                <div className={panelCard + " p-4"}>
+                <div className={panelCard + " p-3"}>
                   <div className="text-sm font-semibold text-[#F7F4ED]">
                     Early learner support signals
                   </div>
@@ -3799,245 +4084,28 @@ const latestEvent = existingCase ? latestCaseEvent(existingCase) : null;
                   </div>
                 </div>
               </div>
-            </SectionCard>
+            </DisclosureCard>
 
-            <SectionCard
-              title="Candidate rescue profiles"
-              subtitle="Learner-by-learner BECE Mock rescue lens: missing evidence, weak subjects, near-grade opportunities, and next action."
-            >
-              <div className="space-y-4">
-                <div className="grid gap-3 md:grid-cols-4">
-                  <MetricCard
-                    label="Critical rescue"
-                    value={
-                      broadsheet.candidateRescueProfiles.filter(
-                        (profile) => profile.priority === "CRITICAL",
-                      ).length
-                    }
-                    hint="Missing evidence or severe weakness"
-                  />
-                  <MetricCard
-                    label="High rescue"
-                    value={
-                      broadsheet.candidateRescueProfiles.filter(
-                        (profile) => profile.priority === "HIGH",
-                      ).length
-                    }
-                    hint="Weak subject drag"
-                  />
-                  <MetricCard
-                    label="Improvement chances"
-                    value={
-                      broadsheet.candidateRescueProfiles.filter(
-                        (profile) => profile.priority === "MEDIUM",
-                      ).length
-                    }
-                    hint="Near next grade"
-                  />
-                  <MetricCard
-                    label="Stable monitor"
-                    value={
-                      broadsheet.candidateRescueProfiles.filter(
-                        (profile) => profile.priority === "LOW",
-                      ).length
-                    }
-                    hint="No urgent signal"
-                  />
-                </div>
-
-                <div className="grid gap-3 lg:grid-cols-2">
-                  {broadsheet.candidateRescueProfiles.length === 0 ? (
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-8 text-center text-[12px] text-[#AEB6C4]">
-                      No candidate rescue profiles available yet.
-                    </div>
-                  ) : (
-                    broadsheet.candidateRescueProfiles
-                      .slice(0, 12)
-                      .map((profile) => (
-                        <div
-                          key={profile.studentId}
-                          className={panelCard + " p-4"}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <div className="text-sm font-semibold text-[#F7F4ED]">
-                                {profile.name}
-                              </div>
-                              <div className="mt-1 text-[11px] text-[#AEB6C4]">
-                                Avg {formatNumber(profile.averageScore)} •{" "}
-                                {profile.scoredSubjectCount} scored •{" "}
-                                {profile.missingSubjectCount} missing
-                              </div>
-                            </div>
-
-                            <span
-                              className={[
-                                "shrink-0 rounded-full border px-2 py-1 text-[10px] font-semibold",
-                                rescuePriorityClass(profile.priority),
-                              ].join(" ")}
-                            >
-                              {profile.priorityLabel}
-                            </span>
-                          </div>
-
-                          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
-                              <div className="text-[10px] uppercase tracking-[0.14em] text-[#8F98A8]">
-                                School agg.
-                              </div>
-                              <div className="mt-1 text-[13px] font-semibold text-[#F7F4ED]">
-                                {profile.schoolAggregate.aggregate ??
-                                  "Incomplete"}
-                              </div>
-                            </div>
-
-                            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
-                              <div className="text-[10px] uppercase tracking-[0.14em] text-[#8F98A8]">
-                                Placement agg.
-                              </div>
-                              <div className="mt-1 text-[13px] font-semibold text-[#F7F4ED]">
-                                {profile.placementAggregate.aggregate ??
-                                  "Incomplete"}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="mt-3 rounded-xl border border-sky-300/15 bg-sky-400/10 px-3 py-2 text-[11px] leading-5 text-sky-100">
-                            <span className="font-semibold">Why: </span>
-                            {profile.reason}
-                          </div>
-
-                          <div className="mt-2 rounded-xl border border-emerald-300/15 bg-emerald-400/10 px-3 py-2 text-[11px] leading-5 text-emerald-100">
-                            <span className="font-semibold">Next action: </span>
-                            {profile.nextAction}
-                          </div>
-
-                          {profile.missingSubjects.length > 0 ? (
-                            <div className="mt-3">
-                              <div className="text-[11px] font-semibold text-[#F7F4ED]">
-                                Missing evidence
-                              </div>
-                              <div className="mt-2 flex flex-wrap gap-2">
-                                {profile.missingSubjects.map((subject) => (
-                                  <span
-                                    key={`${profile.studentId}:missing:${subject}`}
-                                    className="rounded-full border border-rose-300/20 bg-rose-400/10 px-2 py-1 text-[10px] font-semibold text-rose-100"
-                                  >
-                                    {subject}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          ) : null}
-
-                          {profile.weakSubjects.length > 0 ? (
-                            <div className="mt-3">
-                              <div className="text-[11px] font-semibold text-[#F7F4ED]">
-                                Weak subjects
-                              </div>
-                              <div className="mt-2 space-y-2">
-                                {profile.weakSubjects.map((subject) => (
-                                  <div
-                                    key={`${profile.studentId}:weak:${subject.canonicalSubject}`}
-                                    className="rounded-xl border border-rose-300/20 bg-rose-400/10 px-3 py-2 text-[11px] text-rose-100"
-                                  >
-                                    <div className="flex items-center justify-between gap-3">
-                                      <span className="font-semibold">
-                                        {subject.subject}
-                                      </span>
-                                      <span>
-                                        {formatNumber(subject.score)} •{" "}
-                                        {subject.gradeLabel ?? "—"}
-                                      </span>
-                                    </div>
-                                    <div className="mt-1 text-rose-100/75">
-                                      Owner: {subjectOwnerLine(subject)}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ) : null}
-
-                          {profile.nearGradeOpportunities.length > 0 ? (
-                            <div className="mt-3">
-                              <div className="text-[11px] font-semibold text-[#F7F4ED]">
-                                Fast improvement opportunities
-                              </div>
-                              <div className="mt-2 space-y-2">
-                                {profile.nearGradeOpportunities.map(
-                                  (subject) => (
-                                    <div
-                                      key={`${profile.studentId}:near:${subject.canonicalSubject}`}
-                                      className="rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 py-2 text-[11px] text-amber-100"
-                                    >
-                                      <div className="flex items-center justify-between gap-3">
-                                        <span className="font-semibold">
-                                          {subject.subject}
-                                        </span>
-                                        <span>
-                                          {subject.pointsToNextGrade} mark(s) to
-                                          Grade {subject.nextGrade}
-                                        </span>
-                                      </div>
-                                      <div className="mt-1 text-amber-100/75">
-                                        Owner: {subjectOwnerLine(subject)}
-                                      </div>
-                                    </div>
-                                  ),
-                                )}
-                              </div>
-                            </div>
-                          ) : null}
-
-                          {profile.strongSubjects.length > 0 ? (
-                            <div className="mt-3">
-                              <div className="text-[11px] font-semibold text-[#F7F4ED]">
-                                Strengths to protect
-                              </div>
-                              <div className="mt-2 flex flex-wrap gap-2">
-                                {profile.strongSubjects.map((subject) => (
-                                  <span
-                                    key={`${profile.studentId}:strong:${subject.canonicalSubject}`}
-                                    className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-1 text-[10px] font-semibold text-emerald-100"
-                                  >
-                                    {subject.subject} •{" "}
-                                    {subject.gradeLabel ?? "—"}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          ) : null}
-
-                          <div className="mt-3">
-                            <Link
-                              href={`/headteacher/student/${profile.studentId}?focus=mock-readiness`}
-                              className="inline-flex rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/[0.08]"
-                            >
-                              Open learner profile
-                            </Link>
-                          </div>
-                        </div>
-                      ))
-                  )}
-                </div>
-              </div>
-            </SectionCard>
-
-            <div className="grid gap-5 lg:grid-cols-2">
-              <SectionCard
+            <div className="grid gap-3 lg:grid-cols-2">
+              <DisclosureCard
+                dataUi="subject-readiness-v1"
                 title="Subject readiness"
-                subtitle="Averages, missing scores, and strongest/weakest subjects."
+                subtitle="Open when you need subject averages, missing scores and readiness detail."
+                status={
+                  broadsheet.subjectSummaries.some((summary) => summary.missingCount > 0)
+                    ? `${broadsheet.subjectSummaries.filter((summary) => summary.missingCount > 0).length} subject(s) with gaps`
+                    : "All subject scores complete"
+                }
               >
-                <div className="grid gap-3 md:grid-cols-2">
+                <div className="grid gap-2 md:grid-cols-2">
                   {broadsheet.subjectSummaries.length === 0 ? (
                     <div className="text-sm text-[#AEB6C4]">
                       No Mock subjects created yet.
                     </div>
                   ) : (
                     broadsheet.subjectSummaries.map((summary) => (
-                      <div key={summary.itemId} className={panelCard + " p-4"}>
-                        <div className="flex items-start justify-between gap-3">
+                      <div key={summary.itemId} className={panelCard + " p-3"}>
+                        <div className="flex items-start justify-between gap-2">
                           <div>
                             <div className="text-sm font-semibold text-[#F7F4ED]">
                               {summary.subject}
@@ -4052,7 +4120,7 @@ const latestEvent = existingCase ? latestCaseEvent(existingCase) : null;
                           </span>
                         </div>
 
-                        <div className="mt-3 grid grid-cols-2 gap-2">
+                        <div className="mt-2 grid grid-cols-2 gap-2">
                           <MetricCard
                             label="Avg score"
                             value={formatNumber(summary.averageScore)}
@@ -4066,18 +4134,24 @@ const latestEvent = existingCase ? latestCaseEvent(existingCase) : null;
                     ))
                   )}
                 </div>
-              </SectionCard>
+              </DisclosureCard>
 
-              <SectionCard
+              <DisclosureCard
+                dataUi="leadership-focus-v1"
                 title="Leadership focus"
-                subtitle="Where the headteacher should pay attention first."
+                subtitle="Open when you need the strongest and weakest subject signals."
+                status={
+                  broadsheet.weakestSubjects[0]?.subject
+                    ? `Watch ${broadsheet.weakestSubjects[0].subject}`
+                    : "No priority subject signal"
+                }
               >
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className={panelCard + " p-4"}>
+                <div className="grid gap-2 md:grid-cols-2">
+                  <div className={panelCard + " p-3"}>
                     <div className="text-sm font-semibold text-[#F7F4ED]">
                       Weakest subjects
                     </div>
-                    <div className="mt-3 space-y-2">
+                    <div className="mt-2 space-y-1.5">
                       {broadsheet.weakestSubjects.length === 0 ? (
                         <div className="text-[12px] text-[#AEB6C4]">
                           Not enough subject evidence yet.
@@ -4101,11 +4175,11 @@ const latestEvent = existingCase ? latestCaseEvent(existingCase) : null;
                     </div>
                   </div>
 
-                  <div className={panelCard + " p-4"}>
+                  <div className={panelCard + " p-3"}>
                     <div className="text-sm font-semibold text-[#F7F4ED]">
                       Strongest subjects
                     </div>
-                    <div className="mt-3 space-y-2">
+                    <div className="mt-2 space-y-1.5">
                       {broadsheet.topSubjects.length === 0 ? (
                         <div className="text-[12px] text-[#AEB6C4]">
                           Not enough subject evidence yet.
@@ -4129,85 +4203,10 @@ const latestEvent = existingCase ? latestCaseEvent(existingCase) : null;
                     </div>
                   </div>
                 </div>
-              </SectionCard>
+              </DisclosureCard>
             </div>
 
-            <SectionCard
-              title="Learner readiness broadsheet"
-              subtitle="Placement-style aggregate stays incomplete until all required subjects exist."
-            >
-              <div className="overflow-auto rounded-2xl border border-white/10">
-                <table className="min-w-[980px] w-full border-collapse text-left text-[12px]">
-                  <thead className="bg-white/[0.05] text-[#AEB6C4]">
-                    <tr>
-                      <th className="border-b border-white/10 px-3 py-2">
-                        Learner
-                      </th>
-                      <th className="border-b border-white/10 px-3 py-2">
-                        Scored subjects
-                      </th>
-                      <th className="border-b border-white/10 px-3 py-2">
-                        Average
-                      </th>
-                      <th className="border-b border-white/10 px-3 py-2">
-                        School agg.
-                      </th>
-                      <th className="border-b border-white/10 px-3 py-2">
-                        Placement agg.
-                      </th>
-                      <th className="border-b border-white/10 px-3 py-2">
-                        Readiness
-                      </th>
-                      <th className="border-b border-white/10 px-3 py-2">
-                        Missing for placement
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {broadsheet.students.map((student) => (
-                      <tr
-                        key={student.studentId}
-                        className="border-b border-white/5"
-                      >
-                        <td className="px-3 py-2 font-semibold text-[#F7F4ED]">
-                          {student.name}
-                        </td>
-                        <td className="px-3 py-2 text-[#C9CDD6]">
-                          {student.scoredSubjectCount} scored •{" "}
-                          {student.missingSubjectCount} missing
-                        </td>
-                        <td className="px-3 py-2 text-[#C9CDD6]">
-                          {formatNumber(student.averageScore)}
-                        </td>
-                        <td className="px-3 py-2 text-[#C9CDD6]">
-                          {student.schoolAggregate.aggregate ?? "Incomplete"}
-                        </td>
-                        <td className="px-3 py-2 text-[#C9CDD6]">
-                          {student.placementAggregate.aggregate ?? "Incomplete"}
-                        </td>
-                        <td className="px-3 py-2">
-                          <span
-                            className={[
-                              "inline-flex rounded-full border px-2 py-1 text-[11px] font-semibold",
-                              readinessClass(student.readiness.code),
-                            ].join(" ")}
-                          >
-                            {student.readiness.code}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2 text-[#AEB6C4]">
-                          {student.placementAggregate.missingSubjects?.length
-                            ? student.placementAggregate.missingSubjects.join(
-                                ", ",
-                              )
-                            : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </SectionCard>
+
           </>
         )}
       </div>

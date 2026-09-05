@@ -186,7 +186,6 @@ function buildHeaders(subjects: string[]) {
     headers.push("GR");
   }
 
-  headers.push("SCHOOL\nAGG");
   headers.push("PLACEMENT\nAGG");
   headers.push("TOTAL");
 
@@ -194,7 +193,7 @@ function buildHeaders(subjects: string[]) {
 }
 
 function totalColumns(subjects: string[]) {
-  return 2 + subjects.length * 2 + 3;
+  return 2 + subjects.length * 2 + 2;
 }
 
 function addTemplateBroadsheet(
@@ -261,7 +260,6 @@ function addTemplateBroadsheet(
     }
 
     values.push(
-      student.schoolAggregate.aggregate ?? "",
       student.placementAggregate.aggregate ?? "",
       student.totalRawScore ?? "",
     );
@@ -310,23 +308,12 @@ function addTemplateBroadsheet(
       col += 2;
     }
 
-    const schoolAggCol = 3 + subjects.length * 2;
-    const placementAggCol = schoolAggCol + 1;
+    const placementAggCol = 3 + subjects.length * 2;
     const totalCol = placementAggCol + 1;
 
-    row.getCell(schoolAggCol).fill = aggregateFill(
-      student.schoolAggregate.aggregate,
-    );
     row.getCell(placementAggCol).fill = aggregateFill(
       student.placementAggregate.aggregate,
     );
-
-    row.getCell(schoolAggCol).font = {
-      name: "Calibri",
-      bold: true,
-      size: 24,
-      color: { argb: "FF000000" },
-    };
 
     row.getCell(placementAggCol).font = {
       name: "Calibri",

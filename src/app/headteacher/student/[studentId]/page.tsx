@@ -320,39 +320,42 @@ const shouldFocusMock = qs.get('focus') === 'mock-readiness'
               </div>
             ) : (
               <>
-                <div className="grid gap-3 md:grid-cols-5">
-                  <div className={softPanel + ' p-4'}>
-                    <div className="text-[11px] uppercase tracking-[0.16em] text-[#8F98A8]">Average</div>
-                    <div className="mt-2 text-2xl font-semibold text-white">{fmt(mockReadiness.averageScore)}</div>
+                <div
+                  data-mock-rescue-profile-stats="compact-v1"
+                  className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5"
+                >
+                  <div className={softPanel + ' min-w-0 px-3 py-2.5'}>
+                    <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#8F98A8] sm:text-[10px]">Average</div>
+                    <div className="mt-1 text-lg font-semibold leading-none text-white">{fmt(mockReadiness.averageScore)}</div>
                   </div>
 
-                  <div className={softPanel + ' p-4'}>
-                    <div className="text-[11px] uppercase tracking-[0.16em] text-[#8F98A8]">School aggregate</div>
-                    <div className="mt-2 text-2xl font-semibold text-white">
+                  <div className={softPanel + ' min-w-0 px-3 py-2.5'}>
+                    <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#8F98A8] sm:text-[10px]">School aggregate</div>
+                    <div className="mt-1 truncate text-lg font-semibold leading-none text-white">
                       {mockReadiness.schoolAggregate?.aggregate ?? 'Incomplete'}
                     </div>
                   </div>
 
-                  <div className={softPanel + ' p-4'}>
-                    <div className="text-[11px] uppercase tracking-[0.16em] text-[#8F98A8]">Placement aggregate</div>
-                    <div className="mt-2 text-2xl font-semibold text-white">
+                  <div className={softPanel + ' min-w-0 px-3 py-2.5'}>
+                    <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#8F98A8] sm:text-[10px]">Placement aggregate</div>
+                    <div className="mt-1 truncate text-lg font-semibold leading-none text-white">
                       {mockReadiness.placementAggregate?.aggregate ?? 'Incomplete'}
                     </div>
                   </div>
 
-                  <div className={softPanel + ' p-4'}>
-                    <div className="text-[11px] uppercase tracking-[0.16em] text-[#8F98A8]">Scored</div>
-                    <div className="mt-2 text-lg font-semibold text-white">
+                  <div className={softPanel + ' min-w-0 px-3 py-2.5'}>
+                    <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#8F98A8] sm:text-[10px]">Scored</div>
+                    <div className="mt-1 text-base font-semibold leading-none text-white">
                       {mockReadiness.scoredSubjectCount} scored
                     </div>
-                    <div className="mt-1 text-xs text-[#AEB6C4]">
+                    <div className="mt-1 text-[10px] leading-4 text-[#AEB6C4]">
                       {mockReadiness.missingSubjectCount} missing
                     </div>
                   </div>
 
-                  <div className={softPanel + ' p-4'}>
-                    <div className="text-[11px] uppercase tracking-[0.16em] text-[#8F98A8]">Readiness</div>
-                    <div className="mt-2">
+                  <div className={softPanel + ' col-span-2 min-w-0 px-3 py-2.5 sm:col-span-1'}>
+                    <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#8F98A8] sm:text-[10px]">Readiness</div>
+                    <div className="mt-1">
                       <span className={readinessBadge(mockReadiness.readiness?.code)}>
                         {mockReadiness.readiness?.label || 'Incomplete'}
                       </span>

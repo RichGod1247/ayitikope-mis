@@ -259,12 +259,6 @@ function buildColumns(subjects: string[], scale = 1) {
   }
 
   columns.push({
-    key: "schoolAgg",
-    label: "SCHOOL\nAGG",
-    width: w(54),
-    kind: "agg",
-  });
-  columns.push({
     key: "placementAgg",
     label: "PLACE.\nAGG",
     width: w(54),
@@ -332,12 +326,6 @@ function drawStudentRow(
       const cell = subjectCellFor(args.row, column.subject);
       value = cell?.grade == null ? "" : text(cell.grade);
       fill = gradeColor(cell?.grade);
-    } else if (column.key === "schoolAgg") {
-      value =
-        args.row.schoolAggregate.aggregate == null
-          ? ""
-          : text(args.row.schoolAggregate.aggregate);
-      fill = aggregateColor(args.row.schoolAggregate.aggregate);
     } else if (column.key === "placementAgg") {
       value =
         args.row.placementAggregate.aggregate == null
