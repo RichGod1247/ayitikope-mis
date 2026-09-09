@@ -39,10 +39,12 @@ const listPath = "src/app/teacher/lesson-notes/ui/LessonNotesListClient.tsx";
 const editorPath = "src/app/teacher/lesson-notes/[id]/ui/LessonNoteEditorClient.tsx";
 const studioPath = "src/app/teacher/lesson-notes/studio/ui/LessonNotesStudioClient.tsx";
 const createFromSchemePath = "src/app/api/teachers/lesson-notes/create-from-scheme/route.ts";
+const palettePath = "src/components/teacher/GhanaianLanguageCharacterPalette.tsx";
 const list = read(listPath);
 const editor = read(editorPath);
 const studio = read(studioPath);
 const createFromScheme = read(createFromSchemePath);
+const palette = read(palettePath);
 
 // Lesson Notes list: status-first guidance + low-network filter behavior.
 has(list, 'const [filtersOpen, setFiltersOpen] = useState(false);', "progressive filter disclosure");
@@ -80,6 +82,25 @@ has(editor, 'Choose indicator from approved Scheme', "BBC Scheme-item picker wor
 has(editor, '<summary className="cursor-pointer text-xs font-semibold text-[#D7DCE5]">Having trouble finding the indicator?</summary>', "advanced picker troubleshooting disclosure");
 has(editor, 'id="lesson-note-fields"', "continue-to-fields anchor");
 
+// GL-P1 U4K: native-language input follows the teacher across desktop and mobile.
+has(editor, "activeLanguageField", "active Lesson Note field state for mobile language accessory");
+has(editor, "onActiveChange={setActiveLanguageField}", "all editable Lesson Note fields report active focus");
+has(editor, "mobileActive={Boolean(activeLanguageField)}", "mobile palette follows current active Lesson Note field");
+has(editor, "languageStickyAnchorRef", "desktop language sticky transition anchor");
+has(editor, "desktopLanguageCompact", "desktop keys-only sticky state");
+has(editor, "anchor.getBoundingClientRect().top <= 96", "desktop compact state begins only when sticky threshold is reached");
+has(editor, 'className="mt-2 space-y-2 md:sticky md:top-24 md:z-30"', "desktop sticky authority remains on long-lived Lesson Note section child");
+has(editor, 'desktopLanguageCompact ? "md:hidden" : ""', "bulky language badge and copy disappear only while desktop palette is sticky");
+has(editor, "desktopCompact={desktopLanguageCompact}", "palette receives desktop compact sticky state");
+has(editor, 'lessonLanguage ? "pb-24 md:pb-4" : ""', "mobile editor reserves room for language keyboard accessory");
+has(palette, "window.visualViewport", "mobile visual-viewport keyboard positioning");
+has(palette, "props.desktopCompact", "desktop palette has distinct natural and sticky presentations");
+has(palette, 'className="w-fit max-w-full rounded-xl', "sticky desktop presentation contains only a compact key surface");
+has(palette, 'className="fixed inset-x-1.5 z-[65] md:hidden"', "compact mobile language keyboard accessory");
+has(palette, "onPointerDown={(event) => event.preventDefault()}", "palette taps preserve active textarea focus and phone keyboard");
+has(palette, "overflow-x-auto overscroll-x-contain", "compact horizontally scrollable mobile character strip");
+lacks(palette, "Your phone keyboard stays open.", "bulky mobile helper copy inside active keyboard accessory");
+
 // Approved Scheme remains level-scoped; exact classroom is bound only when a Lesson Note is created.
 has(createFromScheme, 'classroomId: z.string().trim().min(1).max(160).optional().nullable()', "optional exact classroom request");
 has(createFromScheme, "listUserAccessibleClassrooms", "existing teacher classroom authority reused");
@@ -92,6 +113,17 @@ has(createFromScheme, 'status: { in: ["DRAFT", "REJECTED"] }', "only mutable leg
 has(createFromScheme, '...(existing.classroomId ? {} : { classroomId })', "legacy mutable draft gains exact classroom without rewriting bound evidence");
 has(createFromScheme, "classroomId,", "created Lesson Note is anchored to exact classroom");
 lacks(createFromScheme, "schemeOfWork.update", "Lesson Note classroom binding must not mutate level-scoped Scheme authority");
+
+// Create-from-Scheme is idempotent under double-click/retry/concurrent requests.
+// The server serializes the same canonical tenant/teacher/class/subject/term/year/week/level
+// identity before running the existing-note read/create decision.
+has(createFromScheme, "function lessonNoteCreationLockKey", "canonical Lesson Note creation lock-key helper");
+has(createFromScheme, '"LESSON_NOTE_CREATE_FROM_SCHEME_V1"', "versioned Lesson Note creation lock namespace");
+has(createFromScheme, "const creationLockKey = lessonNoteCreationLockKey({", "server-derived canonical creation lock key");
+has(createFromScheme, "pg_advisory_xact_lock", "transaction-scoped Lesson Note creation serialization");
+has(createFromScheme, '::text AS "lockResult"', "Prisma-supported scalar cast for advisory-lock result");
+has(createFromScheme, "hashtextextended", "64-bit database advisory lock hashing");
+has(createFromScheme, "const existingExact = await tx.lessonNote.findFirst({", "existing-note recheck occurs inside serialized transaction");
 has(studio, 'data.code === "CLASSROOM_REQUIRED"', "Studio handles exact-class choice response");
 has(studio, "Which class is this Lesson Note for?", "BBC exact-class prompt");
 has(studio, "The approved Scheme can cover the level.", "level-scoped Scheme explanation");
@@ -104,13 +136,13 @@ has(studio, "defaultChoices.length === 1 ? defaultChoices[0]!.id :", "single can
 has(studio, '...(classroomId ? { classroomId } : {})', "class choice is retried in the existing create POST");
 lacks(studio, '/api/teachers/classrooms/list', "exact-class bridge adds no extra classroom-list browser fetch");
 
-// Existing server-side authority and workflow must remain byte-identical except the intentional create-from-Scheme class-binding bridge.
+// Existing server-side authority and workflow remain exact. GL-P1 intentionally extends the teacher item GET and upsert routes with frozen Ghanaian-language evidence; their exact new hashes and language-only markers are pinned below.
 const protectedHashes = {
   "src/lib/lessonNotes/approvedScheme.ts": "36D10F64CBA812E9C448CE9FCD4141B40CB38BD98E195D5AD66C91A1056B39E3",
   "src/app/api/teachers/lesson-notes/from-scheme-item/route.ts": "35EC18A52D63DE6BA00AFC90F9C2151B4F16B9C90A3B3765079B7F8AB3E53468",
   "src/app/api/teachers/lesson-notes/list/route.ts": "45ADEDEC1526FF0395102571AB8657C00701D041C1549E6924753E60006DA147",
-  "src/app/api/teachers/lesson-notes/item/[id]/route.ts": "FC1EA0BD9CE47104902FEDF51D43A1006D8F7B8964EEA4F7EFF4D0533CD21EB6",
-  "src/app/api/teachers/lesson-notes/upsert/route.ts": "B9D3A71F5E74A7A5FFCDF38FB44E912ED3A885D24225CF19180C1466E6E0F8FB",
+  "src/app/api/teachers/lesson-notes/item/[id]/route.ts": "3CFA90BE7517F74C43368A3F57E3438F1A7E7A09A24902CE2D30DEA4346BB6E5",
+  "src/app/api/teachers/lesson-notes/upsert/route.ts": "CE5D3BA4A34DF7EFC1C53E72C2C31772FDF7DB2F94292D94554CB864672C03FE",
   "src/app/api/teachers/lesson-notes/submit/route.ts": "05696E70C5CA5683A8863FD9608DCB26BAB62DF97BA57D93C74C4F4ADFD027B9",
   "src/app/api/teachers/lesson-notes/delete/route.ts": "34DB743DA56ACD1CA4144C72839204022CE32D9E259B6866FA06FF03A0674783",
   "src/app/api/headteacher/lesson-notes/review/route.ts": "7E1C276FA1FF978AEB68FEB17C0703EEB5DBEB26BEAF7BF719C02DDA2F5D1BB2",
@@ -125,6 +157,18 @@ for (const [relativePath, expectedHash] of Object.entries(protectedHashes)) {
     actualHash,
   });
 }
+
+// GL-P1 extends two protected routes only to expose/freeze server-owned language evidence; tenant/teacher ownership and existing workflow authority stay pinned.
+const itemRoute = read("src/app/api/teachers/lesson-notes/item/[id]/route.ts");
+has(itemRoute, "lessonLanguageCode: true,", "frozen lesson-language field in teacher item response");
+has(itemRoute, "languageRegistryVersion: true,", "frozen language-registry version in teacher item response");
+has(itemRoute, "where: { id, tenantId: ctx.tenantId, teacherUserId: ctx.userId },", "existing tenant + teacher ownership gate on teacher item GET");
+
+const upsertRoute = read("src/app/api/teachers/lesson-notes/upsert/route.ts");
+has(upsertRoute, "normalizeEducationalTextNullable", "Unicode-safe editable Lesson Note text normalization");
+has(upsertRoute, "resolveTeacherLessonLanguageForNote", "server-owned lesson-language resolution during upsert");
+has(upsertRoute, "existing.lessonLanguageCode && !isGhanaianLanguageSubject(effectiveSubject)", "frozen Ghanaian-language subject-change guard");
+has(upsertRoute, "where: { id: lessonNoteId, tenantId: ctx.tenantId, teacherUserId: ctx.userId },", "existing tenant + teacher ownership gate on Lesson Note upsert");
 
 const submitRoute = read("src/app/api/teachers/lesson-notes/submit/route.ts");
 has(submitRoute, "notifyLessonNoteSubmitted", "existing Lesson Note submit notification call");
@@ -145,4 +189,9 @@ console.log("- advanced Scheme-item troubleshooting is hidden behind progressive
 console.log("- approved Scheme stays level-scoped; exact classroom is bound only at Lesson Note creation");
 console.log("- Lesson Note class choice defaults to the canonical single stream and progressively reveals authorized arms");
 console.log("- ambiguous multi-stream scope asks one BBC-friendly class question and validates it server-side");
-console.log("- Headteacher review, submit notifications, delete rules and remaining Lesson Note server authority are unchanged");
+console.log("- create-from-Scheme serializes canonical Lesson Note identity so retries/double-clicks reuse one draft");
+console.log("- advisory-lock result is cast to text so Prisma does not deserialize PostgreSQL void");
+console.log("- Ghanaian-language input follows the active field: sticky desktop palette + mobile keyboard accessory");
+console.log("- desktop palette is full at its natural position, then collapses to keys-only once the sticky threshold is reached");
+console.log("- mobile accessory is keys-only, compact, horizontally scrollable and visual-viewport aware");
+console.log("- Headteacher review, submit notifications and delete rules remain unchanged; teacher item/upsert authority is extended only with exact frozen-language evidence + Unicode-safe text handling");

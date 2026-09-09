@@ -4,6 +4,14 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
 import {
+  GHANAIAN_LANGUAGE_REGISTRY_VERSION,
+  GHANAIAN_LANGUAGE_SUBJECT_KEY,
+  getGhanaianLanguage,
+  isGhanaianLanguageSubject,
+  listGhanaianLanguageOptions,
+} from "@/lib/ghanaianLanguages/registry";
+import { readActiveTeacherLessonLanguageSettings } from "@/lib/lessonNotes/teacherLanguage";
+import {
   authorizeTeacherTimetableSelection,
   listTeacherTimetableOptions,
   minuteToTimeInput,
@@ -20,6 +28,7 @@ const BodySchema = z
   .object({
     classroomId: z.string().min(1).max(160),
     subject: z.string().trim().min(1).max(120),
+    languageCode: z.string().trim().min(2).max(40).optional().nullable(),
     periods: z
       .array(
         z
@@ -102,7 +111,7 @@ function requestIp(req: Request) {
 }
 
 async function loadResponseState(ctx: { tenantId: string; userId: string; roleName: string | null }) {
-  const [subjects, rows] = await Promise.all([
+  const [subjects, rows, languageSettings] = await Promise.all([
     listTeacherTimetableOptions({
       tenantId: ctx.tenantId,
       userId: ctx.userId,
@@ -112,10 +121,24 @@ async function loadResponseState(ctx: { tenantId: string; userId: string; roleNa
       tenantId: ctx.tenantId,
       teacherUserId: ctx.userId,
     }),
+    readActiveTeacherLessonLanguageSettings({
+      tenantId: ctx.tenantId,
+      teacherUserId: ctx.userId,
+    }),
   ]);
 
   return {
     subjects,
+    languages: listGhanaianLanguageOptions(),
+    languageSettings: languageSettings.map((row) => ({
+      id: row.id,
+      classroomId: row.classroomId,
+      subject: row.subject,
+      subjectNorm: row.subjectNorm,
+      subjectKey: normalizeTimetableSubjectKey(row.subject),
+      languageCode: row.languageCode,
+      registryVersion: row.registryVersion,
+    })),
     entries: rows.map((row) => ({
       ...row,
       subjectKey: normalizeTimetableSubjectKey(row.subject),
@@ -198,6 +221,31 @@ export async function POST(req: Request) {
   const subject = authorization.subject;
   const subjectNorm = authorization.subjectNorm;
   const classroomId = authorization.classroom.id;
+  const requiresGhanaianLanguage = isGhanaianLanguageSubject(subject) || subjectNorm === GHANAIAN_LANGUAGE_SUBJECT_KEY;
+  const requestedLanguage = getGhanaianLanguage(parsed.data.languageCode);
+
+  if (requiresGhanaianLanguage && !requestedLanguage) {
+    return jsonNoStore(
+      {
+        ok: false,
+        code: "GHANAIAN_LANGUAGE_REQUIRED",
+        error: "Choose the Ghanaian language you teach.",
+      },
+      400,
+    );
+  }
+
+  if (!requiresGhanaianLanguage && parsed.data.languageCode) {
+    return jsonNoStore(
+      {
+        ok: false,
+        code: "GHANAIAN_LANGUAGE_NOT_APPLICABLE",
+        error: "A Ghanaian language can only be selected for the Ghanaian Language subject.",
+      },
+      400,
+    );
+  }
+
   const auditAction = periods.length
     ? "TEACHER_LESSON_TIMETABLE_REPLACED"
     : "TEACHER_LESSON_TIMETABLE_CLEARED";
@@ -228,6 +276,69 @@ export async function POST(req: Request) {
             AND "isActive" = true
           FOR UPDATE
         `);
+
+        const existingLanguageSettings = requiresGhanaianLanguage
+          ? await tx.$queryRaw<Array<{ id: string; languageCode: string; registryVersion: string }>>(Prisma.sql`
+              SELECT
+                "id"::text AS "id",
+                "languageCode" AS "languageCode",
+                "registryVersion" AS "registryVersion"
+              FROM edulife_os."TeacherLessonLanguageSetting"
+              WHERE "tenantId" = ${auth.ctx.tenantId}
+                AND "teacherUserId" = ${auth.ctx.userId}
+                AND "classroomId" = ${classroomId}
+                AND "subjectNorm" = ${GHANAIAN_LANGUAGE_SUBJECT_KEY}
+                AND "isActive" = true
+              FOR UPDATE
+            `)
+          : [];
+
+        if (existingLanguageSettings.length > 1) {
+          throw new Error("GL_LANGUAGE_MULTIPLE_ACTIVE_SETTINGS");
+        }
+
+        const activeLanguageSetting = existingLanguageSettings[0] ?? null;
+        const languageChanged = Boolean(
+          requiresGhanaianLanguage &&
+            requestedLanguage &&
+            (!activeLanguageSetting ||
+              activeLanguageSetting.languageCode !== requestedLanguage.code ||
+              activeLanguageSetting.registryVersion !== GHANAIAN_LANGUAGE_REGISTRY_VERSION),
+        );
+
+        if (languageChanged && activeLanguageSetting) {
+          await tx.$executeRaw(Prisma.sql`
+            UPDATE edulife_os."TeacherLessonLanguageSetting"
+            SET
+              "isActive" = false,
+              "retiredAt" = now(),
+              "updatedAt" = now()
+            WHERE "id" = ${activeLanguageSetting.id}::uuid
+              AND "isActive" = true
+          `);
+        }
+
+        if (languageChanged && requestedLanguage) {
+          await tx.$executeRaw(Prisma.sql`
+            INSERT INTO edulife_os."TeacherLessonLanguageSetting" (
+              "tenantId",
+              "teacherUserId",
+              "classroomId",
+              "subject",
+              "subjectNorm",
+              "languageCode",
+              "registryVersion"
+            ) VALUES (
+              ${auth.ctx.tenantId},
+              ${auth.ctx.userId},
+              ${classroomId},
+              ${subject},
+              ${GHANAIAN_LANGUAGE_SUBJECT_KEY},
+              ${requestedLanguage.code},
+              ${GHANAIAN_LANGUAGE_REGISTRY_VERSION}
+            )
+          `);
+        }
 
         if (existing.length) {
           await tx.$executeRaw(Prisma.sql`
@@ -284,6 +395,9 @@ export async function POST(req: Request) {
               retiredCount: existing.length,
               activePeriodCount: periods.length,
               periods,
+              lessonLanguageCode: requestedLanguage?.code ?? null,
+              languageRegistryVersion: requestedLanguage ? GHANAIAN_LANGUAGE_REGISTRY_VERSION : null,
+              languageSettingChanged: languageChanged,
             },
           },
         });
@@ -298,7 +412,7 @@ export async function POST(req: Request) {
     const state = await loadResponseState(auth.ctx);
     return jsonNoStore({
       ok: true,
-      message: periods.length ? "Lesson times saved." : "Saved lesson times cleared.",
+      message: periods.length ? "Lesson Note settings saved." : "Saved lesson times cleared.",
       ...state,
     });
   } catch (error) {
@@ -323,6 +437,20 @@ export async function POST(req: Request) {
       text.includes("LESSON_TIMETABLE_TEACHER_MEMBERSHIP_INACTIVE")
     ) {
       return jsonNoStore({ ok: false, error: "Your current school assignment changed. Refresh and try again." }, 409);
+    }
+
+    if (
+      text.includes("GL_LANGUAGE_CLASSROOM_TENANT_SCOPE_INVALID") ||
+      text.includes("GL_LANGUAGE_TEACHER_MEMBERSHIP_INACTIVE")
+    ) {
+      return jsonNoStore({ ok: false, error: "Your current school assignment changed. Refresh and try again." }, 409);
+    }
+
+    if (text.includes("GL_LANGUAGE_MULTIPLE_ACTIVE_SETTINGS")) {
+      return jsonNoStore(
+        { ok: false, error: "Your Ghanaian Language setting needs review. Please contact support before saving again." },
+        409,
+      );
     }
 
     console.error("[TEACHER_LESSON_TIMETABLE_POST_ERROR]", error);

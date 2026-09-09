@@ -11,6 +11,7 @@ import {
   resolveUserClassroomAccess,
 } from "@/lib/teacherAccess";
 import { loadOwnedSchemeItem } from "@/lib/lessonNotes/approvedScheme";
+import { resolveTeacherLessonLanguageForNote } from "@/lib/lessonNotes/teacherLanguage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -218,6 +219,29 @@ function shouldReplaceTitle(existingTitle: string | null | undefined) {
   return !cleanStr(existingTitle);
 }
 
+function lessonNoteCreationLockKey(args: {
+  tenantId: string;
+  teacherUserId: string;
+  classroomId: string;
+  subject: string;
+  term: Term;
+  academicYear: string;
+  weekNumber: number;
+  level: string;
+}) {
+  return JSON.stringify([
+    "LESSON_NOTE_CREATE_FROM_SCHEME_V1",
+    args.tenantId,
+    args.teacherUserId,
+    args.classroomId,
+    normalizeSpaces(args.subject).toLowerCase(),
+    args.term,
+    normalizeSpaces(args.academicYear),
+    String(args.weekNumber),
+    normalizeLevelToken(args.level) || normalizeSpaces(args.level).toUpperCase(),
+  ]);
+}
+
 
 type LessonNoteClassroomOption = {
   id: string;
@@ -415,10 +439,39 @@ const membership = await prisma.membership.findUnique({
     }
   }
 
+  const lessonLanguage = await resolveTeacherLessonLanguageForNote({
+    tenantId: ctx.tenantId,
+    teacherUserId: ctx.userId,
+    classroomId,
+    subject,
+  });
+
+  if (!lessonLanguage.ok) {
+    return json(409, { ok: false, code: lessonLanguage.code, error: lessonLanguage.error });
+  }
+
   const phase = phaseFromLevel(level);
+
+  const creationLockKey = lessonNoteCreationLockKey({
+    tenantId: ctx.tenantId,
+    teacherUserId: ctx.userId,
+    classroomId,
+    subject,
+    term,
+    academicYear,
+    weekNumber,
+    level,
+  });
 
   try {
     const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // Serialize the canonical Lesson Note identity before the existing-note
+      // read and create decision. This closes double-click, retry, and
+      // concurrent-request races without changing the persisted identity.
+      await tx.$queryRaw(
+        Prisma.sql`SELECT pg_advisory_xact_lock(hashtextextended(${creationLockKey}, 0::bigint))::text AS "lockResult"`
+      );
+
       const noteScope = {
         tenantId: ctx.tenantId,
         teacherUserId: ctx.userId,
@@ -443,6 +496,8 @@ const membership = await prisma.membership.findUnique({
           schemeOfWorkItemId: true,
           lessonTitle: true,
           status: true,
+          lessonLanguageCode: true,
+          languageRegistryVersion: true,
         },
       });
 
@@ -466,6 +521,8 @@ const membership = await prisma.membership.findUnique({
               schemeOfWorkItemId: true,
               lessonTitle: true,
               status: true,
+              lessonLanguageCode: true,
+              languageRegistryVersion: true,
             },
           });
 
@@ -496,6 +553,12 @@ const membership = await prisma.membership.findUnique({
             where: { id: existing.id },
             data: {
               ...(existing.classroomId ? {} : { classroomId }),
+              ...(!existing.lessonLanguageCode && lessonLanguage.lessonLanguageCode
+                ? {
+                    lessonLanguageCode: lessonLanguage.lessonLanguageCode,
+                    languageRegistryVersion: lessonLanguage.languageRegistryVersion,
+                  }
+                : {}),
               curriculumUnitId: existing.curriculumUnitId ?? bestUnit?.id ?? null,
               schemeOfWorkItemId: item.id,
               strand: strandText,
@@ -521,6 +584,8 @@ const membership = await prisma.membership.findUnique({
           tenantId: ctx.tenantId,
           teacherUserId: ctx.userId,
           classroomId,
+          lessonLanguageCode: lessonLanguage.lessonLanguageCode,
+          languageRegistryVersion: lessonLanguage.languageRegistryVersion,
 
           subject,
           phase,

@@ -3,6 +3,9 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import GhanaianLanguageCharacterPalette from "@/components/teacher/GhanaianLanguageCharacterPalette";
+import { getGhanaianLanguage } from "@/lib/ghanaianLanguages/registry";
+import { normalizeEducationalText } from "@/lib/ghanaianLanguages/text";
 
 type LessonNoteStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
@@ -32,6 +35,8 @@ type SchemeUnit = {
 type LessonNote = {
   id: string;
   subject: string;
+  lessonLanguageCode: string | null;
+  languageRegistryVersion: string | null;
   phase: string | null;
   level: string | null;
 
@@ -246,10 +251,31 @@ function ConfirmDialog(props: {
   );
 }
 
+type LessonFieldKey =
+  | "lessonTitle"
+  | "objectives"
+  | "tlr"
+  | "intro"
+  | "dev"
+  | "concl"
+  | "assessment"
+  | "homework"
+  | "diff"
+  | "refl";
+
+type LessonFieldSelection = {
+  fieldKey: LessonFieldKey;
+  start: number;
+  end: number;
+};
+
 function Field(props: {
+  fieldKey: LessonFieldKey;
   label: string;
   value: string;
   onChange: (v: string) => void;
+  onSelection: (selection: LessonFieldSelection) => void;
+  onActiveChange?: (fieldKey: LessonFieldKey | null) => void;
   disabled?: boolean;
   rows?: number;
   hint?: string;
@@ -272,7 +298,24 @@ function Field(props: {
         rows={props.rows ?? 4}
         value={props.value}
         placeholder={props.placeholder}
+        data-lesson-field={props.fieldKey}
         onChange={(e) => props.onChange(e.target.value)}
+        onFocus={(e) => {
+          props.onActiveChange?.(props.fieldKey);
+          props.onSelection({
+            fieldKey: props.fieldKey,
+            start: e.currentTarget.selectionStart ?? e.currentTarget.value.length,
+            end: e.currentTarget.selectionEnd ?? e.currentTarget.value.length,
+          });
+        }}
+        onBlur={() => props.onActiveChange?.(null)}
+        onSelect={(e) =>
+          props.onSelection({
+            fieldKey: props.fieldKey,
+            start: e.currentTarget.selectionStart ?? e.currentTarget.value.length,
+            end: e.currentTarget.selectionEnd ?? e.currentTarget.value.length,
+          })
+        }
         disabled={!!props.disabled}
       />
     </div>
@@ -338,7 +381,39 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
   const [aiFields, setAiFields] = useState<any | null>(null);
 
   const baselineRef = useRef<string>("");
+  const fieldSelectionRef = useRef<LessonFieldSelection | null>(null);
+  const languageStickyAnchorRef = useRef<HTMLDivElement | null>(null);
+  const [activeLanguageField, setActiveLanguageField] = useState<LessonFieldKey | null>(null);
+  const [desktopLanguageCompact, setDesktopLanguageCompact] = useState(false);
   const locked = note?.status === "SUBMITTED" || note?.status === "APPROVED";
+
+  const lessonLanguage = useMemo(
+    () => getGhanaianLanguage(note?.lessonLanguageCode),
+    [note?.lessonLanguageCode],
+  );
+
+  useEffect(() => {
+    function syncDesktopLanguageCompact() {
+      const anchor = languageStickyAnchorRef.current;
+
+      if (!anchor || window.innerWidth < 768) {
+        setDesktopLanguageCompact(false);
+        return;
+      }
+
+      setDesktopLanguageCompact(anchor.getBoundingClientRect().top <= 96);
+    }
+
+    syncDesktopLanguageCompact();
+
+    window.addEventListener("scroll", syncDesktopLanguageCompact, { passive: true });
+    window.addEventListener("resize", syncDesktopLanguageCompact);
+
+    return () => {
+      window.removeEventListener("scroll", syncDesktopLanguageCompact);
+      window.removeEventListener("resize", syncDesktopLanguageCompact);
+    };
+  }, [lessonLanguage?.code]);
 
   const context = useMemo(() => {
     if (!note) return "";
@@ -366,6 +441,95 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
     if (!note) return false;
     return baselineRef.current !== "" && baselineRef.current !== draftSnapshot;
   }, [draftSnapshot, note]);
+
+  function rememberFieldSelection(selection: LessonFieldSelection) {
+    fieldSelectionRef.current = selection;
+    setActiveLanguageField(selection.fieldKey);
+  }
+
+  function insertGhanaianCharacter(character: string) {
+    if (locked) return;
+
+    const selection = fieldSelectionRef.current;
+    if (!selection) {
+      pushToast({
+        tone: "info",
+        title: "Choose where to type",
+        message: "Tap inside a Lesson Note field first, then choose the Ghanaian letter.",
+      });
+      return;
+    }
+
+    let current = "";
+    let setter: React.Dispatch<React.SetStateAction<string>>;
+
+    switch (selection.fieldKey) {
+      case "lessonTitle":
+        current = lessonTitle;
+        setter = setLessonTitle;
+        break;
+      case "objectives":
+        current = objectives;
+        setter = setObjectives;
+        break;
+      case "tlr":
+        current = tlr;
+        setter = setTlr;
+        break;
+      case "intro":
+        current = intro;
+        setter = setIntro;
+        break;
+      case "dev":
+        current = dev;
+        setter = setDev;
+        break;
+      case "concl":
+        current = concl;
+        setter = setConcl;
+        break;
+      case "assessment":
+        current = assessment;
+        setter = setAssessment;
+        break;
+      case "homework":
+        current = homework;
+        setter = setHomework;
+        break;
+      case "diff":
+        current = diff;
+        setter = setDiff;
+        break;
+      case "refl":
+        current = refl;
+        setter = setRefl;
+        break;
+    }
+
+    const start = Math.max(0, Math.min(selection.start, current.length));
+    const end = Math.max(start, Math.min(selection.end, current.length));
+    const inserted = normalizeEducationalText(character);
+    const next = normalizeEducationalText(
+      `${current.slice(0, start)}${inserted}${current.slice(end)}`,
+    );
+    const nextCursor = start + inserted.length;
+
+    setter(next);
+    fieldSelectionRef.current = {
+      fieldKey: selection.fieldKey,
+      start: nextCursor,
+      end: nextCursor,
+    };
+
+    window.requestAnimationFrame(() => {
+      const target = document.querySelector<HTMLTextAreaElement>(
+        `textarea[data-lesson-field="${selection.fieldKey}"]`,
+      );
+      if (!target || target.disabled) return;
+      target.focus();
+      target.setSelectionRange(nextCursor, nextCursor);
+    });
+  }
 
   const submitChecks = useMemo(() => {
     const hasUnit = Boolean(note?.schemeOfWorkItemId || note?.curriculumUnitId);
@@ -1070,7 +1234,12 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
       </section>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <section id="lesson-note-fields" className="scroll-mt-24 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+        <section
+          id="lesson-note-fields"
+          className={`scroll-mt-24 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl ${
+            lessonLanguage ? "pb-24 md:pb-4" : ""
+          }`}
+        >
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div>
               <div className="text-sm font-semibold text-[#F7F4ED]">Prepare the Lesson Note</div>
@@ -1079,8 +1248,35 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
             {locked ? <Badge tone="warn">Locked</Badge> : <Badge tone="info">Editable</Badge>}
           </div>
 
+          {lessonLanguage ? (
+            <>
+              <div ref={languageStickyAnchorRef} className="h-px" aria-hidden="true" />
+              <div className="mt-2 space-y-2 md:sticky md:top-24 md:z-30">
+                <div
+                  className={`flex flex-wrap items-center gap-2 ${
+                    desktopLanguageCompact ? "md:hidden" : ""
+                  }`}
+                >
+                  <Badge tone="info">Ghanaian Language · {lessonLanguage.name}</Badge>
+                  <span className="text-[11px] text-[#AEB6C4]">
+                    Native-language identity is frozen on this Lesson Note.
+                  </span>
+                </div>
+                <GhanaianLanguageCharacterPalette
+                  languageCode={lessonLanguage.code}
+                  disabled={locked}
+                  mobileActive={Boolean(activeLanguageField)}
+                  desktopCompact={desktopLanguageCompact}
+                  onInsert={insertGhanaianCharacter}
+                />
+              </div>
+            </>
+          ) : null}
+
           <div className="mt-3 grid gap-3">
             <Field
+              fieldKey="lessonTitle"
+              onSelection={rememberFieldSelection} onActiveChange={setActiveLanguageField}
               label="Lesson title"
               value={lessonTitle}
               onChange={setLessonTitle}
@@ -1089,15 +1285,15 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
               placeholder={lessonTitlePlaceholder}
               hint="Leave blank until you link a unit. Title will auto-fill from Sub-strand."
             />
-            <Field label="Objectives/Indicators" value={objectives} onChange={setObjectives} disabled={locked} rows={6} />
-            <Field label="Teaching & learning resources" value={tlr} onChange={setTlr} disabled={locked} rows={6} />
-            <Field label="Introduction" value={intro} onChange={setIntro} disabled={locked} rows={5} />
-            <Field label="Lesson development" value={dev} onChange={setDev} disabled={locked} rows={10} />
-            <Field label="Conclusion" value={concl} onChange={setConcl} disabled={locked} rows={4} />
-            <Field label="Assessment" value={assessment} onChange={setAssessment} disabled={locked} rows={6} />
-            <Field label="Homework" value={homework} onChange={setHomework} disabled={locked} rows={3} />
-            <Field label="Differentiation notes" value={diff} onChange={setDiff} disabled={locked} rows={5} />
-            <Field label="Reflection notes" value={refl} onChange={setRefl} disabled={locked} rows={4} />
+            <Field fieldKey="objectives" onSelection={rememberFieldSelection} onActiveChange={setActiveLanguageField} label="Objectives/Indicators" value={objectives} onChange={setObjectives} disabled={locked} rows={6} />
+            <Field fieldKey="tlr" onSelection={rememberFieldSelection} onActiveChange={setActiveLanguageField} label="Teaching & learning resources" value={tlr} onChange={setTlr} disabled={locked} rows={6} />
+            <Field fieldKey="intro" onSelection={rememberFieldSelection} onActiveChange={setActiveLanguageField} label="Introduction" value={intro} onChange={setIntro} disabled={locked} rows={5} />
+            <Field fieldKey="dev" onSelection={rememberFieldSelection} onActiveChange={setActiveLanguageField} label="Lesson development" value={dev} onChange={setDev} disabled={locked} rows={10} />
+            <Field fieldKey="concl" onSelection={rememberFieldSelection} onActiveChange={setActiveLanguageField} label="Conclusion" value={concl} onChange={setConcl} disabled={locked} rows={4} />
+            <Field fieldKey="assessment" onSelection={rememberFieldSelection} onActiveChange={setActiveLanguageField} label="Assessment" value={assessment} onChange={setAssessment} disabled={locked} rows={6} />
+            <Field fieldKey="homework" onSelection={rememberFieldSelection} onActiveChange={setActiveLanguageField} label="Homework" value={homework} onChange={setHomework} disabled={locked} rows={3} />
+            <Field fieldKey="diff" onSelection={rememberFieldSelection} onActiveChange={setActiveLanguageField} label="Differentiation notes" value={diff} onChange={setDiff} disabled={locked} rows={5} />
+            <Field fieldKey="refl" onSelection={rememberFieldSelection} onActiveChange={setActiveLanguageField} label="Reflection notes" value={refl} onChange={setRefl} disabled={locked} rows={4} />
           </div>
 
           <div className="mt-4 flex items-center justify-between flex-wrap gap-2">
@@ -1138,6 +1334,12 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
               </button>
             </div>
           </div>
+
+          {lessonLanguage ? (
+            <div className="mt-3 rounded-2xl border border-sky-300/20 bg-sky-400/10 px-4 py-3 text-sm text-sky-100">
+              Co-Tutor remains the existing grounded English-first engine in GL-P1. Use its suggestion, then make native-language corrections with the {lessonLanguage.name} letter palette. Translation is not enabled yet.
+            </div>
+          ) : null}
 
           {!note.curriculumUnitId ? (
             <div className="mt-3 rounded-2xl border border-amber-300/20 bg-amber-400/12 px-4 py-3 text-sm text-amber-100">

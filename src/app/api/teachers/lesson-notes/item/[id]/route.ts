@@ -46,6 +46,8 @@ const LESSON_NOTE_SELECT = {
   curriculumUnitId: true,
 
   subject: true,
+  lessonLanguageCode: true,
+  languageRegistryVersion: true,
   term: true,
   academicYear: true,
   weekNumber: true,

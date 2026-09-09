@@ -77,6 +77,7 @@ model User {
   lessonNotesAsTeacher                LessonNote[]                  @relation("LessonNoteTeacher")
   lessonDeliveriesAsTeacher           LessonDelivery[]              @relation("LessonDeliveryTeacher")
   teacherLessonTimetableEntries       TeacherLessonTimetableEntry[]
+  teacherLessonLanguageSettings       TeacherLessonLanguageSetting[]
   memberships                         Membership[]
   sessions                            Session[]
   passwordRecoveryTokens              PasswordRecoveryToken[]
@@ -224,6 +225,7 @@ model Tenant {
   lessonNotes               LessonNote[]
   lessonDeliveries          LessonDelivery[]
   teacherLessonTimetableEntries TeacherLessonTimetableEntry[]
+  teacherLessonLanguageSettings TeacherLessonLanguageSetting[]
   memberships               Membership[]
   roles                     Role[]
   students                  Student[]
@@ -893,6 +895,7 @@ model Classroom {
   lessonNotes          LessonNote[]
   lessonDeliveries     LessonDelivery[]
   teacherLessonTimetableEntries TeacherLessonTimetableEntry[]
+  teacherLessonLanguageSettings TeacherLessonLanguageSetting[]
 
   /// ✅ A15.4B — teacher appraisal evidence spine
   teacherAppraisals TeacherAppraisal[]
@@ -2361,6 +2364,8 @@ model LessonNote {
   term                      String
   academicYear              String
   subject                   String
+  lessonLanguageCode        String?   @db.VarChar(40)
+  languageRegistryVersion   String?   @db.VarChar(80)
   strand                    String
   substrand                 String
   lessonDate                DateTime? @db.Timestamptz(6)
@@ -2420,6 +2425,7 @@ model LessonNote {
   @@index([tenantId], map: "LessonNote_tenant_idx")
   @@index([term, academicYear, weekNumber], map: "LessonNote_term_year_week_idx")
   @@index([schemeOfWorkItemId], map: "LessonNote_schemeOfWorkItem_idx")
+  @@index([tenantId, lessonLanguageCode], map: "LessonNote_language_idx")
 }
 
 model CurriculumUnit {
@@ -2851,6 +2857,30 @@ model TeacherLessonTimetableEntry {
 
   /// DB truth also includes partial unique index TeacherLessonTimetableEntry_active_exact_unique
   /// plus insert-overlap and retired-evidence guard triggers.
+}
+
+model TeacherLessonLanguageSetting {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String
+  teacherUserId   String
+  classroomId     String
+  subject         String    @db.VarChar(120)
+  subjectNorm     String    @db.VarChar(120)
+  languageCode    String    @db.VarChar(40)
+  registryVersion String    @db.VarChar(80)
+  isActive        Boolean   @default(true)
+  retiredAt       DateTime? @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "TeacherLessonLanguageSetting_tenant_fkey")
+  teacher   User      @relation(fields: [teacherUserId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "TeacherLessonLanguageSetting_teacher_fkey")
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "TeacherLessonLanguageSetting_classroom_fkey")
+
+  @@index([tenantId, teacherUserId, isActive, classroomId, subjectNorm], map: "TeacherLessonLanguageSetting_teacher_active_idx")
+
+  /// DB truth also includes partial unique index TeacherLessonLanguageSetting_active_unique
+  /// plus insert and retired-evidence guard triggers.
 }
 
 model AssessmentScore {

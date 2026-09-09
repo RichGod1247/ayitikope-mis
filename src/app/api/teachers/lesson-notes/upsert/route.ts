@@ -4,6 +4,9 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
 import { resolveUserClassroomAccess } from "@/lib/teacherAccess";
+import { isGhanaianLanguageSubject } from "@/lib/ghanaianLanguages/registry";
+import { normalizeEducationalTextNullable } from "@/lib/ghanaianLanguages/text";
+import { resolveTeacherLessonLanguageForNote } from "@/lib/lessonNotes/teacherLanguage";
 import {
   approvedSchemeItemMatchesScope,
   findApprovedSchemeItemForScope,
@@ -76,7 +79,7 @@ function asNullableString(v: unknown): string | null | undefined {
   if (v === undefined) return undefined;
   if (v === null) return null;
   if (typeof v !== "string") return undefined;
-  return v;
+  return normalizeEducationalTextNullable(v);
 }
 
 function asTrimmedNullableString(v: unknown): string | null | undefined {
@@ -151,6 +154,8 @@ const LESSON_NOTE_SELECT = {
   schemeOfWorkItemId: true,
 
   subject: true,
+  lessonLanguageCode: true,
+  languageRegistryVersion: true,
   term: true,
   academicYear: true,
   weekNumber: true,
@@ -296,6 +301,8 @@ select: {
 
   classroomId: true,
   subject: true,
+  lessonLanguageCode: true,
+  languageRegistryVersion: true,
   level: true,
   term: true,
   academicYear: true,
@@ -389,10 +396,37 @@ if (existing.classroomId && effectiveSubjectForAccess) {
       { status: access.reason === "CLASSROOM_NOT_FOUND" ? 404 : 403 }
     );
   }
-}  
+}
 
     const effectiveSubject =
       subject !== undefined && subject !== null ? subject : existing.subject;
+
+    if (existing.lessonLanguageCode && !isGhanaianLanguageSubject(effectiveSubject)) {
+      return jsonNoStore(
+        { ok: false, error: "The subject of a language-frozen Ghanaian Language lesson note cannot be changed." },
+        { status: 409 },
+      );
+    }
+
+    const resolvedLessonLanguage = await resolveTeacherLessonLanguageForNote({
+      tenantId: ctx.tenantId,
+      teacherUserId: ctx.userId,
+      classroomId: existing.classroomId,
+      subject: effectiveSubject,
+    });
+
+    if (!resolvedLessonLanguage.ok) {
+      return jsonNoStore(
+        { ok: false, code: resolvedLessonLanguage.code, error: resolvedLessonLanguage.error },
+        { status: 409 },
+      );
+    }
+
+    const languageFreeze =
+      existing.lessonLanguageCode || !resolvedLessonLanguage.lessonLanguageCode
+        ? null
+        : resolvedLessonLanguage;
+
     const effectiveLevel =
       level !== undefined && level !== null ? level : existing.level;
     const effectiveTerm =
@@ -601,6 +635,11 @@ const data: Prisma.LessonNoteUncheckedUpdateManyInput = {
   status: nextStatus,
   submittedAt,
 };
+
+    if (languageFreeze?.lessonLanguageCode) {
+      data.lessonLanguageCode = languageFreeze.lessonLanguageCode;
+      data.languageRegistryVersion = languageFreeze.languageRegistryVersion;
+    }
 
     // Apply optional fields only when present
 if (phase !== undefined) data.phase = phase;

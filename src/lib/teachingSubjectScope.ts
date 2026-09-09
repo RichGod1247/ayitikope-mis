@@ -69,6 +69,9 @@ const SUBJECT_CANONICAL_KEY: Record<string, string> = {
 
   ICT: "COMPUTING",
   COMPUTING: "COMPUTING",
+
+  GHANAIANLANGUAGE: "GHANAIANLANGUAGE",
+  GHANAIANLANGUAGES: "GHANAIANLANGUAGE",
 };
 
 function canonicalSubjectKey(raw: unknown) {

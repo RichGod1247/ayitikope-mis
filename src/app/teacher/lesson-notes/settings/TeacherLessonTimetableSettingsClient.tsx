@@ -18,6 +18,24 @@ type SubjectOption = {
   classes: ClassroomOption[];
 };
 
+type GhanaianLanguageOption = {
+  code: string;
+  name: string;
+  keyboardCharacters: string[];
+  registryVersion: string;
+  translationStatus: string;
+};
+
+type SavedLanguageSetting = {
+  id: string;
+  classroomId: string;
+  subject: string;
+  subjectNorm: string;
+  subjectKey: string;
+  languageCode: string;
+  registryVersion: string;
+};
+
 type SavedEntry = {
   id: string;
   classroomId: string;
@@ -35,6 +53,8 @@ type ApiState = {
   ok: true;
   subjects: SubjectOption[];
   entries: SavedEntry[];
+  languages: GhanaianLanguageOption[];
+  languageSettings: SavedLanguageSetting[];
   message?: string;
 };
 
@@ -120,8 +140,11 @@ async function parseJsonResponse(res: Response) {
 export default function TeacherLessonTimetableSettingsClient() {
   const [subjects, setSubjects] = useState<SubjectOption[]>([]);
   const [entries, setEntries] = useState<SavedEntry[]>([]);
+  const [languages, setLanguages] = useState<GhanaianLanguageOption[]>([]);
+  const [languageSettings, setLanguageSettings] = useState<SavedLanguageSetting[]>([]);
   const [subjectKey, setSubjectKey] = useState("");
   const [classroomId, setClassroomId] = useState("");
+  const [languageCode, setLanguageCode] = useState("");
   const [showMultipleStreams, setShowMultipleStreams] = useState(false);
   const [periods, setPeriods] = useState<PeriodDraft[]>([newPeriod()]);
   const [loading, setLoading] = useState(true);
@@ -155,6 +178,21 @@ export default function TeacherLessonTimetableSettingsClient() {
     [classroomId, selectedSubject],
   );
 
+  const requiresGhanaianLanguage = subjectKey === "GHANAIANLANGUAGE";
+
+  const savedLanguageForSelection = useMemo(
+    () =>
+      languageSettings.find(
+        (setting) => setting.classroomId === classroomId && setting.subjectKey === subjectKey,
+      ) ?? null,
+    [classroomId, languageSettings, subjectKey],
+  );
+
+  const selectedLanguage = useMemo(
+    () => languages.find((language) => language.code === languageCode) ?? null,
+    [languageCode, languages],
+  );
+
   const savedForSelection = useMemo(
     () =>
       entries
@@ -179,6 +217,8 @@ export default function TeacherLessonTimetableSettingsClient() {
         subject: string;
         classroomId: string;
         classroomLabel: string;
+        languageCode: string | null;
+        languageName: string | null;
         entries: SavedEntry[];
       }
     >();
@@ -190,6 +230,11 @@ export default function TeacherLessonTimetableSettingsClient() {
         subject: entry.subject,
         classroomId: entry.classroomId,
         classroomLabel: classLookup.get(entry.classroomId)?.label ?? "Assigned class",
+        languageCode:
+          languageSettings.find(
+            (setting) => setting.classroomId === entry.classroomId && setting.subjectKey === entry.subjectKey,
+          )?.languageCode ?? null,
+        languageName: null,
         entries: [],
       };
       current.entries.push(entry);
@@ -199,13 +244,15 @@ export default function TeacherLessonTimetableSettingsClient() {
     return Array.from(map.values())
       .map((group) => ({
         ...group,
+        languageName:
+          languages.find((language) => language.code === group.languageCode)?.name ?? null,
         entries: group.entries.sort((a, b) => a.weekday - b.weekday || a.startMinute - b.startMinute),
       }))
       .sort(
         (a, b) =>
           a.subject.localeCompare(b.subject) || a.classroomLabel.localeCompare(b.classroomLabel),
       );
-  }, [classLookup, entries]);
+  }, [classLookup, entries, languageSettings, languages]);
 
   async function load() {
     setLoading(true);
@@ -221,10 +268,14 @@ export default function TeacherLessonTimetableSettingsClient() {
       const data = await parseJsonResponse(res);
       setSubjects(data.subjects ?? []);
       setEntries(data.entries ?? []);
+      setLanguages(data.languages ?? []);
+      setLanguageSettings(data.languageSettings ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load Lesson Note settings.");
       setSubjects([]);
       setEntries([]);
+      setLanguages([]);
+      setLanguageSettings([]);
     } finally {
       setLoading(false);
     }
@@ -271,6 +322,15 @@ export default function TeacherLessonTimetableSettingsClient() {
     );
   }, [classroomId, savedForSelection, subjectKey]);
 
+  useEffect(() => {
+    if (!requiresGhanaianLanguage || !classroomId) {
+      setLanguageCode("");
+      return;
+    }
+
+    setLanguageCode(savedLanguageForSelection?.languageCode ?? "");
+  }, [classroomId, requiresGhanaianLanguage, savedLanguageForSelection]);
+
   function changeMultipleStreams(next: boolean) {
     setShowMultipleStreams(next);
 
@@ -310,6 +370,11 @@ export default function TeacherLessonTimetableSettingsClient() {
       return;
     }
 
+    if (requiresGhanaianLanguage && !selectedLanguage) {
+      setError("Choose the Ghanaian language you teach.");
+      return;
+    }
+
     const validationError = validatePeriods();
     if (validationError) {
       setError(validationError);
@@ -329,6 +394,7 @@ export default function TeacherLessonTimetableSettingsClient() {
         body: JSON.stringify({
           classroomId: selectedClass.id,
           subject: selectedSubject.label,
+          languageCode: requiresGhanaianLanguage ? selectedLanguage?.code ?? null : null,
           periods: periods.map((item) => ({
             weekday: item.weekday,
             startTime: item.startTime,
@@ -340,7 +406,9 @@ export default function TeacherLessonTimetableSettingsClient() {
       const data = await parseJsonResponse(res);
       setSubjects(data.subjects ?? subjects);
       setEntries(data.entries ?? []);
-      setNotice(data.message ?? "Lesson times saved.");
+      setLanguages(data.languages ?? languages);
+      setLanguageSettings(data.languageSettings ?? []);
+      setNotice(data.message ?? "Lesson Note settings saved.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save Lesson Note settings.");
     } finally {
@@ -365,6 +433,7 @@ export default function TeacherLessonTimetableSettingsClient() {
         body: JSON.stringify({
           classroomId: selectedClass.id,
           subject: selectedSubject.label,
+          languageCode: requiresGhanaianLanguage ? selectedLanguage?.code ?? savedLanguageForSelection?.languageCode ?? null : null,
           periods: [],
         }),
       });
@@ -372,6 +441,8 @@ export default function TeacherLessonTimetableSettingsClient() {
       const data = await parseJsonResponse(res);
       setSubjects(data.subjects ?? subjects);
       setEntries(data.entries ?? []);
+      setLanguages(data.languages ?? languages);
+      setLanguageSettings(data.languageSettings ?? []);
       setPeriods([newPeriod()]);
       setNotice(data.message ?? "Saved lesson times cleared.");
     } catch (err) {
@@ -386,6 +457,7 @@ export default function TeacherLessonTimetableSettingsClient() {
     setSubjectKey(group.subjectKey);
     setShowMultipleStreams(Boolean(editedClass && hasClassArm(editedClass)));
     setClassroomId(group.classroomId);
+    setLanguageCode(group.languageCode ?? "");
     setError(null);
     setNotice(null);
     window.setTimeout(() => editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
@@ -419,7 +491,7 @@ export default function TeacherLessonTimetableSettingsClient() {
 
       <section className="rounded-2xl border border-sky-300/20 bg-sky-400/10 p-4 text-sm leading-6 text-sky-100">
         <div className="font-semibold">How it works</div>
-        <div className="mt-1">Choose Subject → Class → add every weekly day and time → Save. If a subject meets the same class more than once, add another lesson time.</div>
+        <div className="mt-1">Choose Subject → Class → add every weekly day and time → Save. If the subject is Ghanaian Language, choose the language before adding times. If a subject meets the same class more than once, add another lesson time.</div>
       </section>
 
       <section ref={editorRef} id="lesson-note-timetable-editor" className={shell}>
@@ -511,9 +583,38 @@ export default function TeacherLessonTimetableSettingsClient() {
                     </label>
                   ) : null}
                 </div>
+
+                {requiresGhanaianLanguage ? (
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-semibold text-[#F7F4ED]" htmlFor="lesson-setting-language">
+                      Ghanaian language
+                    </label>
+                    <select
+                      id="lesson-setting-language"
+                      className={field}
+                      value={languageCode}
+                      onChange={(event) => {
+                        setLanguageCode(event.target.value);
+                        setNotice(null);
+                        setError(null);
+                      }}
+                      disabled={!selectedClass || saving}
+                    >
+                      <option value="">Choose language</option>
+                      {languages.map((language) => (
+                        <option key={language.code} value={language.code}>
+                          {language.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1.5 text-[11px] leading-4 text-[#9AA4B2]">
+                      Choose once for this subject and class. EduLife keeps the language with each Lesson Note for historical accuracy.
+                    </p>
+                  </div>
+                ) : null}
               </div>
 
-              {selectedSubject && selectedClass ? (
+              {selectedSubject && selectedClass && (!requiresGhanaianLanguage || selectedLanguage) ? (
                 <div className="mt-5 border-t border-white/10 pt-5">
                   <div>
                     <h2 className="text-lg font-bold text-[#F7F4ED]">2. Add weekly lesson time</h2>
@@ -592,8 +693,14 @@ export default function TeacherLessonTimetableSettingsClient() {
                       + Add another day/time
                     </button>
 
-                    <button type="button" className={goldBtn + " w-full sm:w-auto"} onClick={() => void save()} disabled={saving}>
-                      {saving ? "Saving…" : "Save lesson times"}
+                    <button
+                      type="button"
+                      className={goldBtn + " w-full sm:w-auto"}
+                      aria-label="Save lesson times"
+                      onClick={() => void save()}
+                      disabled={saving}
+                    >
+                      {saving ? "Saving…" : "Save settings"}
                     </button>
 
                     {savedForSelection.length ? (
@@ -637,6 +744,9 @@ export default function TeacherLessonTimetableSettingsClient() {
                     <div>
                       <div className="font-semibold text-[#F7F4ED]">{group.subject}</div>
                       <div className="mt-1 text-sm text-[#C9CDD6]">{group.classroomLabel}</div>
+                      {group.languageName ? (
+                        <div className="mt-1 text-xs font-semibold text-sky-100">Language: {group.languageName}</div>
+                      ) : null}
                     </div>
                     <button className={outlineBtn + " px-2.5 py-1.5 text-xs"} onClick={() => editGroup(group)}>
                       Edit

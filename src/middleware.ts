@@ -48,6 +48,21 @@ function jsonForbidden(role: string, path: string) {
   );
 }
 
+
+function rewriteTeacherLessonNotePrint(req: NextRequest) {
+  const match = req.nextUrl.pathname.match(
+    /^\/teacher\/lesson-notes\/([^/]+)\/print\/?$/
+  );
+
+  const noteId = match?.[1];
+  if (!noteId) return null;
+
+  const url = req.nextUrl.clone();
+  url.pathname = `/print/lesson-note/${noteId}`;
+
+  return NextResponse.rewrite(url);
+}
+
 // ---------- Parent cookie verification (EDGE, WebCrypto) ----------
 function b64urlToUint8Array(s: string) {
   const pad = "=".repeat((4 - (s.length % 4)) % 4);
@@ -243,7 +258,12 @@ export default async function middleware(req: NextRequest) {
     // Consent special policy
     if (isConsentAllowedForRole(path, role)) return NextResponse.next();
 
-    if (isPathAllowedForRole(path, role)) return NextResponse.next();
+    if (isPathAllowedForRole(path, role)) {
+      const lessonNotePrintRewrite = rewriteTeacherLessonNotePrint(req);
+      if (lessonNotePrintRewrite) return lessonNotePrintRewrite;
+
+      return NextResponse.next();
+    }
 
     if (isApi) return jsonForbidden(role, path);
 

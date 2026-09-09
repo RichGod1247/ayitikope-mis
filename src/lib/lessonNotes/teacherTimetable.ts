@@ -56,6 +56,9 @@ const SUBJECT_ALIASES: Record<string, string> = {
   RELIGIOUSANDMORALEDUCATION: "RME",
   ICT: "COMPUTING",
   COMPUTING: "COMPUTING",
+
+  GHANAIANLANGUAGE: "GHANAIANLANGUAGE",
+  GHANAIANLANGUAGES: "GHANAIANLANGUAGE",
 };
 
 const DAY_LABELS = ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] as const;

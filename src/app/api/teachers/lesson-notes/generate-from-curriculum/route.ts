@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
 import { resolveUserClassroomAccess } from "@/lib/teacherAccess";
+import { resolveTeacherLessonLanguageForNote } from "@/lib/lessonNotes/teacherLanguage";
 import {
   approvedSchemeItemMatchesScope,
   findApprovedSchemeItemForScope,
@@ -310,6 +311,20 @@ const access = await assertTeacherCanAccessClassroomAndSubject({
     if (!access.ok) return jsonNoStore({ ok: false, error: access.error }, { status: access.status });
   }
 
+  const lessonLanguage = await resolveTeacherLessonLanguageForNote({
+    tenantId: ctx.tenantId,
+    teacherUserId: ctx.userId,
+    classroomId,
+    subject,
+  });
+
+  if (!lessonLanguage.ok) {
+    return jsonNoStore(
+      { ok: false, code: lessonLanguage.code, error: lessonLanguage.error },
+      { status: 409 },
+    );
+  }
+
   // Approved Scheme of Work + matching week is the lesson-note authoring precondition.
   const approvedSchemeItem = await findApprovedSchemeItemForScope({
     tenantId: ctx.tenantId,
@@ -365,6 +380,8 @@ const access = await assertTeacherCanAccessClassroomAndSubject({
       contentStandard: true,
       indicator: true,
       schemeOfWorkItemId: true,
+      lessonLanguageCode: true,
+      languageRegistryVersion: true,
     },
     orderBy: { createdAt: "desc" },
   });
@@ -416,6 +433,10 @@ const access = await assertTeacherCanAccessClassroomAndSubject({
         const shouldFixTitle = isPlaceholderTitle(existing.lessonTitle, subject, weekNumber);
         const data: any = {};
 
+        if (!existing.lessonLanguageCode && lessonLanguage.lessonLanguageCode) {
+          data.lessonLanguageCode = lessonLanguage.lessonLanguageCode;
+          data.languageRegistryVersion = lessonLanguage.languageRegistryVersion;
+        }
         if (!existing.schemeOfWorkItemId) data.schemeOfWorkItemId = reuseSchemeItem.id;
         if (!normalizeSpaces(existing.strand ?? "") && strand) data.strand = strand;
         if (!normalizeSpaces(existing.substrand ?? "") && substrand) data.substrand = substrand;
@@ -500,6 +521,8 @@ const access = await assertTeacherCanAccessClassroomAndSubject({
           teacherUserId: ctx.userId,
           headteacherUserId: null,
           classroomId,
+          lessonLanguageCode: lessonLanguage.lessonLanguageCode,
+          languageRegistryVersion: lessonLanguage.languageRegistryVersion,
 
           phase,
           level,
@@ -744,6 +767,8 @@ const access = await assertTeacherCanAccessClassroomAndSubject({
         teacherUserId: ctx.userId,
         headteacherUserId: null,
         classroomId,
+        lessonLanguageCode: lessonLanguage.lessonLanguageCode,
+        languageRegistryVersion: lessonLanguage.languageRegistryVersion,
 
         phase,
         level,

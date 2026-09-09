@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
 import { mediaUrl } from "@/lib/media";
+import { getGhanaianLanguage } from "@/lib/ghanaianLanguages/registry";
+import { normalizeEducationalText, tokenizeEducationalText } from "@/lib/ghanaianLanguages/text";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,6 +34,8 @@ type AiLessonFields = {
 type LessonNoteForCoach = {
   id: string;
   subject: string;
+  lessonLanguageCode: string | null;
+  languageRegistryVersion: string | null;
   phase: string | null;
   level: string | null;
 
@@ -142,11 +146,11 @@ function isPlausibleId(id: string) {
 }
 
 function clean(s: unknown) {
-  return String(s ?? "").trim();
+  return normalizeEducationalText(s).trim();
 }
 
 function safeLower(s: unknown) {
-  return typeof s === "string" ? s.toLowerCase().trim() : "";
+  return typeof s === "string" ? normalizeEducationalText(s).toLocaleLowerCase("en-GH").trim() : "";
 }
 
 function titleCase(s: string) {
@@ -717,9 +721,9 @@ const STOPWORDS = new Set([
 function extractKeywords(parts: string[], max = 6) {
   const bag: string[] = [];
   for (const p of parts) {
-    const t = clean(p).replace(/[“”"’']/g, "").toLowerCase();
+    const t = clean(p).replace(/[“”"’']/g, "").toLocaleLowerCase("en-GH");
     if (!t) continue;
-    const words = t.split(/[^a-z0-9-]+/g).filter(Boolean);
+    const words = tokenizeEducationalText(t);
     for (const w of words) {
       if (w.length < 4) continue;
       if (STOPWORDS.has(w)) continue;
@@ -1153,6 +1157,8 @@ export async function POST(req: NextRequest) {
       select: {
         id: true,
         subject: true,
+        lessonLanguageCode: true,
+        languageRegistryVersion: true,
         phase: true,
         level: true,
         term: true,
@@ -1188,6 +1194,8 @@ export async function POST(req: NextRequest) {
     const coachInput: LessonNoteForCoach = {
       id: note.id,
       subject: String(note.subject ?? ""),
+      lessonLanguageCode: note.lessonLanguageCode ?? null,
+      languageRegistryVersion: note.languageRegistryVersion ?? null,
       phase: note.phase ?? null,
       level: note.level ?? null,
 
@@ -1232,6 +1240,8 @@ export async function POST(req: NextRequest) {
     const result = buildWorldClassCoachV4(coachInput, grounding, mode);
 
     // ✅ Minimal "metrics + actions" contract, meta-only (no breaking changes)
+    const languageDefinition = getGhanaianLanguage(coachInput.lessonLanguageCode);
+
     const metaMetrics = {
       hasCurriculumUnitId: !!coachInput.curriculumUnitId,
       hasSchemeOfWorkItemId: !!coachInput.schemeOfWorkItemId,
@@ -1249,6 +1259,15 @@ export async function POST(req: NextRequest) {
       because: string[];
       message: string;
     }> = [];
+
+    if (languageDefinition) {
+      metaActions.push({
+        code: "GHANAIAN_LANGUAGE_REVIEW",
+        priority: "LOW",
+        because: ["meta.language.code", "meta.language.translationStatus"],
+        message: `${languageDefinition.name} is frozen on this Lesson Note. Co-Tutor remains English-first in GL-P1; use the native-letter palette for teacher corrections.`,
+      });
+    }
 
     if (!metaMetrics.hasCurriculumUnitId && !metaMetrics.hasSchemeOfWorkItemId) {
       metaActions.push({
@@ -1297,6 +1316,14 @@ export async function POST(req: NextRequest) {
           // kept
           exemplarCount: grounding.exemplars.length,
           engine: "RULE_BASED_COTUTOR_V4_TEMPLATE_GROUNDED",
+          language: languageDefinition
+            ? {
+                code: languageDefinition.code,
+                name: languageDefinition.name,
+                registryVersion: coachInput.languageRegistryVersion,
+                translationStatus: languageDefinition.translationStatus,
+              }
+            : null,
 
           // ✅ new (meta-only, safe)
           metrics: metaMetrics,

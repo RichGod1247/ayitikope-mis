@@ -5,7 +5,9 @@ import { notFound, redirect } from "next/navigation";
 import HeadteacherReviewPanel from "./HeadteacherReviewPanel";
 import { mediaUrl } from "@/lib/media";
 import ZoomableImage from "./ZoomableImage";
+import PrintLessonNoteActions from "./PrintLessonNoteActions";
 import { subjectMatchesTeachingScope } from "@/lib/teachingSubjectScope";
+import { getGhanaianLanguage } from "@/lib/ghanaianLanguages/registry";
 import {
   groupTimetableEntriesForPrint,
   readTeacherTimetableEntries,
@@ -1489,6 +1491,8 @@ export default async function Page({ params, searchParams }: PageProps) {
       academicYear: true,
 
       subject: true,
+      lessonLanguageCode: true,
+      languageRegistryVersion: true,
       strand: true,
       substrand: true,
       contentStandard: true,
@@ -1578,6 +1582,8 @@ export default async function Page({ params, searchParams }: PageProps) {
 
   const subject = note.subject ?? unitRow?.subject ?? "";
   const strand = note.strand ?? unitRow?.strand ?? "";
+  const lessonLanguage = getGhanaianLanguage(note.lessonLanguageCode);
+  const lessonLanguageLabel = lessonLanguage?.name ?? note.lessonLanguageCode ?? "";
   const substrand = note.substrand ?? unitRow?.substrand ?? "";
   const contentStandard = note.contentStandard ?? unitRow?.contentStandard ?? "";
   const indicator = note.indicator ?? unitRow?.indicator ?? "";
@@ -1829,6 +1835,8 @@ const weekEndingLabel = formatDate(fridayOfWeek(weekEndingSource));
   return (
     <main className="flex min-h-screen justify-center bg-[linear-gradient(180deg,#05070B_0%,#071A3D_55%,#05070B_100%)] px-2 py-4 print:bg-white sm:py-6">
       <div className="mx-auto w-full max-w-5xl overflow-x-hidden rounded-[28px] border border-white/10 bg-white p-3 text-black shadow-[0_28px_90px_rgba(0,0,0,0.34)] print:rounded-none print:border-black print:shadow-none sm:p-4 md:p-6">
+        {!isEmbed ? <PrintLessonNoteActions /> : null}
+
         <header className="mb-4 space-y-1 text-center">
           <h1 className="text-base font-bold tracking-wide md:text-lg">
             LEARNER PLAN – {subject || "____________________"}
@@ -1854,6 +1862,11 @@ const weekEndingLabel = formatDate(fridayOfWeek(weekEndingSource));
               </span>
             </p>
           )}
+          {lessonLanguageLabel ? (
+            <p className="text-[11px]">
+              Language: <span className="font-semibold">{lessonLanguageLabel}</span>
+            </p>
+          ) : null}
           <p className="text-[10px] text-zinc-600">
             EduLife OS – NaCCA-aligned lesson note (print-ready)
           </p>
@@ -2175,8 +2188,8 @@ const weekEndingLabel = formatDate(fridayOfWeek(weekEndingSource));
                 {!isEmbed ? (
           <>
             <p className="mt-2 text-center text-[10px] text-zinc-500 print:hidden">
-              Tip: Use your browser&apos;s <span className="font-semibold">Print</span> command
-              (Ctrl+P) to export as PDF.
+              Use the <span className="font-semibold">Print / Save PDF</span> button above whenever
+              you need a paper copy or PDF from this device.
             </p>
 
             <div className="mt-6 rounded-[24px] border border-zinc-200 bg-zinc-50 p-3 print:hidden sm:p-4">
