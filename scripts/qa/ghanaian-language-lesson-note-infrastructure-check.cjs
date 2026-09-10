@@ -37,6 +37,7 @@ const languageAuthority = read("src/lib/lessonNotes/teacherLanguage.ts");
 const palette = read("src/components/teacher/GhanaianLanguageCharacterPalette.tsx");
 const schema = read("prisma/schema.prisma");
 const migration = read("prisma/migrations/20260908123000_ghanaian_language_lesson_note_authority/migration.sql");
+const subjectPrefixRepairMigration = read("prisma/migrations/20260909203000_ghanaian_language_lesson_note_subject_prefix_parity/migration.sql");
 const subjectScope = read("src/lib/teachingSubjectScope.ts");
 const timetable = read("src/lib/lessonNotes/teacherTimetable.ts");
 const settingsRoute = read("src/app/api/teacher/lesson-notes/settings/route.ts");
@@ -72,6 +73,15 @@ has(registry, 'keyboardCharacters: ["ɖ", "Ɖ", "ɛ", "Ɛ", "ƒ", "Ƒ", "ɣ", "�
 has(registry, 'singleLetters:', "single-letter orthography metadata");
 has(registry, 'multipleLetters:', "multiple-letter orthography metadata");
 has(registry, 'sourceAuthority:', "source authority metadata");
+
+for (const marker of [
+  "stripTeachingLevelPrefix",
+  "JHS\\s*[1-3]",
+  "JUNIOR\\s+HIGH\\s+SCHOOL\\s*[1-3]",
+  "BASIC\\s*[1-9]",
+  "PRIMARY\\s*[1-6]",
+  "KG\\s*[1-2]",
+]) has(registry, marker, "application Ghanaian Language level-prefix authority");
 
 for (const marker of [
   '.normalize("NFC")',
@@ -117,6 +127,32 @@ for (const marker of [
   'CREATE TRIGGER "LessonNote_language_evidence_guard"',
 ]) has(migration, marker, "database migration guard");
 lacks(migration, "UPDATE edulife_os.\"LessonNote\" SET \"lessonLanguageCode\"", "guessed LessonNote language backfill");
+
+for (const marker of [
+  "BEGIN;",
+  "COMMIT;",
+  'DROP CONSTRAINT "LessonNote_language_pair_check"',
+  'ADD CONSTRAINT "LessonNote_language_pair_check"',
+  "'GH_EDU_LANGUAGE_REGISTRY_V1'",
+  "JHS[1-3]",
+  "JUNIORHIGHSCHOOL[1-3]",
+  "BASIC[1-9]",
+  "BS[1-9]",
+  "B[1-9]",
+  "P[1-6]",
+  "PRIMARY[1-6]",
+  "KG[1-2]",
+  "GHANAIANLANGUAGES?",
+  "GL_LANGUAGE_PAIR_JHS2_SUBJECT_REJECTED",
+  "GL_LANGUAGE_PAIR_UNRELATED_PREFIX_ACCEPTED",
+  "GL_LANGUAGE_PAIR_INVALID_JHS_LEVEL_ACCEPTED",
+  "GL_LANGUAGE_PAIR_SUFFIX_DRIFT_ACCEPTED",
+]) has(subjectPrefixRepairMigration, marker, "LessonNote subject-prefix parity repair");
+lacks(subjectPrefixRepairMigration, 'UPDATE edulife_os."LessonNote"', "LessonNote data rewrite in subject-prefix parity repair");
+lacks(subjectPrefixRepairMigration, 'UPDATE edulife_os."TeacherLessonLanguageSetting"', "language-setting data rewrite in subject-prefix parity repair");
+lacks(subjectPrefixRepairMigration, 'DROP TRIGGER', "trigger weakening in subject-prefix parity repair");
+lacks(subjectPrefixRepairMigration, 'DROP FUNCTION', "guard-function weakening in subject-prefix parity repair");
+
 
 for (const marker of [
   'subjectNorm" = ${GHANAIAN_LANGUAGE_SUBJECT_KEY}',
@@ -207,6 +243,7 @@ console.log("- translation: DISABLED / not part of GL-P1");
 console.log("- Unicode: NFC + Unicode-letter/mark/number tokenization");
 console.log("- language setting: teacher + tenant + class + subject, append/retire evidence");
 console.log("- LessonNote language: server-derived + frozen + no guessed backfill");
+console.log("- subject parity: legitimate level-prefixed Ghanaian Language labels accepted without weakening unrelated-subject rejection");
 console.log("- editor: cursor-aware native-character palette / mobile-friendly");
 console.log("- Co-Tutor: RULE_BASED_COTUTOR_V4_TEMPLATE_GROUNDED preserved and Unicode-hardened");
 console.log("- print: frozen Ghanaian language displayed without rewriting curriculum identifiers");
