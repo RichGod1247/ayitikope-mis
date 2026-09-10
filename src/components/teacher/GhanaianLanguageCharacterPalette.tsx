@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { getGhanaianLanguage } from "@/lib/ghanaianLanguages/registry";
 
 export default function GhanaianLanguageCharacterPalette(props: {
@@ -11,10 +12,13 @@ export default function GhanaianLanguageCharacterPalette(props: {
   onInsert: (character: string) => void;
 }) {
   const [open, setOpen] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [mobileBottom, setMobileBottom] = useState(6);
   const language = useMemo(() => getGhanaianLanguage(props.languageCode), [props.languageCode]);
 
   useEffect(() => {
+    setMounted(true);
+
     function syncMobileBottom() {
       const viewport = window.visualViewport;
       if (!viewport) {
@@ -115,24 +119,27 @@ export default function GhanaianLanguageCharacterPalette(props: {
         )}
       </div>
 
-      {props.mobileActive ? (
-        <div
-          className="fixed inset-x-1.5 z-[65] md:hidden"
-          style={{ bottom: `${mobileBottom}px` }}
-          aria-label={`${language.name} keyboard accessory`}
-        >
-          <div className="rounded-xl border border-sky-200/25 bg-[#071A3D]/98 p-1.5 shadow-[0_14px_36px_rgba(0,0,0,0.36)] backdrop-blur-xl">
-            <span className="sr-only">{language.name} special letters</span>
+      {mounted && props.mobileActive
+        ? createPortal(
             <div
-              className="flex gap-1.5 overflow-x-auto overscroll-x-contain"
-              role="group"
-              aria-label={`${language.name} mobile special letters`}
+              className="fixed inset-x-1.5 z-[65] md:hidden"
+              style={{ bottom: `${mobileBottom}px` }}
+              aria-label={`${language.name} keyboard accessory`}
             >
-              {characterButtons(true)}
-            </div>
-          </div>
-        </div>
-      ) : null}
+              <div className="rounded-xl border border-sky-200/25 bg-[#071A3D]/98 p-1.5 shadow-[0_14px_36px_rgba(0,0,0,0.36)] backdrop-blur-xl">
+                <span className="sr-only">{language.name} special letters</span>
+                <div
+                  className="flex gap-1.5 overflow-x-auto overscroll-x-contain"
+                  role="group"
+                  aria-label={`${language.name} mobile special letters`}
+                >
+                  {characterButtons(true)}
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }
