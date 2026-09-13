@@ -78,6 +78,7 @@ model User {
   lessonDeliveriesAsTeacher           LessonDelivery[]              @relation("LessonDeliveryTeacher")
   teacherLessonTimetableEntries       TeacherLessonTimetableEntry[]
   teacherLessonLanguageSettings       TeacherLessonLanguageSetting[]
+  lessonTranslationEvidence           LessonTranslationEvidence[]    @relation("LessonTranslationEvidenceTeacher")
   memberships                         Membership[]
   sessions                            Session[]
   passwordRecoveryTokens              PasswordRecoveryToken[]
@@ -226,6 +227,7 @@ model Tenant {
   lessonDeliveries          LessonDelivery[]
   teacherLessonTimetableEntries TeacherLessonTimetableEntry[]
   teacherLessonLanguageSettings TeacherLessonLanguageSetting[]
+  lessonTranslationEvidence     LessonTranslationEvidence[]
   memberships               Membership[]
   roles                     Role[]
   students                  Student[]
@@ -2881,6 +2883,47 @@ model TeacherLessonLanguageSetting {
 
   /// DB truth also includes partial unique index TeacherLessonLanguageSetting_active_unique
   /// plus insert and retired-evidence guard triggers.
+}
+
+/// Immutable teacher-verified translation evidence.
+/// LessonNote is intentionally referenced by snapshot id only: deleting an editable draft
+/// must not erase already-acquired linguistic evidence.
+model LessonTranslationEvidence {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId             String
+  teacherUserId        String
+  lessonNoteId         String
+  fieldKey             String   @db.VarChar(48)
+  sourceLanguage       String   @default("en") @db.VarChar(16)
+  languageCode         String   @db.VarChar(40)
+  registryVersion      String   @db.VarChar(80)
+  normalizationVersion String   @default("EDULIFE_EDU_TEXT_NFC_V1") @db.VarChar(64)
+  sourceText           String   @db.Text
+  sourceHash           String   @db.VarChar(64)
+  suggestionSource     String   @db.VarChar(32)
+  provider             String?  @db.VarChar(80)
+  modelId              String?  @db.VarChar(180)
+  modelRevision        String?  @db.VarChar(180)
+  suggestedText        String   @db.Text
+  suggestedHash        String   @db.VarChar(64)
+  finalText            String   @db.Text
+  finalHash            String   @db.VarChar(64)
+  teacherAction        String   @db.VarChar(16)
+  receiptId            String   @unique(map: "LessonTranslationEvidence_receipt_unique") @db.Uuid
+  receiptVersion       String   @default("EDULIFE_TRANSLATION_RECEIPT_V1") @db.VarChar(64)
+  corpusOptIn          Boolean  @default(false)
+  corpusEligible       Boolean  @default(false)
+  createdAt            DateTime @default(now()) @db.Timestamptz(6)
+
+  tenant  Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "LessonTranslationEvidence_tenant_fkey")
+  teacher User   @relation("LessonTranslationEvidenceTeacher", fields: [teacherUserId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "LessonTranslationEvidence_teacher_fkey")
+
+  @@index([tenantId, teacherUserId, languageCode, registryVersion, fieldKey, sourceHash, createdAt], map: "LessonTranslationEvidence_personal_lookup_idx")
+  @@index([tenantId, languageCode, registryVersion, fieldKey, sourceHash, finalHash, teacherUserId], map: "LessonTranslationEvidence_consensus_lookup_idx")
+  @@index([lessonNoteId, createdAt], map: "LessonTranslationEvidence_note_provenance_idx")
+
+  /// DB truth also includes insert-authority and append-only guard triggers plus
+  /// field/language/hash/provenance/action/pilot-corpus check constraints.
 }
 
 model AssessmentScore {
