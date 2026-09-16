@@ -52,42 +52,43 @@ model User {
   phoneNorm String? @unique
 
   accounts                            Account[]
-  announcementsCreated                Announcement[]                @relation("AnnouncementCreatedBy")
+  announcementsCreated                Announcement[]                 @relation("AnnouncementCreatedBy")
   Assessment                          Assessment[]
-  assessmentItemsCreated              AssessmentItem[]              @relation("AssessmentItemCreatedBy")
-  assessmentItemsPublished            AssessmentItem[]              @relation("AssessmentItemPublishedBy")
-  assessmentItemsLocked               AssessmentItem[]              @relation("AssessmentItemLockedBy")
-  mockExamSessionsCreated             MockExamSession[]             @relation("MockExamSessionCreatedBy")
+  assessmentItemsCreated              AssessmentItem[]               @relation("AssessmentItemCreatedBy")
+  assessmentItemsPublished            AssessmentItem[]               @relation("AssessmentItemPublishedBy")
+  assessmentItemsLocked               AssessmentItem[]               @relation("AssessmentItemLockedBy")
+  mockExamSessionsCreated             MockExamSession[]              @relation("MockExamSessionCreatedBy")
   /// ✅ Assessment Sprint A — policy, broadsheet assignment, release governance
-  assessmentPoliciesCreated           AssessmentPolicy[]            @relation("AssessmentPolicyCreatedBy")
-  teacherAssessmentAssignments        TeacherAssessmentAssignment[] @relation("TeacherAssessmentAssignmentTeacher")
-  teacherAssessmentAssignmentsMade    TeacherAssessmentAssignment[] @relation("TeacherAssessmentAssignmentCreatedBy")
-  teacherAssessmentAssignmentsRevoked TeacherAssessmentAssignment[] @relation("TeacherAssessmentAssignmentRevokedBy")
-  tenantBootstrapInvitesCreated       TenantBootstrapInvite[]       @relation("TenantBootstrapInviteCreatedBy")
-  AttendanceSession                   AttendanceSession[]              @relation("AttendanceSessionTakenBy")
-  attendanceHolidayDeclarations      AttendanceSession[]              @relation("AttendanceHolidayDeclaredBy")
-  attendanceBadgesIssued              StudentAttendanceBadge[]      @relation("AttendanceBadgeIssuedBy")
-  attendanceBadgesRevoked             StudentAttendanceBadge[]      @relation("AttendanceBadgeRevokedBy")
-  attendanceScans                     AttendanceScanEvent[]         @relation("AttendanceScanScannedBy")
+  assessmentPoliciesCreated           AssessmentPolicy[]             @relation("AssessmentPolicyCreatedBy")
+  teacherAssessmentAssignments        TeacherAssessmentAssignment[]  @relation("TeacherAssessmentAssignmentTeacher")
+  teacherAssessmentAssignmentsMade    TeacherAssessmentAssignment[]  @relation("TeacherAssessmentAssignmentCreatedBy")
+  teacherAssessmentAssignmentsRevoked TeacherAssessmentAssignment[]  @relation("TeacherAssessmentAssignmentRevokedBy")
+  tenantBootstrapInvitesCreated       TenantBootstrapInvite[]        @relation("TenantBootstrapInviteCreatedBy")
+  AttendanceSession                   AttendanceSession[]            @relation("AttendanceSessionTakenBy")
+  attendanceHolidayDeclarations       AttendanceSession[]            @relation("AttendanceHolidayDeclaredBy")
+  attendanceBadgesIssued              StudentAttendanceBadge[]       @relation("AttendanceBadgeIssuedBy")
+  attendanceBadgesRevoked             StudentAttendanceBadge[]       @relation("AttendanceBadgeRevokedBy")
+  attendanceScans                     AttendanceScanEvent[]          @relation("AttendanceScanScannedBy")
   auditLogs                           AuditLog[]
   legalAcceptances                    LegalAcceptance[]
   onboardingWelcomes                  OnboardingWelcome[]
-  invitesSent                         Invite[]                      @relation("UserInvites")
-  lessonNotesAsHeadteacher            LessonNote[]                  @relation("LessonNoteHeadteacher")
-  lessonNotesAsTeacher                LessonNote[]                  @relation("LessonNoteTeacher")
-  lessonDeliveriesAsTeacher           LessonDelivery[]              @relation("LessonDeliveryTeacher")
+  invitesSent                         Invite[]                       @relation("UserInvites")
+  lessonNotesAsHeadteacher            LessonNote[]                   @relation("LessonNoteHeadteacher")
+  lessonNotesAsTeacher                LessonNote[]                   @relation("LessonNoteTeacher")
+  lessonDeliveriesAsTeacher           LessonDelivery[]               @relation("LessonDeliveryTeacher")
   teacherLessonTimetableEntries       TeacherLessonTimetableEntry[]
   teacherLessonLanguageSettings       TeacherLessonLanguageSetting[]
   lessonTranslationEvidence           LessonTranslationEvidence[]    @relation("LessonTranslationEvidenceTeacher")
+  lessonTranslationCompletions        LessonTranslationCompletion[]  @relation("LessonTranslationCompletionTeacher")
   memberships                         Membership[]
   sessions                            Session[]
   passwordRecoveryTokens              PasswordRecoveryToken[]
   teacherHealthWeekly                 TeacherHealthWeekly[]
-  teacherAttendanceRecords            TeacherAttendanceRecord[]     @relation("TeacherAttendanceTeacher")
-  teacherAttendanceMarked             TeacherAttendanceRecord[]     @relation("TeacherAttendanceMarkedBy")
-  teacherAttendanceSessionsOpened     TeacherAttendanceSession[]    @relation("TeacherAttendanceSessionOpenedBy")
-  teacherAttendanceSessionsClosed     TeacherAttendanceSession[]    @relation("TeacherAttendanceSessionClosedBy")
-  teacherAttendanceSessionsCertified  TeacherAttendanceSession[]    @relation("TeacherAttendanceSessionCertifiedBy")
+  teacherAttendanceRecords            TeacherAttendanceRecord[]      @relation("TeacherAttendanceTeacher")
+  teacherAttendanceMarked             TeacherAttendanceRecord[]      @relation("TeacherAttendanceMarkedBy")
+  teacherAttendanceSessionsOpened     TeacherAttendanceSession[]     @relation("TeacherAttendanceSessionOpenedBy")
+  teacherAttendanceSessionsClosed     TeacherAttendanceSession[]     @relation("TeacherAttendanceSessionClosedBy")
+  teacherAttendanceSessionsCertified  TeacherAttendanceSession[]     @relation("TeacherAttendanceSessionCertifiedBy")
 
   /// ✅ A15.4B — teacher appraisal evidence spine
   teacherAppraisalsAsTeacher   TeacherAppraisal[] @relation("TeacherAppraisalTeacher")
@@ -111,9 +112,9 @@ model User {
   appraisalParticipantsRevoked AppraisalParticipant[] @relation("AppraisalParticipantRevokedBy")
   appraisalResponsesFinalized  AppraisalResponse[]    @relation("AppraisalResponseFinalizedBy")
 
-  appraisalAssessmentsConducted AppraisalAssessment[] @relation("AppraisalAssessmentAssessor")
-  appraisalAssessmentsFinalized AppraisalAssessment[] @relation("AppraisalAssessmentFinalizedBy")
-  appraisalReviewsAuthored      AppraisalReview[]     @relation("AppraisalReviewReviewer")
+  appraisalAssessmentsConducted         AppraisalAssessment[]          @relation("AppraisalAssessmentAssessor")
+  appraisalAssessmentsFinalized         AppraisalAssessment[]          @relation("AppraisalAssessmentFinalizedBy")
+  appraisalReviewsAuthored              AppraisalReview[]              @relation("AppraisalReviewReviewer")
   appraisalStaffFeedbackReviewsAuthored AppraisalStaffFeedbackReview[] @relation("AppraisalStaffFeedbackReviewReviewer")
 
   appraisalAggregatesGenerated AppraisalAggregateSnapshot[] @relation("AppraisalAggregateGeneratedBy")
@@ -222,19 +223,20 @@ model Tenant {
   feeStructures FeeStructure[] @relation("TenantFeeStructures")
   feeRefunds    FeeRefund[]    @relation("TenantFeeRefunds")
 
-  invites                   Invite[]
-  lessonNotes               LessonNote[]
-  lessonDeliveries          LessonDelivery[]
+  invites                       Invite[]
+  lessonNotes                   LessonNote[]
+  lessonDeliveries              LessonDelivery[]
   teacherLessonTimetableEntries TeacherLessonTimetableEntry[]
   teacherLessonLanguageSettings TeacherLessonLanguageSetting[]
   lessonTranslationEvidence     LessonTranslationEvidence[]
-  memberships               Membership[]
-  roles                     Role[]
-  students                  Student[]
-  StudentHealthDaily        StudentHealthDaily[]
-  teacherHealthWeekly       TeacherHealthWeekly[]
-  teacherAttendanceSessions TeacherAttendanceSession[]
-  teacherAttendanceRecords  TeacherAttendanceRecord[]
+  lessonTranslationCompletions  LessonTranslationCompletion[]
+  memberships                   Membership[]
+  roles                         Role[]
+  students                      Student[]
+  StudentHealthDaily            StudentHealthDaily[]
+  teacherHealthWeekly           TeacherHealthWeekly[]
+  teacherAttendanceSessions     TeacherAttendanceSession[]
+  teacherAttendanceRecords      TeacherAttendanceRecord[]
 
   /// ✅ A15.4B — teacher appraisal evidence spine
   teacherAppraisals TeacherAppraisal[]
@@ -619,11 +621,11 @@ model LegalDocumentVersion {
   termsAcceptances   LegalAcceptance[] @relation("LegalAcceptanceTermsDocument")
   privacyAcceptances LegalAcceptance[] @relation("LegalAcceptancePrivacyDocument")
 
-  @@unique([documentType, version], map: "LegalDocumentVersion_type_version_unique")
-  @@index([documentType, effectiveAt(sort: Desc)], map: "LegalDocumentVersion_effective_idx")
-
   /// DB truth also includes partial unique index LegalDocumentVersion_current_type_unique
   /// on documentType WHERE isCurrent = true plus immutable/terminal lifecycle triggers.
+
+  @@unique([documentType, version], map: "LegalDocumentVersion_type_version_unique")
+  @@index([documentType, effectiveAt(sort: Desc)], map: "LegalDocumentVersion_effective_idx")
 }
 
 /// Append-only evidence of agreement to the current Terms and acknowledgement of the
@@ -655,13 +657,13 @@ model LegalAcceptance {
   membership           Membership?                  @relation(fields: [membershipId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "LegalAcceptance_membership_fkey")
   governanceAssignment GovernanceOfficerAssignment? @relation(fields: [governanceAssignmentId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "LegalAcceptance_governance_assignment_fkey")
 
+  /// DB trigger derives document snapshots, role and scope from current DB authority;
+  /// LegalAcceptance rows are append-only and cannot be updated or deleted.
+
   @@unique([userId, termsDocumentId, privacyDocumentId, authorityType, authorityId], map: "LegalAcceptance_idempotency_unique")
   @@index([userId, acceptedAt(sort: Desc)], map: "LegalAcceptance_user_idx")
   @@index([authorityType, authorityId, acceptedAt(sort: Desc)], map: "LegalAcceptance_authority_idx")
   @@index([acceptedAt(sort: Desc)], map: "LegalAcceptance_accepted_idx")
-
-  /// DB trigger derives document snapshots, role and scope from current DB authority;
-  /// LegalAcceptance rows are append-only and cannot be updated or deleted.
 }
 
 /// Exactly one initial Teacher/Headteacher welcome per school membership. Core identity,
@@ -695,11 +697,11 @@ model OnboardingWelcome {
   tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "OnboardingWelcome_tenant_fkey")
   membership Membership @relation(fields: [membershipId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "OnboardingWelcome_membership_fkey")
 
-  @@index([userId, tenantId, createdAt(sort: Desc)], map: "OnboardingWelcome_user_tenant_idx")
-  @@index([emailStatus, smsStatus, createdAt], map: "OnboardingWelcome_delivery_idx")
-
   /// DB truth also includes partial index OnboardingWelcome_inapp_idx on
   /// (userId, inAppVisibleAt DESC) WHERE inAppDismissedAt IS NULL plus evidence guards.
+
+  @@index([userId, tenantId, createdAt(sort: Desc)], map: "OnboardingWelcome_user_tenant_idx")
+  @@index([emailStatus, smsStatus, createdAt], map: "OnboardingWelcome_delivery_idx")
 }
 
 /// *
@@ -710,12 +712,12 @@ model OnboardingWelcome {
 model EssentialAlertEnrollment {
   id String @id @default(cuid())
 
-  tenantId String
+  tenantId   String
   subjectKey String @db.VarChar(180)
 
   recipientKind EssentialAlertRecipientKind
-  studentId String?
-  userId String?
+  studentId     String?
+  userId        String?
 
   /// Current destination snapshot used when the invitation/decision was made.
   phoneNormSnapshot String @db.VarChar(16)
@@ -723,26 +725,26 @@ model EssentialAlertEnrollment {
   /// HMAC fingerprint of tenant + recipient + current phone. Raw phone is never placed in a token.
   phoneFingerprint String @db.VarChar(64)
 
-  status EssentialAlertEnrollmentStatus @default(INVITED)
-  policyVersion Int @default(1)
+  status        EssentialAlertEnrollmentStatus @default(INVITED)
+  policyVersion Int                            @default(1)
 
-  consentSource String? @db.VarChar(80)
-  consentedAt DateTime? @db.Timestamptz(6)
-  optedOutAt DateTime? @db.Timestamptz(6)
+  consentSource String?   @db.VarChar(80)
+  consentedAt   DateTime? @db.Timestamptz(6)
+  optedOutAt    DateTime? @db.Timestamptz(6)
 
-  firstInvitedAt DateTime? @db.Timestamptz(6)
+  firstInvitedAt          DateTime? @db.Timestamptz(6)
   lastInvitationAttemptAt DateTime? @db.Timestamptz(6)
-  lastInvitationSentAt DateTime? @db.Timestamptz(6)
-  invitationCount Int @default(0)
+  lastInvitationSentAt    DateTime? @db.Timestamptz(6)
+  invitationCount         Int       @default(0)
 
   consentEvidenceJson Json @default("{}")
 
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   student Student? @relation(fields: [studentId], references: [id], onDelete: Restrict, onUpdate: NoAction)
-  user User? @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  user    User?    @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: NoAction)
 
   @@unique([tenantId, subjectKey], map: "EssentialAlertEnrollment_tenant_subject_unique")
   @@index([tenantId, recipientKind, status], map: "EssentialAlertEnrollment_tenant_kind_status_idx")
@@ -821,22 +823,22 @@ model Session {
 /// * =======================
 /// Raw recovery tokens must never be stored. Only SHA-256 token hashes are persisted.
 model PasswordRecoveryToken {
-  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId             String
-  tokenHash          String   @unique(map: "PasswordRecoveryToken_tokenHash_key") @db.VarChar(64)
+  tokenHash          String    @unique(map: "PasswordRecoveryToken_tokenHash_key") @db.VarChar(64)
   authVersionAtIssue Int
-  expiresAt          DateTime @db.Timestamptz(6)
+  expiresAt          DateTime  @db.Timestamptz(6)
   consumedAt         DateTime? @db.Timestamptz(6)
   revokedAt          DateTime? @db.Timestamptz(6)
-  createdAt          DateTime @default(now()) @db.Timestamptz(6)
+  createdAt          DateTime  @default(now()) @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "PasswordRecoveryToken_user_fkey")
 
-  @@index([userId, createdAt(sort: Desc)], map: "PasswordRecoveryToken_user_created_idx")
-  @@index([expiresAt], map: "PasswordRecoveryToken_expires_idx")
-
   /// DB truth: partial index "PasswordRecoveryToken_active_user_idx"
   /// covers active rows only: consumedAt IS NULL AND revokedAt IS NULL.
+
+  @@index([userId, createdAt(sort: Desc)], map: "PasswordRecoveryToken_user_created_idx")
+  @@index([expiresAt], map: "PasswordRecoveryToken_expires_idx")
 }
 
 model VerificationToken {
@@ -889,13 +891,13 @@ model Classroom {
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
-  Assessment           Assessment[]
-  assessmentItems      AssessmentItem[]
-  mockExamSessions     MockExamSession[]
-  AttendanceSession    AttendanceSession[]
-  attendanceScanEvents AttendanceScanEvent[]
-  lessonNotes          LessonNote[]
-  lessonDeliveries     LessonDelivery[]
+  Assessment                    Assessment[]
+  assessmentItems               AssessmentItem[]
+  mockExamSessions              MockExamSession[]
+  AttendanceSession             AttendanceSession[]
+  attendanceScanEvents          AttendanceScanEvent[]
+  lessonNotes                   LessonNote[]
+  lessonDeliveries              LessonDelivery[]
   teacherLessonTimetableEntries TeacherLessonTimetableEntry[]
   teacherLessonLanguageSettings TeacherLessonLanguageSetting[]
 
@@ -1244,10 +1246,10 @@ model AttendanceSession {
   marks      AttendanceMark[]
   scanEvents AttendanceScanEvent[]
 
-  classroom       Classroom @relation(fields: [classroomId], references: [id], onUpdate: NoAction, map: "AttendanceSession_classroom_fkey")
-  takenBy         User?     @relation("AttendanceSessionTakenBy", fields: [takenByUserId], references: [id], onUpdate: NoAction, map: "AttendanceSession_takenBy_fkey")
-  holidayDeclaredBy User?   @relation("AttendanceHolidayDeclaredBy", fields: [holidayDeclaredByUserId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "AttendanceSession_holidayDeclaredBy_fkey")
-  tenant          Tenant    @relation(fields: [tenantId], references: [id], onUpdate: NoAction, map: "AttendanceSession_tenant_fkey")
+  classroom         Classroom @relation(fields: [classroomId], references: [id], onUpdate: NoAction, map: "AttendanceSession_classroom_fkey")
+  takenBy           User?     @relation("AttendanceSessionTakenBy", fields: [takenByUserId], references: [id], onUpdate: NoAction, map: "AttendanceSession_takenBy_fkey")
+  holidayDeclaredBy User?     @relation("AttendanceHolidayDeclaredBy", fields: [holidayDeclaredByUserId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "AttendanceSession_holidayDeclaredBy_fkey")
+  tenant            Tenant    @relation(fields: [tenantId], references: [id], onUpdate: NoAction, map: "AttendanceSession_tenant_fkey")
 
   @@unique([tenantId, classroomId, date], map: "AttendanceSession_tenant_classroom_date_unique")
   @@index([date])
@@ -2382,6 +2384,7 @@ model LessonNote {
   assessment                String?
   homework                  String?
   coreCompetencies          String?
+  keywords                  String?
   teachingLearningResources String?
   differentiationNotes      String?
   reflectionNotes           String?
@@ -2410,13 +2413,14 @@ model LessonNote {
   curriculumUnitId   String?
   schemeOfWorkItemId String?
 
-  classroom        Classroom?        @relation(fields: [classroomId], references: [id], onUpdate: NoAction, map: "LessonNote_classroom_fkey")
-  curriculumUnit   CurriculumUnit?   @relation(fields: [curriculumUnitId], references: [id], onUpdate: NoAction)
-  headteacher      User?             @relation("LessonNoteHeadteacher", fields: [headteacherUserId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "LessonNote_headteacher_fkey")
-  schemeOfWorkItem SchemeOfWorkItem? @relation("LessonNoteSchemeItem", fields: [schemeOfWorkItemId], references: [id], onUpdate: NoAction, map: "LessonNote_schemeOfWorkItem_fkey")
-  teacher          User              @relation("LessonNoteTeacher", fields: [teacherUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "LessonNote_teacher_fkey")
-  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "LessonNote_tenant_fkey")
-  lessonDeliveries LessonDelivery[]
+  classroom              Classroom?                    @relation(fields: [classroomId], references: [id], onUpdate: NoAction, map: "LessonNote_classroom_fkey")
+  curriculumUnit         CurriculumUnit?               @relation(fields: [curriculumUnitId], references: [id], onUpdate: NoAction)
+  headteacher            User?                         @relation("LessonNoteHeadteacher", fields: [headteacherUserId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "LessonNote_headteacher_fkey")
+  schemeOfWorkItem       SchemeOfWorkItem?             @relation("LessonNoteSchemeItem", fields: [schemeOfWorkItemId], references: [id], onUpdate: NoAction, map: "LessonNote_schemeOfWorkItem_fkey")
+  teacher                User                          @relation("LessonNoteTeacher", fields: [teacherUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "LessonNote_teacher_fkey")
+  tenant                 Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "LessonNote_tenant_fkey")
+  lessonDeliveries       LessonDelivery[]
+  translationCompletions LessonTranslationCompletion[]
 
   /// ✅ A15.4B — teacher appraisal evidence spine
   teacherAppraisals TeacherAppraisal[]
@@ -2836,29 +2840,29 @@ model LessonDelivery {
 /// Weekly recurring teacher timetable evidence used by Lesson Note print.
 /// One active row = one lesson period. Edits retire old rows and append replacements.
 model TeacherLessonTimetableEntry {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId      String
   teacherUserId String
   classroomId   String
-  subject       String   @db.VarChar(120)
-  subjectNorm   String   @db.VarChar(120)
-  weekday       Int      @db.SmallInt
-  startMinute   Int      @db.SmallInt
-  endMinute     Int      @db.SmallInt
-  isActive      Boolean  @default(true)
+  subject       String    @db.VarChar(120)
+  subjectNorm   String    @db.VarChar(120)
+  weekday       Int       @db.SmallInt
+  startMinute   Int       @db.SmallInt
+  endMinute     Int       @db.SmallInt
+  isActive      Boolean   @default(true)
   retiredAt     DateTime? @db.Timestamptz(6)
-  createdAt     DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt     DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
 
   tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "TeacherLessonTimetableEntry_tenant_fkey")
   teacher   User      @relation(fields: [teacherUserId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "TeacherLessonTimetableEntry_teacher_fkey")
   classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "TeacherLessonTimetableEntry_classroom_fkey")
 
-  @@index([tenantId, teacherUserId, classroomId, subjectNorm, isActive, weekday, startMinute], map: "TeacherLessonTimetableEntry_active_lookup_idx")
-  @@index([tenantId, classroomId, isActive, weekday, startMinute, endMinute], map: "TeacherLessonTimetableEntry_class_time_idx")
-
   /// DB truth also includes partial unique index TeacherLessonTimetableEntry_active_exact_unique
   /// plus insert-overlap and retired-evidence guard triggers.
+
+  @@index([tenantId, teacherUserId, classroomId, subjectNorm, isActive, weekday, startMinute], map: "TeacherLessonTimetableEntry_active_lookup_idx")
+  @@index([tenantId, classroomId, isActive, weekday, startMinute, endMinute], map: "TeacherLessonTimetableEntry_class_time_idx")
 }
 
 model TeacherLessonLanguageSetting {
@@ -2879,10 +2883,10 @@ model TeacherLessonLanguageSetting {
   teacher   User      @relation(fields: [teacherUserId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "TeacherLessonLanguageSetting_teacher_fkey")
   classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "TeacherLessonLanguageSetting_classroom_fkey")
 
-  @@index([tenantId, teacherUserId, isActive, classroomId, subjectNorm], map: "TeacherLessonLanguageSetting_teacher_active_idx")
-
   /// DB truth also includes partial unique index TeacherLessonLanguageSetting_active_unique
   /// plus insert and retired-evidence guard triggers.
+
+  @@index([tenantId, teacherUserId, isActive, classroomId, subjectNorm], map: "TeacherLessonLanguageSetting_teacher_active_idx")
 }
 
 /// Immutable teacher-verified translation evidence.
@@ -2918,12 +2922,45 @@ model LessonTranslationEvidence {
   tenant  Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "LessonTranslationEvidence_tenant_fkey")
   teacher User   @relation("LessonTranslationEvidenceTeacher", fields: [teacherUserId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "LessonTranslationEvidence_teacher_fkey")
 
+  /// DB truth also includes insert-authority and append-only guard triggers plus
+  /// field/language/hash/provenance/action/pilot-corpus check constraints.
+
   @@index([tenantId, teacherUserId, languageCode, registryVersion, fieldKey, sourceHash, createdAt], map: "LessonTranslationEvidence_personal_lookup_idx")
   @@index([tenantId, languageCode, registryVersion, fieldKey, sourceHash, finalHash, teacherUserId], map: "LessonTranslationEvidence_consensus_lookup_idx")
   @@index([lessonNoteId, createdAt], map: "LessonTranslationEvidence_note_provenance_idx")
+}
 
-  /// DB truth also includes insert-authority and append-only guard triggers plus
-  /// field/language/hash/provenance/action/pilot-corpus check constraints.
+model LessonTranslationCompletion {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId             String
+  teacherUserId        String
+  lessonNoteId         String
+  fieldKey             String   @db.VarChar(48)
+  completionMethod     String   @db.VarChar(48)
+  sourceLanguage       String?  @db.VarChar(16)
+  languageCode         String   @db.VarChar(40)
+  registryVersion      String   @db.VarChar(80)
+  normalizationVersion String   @default("EDULIFE_EDU_TEXT_NFC_V1") @db.VarChar(64)
+  sourceHash           String?  @db.VarChar(64)
+  suggestedHash        String?  @db.VarChar(64)
+  finalHash            String   @db.VarChar(64)
+  teacherAction        String   @db.VarChar(16)
+  receiptId            String?  @unique(map: "LessonTranslationCompletion_receipt_unique") @db.Uuid
+  receiptVersion       String?  @db.VarChar(64)
+  confirmationVersion  String?  @db.VarChar(64)
+  verifiedAt           DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "LessonTranslationCompletion_tenant_fkey")
+  teacher    User       @relation("LessonTranslationCompletionTeacher", fields: [teacherUserId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "LessonTranslationCompletion_teacher_fkey")
+  lessonNote LessonNote @relation(fields: [lessonNoteId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "LessonTranslationCompletion_note_fkey")
+
+  /// DB truth also includes method-aware field/language/hash/action/receipt/confirmation checks
+  /// plus active-membership/note-authority/identity-immutability trigger enforcement.
+
+  @@unique([lessonNoteId, fieldKey], map: "LessonTranslationCompletion_note_field_unique")
+  @@index([tenantId, teacherUserId, lessonNoteId], map: "LessonTranslationCompletion_teacher_note_idx")
+  @@index([lessonNoteId, verifiedAt], map: "LessonTranslationCompletion_note_verified_idx")
 }
 
 model AssessmentScore {
@@ -3305,11 +3342,11 @@ model GovernanceOfficerAssignment {
   revokedBy User?     @relation("GovernanceOfficerAssignmentRevokedBy", fields: [revokedByUserId], references: [id], onDelete: SetNull)
 
   /// ✅ D3 — appraisal subject, assessor, reviewer, and identity-access provenance
-  appraisalCyclesAsTarget   AppraisalCycle[]          @relation("AppraisalCycleTargetAssignment")
-  appraisalAssessments      AppraisalAssessment[]     @relation("AppraisalAssessmentAssessorAssignment")
-  appraisalReviews          AppraisalReview[]         @relation("AppraisalReviewReviewerAssignment")
+  appraisalCyclesAsTarget       AppraisalCycle[]               @relation("AppraisalCycleTargetAssignment")
+  appraisalAssessments          AppraisalAssessment[]          @relation("AppraisalAssessmentAssessorAssignment")
+  appraisalReviews              AppraisalReview[]              @relation("AppraisalReviewReviewerAssignment")
   appraisalStaffFeedbackReviews AppraisalStaffFeedbackReview[] @relation("AppraisalStaffFeedbackReviewReviewerAssignment")
-  appraisalIdentityAccesses AppraisalIdentityAccess[] @relation("AppraisalIdentityAccessActorAssignment")
+  appraisalIdentityAccesses     AppraisalIdentityAccess[]      @relation("AppraisalIdentityAccessActorAssignment")
 
   /// ✅ UI-LEGAL-P1 — append-only Terms/Privacy acceptance evidence.
   legalAcceptances LegalAcceptance[]
@@ -3971,14 +4008,14 @@ model AppraisalCycle {
   cancelledBy    User? @relation("AppraisalCycleCancelledBy", fields: [cancelledByUserId], references: [id], onDelete: SetNull, map: "AppraisalCycle_cancelledBy_fkey")
   lastExtendedBy User? @relation("AppraisalCycleExtendedBy", fields: [lastExtendedByUserId], references: [id], onDelete: SetNull, map: "AppraisalCycle_extendedBy_fkey")
 
-  participants     AppraisalParticipant[]
-  responses        AppraisalResponse[]
-  assessments      AppraisalAssessment[]
+  participants         AppraisalParticipant[]
+  responses            AppraisalResponse[]
+  assessments          AppraisalAssessment[]
   reviews              AppraisalReview[]
   staffFeedbackReviews AppraisalStaffFeedbackReview[]
   aggregates           AppraisalAggregateSnapshot[]
-  identityAccesses AppraisalIdentityAccess[]
-  notifications    AppraisalNotification[]
+  identityAccesses     AppraisalIdentityAccess[]
+  notifications        AppraisalNotification[]
 
   @@index([instrumentVersionId, status], map: "AppraisalCycle_version_status_idx")
   @@index([scopeZoneId, status], map: "AppraisalCycle_scope_status_idx")
@@ -4272,8 +4309,8 @@ model AppraisalAggregateSnapshot {
 
   metadata Json @default("{}")
 
-  cycle       AppraisalCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade, map: "AppraisalAggregate_cycle_fkey")
-  generatedBy User?          @relation("AppraisalAggregateGeneratedBy", fields: [generatedByUserId], references: [id], onDelete: SetNull, map: "AppraisalAggregate_generatedBy_fkey")
+  cycle                AppraisalCycle                 @relation(fields: [cycleId], references: [id], onDelete: Cascade, map: "AppraisalAggregate_cycle_fkey")
+  generatedBy          User?                          @relation("AppraisalAggregateGeneratedBy", fields: [generatedByUserId], references: [id], onDelete: SetNull, map: "AppraisalAggregate_generatedBy_fkey")
   staffFeedbackReviews AppraisalStaffFeedbackReview[]
 
   @@unique([cycleId, version], map: "AppraisalAggregate_cycle_version_unique")

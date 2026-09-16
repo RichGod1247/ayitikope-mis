@@ -1,0 +1,6 @@
+**
+!deploy/
+!deploy/lesson-note-translator/
+!deploy/lesson-note-translator/server.py
+!deploy/lesson-note-translator-relay/
+!deploy/lesson-note-translator-relay/relay.py

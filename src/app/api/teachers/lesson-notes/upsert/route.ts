@@ -12,6 +12,26 @@ import {
   findApprovedSchemeItemForScope,
   loadOwnedSchemeItem,
 } from "@/lib/lessonNotes/approvedScheme";
+import {
+  getCurrentCompletedTranslationFields,
+  getTranslationCompletionGate,
+  isTranslationCompletionField,
+  TARGET_LANGUAGE_CONFIRMATION_VERSION,
+  TRANSLATION_COMPLETION_METHOD_RECEIPT,
+  TRANSLATION_COMPLETION_METHOD_TEACHER_CONFIRMATION,
+  translationCompletionApplies,
+  verifyTargetLanguageConfirmation,
+  verifyTranslationReview,
+  type TranslationReviewInput,
+  type VerifiedTargetLanguageConfirmation,
+  type VerifiedTranslationReview,
+} from "@/lib/lessonNotes/translationCompletion";
+import {
+  hashTranslationText,
+  normalizeTranslationText,
+  TRANSLATION_NORMALIZATION_VERSION,
+  type TranslatableLessonField,
+} from "@/lib/lessonNotes/translationContract";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,6 +66,8 @@ type UpsertBody = {
 
   objectives?: string | null;
   priorKnowledge?: string | null;
+  coreCompetencies?: string | null;
+  keywords?: string | null;
   teachingLearningResources?: string | null;
   introduction?: string | null;
   lessonDevelopment?: string | null;
@@ -54,6 +76,9 @@ type UpsertBody = {
   homework?: string | null;
   differentiationNotes?: string | null;
   reflectionNotes?: string | null;
+
+  translationReviews?: TranslationReviewInput[];
+  targetLanguageConfirmations?: TranslatableLessonField[];
 
   status?: LessonNoteStatus; // teacher only: DRAFT | SUBMITTED
 };
@@ -169,6 +194,8 @@ const LESSON_NOTE_SELECT = {
 
   objectives: true,
   priorKnowledge: true,
+  coreCompetencies: true,
+  keywords: true,
   teachingLearningResources: true,
   introduction: true,
   lessonDevelopment: true,
@@ -268,6 +295,8 @@ const lessonNoteIdRaw =
   const maybeBig = [
     body.objectives,
     body.priorKnowledge,
+    body.coreCompetencies,
+    body.keywords,
     body.teachingLearningResources,
     body.introduction,
     body.lessonDevelopment,
@@ -279,6 +308,27 @@ const lessonNoteIdRaw =
   ];
   if (maybeBig.some((v) => tooLarge(v))) {
     return jsonNoStore({ ok: false, error: "One or more fields are too large." }, { status: 413 });
+  }
+
+  if (
+    body.translationReviews !== undefined &&
+    (!Array.isArray(body.translationReviews) || body.translationReviews.length > 13)
+  ) {
+    return jsonNoStore(
+      { ok: false, error: "Invalid translation review payload." },
+      { status: 400 },
+    );
+  }
+
+  if (
+    body.targetLanguageConfirmations !== undefined &&
+    (!Array.isArray(body.targetLanguageConfirmations) ||
+      body.targetLanguageConfirmations.length > 13)
+  ) {
+    return jsonNoStore(
+      { ok: false, error: "Invalid target-language confirmation payload." },
+      { status: 400 },
+    );
   }
 
   const requestedStatus = body.status;
@@ -312,9 +362,19 @@ select: {
   schemeOfWorkItemId: true,
 
   indicator: true,
+  lessonTitle: true,
   objectives: true,
+  priorKnowledge: true,
+  coreCompetencies: true,
+  keywords: true,
+  teachingLearningResources: true,
+  introduction: true,
   lessonDevelopment: true,
+  conclusion: true,
   assessment: true,
+  homework: true,
+  differentiationNotes: true,
+  reflectionNotes: true,
 },
     });
 
@@ -356,6 +416,8 @@ const schemeOfWorkItemId = asTrimmedNullableString(
     const lessonTitle = asNullableString(body.lessonTitle);
     const objectives = asNullableString(body.objectives);
     const priorKnowledge = asNullableString(body.priorKnowledge);
+    const coreCompetencies = asNullableString(body.coreCompetencies);
+    const keywords = asNullableString(body.keywords);
     const teachingLearningResources = asNullableString(body.teachingLearningResources);
     const introduction = asNullableString(body.introduction);
     const lessonDevelopment = asNullableString(body.lessonDevelopment);
@@ -690,6 +752,8 @@ if (lessonDate !== undefined) data.lessonDate = lessonDate;
     if (lessonTitle !== undefined) data.lessonTitle = lessonTitle;
     if (objectives !== undefined) data.objectives = objectives;
     if (priorKnowledge !== undefined) data.priorKnowledge = priorKnowledge;
+    if (coreCompetencies !== undefined) data.coreCompetencies = coreCompetencies;
+    if (keywords !== undefined) data.keywords = keywords;
     if (teachingLearningResources !== undefined) data.teachingLearningResources = teachingLearningResources;
     if (introduction !== undefined) data.introduction = introduction;
     if (lessonDevelopment !== undefined) data.lessonDevelopment = lessonDevelopment;
@@ -699,33 +763,444 @@ if (lessonDate !== undefined) data.lessonDate = lessonDate;
     if (differentiationNotes !== undefined) data.differentiationNotes = differentiationNotes;
     if (reflectionNotes !== undefined) data.reflectionNotes = reflectionNotes;
 
-    // Optimistic concurrency: update only if status unchanged since read
-    const updated = await prisma.lessonNote.updateMany({
-      where: {
-        id: lessonNoteId,
-        tenantId: ctx.tenantId,
-        teacherUserId: ctx.userId,
-        status: existing.status,
+    const effectiveLanguageCode =
+      existing.lessonLanguageCode ??
+      languageFreeze?.lessonLanguageCode ??
+      null;
+    const effectiveRegistryVersion =
+      existing.languageRegistryVersion ??
+      languageFreeze?.languageRegistryVersion ??
+      null;
+
+    const effectiveTranslationValues = {
+      lessonTitle:
+        lessonTitle !== undefined ? lessonTitle : existing.lessonTitle,
+      objectives:
+        objectives !== undefined ? objectives : existing.objectives,
+      priorKnowledge:
+        priorKnowledge !== undefined ? priorKnowledge : existing.priorKnowledge,
+      coreCompetencies:
+        coreCompetencies !== undefined ? coreCompetencies : existing.coreCompetencies,
+      keywords:
+        keywords !== undefined ? keywords : existing.keywords,
+      teachingLearningResources:
+        teachingLearningResources !== undefined
+          ? teachingLearningResources
+          : existing.teachingLearningResources,
+      introduction:
+        introduction !== undefined ? introduction : existing.introduction,
+      lessonDevelopment:
+        lessonDevelopment !== undefined
+          ? lessonDevelopment
+          : existing.lessonDevelopment,
+      conclusion:
+        conclusion !== undefined ? conclusion : existing.conclusion,
+      assessment:
+        assessment !== undefined ? assessment : existing.assessment,
+      homework:
+        homework !== undefined ? homework : existing.homework,
+      differentiationNotes:
+        differentiationNotes !== undefined
+          ? differentiationNotes
+          : existing.differentiationNotes,
+      reflectionNotes:
+        reflectionNotes !== undefined
+          ? reflectionNotes
+          : existing.reflectionNotes,
+    } satisfies Partial<Record<TranslatableLessonField, string | null>>;
+
+    const completionRequired = translationCompletionApplies({
+      subject: effectiveSubject,
+      languageCode: effectiveLanguageCode,
+      registryVersion: effectiveRegistryVersion,
+    });
+
+    const verifiedReviews: VerifiedTranslationReview[] = [];
+    const verifiedConfirmations: VerifiedTargetLanguageConfirmation[] = [];
+    let existingCompletionRows: Array<{
+      id: string;
+      fieldKey: string;
+      completionMethod: string;
+      sourceLanguage: string | null;
+      languageCode: string;
+      registryVersion: string;
+      normalizationVersion: string;
+      sourceHash: string | null;
+      suggestedHash: string | null;
+      finalHash: string;
+      teacherAction: string;
+      receiptId: string | null;
+      receiptVersion: string | null;
+      confirmationVersion: string | null;
+      verifiedAt: Date;
+    }> = [];
+
+    if (completionRequired) {
+      const seenCompletionFields = new Set<string>();
+
+      for (const review of body.translationReviews ?? []) {
+        const field =
+          review && typeof review === "object" && !Array.isArray(review)
+            ? (review as { field?: unknown }).field
+            : null;
+
+        if (typeof field !== "string" || seenCompletionFields.has(field)) {
+          return jsonNoStore(
+            { ok: false, error: "Duplicate or invalid translation review field." },
+            { status: 400 },
+          );
+        }
+        seenCompletionFields.add(field);
+
+        const finalText =
+          field in effectiveTranslationValues
+            ? effectiveTranslationValues[field as TranslatableLessonField]
+            : null;
+
+        const verified = verifyTranslationReview({
+          review,
+          tenantId: ctx.tenantId,
+          teacherUserId: ctx.userId,
+          lessonNoteId,
+          languageCode: effectiveLanguageCode as string,
+          registryVersion: effectiveRegistryVersion as string,
+          finalText,
+          now,
+        });
+
+        if (!verified.ok) {
+          return jsonNoStore(
+            {
+              ok: false,
+              code: verified.error,
+              error: "Translation proof is no longer valid. Translate the highlighted field again.",
+              field,
+            },
+            { status: 409 },
+          );
+        }
+
+        verifiedReviews.push(verified.value);
+      }
+
+      for (const field of body.targetLanguageConfirmations ?? []) {
+        if (seenCompletionFields.has(field)) {
+          return jsonNoStore(
+            {
+              ok: false,
+              error: "A field cannot be both translated and directly confirmed in the same save.",
+              field,
+            },
+            { status: 400 },
+          );
+        }
+        seenCompletionFields.add(field);
+
+        const finalText =
+          field in effectiveTranslationValues
+            ? effectiveTranslationValues[field]
+            : null;
+
+        const verified = verifyTargetLanguageConfirmation({
+          field,
+          finalText,
+        });
+
+        if (!verified.ok) {
+          return jsonNoStore(
+            {
+              ok: false,
+              code: verified.error,
+              error: "Confirm only a non-empty current Ghanaian-language field.",
+              field,
+            },
+            { status: 409 },
+          );
+        }
+
+        verifiedConfirmations.push(verified.value);
+      }
+
+      existingCompletionRows =
+        await prisma.lessonTranslationCompletion.findMany({
+          where: {
+            lessonNoteId,
+            tenantId: ctx.tenantId,
+            teacherUserId: ctx.userId,
+          },
+          select: {
+            id: true,
+            fieldKey: true,
+            completionMethod: true,
+            sourceLanguage: true,
+            languageCode: true,
+            registryVersion: true,
+            normalizationVersion: true,
+            sourceHash: true,
+            suggestedHash: true,
+            finalHash: true,
+            teacherAction: true,
+            receiptId: true,
+            receiptVersion: true,
+            confirmationVersion: true,
+            verifiedAt: true,
+          },
+        });
+
+      const completedFields = new Set<string>();
+
+      // A field with an existing completion row has already passed the
+      // teacher-reviewed translation gate. Subsequent teacher edits are
+      // corrections to that translated field, not a request to translate
+      // the corrected Ewe text again as though it were English. The
+      // transaction below advances finalHash to the teacher's current text.
+      for (const row of existingCompletionRows) {
+        if (!isTranslationCompletionField(row.fieldKey)) continue;
+        const current = normalizeTranslationText(
+          effectiveTranslationValues[row.fieldKey],
+        );
+        if (current) completedFields.add(row.fieldKey);
+      }
+
+      for (const review of verifiedReviews) {
+        completedFields.add(review.field);
+      }
+
+      for (const confirmation of verifiedConfirmations) {
+        completedFields.add(confirmation.field);
+      }
+
+      const completionGate = getTranslationCompletionGate({
+        values: effectiveTranslationValues,
+        completedFields: [...completedFields],
+      });
+
+      if (!completionGate.ok) {
+        return jsonNoStore(
+          {
+            ok: false,
+            code: "GHANAIAN_TRANSLATION_INCOMPLETE",
+            error:
+              "Review every required Ghanaian Language section before saving. Translate English content or confirm content that is already in the target language.",
+            missingContent: completionGate.missingContent,
+            needsTranslation: completionGate.needsTranslation,
+          },
+          { status: 409 },
+        );
+      }
+    }
+
+    const replacementCompletionRows: Prisma.LessonTranslationCompletionCreateManyInput[] = [];
+
+    if (completionRequired) {
+      const existingByField = new Map(
+        existingCompletionRows.map((row) => [row.fieldKey, row] as const),
+      );
+      const pendingFields = new Set<TranslatableLessonField>([
+        ...verifiedReviews.map((review) => review.field),
+        ...verifiedConfirmations.map((confirmation) => confirmation.field),
+      ]);
+
+      // Build the complete desired completion-state snapshot before opening
+      // the interactive transaction. The transaction then replaces the
+      // note-scoped completion rows with two database round-trips instead of
+      // issuing one remote update/upsert per field.
+      for (const row of existingCompletionRows) {
+        if (!isTranslationCompletionField(row.fieldKey)) continue;
+        if (pendingFields.has(row.fieldKey)) continue;
+
+        const current = normalizeTranslationText(
+          effectiveTranslationValues[row.fieldKey],
+        );
+        if (!current) continue;
+
+        const finalHash = hashTranslationText(current);
+        const changed = finalHash !== row.finalHash;
+
+        replacementCompletionRows.push({
+          id: row.id,
+          tenantId: ctx.tenantId,
+          teacherUserId: ctx.userId,
+          lessonNoteId,
+          fieldKey: row.fieldKey,
+          completionMethod: row.completionMethod,
+          sourceLanguage: row.sourceLanguage,
+          languageCode: row.languageCode,
+          registryVersion: row.registryVersion,
+          normalizationVersion: row.normalizationVersion,
+          sourceHash: row.sourceHash,
+          suggestedHash: row.suggestedHash,
+          finalHash,
+          teacherAction:
+            row.completionMethod ===
+            TRANSLATION_COMPLETION_METHOD_TEACHER_CONFIRMATION
+              ? "CONFIRMED"
+              : row.suggestedHash === finalHash
+                ? "ACCEPTED"
+                : "CORRECTED",
+          receiptId: row.receiptId,
+          receiptVersion: row.receiptVersion,
+          confirmationVersion:
+            row.completionMethod ===
+            TRANSLATION_COMPLETION_METHOD_TEACHER_CONFIRMATION
+              ? TARGET_LANGUAGE_CONFIRMATION_VERSION
+              : row.confirmationVersion,
+          verifiedAt: changed ? now : row.verifiedAt,
+        });
+      }
+
+      for (const review of verifiedReviews) {
+        const existingRow = existingByField.get(review.field);
+
+        replacementCompletionRows.push({
+          ...(existingRow ? { id: existingRow.id } : {}),
+          tenantId: ctx.tenantId,
+          teacherUserId: ctx.userId,
+          lessonNoteId,
+          fieldKey: review.field,
+          completionMethod: TRANSLATION_COMPLETION_METHOD_RECEIPT,
+          sourceLanguage: "en",
+          languageCode: review.receipt.languageCode,
+          registryVersion: review.receipt.registryVersion,
+          normalizationVersion: review.receipt.normalizationVersion,
+          sourceHash: review.sourceHash,
+          suggestedHash: review.suggestedHash,
+          finalHash: review.finalHash,
+          teacherAction: review.teacherAction,
+          receiptId: review.receipt.receiptId,
+          receiptVersion: review.receipt.receiptVersion,
+          confirmationVersion: null,
+          verifiedAt: now,
+        });
+      }
+
+      for (const confirmation of verifiedConfirmations) {
+        const existingRow = existingByField.get(confirmation.field);
+
+        replacementCompletionRows.push({
+          ...(existingRow ? { id: existingRow.id } : {}),
+          tenantId: ctx.tenantId,
+          teacherUserId: ctx.userId,
+          lessonNoteId,
+          fieldKey: confirmation.field,
+          completionMethod:
+            TRANSLATION_COMPLETION_METHOD_TEACHER_CONFIRMATION,
+          sourceLanguage: null,
+          languageCode: effectiveLanguageCode as string,
+          registryVersion: effectiveRegistryVersion as string,
+          normalizationVersion: TRANSLATION_NORMALIZATION_VERSION,
+          sourceHash: null,
+          suggestedHash: null,
+          finalHash: confirmation.finalHash,
+          teacherAction: confirmation.teacherAction,
+          receiptId: null,
+          receiptVersion: null,
+          confirmationVersion: confirmation.confirmationVersion,
+          verifiedAt: now,
+        });
+      }
+    }
+
+    const transactionResult = await prisma.$transaction(
+      async (tx) => {
+        const updated = await tx.lessonNote.updateMany({
+          where: {
+            id: lessonNoteId,
+            tenantId: ctx.tenantId,
+            teacherUserId: ctx.userId,
+            status: existing.status,
+          },
+          data,
+        });
+
+        if (updated.count !== 1) {
+          throw new Error("LESSON_NOTE_OPTIMISTIC_CONFLICT");
+        }
+
+        if (completionRequired) {
+          await tx.lessonTranslationCompletion.deleteMany({
+            where: {
+              lessonNoteId,
+              tenantId: ctx.tenantId,
+              teacherUserId: ctx.userId,
+            },
+          });
+
+          if (replacementCompletionRows.length > 0) {
+            await tx.lessonTranslationCompletion.createMany({
+              data: replacementCompletionRows,
+            });
+          }
+        }
+
+        const fresh = await tx.lessonNote.findFirst({
+          where: {
+            id: lessonNoteId,
+            tenantId: ctx.tenantId,
+            teacherUserId: ctx.userId,
+          },
+          select: LESSON_NOTE_SELECT,
+        });
+
+        if (!fresh) {
+          throw new Error("LESSON_NOTE_POST_SAVE_MISSING");
+        }
+
+        const completionRows = completionRequired
+          ? await tx.lessonTranslationCompletion.findMany({
+              where: {
+                lessonNoteId,
+                tenantId: ctx.tenantId,
+                teacherUserId: ctx.userId,
+              },
+              select: {
+                fieldKey: true,
+                finalHash: true,
+                receiptId: true,
+              },
+            })
+          : [];
+
+        return {
+          fresh,
+          completedFields: completionRequired
+            ? getCurrentCompletedTranslationFields({
+                values: {
+                  lessonTitle: fresh.lessonTitle,
+                  objectives: fresh.objectives,
+                  priorKnowledge: fresh.priorKnowledge,
+                  coreCompetencies: fresh.coreCompetencies,
+                  keywords: fresh.keywords,
+                  teachingLearningResources: fresh.teachingLearningResources,
+                  introduction: fresh.introduction,
+                  lessonDevelopment: fresh.lessonDevelopment,
+                  conclusion: fresh.conclusion,
+                  assessment: fresh.assessment,
+                  homework: fresh.homework,
+                  differentiationNotes: fresh.differentiationNotes,
+                  reflectionNotes: fresh.reflectionNotes,
+                },
+                rows: completionRows,
+              })
+            : [],
+        };
       },
-      data,
-    });
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        maxWait: 10_000,
+        timeout: 30_000,
+      },
+    );
 
-    if (updated.count !== 1) {
-      return jsonNoStore({ ok: false, error: "Conflict: lesson note changed. Refresh and try again." }, { status: 409 });
-    }
-
-    const fresh = await prisma.lessonNote.findFirst({
-      where: { id: lessonNoteId, tenantId: ctx.tenantId, teacherUserId: ctx.userId },
-      select: LESSON_NOTE_SELECT,
-    });
-
-    if (!fresh) {
-      return jsonNoStore({ ok: false, error: "Failed to load updated lesson note." }, { status: 500 });
-    }
+    const fresh = transactionResult.fresh;
 
     return jsonNoStore(
       {
         ok: true,
+        translationCompletion: {
+          required: completionRequired,
+          completedFields: transactionResult.completedFields,
+        },
         item: {
           ...fresh,
           lessonDate: toIso(fresh.lessonDate),
@@ -740,6 +1215,13 @@ if (lessonDate !== undefined) data.lessonDate = lessonDate;
       { status: 200 }
     );
   } catch (err) {
+    if (err instanceof Error && err.message === "LESSON_NOTE_OPTIMISTIC_CONFLICT") {
+      return jsonNoStore(
+        { ok: false, error: "Conflict: lesson note changed. Refresh and try again." },
+        { status: 409 },
+      );
+    }
+
     console.error("[TEACHER_LESSON_NOTE_UPSERT_ERROR]", err);
     return jsonNoStore({ ok: false, error: "Failed to save this lesson note. Please try again." }, { status: 500 });
   }

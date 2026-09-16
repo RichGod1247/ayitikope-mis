@@ -9,6 +9,11 @@ import {
   findApprovedSchemeItemForScope,
   loadOwnedSchemeItem,
 } from "@/lib/lessonNotes/approvedScheme";
+import {
+  getCurrentCompletedTranslationFields,
+  getTranslationCompletionGate,
+  translationCompletionApplies,
+} from "@/lib/lessonNotes/translationCompletion";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -99,6 +104,8 @@ export async function POST(req: NextRequest) {
         submittedAt: true,
 
 subject: true,
+lessonLanguageCode: true,
+languageRegistryVersion: true,
 level: true,
 term: true,
 academicYear: true,
@@ -109,9 +116,19 @@ classroomId: true,
         curriculumUnitId: true,
 
         indicator: true,
+        lessonTitle: true,
         objectives: true,
+        priorKnowledge: true,
+        coreCompetencies: true,
+        keywords: true,
+        teachingLearningResources: true,
+        introduction: true,
         lessonDevelopment: true,
+        conclusion: true,
         assessment: true,
+        homework: true,
+        differentiationNotes: true,
+        reflectionNotes: true,
 
         curriculumUnit: {
           select: {
@@ -184,6 +201,79 @@ if (note.classroomId && note.subject) {
         },
         { status: 400 }
       );
+    }
+
+    const completionRequired = translationCompletionApplies({
+      subject: note.subject,
+      languageCode: note.lessonLanguageCode,
+      registryVersion: note.languageRegistryVersion,
+    });
+
+    if (completionRequired) {
+      const completionRows = await prisma.lessonTranslationCompletion.findMany({
+        where: {
+          lessonNoteId: note.id,
+          tenantId: ctx.tenantId,
+          teacherUserId: ctx.userId,
+        },
+        select: {
+          fieldKey: true,
+          finalHash: true,
+          receiptId: true,
+        },
+      });
+
+      const completedFields = getCurrentCompletedTranslationFields({
+        values: {
+          lessonTitle: note.lessonTitle,
+          objectives: note.objectives,
+          priorKnowledge: note.priorKnowledge,
+          coreCompetencies: note.coreCompetencies,
+          keywords: note.keywords,
+          teachingLearningResources: note.teachingLearningResources,
+          introduction: note.introduction,
+          lessonDevelopment: note.lessonDevelopment,
+          conclusion: note.conclusion,
+          assessment: note.assessment,
+          homework: note.homework,
+          differentiationNotes: note.differentiationNotes,
+          reflectionNotes: note.reflectionNotes,
+        },
+        rows: completionRows,
+      });
+
+      const completionGate = getTranslationCompletionGate({
+        values: {
+          lessonTitle: note.lessonTitle,
+          objectives: note.objectives,
+          priorKnowledge: note.priorKnowledge,
+          coreCompetencies: note.coreCompetencies,
+          keywords: note.keywords,
+          teachingLearningResources: note.teachingLearningResources,
+          introduction: note.introduction,
+          lessonDevelopment: note.lessonDevelopment,
+          conclusion: note.conclusion,
+          assessment: note.assessment,
+          homework: note.homework,
+          differentiationNotes: note.differentiationNotes,
+          reflectionNotes: note.reflectionNotes,
+        },
+        completedFields,
+      });
+
+      if (!completionGate.ok) {
+        return jsonNoStore(
+          {
+            ok: false,
+            code: "GHANAIAN_TRANSLATION_INCOMPLETE",
+            error:
+              "Translate every required Ghanaian Language section before submitting.",
+            missingContent: completionGate.missingContent,
+            needsTranslation: completionGate.needsTranslation,
+          },
+          { status: 409 },
+        );
+      }
     }
 
     const hasCurriculum = Boolean(note.curriculumUnitId && note.curriculumUnit);

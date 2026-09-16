@@ -334,9 +334,13 @@ function scoreMediaCandidate(args: {
 async function resolveIndicatorMedia(args: {
   indicatorId: string | null;
   indicatorCode: string | null;
+  contentStandardCode: string | null;
 }): Promise<ResolvedMedia> {
   const indicatorId = clean(args.indicatorId) || null;
-  const indicatorCode = normalizeIndicatorCode(args.indicatorCode) || null;
+  // Keep the curriculum code exactly as stored for relational database
+  // lookup. Filename scoring normalizes the code separately.
+  const indicatorCode = clean(args.indicatorCode) || null;
+  const contentStandardCode = clean(args.contentStandardCode) || null;
 
   const client: any = (prisma as any).curriculumMedia;
   if (!client || typeof client.findMany !== "function") {
@@ -356,11 +360,26 @@ async function resolveIndicatorMedia(args: {
 
   if (indicatorId) {
     tryWheres.push({ label: "indicatorId", where: { indicatorId } });
-    tryWheres.push({ label: "curriculumIndicatorId", where: { curriculumIndicatorId: indicatorId } });
   }
 
   if (indicatorCode) {
-    tryWheres.push({ label: "indicatorCode", where: { indicatorCode } });
+    tryWheres.push({
+      label: "indicatorCode",
+      where: {
+        indicator: {
+          is: {
+            code: indicatorCode,
+            ...(contentStandardCode
+              ? {
+                  contentStandard: {
+                    is: { code: contentStandardCode },
+                  },
+                }
+              : {}),
+          },
+        },
+      },
+    });
   }
 
   let rows: Array<{ imagePath: string; altText: string | null }> = [];
@@ -426,7 +445,7 @@ async function resolveIndicatorMedia(args: {
   };
 
   // Safety: only "safeToDescribe" when matched by indicatorId-based lookup
-  const safeToDescribe = usedLabel === "indicatorId" || usedLabel === "curriculumIndicatorId";
+  const safeToDescribe = usedLabel === "indicatorId";
 
   // Ambiguity: if we only had code-based lookup AND multiple candidates, do not claim specificity.
   if (!safeToDescribe && candidatesCount > 1) {
@@ -1233,8 +1252,12 @@ export async function POST(req: NextRequest) {
 
     // ✅ Image-aware meta only: resolve media by indicatorId first (exact), else fallback by indicatorCode.
     const media = await resolveIndicatorMedia({
-      indicatorId: clean(grounding.indicatorId) || clean(grounding.schemeItem?.indicatorId) || null,
+      indicatorId:
+        clean(grounding.indicatorId) ||
+        clean(grounding.schemeItem?.indicatorId) ||
+        null,
       indicatorCode: clean(grounding.indicatorCode) || null,
+      contentStandardCode: clean(grounding.contentStandardCode) || null,
     });
 
     const result = buildWorldClassCoachV4(coachInput, grounding, mode);

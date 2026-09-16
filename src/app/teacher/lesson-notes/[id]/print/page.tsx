@@ -76,6 +76,33 @@ function clean(v: unknown) {
   return String(v ?? "").trim();
 }
 
+function stripRepeatedLessonHeaderMetadata(value: string) {
+  const lines = clean(value).split(/\r?\n/);
+
+  while (lines.length) {
+    const head = clean(lines[0]);
+
+    if (!head) {
+      lines.shift();
+      continue;
+    }
+
+    if (/^term\s*:/i.test(head)) {
+      lines.shift();
+      continue;
+    }
+
+    if (/^academic\s+year\s*:/i.test(head)) {
+      lines.shift();
+      continue;
+    }
+
+    break;
+  }
+
+  return lines.join("\n").trim();
+}
+
 function safeLower(v: unknown) {
   return typeof v === "string" ? v.toLowerCase().trim() : "";
 }
@@ -1507,6 +1534,7 @@ export default async function Page({ params, searchParams }: PageProps) {
       assessment: true,
       homework: true,
       coreCompetencies: true,
+      keywords: true,
       teachingLearningResources: true,
       differentiationNotes: true,
       reflectionNotes: true,
@@ -1584,6 +1612,10 @@ export default async function Page({ params, searchParams }: PageProps) {
   const strand = note.strand ?? unitRow?.strand ?? "";
   const lessonLanguage = getGhanaianLanguage(note.lessonLanguageCode);
   const lessonLanguageLabel = lessonLanguage?.name ?? note.lessonLanguageCode ?? "";
+  const isFrozenGhanaianLesson = Boolean(
+    lessonLanguage &&
+    note.languageRegistryVersion === lessonLanguage.registryVersion,
+  );
   const substrand = note.substrand ?? unitRow?.substrand ?? "";
   const contentStandard = note.contentStandard ?? unitRow?.contentStandard ?? "";
   const indicator = note.indicator ?? unitRow?.indicator ?? "";
@@ -1741,11 +1773,20 @@ const weekEndingLabel = formatDate(fridayOfWeek(weekEndingSource));
   const dbCore =
     normalizeLabel(note.coreCompetencies) ?? normalizeLabel((unitRow as any)?.coreCompetencies);
 
-  const coreList = dbCore ? parseListish(dbCore) : defaultCoreCompetencies(subject);
-  const coreCompetenciesText = joinForPrint(coreList, defaultCoreCompetencies(subject).join("; "));
+  const coreList = dbCore
+    ? parseListish(dbCore)
+    : isFrozenGhanaianLesson
+      ? []
+      : defaultCoreCompetencies(subject);
+
+  const coreCompetenciesText = dbCore
+    ? joinForPrint(coreList, "—")
+    : isFrozenGhanaianLesson
+      ? "—"
+      : joinForPrint(coreList, defaultCoreCompetencies(subject).join("; "));
 
   const dbKeywords =
-    normalizeLabel((note as any).keywords) ?? normalizeLabel((unitRow as any)?.keywords);
+    normalizeLabel(note.keywords) ?? normalizeLabel((unitRow as any)?.keywords);
 
   const generatedKeywords = extractKeywords(
     [
@@ -1761,64 +1802,88 @@ const weekEndingLabel = formatDate(fridayOfWeek(weekEndingSource));
   );
 
   const keywordsText = dbKeywords
-    ? joinForPrint(parseListish(dbKeywords), generatedKeywords.join(", "))
-    : generatedKeywords.length
-      ? generatedKeywords.join(", ")
-      : "—";
+    ? joinForPrint(parseListish(dbKeywords), "—")
+    : isFrozenGhanaianLesson
+      ? "—"
+      : generatedKeywords.length
+        ? generatedKeywords.join(", ")
+        : "—";
 
   const teachingResources =
-    note.teachingLearningResources ?? defaultTeachingResources(subject).join("; ");
+    note.teachingLearningResources ??
+    (isFrozenGhanaianLesson ? "—" : defaultTeachingResources(subject).join("; "));
 
   const lessonObjectives =
     note.objectives ??
-    (indicator
-      ? `Learning Outcomes (By the end of the lesson, learners can):\n• ${clean(indicator)}.`
-      : `Learning Outcomes (By the end of the lesson, learners can):\n• Explain ${topic} and give examples.`);
+    (isFrozenGhanaianLesson
+      ? "—"
+      : indicator
+        ? `Learning Outcomes (By the end of the lesson, learners can):\n• ${clean(indicator)}.`
+        : `Learning Outcomes (By the end of the lesson, learners can):\n• Explain ${topic} and give examples.`);
 
   const priorKnowledgeText =
-    note.priorKnowledge ?? `Learners can share relevant experiences about ${topic}.`;
+    note.priorKnowledge ??
+    (isFrozenGhanaianLesson ? "—" : `Learners can share relevant experiences about ${topic}.`);
 
   const introductionText =
-    note.introduction ?? `Introduce ${topic} with a quick question, short discussion, or local example.`;
+    note.introduction ??
+    (isFrozenGhanaianLesson
+      ? "—"
+      : `Introduce ${topic} with a quick question, short discussion, or local example.`);
+
+  const rawDevelopmentText =
+    note.lessonDevelopment ??
+    (isFrozenGhanaianLesson
+      ? "—"
+      : (() => {
+          const k = subjectKind(subject);
+          if (k === "SOCIAL") {
+            return `Teacher explains ${topic} with 1 clear local example; learners discuss in pairs/groups, identify key ideas, and share short answers. Use a short scenario/role-play if helpful.`;
+          }
+          if (k === "ENGLISH") {
+            return `Use a short text/picture prompt; model the skill once, practise together, then learners work independently while teacher supports.`;
+          }
+          if (k === "MATH") {
+            return `Model one example (I do); practise together (We do); learners solve similar items (You do) while teacher coaches.`;
+          }
+          if (k === "COMPUTING") {
+            return `Demonstrate the steps once; learners practise in pairs, then complete a short task independently while teacher supports.`;
+          }
+          return `Explain the key idea; demonstrate once; practise together; then learners complete a short task while teacher supports.`;
+        })());
 
   const developmentText =
-    note.lessonDevelopment ??
-    (() => {
-      const k = subjectKind(subject);
-      if (k === "SOCIAL") {
-        return `Teacher explains ${topic} with 1 clear local example; learners discuss in pairs/groups, identify key ideas, and share short answers. Use a short scenario/role-play if helpful.`;
-      }
-      if (k === "ENGLISH") {
-        return `Use a short text/picture prompt; model the skill once, practise together, then learners work independently while teacher supports.`;
-      }
-      if (k === "MATH") {
-        return `Model one example (I do); practise together (We do); learners solve similar items (You do) while teacher coaches.`;
-      }
-      if (k === "COMPUTING") {
-        return `Demonstrate the steps once; learners practise in pairs, then complete a short task independently while teacher supports.`;
-      }
-      return `Explain the key idea; demonstrate once; practise together; then learners complete a short task while teacher supports.`;
-    })();
+    stripRepeatedLessonHeaderMetadata(rawDevelopmentText) || "—";
 
   const conclusionText =
     note.conclusion ??
-    `Review key points; invite 2 learners to share an example/answer; summarise in one sentence.`;
+    (isFrozenGhanaianLesson
+      ? "—"
+      : `Review key points; invite 2 learners to share an example/answer; summarise in one sentence.`);
 
   const assessmentText =
     note.assessment ??
-    `Use short oral questions and a quick exit task aligned to the indicator. Note learners who need support.`;
+    (isFrozenGhanaianLesson
+      ? "—"
+      : `Use short oral questions and a quick exit task aligned to the indicator. Note learners who need support.`);
 
   const homeworkText =
     note.homework ??
-    `Find one example of ${topic} from home/community and write 2–3 lines (or draw) to share next lesson.`;
+    (isFrozenGhanaianLesson
+      ? "—"
+      : `Find one example of ${topic} from home/community and write 2–3 lines (or draw) to share next lesson.`);
 
   const differentiationText =
     note.differentiationNotes ??
-    `Support: break tasks into smaller steps; pair struggling learners with supportive peers.\nExtension: ask fast learners to explain “why” and create one new example.`;
+    (isFrozenGhanaianLesson
+      ? "—"
+      : `Support: break tasks into smaller steps; pair struggling learners with supportive peers.\nExtension: ask fast learners to explain “why” and create one new example.`);
 
   const reflectionText =
     note.reflectionNotes ??
-    `After the lesson, reflect on what worked, challenges faced, and what to improve next time.`;
+    (isFrozenGhanaianLesson
+      ? "—"
+      : `After the lesson, reflect on what worked, challenges faced, and what to improve next time.`);
 
   const createdAtLabel = formatDate(note.createdAt);
   const updatedAtLabel = formatDate(note.updatedAt);
@@ -1830,7 +1895,7 @@ const weekEndingLabel = formatDate(fridayOfWeek(weekEndingSource));
 
   const referencesText = `${officialNaccaReference(subject)}; Teacher Resource Pack; EduLife OS Teacher Lesson Design Studio printout.`;
 
-  const classroomExample = classroomExampleFor(subject, topic);
+  const classroomExample = isFrozenGhanaianLesson ? "—" : classroomExampleFor(subject, topic);
 
   return (
     <main className="flex min-h-screen justify-center bg-[linear-gradient(180deg,#05070B_0%,#071A3D_55%,#05070B_100%)] px-2 py-4 print:bg-white sm:py-6">
@@ -2093,11 +2158,6 @@ const weekEndingLabel = formatDate(fridayOfWeek(weekEndingSource));
                   <p>{introductionText}</p>
                 </td>
                 <td className="border border-black px-1 py-1 whitespace-pre-line break-words">
-                  <p className="mb-1 font-semibold underline">KEY LEARNING POINTS</p>
-                  <p className="mb-2">
-                    {contentStandard ||
-                      `Highlight the main ideas and skills learners must acquire in ${topic}.`}
-                  </p>
                   <p className="mb-1 font-semibold underline">
                     MAIN TEACHING &amp; LEARNING ACTIVITIES
                   </p>

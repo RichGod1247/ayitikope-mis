@@ -1,0 +1,151 @@
+name: edulife-lesson-note-translator
+
+services:
+  translator:
+    build:
+      context: ../..
+      dockerfile: deploy/lesson-note-translator/Dockerfile
+
+    image: edulife/lesson-note-translator:${EDULIFE_TRANSLATOR_IMAGE_TAG:-i3-s1-local}
+
+    restart: unless-stopped
+    init: true
+
+    environment:
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      TOKENIZERS_PARALLELISM: "false"
+      PYTHONDONTWRITEBYTECODE: "1"
+      EDULIFE_TRANSLATOR_MODEL_PATH: /model
+      EDULIFE_TRANSLATOR_HOST: 0.0.0.0
+      EDULIFE_TRANSLATOR_PORT: "8787"
+      EDULIFE_TRANSLATOR_TORCH_THREADS: "${EDULIFE_TRANSLATOR_TORCH_THREADS:-2}"
+
+    volumes:
+      - type: bind
+        source: ${EDULIFE_TRANSLATOR_MODEL_PATH:?EDULIFE_TRANSLATOR_MODEL_PATH is required}
+        target: /model
+        read_only: true
+
+    networks:
+      translator_private:
+        aliases:
+          - translator
+
+    read_only: true
+
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+
+    cap_drop:
+      - ALL
+
+    security_opt:
+      - no-new-privileges:true
+
+    pids_limit: 128
+    mem_limit: 2g
+    mem_reservation: 768m
+    cpus: 2.0
+
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - >-
+          import json,urllib.request;
+          r=urllib.request.urlopen("http://127.0.0.1:8787/ready",timeout=5);
+          d=json.load(r);
+          assert r.status==200 and d.get("ok") is True and d.get("modelRevision")=="fef1362558b7948e5257f06f192d700761b3b57d"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"
+
+  relay:
+    image: edulife/lesson-note-translator:${EDULIFE_TRANSLATOR_IMAGE_TAG:-i3-s1-local}
+
+    restart: unless-stopped
+    init: true
+
+    command:
+      - python3
+      - /service/relay.py
+
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      EDULIFE_RELAY_BACKEND_HOST: translator
+      EDULIFE_RELAY_BACKEND_PORT: "8787"
+      EDULIFE_RELAY_PORT: "8787"
+      EDULIFE_TRANSLATION_PROVIDER_TOKEN: ${EDULIFE_TRANSLATION_PROVIDER_TOKEN:?EDULIFE_TRANSLATION_PROVIDER_TOKEN is required}
+
+    ports:
+      - "127.0.0.1:${EDULIFE_TRANSLATOR_HOST_PORT:-8787}:8787"
+
+    networks:
+      - translator_private
+      - translator_ingress
+
+    depends_on:
+      translator:
+        condition: service_healthy
+
+    read_only: true
+
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+
+    cap_drop:
+      - ALL
+
+    security_opt:
+      - no-new-privileges:true
+
+    pids_limit: 64
+    mem_limit: 128m
+    mem_reservation: 32m
+    cpus: 0.25
+
+    stop_signal: SIGTERM
+    stop_grace_period: 15s
+
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - >-
+          import json,urllib.request;
+          r=urllib.request.urlopen("http://127.0.0.1:8787/ready",timeout=5);
+          d=json.load(r);
+          assert r.status==200 and d.get("ok") is True and d.get("status")=="ready"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "3"
+
+networks:
+  translator_private:
+    name: edulife-translator-private
+    driver: bridge
+    internal: true
+
+  translator_ingress:
+    name: edulife-translator-ingress
+    driver: bridge

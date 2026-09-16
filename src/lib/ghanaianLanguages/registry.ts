@@ -20,6 +20,14 @@ export type GhanaianLanguageCode = (typeof GHANAIAN_LANGUAGE_CODES)[number];
 
 export type GhanaianLanguageTranslationStatus = "NOT_ENABLED_GL_P1";
 
+export type GhanaianLanguageInputMark = {
+  id: string;
+  label: string;
+  display: string;
+  value: string;
+  replacementGroup: string;
+};
+
 export type GhanaianLanguageDefinition = {
   code: GhanaianLanguageCode;
   name: string;
@@ -27,6 +35,7 @@ export type GhanaianLanguageDefinition = {
   singleLetters: readonly string[];
   multipleLetters: readonly string[];
   keyboardCharacters: readonly string[];
+  inputMarks?: readonly GhanaianLanguageInputMark[];
   registryVersion: typeof GHANAIAN_LANGUAGE_REGISTRY_VERSION;
   translationStatus: GhanaianLanguageTranslationStatus;
   sourceAuthority: readonly string[];
@@ -111,7 +120,29 @@ const DEFINITIONS: readonly GhanaianLanguageDefinition[] = [
     singleLetters: ["a", "b", "d", "ɖ", "e", "ɛ", "f", "ƒ", "g", "ɣ", "h", "x", "i", "k", "l", "m", "n", "ŋ", "o", "ɔ", "p", "r", "s", "t", "u", "v", "ʋ", "w", "y", "z"],
     multipleLetters: ["gb", "dz", "ny", "kp", "ts", "kw", "dzy", "tsy"],
     keyboardCharacters: ["ɖ", "Ɖ", "ɛ", "Ɛ", "ƒ", "Ƒ", "ɣ", "Ɣ", "ŋ", "Ŋ", "ɔ", "Ɔ", "ʋ", "Ʋ"],
-    registryVersion: GHANAIAN_LANGUAGE_REGISTRY_VERSION,
+    inputMarks: [
+      {
+        id: "nasal",
+        label: "Nasal",
+        display: "\u25CC\u0303",
+        value: "\u0303",
+        replacementGroup: "ewe-primary-diacritic",
+      },
+      {
+        id: "high-tone",
+        label: "High tone",
+        display: "\u25CC\u0301",
+        value: "\u0301",
+        replacementGroup: "ewe-primary-diacritic",
+      },
+      {
+        id: "low-tone",
+        label: "Low tone",
+        display: "\u25CC\u0300",
+        value: "\u0300",
+        replacementGroup: "ewe-primary-diacritic",
+      },
+    ],    registryVersion: GHANAIAN_LANGUAGE_REGISTRY_VERSION,
     translationStatus: "NOT_ENABLED_GL_P1",
     sourceAuthority: ["NaCCA approved Ghanaian-language list", "Ghana Book Development Council official Ewe alphabet"],
   },

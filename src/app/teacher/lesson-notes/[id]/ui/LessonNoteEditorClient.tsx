@@ -4,8 +4,14 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import GhanaianLanguageCharacterPalette from "@/components/teacher/GhanaianLanguageCharacterPalette";
-import { getGhanaianLanguage } from "@/lib/ghanaianLanguages/registry";
-import { normalizeEducationalText } from "@/lib/ghanaianLanguages/text";
+import {
+  GHANAIAN_LANGUAGE_REGISTRY_VERSION,
+  getGhanaianLanguage,
+} from "@/lib/ghanaianLanguages/registry";
+import {
+  applyCombiningMarkAtSelection,
+  normalizeEducationalText,
+} from "@/lib/ghanaianLanguages/text";
 
 type LessonNoteStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
@@ -57,6 +63,8 @@ type LessonNote = {
   lessonTitle: string | null;
   objectives: string | null;
   priorKnowledge: string | null;
+  coreCompetencies: string | null;
+  keywords: string | null;
   teachingLearningResources: string | null;
   introduction: string | null;
   lessonDevelopment: string | null;
@@ -254,6 +262,9 @@ function ConfirmDialog(props: {
 type LessonFieldKey =
   | "lessonTitle"
   | "objectives"
+  | "priorKnowledge"
+  | "coreCompetencies"
+  | "keywords"
   | "tlr"
   | "intro"
   | "dev"
@@ -267,6 +278,137 @@ type LessonFieldSelection = {
   fieldKey: LessonFieldKey;
   start: number;
   end: number;
+  target?: "lesson" | "translation";
+};
+
+type TranslationApiField =
+  | "lessonTitle"
+  | "objectives"
+  | "priorKnowledge"
+  | "coreCompetencies"
+  | "keywords"
+  | "teachingLearningResources"
+  | "introduction"
+  | "lessonDevelopment"
+  | "conclusion"
+  | "assessment"
+  | "homework"
+  | "differentiationNotes"
+  | "reflectionNotes";
+
+const TRANSLATION_API_FIELD_BY_UI_FIELD: Record<LessonFieldKey, TranslationApiField> = {
+  lessonTitle: "lessonTitle",
+  objectives: "objectives",
+  priorKnowledge: "priorKnowledge",
+  coreCompetencies: "coreCompetencies",
+  keywords: "keywords",
+  tlr: "teachingLearningResources",
+  intro: "introduction",
+  dev: "lessonDevelopment",
+  concl: "conclusion",
+  assessment: "assessment",
+  homework: "homework",
+  diff: "differentiationNotes",
+  refl: "reflectionNotes",
+};
+
+const UI_FIELD_BY_TRANSLATION_API_FIELD: Record<TranslationApiField, LessonFieldKey> = {
+  lessonTitle: "lessonTitle",
+  objectives: "objectives",
+  priorKnowledge: "priorKnowledge",
+  coreCompetencies: "coreCompetencies",
+  keywords: "keywords",
+  teachingLearningResources: "tlr",
+  introduction: "intro",
+  lessonDevelopment: "dev",
+  conclusion: "concl",
+  assessment: "assessment",
+  homework: "homework",
+  differentiationNotes: "diff",
+  reflectionNotes: "refl",
+};
+
+const REQUIRED_TRANSLATION_UI_FIELDS = new Set<LessonFieldKey>([
+  "lessonTitle",
+  "objectives",
+  "priorKnowledge",
+  "coreCompetencies",
+  "keywords",
+  "tlr",
+  "intro",
+  "dev",
+  "concl",
+  "assessment",
+  "homework",
+]);
+
+type TranslationCompletionState =
+  | "translated"
+  | "review_language"
+  | "needs_content";
+
+type PendingTranslationReview = {
+  field: TranslationApiField;
+  sourceText: string;
+  suggestedText: string;
+  receipt: string;
+};
+
+type TranslationCompletionApiState = {
+  required: boolean;
+  completedFields: TranslationApiField[];
+};
+
+type TranslationPreview = {
+  fieldKey: LessonFieldKey;
+  apiField: TranslationApiField;
+  sourceText: string;
+  suggestion: string;
+  draftText: string;
+  languageName: string;
+  receipt: string;
+  receiptExpiresAt: string;
+  provider: string;
+  modelId: string;
+  modelRevision: string;
+  protectedCount: number;
+};
+
+type TranslationApiResponse = {
+  ok: true;
+  field: TranslationApiField;
+  language: {
+    code: string;
+    name: string;
+    registryVersion: string;
+  };
+  suggestion: string;
+  provenance: {
+    suggestionSource: string;
+    provider: string;
+    modelId: string;
+    modelRevision: string;
+  };
+  protectedValues?: {
+    count?: number;
+  };
+  receipt: string;
+  receiptExpiresAt: string;
+};
+
+type FieldTranslationUi = {
+  enabled: boolean;
+  languageName: string;
+  onConfirmExisting: () => void;
+  loading: boolean;
+  error: string | null;
+  preview: TranslationPreview | null;
+  onTranslate: () => void;
+  onDraftChange: (value: string) => void;
+  onDraftSelection: (start: number, end: number) => void;
+  onDraftActiveChange: (active: boolean) => void;
+  onUse: () => void;
+  onDismiss: () => void;
 };
 
 function Field(props: {
@@ -280,12 +422,37 @@ function Field(props: {
   rows?: number;
   hint?: string;
   placeholder?: string;
+  translation?: FieldTranslationUi;
+  translationState?: TranslationCompletionState;
+  translationBlocked?: boolean;
 }) {
+  const statusBadge =
+    props.translationState === "translated"
+      ? { label: "Translated", cls: "border-emerald-300/25 bg-emerald-400/12 text-emerald-100" }
+      : props.translationState === "needs_content"
+        ? { label: "Add content", cls: "border-amber-300/25 bg-amber-400/12 text-amber-100" }
+        : props.translationState === "review_language"
+          ? { label: "Review language", cls: "border-amber-300/25 bg-amber-400/12 text-amber-100" }
+          : null;
+
+  const shellClass = props.translationBlocked
+    ? "rounded-2xl border border-rose-300/50 bg-rose-400/8 p-3 ring-2 ring-rose-400/20"
+    : props.translationState === "translated"
+      ? "rounded-2xl border border-emerald-300/15 bg-emerald-400/[0.04] p-3"
+      : "rounded-2xl border border-transparent p-3";
+
   return (
-    <div>
-      <label className="text-xs font-bold uppercase tracking-[0.08em] text-[#F7F4ED]">
-        {props.label}
-      </label>
+    <div className={shellClass} data-translation-field-shell={props.fieldKey}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <label className="text-xs font-bold uppercase tracking-[0.08em] text-[#F7F4ED]">
+          {props.label}
+        </label>
+        {statusBadge ? (
+          <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-semibold ${statusBadge.cls}`}>
+            {statusBadge.label}
+          </span>
+        ) : null}
+      </div>
 
       {props.hint ? (
         <div className="mt-1 text-[12px] leading-5 text-[#DDE3EE]">
@@ -318,6 +485,113 @@ function Field(props: {
         }
         disabled={!!props.disabled}
       />
+
+      {props.translation?.enabled && props.translationState !== "translated" ? (
+        <div className="mt-2 space-y-2">
+          {props.translationState === "review_language" && !props.translation.loading && !props.translation.preview ? (
+            <div className="rounded-xl border border-amber-300/20 bg-amber-400/8 px-3 py-2 text-[11px] leading-5 text-amber-50">
+              Review this field. If it is already good {props.translation.languageName}, confirm it. If it is still English, translate it.
+            </div>
+          ) : null}
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-[11px] leading-5 text-[#AEB6C4]">
+              English → <span className="font-semibold text-[#F7F4ED]">{props.translation.languageName}</span> · preview first
+            </div>
+            <div className={`grid w-full grid-cols-1 gap-2 sm:w-auto ${
+              props.translation.loading || props.translation.preview ? "sm:grid-cols-1" : "sm:grid-cols-2"
+            }`}>
+              {props.translationState === "review_language" && !props.translation.loading && !props.translation.preview ? (
+                <button
+                  type="button"
+                  className="w-full rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={!!props.disabled || !props.value.trim()}
+                  onClick={props.translation.onConfirmExisting}
+                >
+                  Already in {props.translation.languageName} — confirm
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="w-full rounded-xl border border-sky-300/20 bg-sky-400/10 px-3 py-2 text-xs font-semibold text-sky-100 hover:bg-sky-400/15 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!!props.disabled || props.translation.loading || !props.value.trim()}
+                onClick={props.translation.onTranslate}
+              >
+                {props.translation.loading ? "Translating…" : props.translation.preview ? "Translate again" : `Translate English → ${props.translation.languageName}`}
+              </button>
+            </div>
+          </div>
+
+          {props.translation.error ? (
+            <div className="rounded-xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-xs leading-5 text-rose-100">
+              {props.translation.error}
+            </div>
+          ) : null}
+
+          {props.translation.preview ? (
+            <div className="rounded-2xl border border-sky-300/20 bg-[#07111F]/85 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="text-sm font-semibold text-sky-100">
+                  Review {props.translation.languageName} translation
+                </div>
+                <div className="text-[10px] uppercase tracking-[0.12em] text-[#8F98A8]">Not saved</div>
+              </div>
+
+              <div className="mt-2 rounded-xl border border-sky-300/15 bg-sky-400/8 px-3 py-2 text-xs leading-5 text-sky-50">
+                Compare with the English above. Correct the {props.translation.languageName} draft below before using it.
+                Editing here uses no extra network and does not save anything.
+              </div>
+
+              <textarea
+                className="mt-2 min-h-28 w-full rounded-2xl border border-slate-300 bg-white p-3 text-[15px] leading-7 text-slate-950 shadow-inner placeholder:text-slate-500 focus:border-[#D4AF37] focus:outline-none focus:ring-4 focus:ring-[#D4AF37]/20"
+                rows={Math.max(4, props.rows ?? 4)}
+                value={props.translation.preview.draftText}
+                data-translation-draft-field={props.fieldKey}
+                aria-label={`Edit ${props.translation.languageName} translation for ${props.label}`}
+                onChange={(e) => props.translation?.onDraftChange(e.target.value)}
+                onFocus={(e) => {
+                  props.translation?.onDraftActiveChange(true);
+                  props.translation?.onDraftSelection(
+                    e.currentTarget.selectionStart ?? e.currentTarget.value.length,
+                    e.currentTarget.selectionEnd ?? e.currentTarget.value.length,
+                  );
+                }}
+                onBlur={() => props.translation?.onDraftActiveChange(false)}
+                onSelect={(e) =>
+                  props.translation?.onDraftSelection(
+                    e.currentTarget.selectionStart ?? e.currentTarget.value.length,
+                    e.currentTarget.selectionEnd ?? e.currentTarget.value.length,
+                  )
+                }
+              />
+
+              <div className="mt-3 space-y-3">
+                <div className="text-[11px] leading-5 text-[#AEB6C4]">
+                  When the translation is correct, tap Use translation. It changes only this field locally.
+                  Save the Lesson Note separately when you are satisfied.
+                </div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    className="min-h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-[#F7F4ED] hover:bg-white/10"
+                    onClick={props.translation.onDismiss}
+                  >
+                    Keep English
+                  </button>
+                  <button
+                    type="button"
+                    className="min-h-11 w-full rounded-xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-3 text-sm font-semibold text-[#071A3D] hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={!props.translation.preview.draftText.trim()}
+                    onClick={props.translation.onUse}
+                  >
+                    Use translation
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -352,6 +626,9 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
 
   const [lessonTitle, setLessonTitle] = useState("");
   const [objectives, setObjectives] = useState("");
+  const [priorKnowledge, setPriorKnowledge] = useState("");
+  const [coreCompetencies, setCoreCompetencies] = useState("");
+  const [keywords, setKeywords] = useState("");
   const [tlr, setTlr] = useState("");
   const [intro, setIntro] = useState("");
   const [dev, setDev] = useState("");
@@ -380,9 +657,19 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [aiFields, setAiFields] = useState<any | null>(null);
 
+  const [translationLoadingField, setTranslationLoadingField] = useState<LessonFieldKey | null>(null);
+  const [translationErr, setTranslationErr] = useState<{ fieldKey: LessonFieldKey; message: string } | null>(null);
+  const [translationPreview, setTranslationPreview] = useState<TranslationPreview | null>(null);
+  const [translationCompletionRequired, setTranslationCompletionRequired] = useState(false);
+  const [persistedCompletedFields, setPersistedCompletedFields] = useState<LessonFieldKey[]>([]);
+  const [pendingTranslationReviews, setPendingTranslationReviews] = useState<Partial<Record<LessonFieldKey, PendingTranslationReview>>>({});
+  const [pendingTargetLanguageConfirmations, setPendingTargetLanguageConfirmations] = useState<Partial<Record<LessonFieldKey, true>>>({});
+  const [translationGateFields, setTranslationGateFields] = useState<LessonFieldKey[]>([]);
+
   const baselineRef = useRef<string>("");
   const fieldSelectionRef = useRef<LessonFieldSelection | null>(null);
   const languageStickyAnchorRef = useRef<HTMLDivElement | null>(null);
+  const translationRequestSeqRef = useRef(0);
   const [activeLanguageField, setActiveLanguageField] = useState<LessonFieldKey | null>(null);
   const [desktopLanguageCompact, setDesktopLanguageCompact] = useState(false);
   const locked = note?.status === "SUBMITTED" || note?.status === "APPROVED";
@@ -391,6 +678,22 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
     () => getGhanaianLanguage(note?.lessonLanguageCode),
     [note?.lessonLanguageCode],
   );
+
+  const translationAuthorityReady =
+    Boolean(note?.lessonLanguageCode && lessonLanguage) &&
+    note?.lessonLanguageCode === lessonLanguage?.code &&
+    note?.languageRegistryVersion === lessonLanguage?.registryVersion &&
+    lessonLanguage?.registryVersion === GHANAIAN_LANGUAGE_REGISTRY_VERSION;
+
+  // Engine availability is deliberately separate from language identity.
+  // The UI derives the frozen language from the Lesson Note/registry, while
+  // only certified engines may be enabled. Ewe is the sole certified pilot.
+  const translationEngineAvailable =
+    lessonLanguage?.code === "EWE";
+
+  const translationEnabled =
+    translationAuthorityReady &&
+    translationEngineAvailable;
 
   useEffect(() => {
     function syncDesktopLanguageCompact() {
@@ -426,6 +729,9 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
     return JSON.stringify({
       lessonTitle: lessonTitle.trim(),
       objectives: objectives.trim(),
+      priorKnowledge: priorKnowledge.trim(),
+      coreCompetencies: coreCompetencies.trim(),
+      keywords: keywords.trim(),
       tlr: tlr.trim(),
       intro: intro.trim(),
       dev: dev.trim(),
@@ -435,16 +741,37 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
       diff: diff.trim(),
       refl: refl.trim(),
     });
-  }, [assessment, concl, dev, diff, homework, intro, lessonTitle, objectives, refl, tlr]);
+  }, [assessment, concl, coreCompetencies, dev, diff, homework, intro, keywords, lessonTitle, objectives, priorKnowledge, refl, tlr]);
 
   const dirty = useMemo(() => {
     if (!note) return false;
-    return baselineRef.current !== "" && baselineRef.current !== draftSnapshot;
-  }, [draftSnapshot, note]);
+    const textDirty = baselineRef.current !== "" && baselineRef.current !== draftSnapshot;
+    const proofDirty =
+      Object.keys(pendingTranslationReviews).length > 0 ||
+      Object.keys(pendingTargetLanguageConfirmations).length > 0;
+    return textDirty || proofDirty;
+  }, [draftSnapshot, note, pendingTargetLanguageConfirmations, pendingTranslationReviews]);
 
   function rememberFieldSelection(selection: LessonFieldSelection) {
-    fieldSelectionRef.current = selection;
+    fieldSelectionRef.current = {
+      ...selection,
+      target: "lesson",
+    };
     setActiveLanguageField(selection.fieldKey);
+  }
+
+  function rememberTranslationDraftSelection(
+    fieldKey: LessonFieldKey,
+    start: number,
+    end: number,
+  ) {
+    fieldSelectionRef.current = {
+      fieldKey,
+      start,
+      end,
+      target: "translation",
+    };
+    setActiveLanguageField(fieldKey);
   }
 
   function insertGhanaianCharacter(character: string) {
@@ -460,6 +787,51 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
       return;
     }
 
+    if (selection.target === "translation") {
+      const preview = translationPreview;
+
+      if (!preview || preview.fieldKey !== selection.fieldKey) {
+        pushToast({
+          tone: "info",
+          title: "Translation draft closed",
+          message: "Open the translation draft again before inserting a Ghanaian letter.",
+        });
+        return;
+      }
+
+      const current = preview.draftText;
+      const start = Math.max(0, Math.min(selection.start, current.length));
+      const end = Math.max(start, Math.min(selection.end, current.length));
+      const inserted = normalizeEducationalText(character);
+      const next = normalizeEducationalText(
+        `${current.slice(0, start)}${inserted}${current.slice(end)}`,
+      );
+      const nextCursor = start + inserted.length;
+
+      setTranslationPreview({
+        ...preview,
+        draftText: next,
+      });
+
+      fieldSelectionRef.current = {
+        fieldKey: selection.fieldKey,
+        start: nextCursor,
+        end: nextCursor,
+        target: "translation",
+      };
+
+      window.requestAnimationFrame(() => {
+        const target = document.querySelector<HTMLTextAreaElement>(
+          `textarea[data-translation-draft-field="${selection.fieldKey}"]`,
+        );
+        if (!target || target.disabled) return;
+        target.focus();
+        target.setSelectionRange(nextCursor, nextCursor);
+      });
+
+      return;
+    }
+
     let current = "";
     let setter: React.Dispatch<React.SetStateAction<string>>;
 
@@ -471,6 +843,18 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
       case "objectives":
         current = objectives;
         setter = setObjectives;
+        break;
+      case "priorKnowledge":
+        current = priorKnowledge;
+        setter = setPriorKnowledge;
+        break;
+      case "coreCompetencies":
+        current = coreCompetencies;
+        setter = setCoreCompetencies;
+        break;
+      case "keywords":
+        current = keywords;
+        setter = setKeywords;
         break;
       case "tlr":
         current = tlr;
@@ -531,6 +915,544 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
     });
   }
 
+  function insertGhanaianInputMark(
+    markValue: string,
+    markLabel: string,
+    replacementGroup: string,
+  ) {
+    if (locked) return;
+
+    const selection = fieldSelectionRef.current;
+    if (!selection) {
+      pushToast({
+        tone: "info",
+        title: "Choose where to type",
+        message: "Tap inside a Lesson Note field first. Place the cursor after a letter, then choose the mark.",
+      });
+      return;
+    }
+
+    const replacementMarkValues =
+      (lessonLanguage?.inputMarks ?? [])
+        .filter(
+          (candidate) =>
+            candidate.replacementGroup === replacementGroup,
+        )
+        .map((candidate) => candidate.value);
+
+    const showMarkFailure = (
+      reason: "INVALID_MARK" | "NO_BASE_LETTER" | "INVALID_SELECTION" | "DUPLICATE_MARK",
+    ) => {
+      if (reason === "DUPLICATE_MARK") {
+        pushToast({
+          tone: "info",
+          title: "Mark already added",
+          message: `The ${markLabel.toLowerCase()} mark is already on this letter.`,
+        });
+        return;
+      }
+
+      if (reason === "NO_BASE_LETTER") {
+        pushToast({
+          tone: "info",
+          title: "Place cursor after a letter",
+          message: "Put the cursor immediately after the letter that needs the mark, then tap the mark again.",
+        });
+        return;
+      }
+
+      if (reason === "INVALID_SELECTION") {
+        pushToast({
+          tone: "info",
+          title: "Choose one letter",
+          message: "Select one letter, or place the cursor immediately after one letter, then tap the mark again.",
+        });
+        return;
+      }
+
+      pushToast({
+        tone: "warn",
+        title: "Mark unavailable",
+        message: "This mark cannot be applied here.",
+      });
+    };
+
+    if (selection.target === "translation") {
+      const preview = translationPreview;
+
+      if (!preview || preview.fieldKey !== selection.fieldKey) {
+        pushToast({
+          tone: "info",
+          title: "Translation draft closed",
+          message: "Open the translation draft again before applying a Ghanaian-language mark.",
+        });
+        return;
+      }
+
+      const applied = applyCombiningMarkAtSelection(
+        preview.draftText,
+        selection.start,
+        selection.end,
+        markValue,
+        replacementMarkValues,
+      );
+
+      if (!applied.ok) {
+        showMarkFailure(applied.reason);
+        return;
+      }
+
+      setTranslationPreview({
+        ...preview,
+        draftText: applied.value,
+      });
+
+      fieldSelectionRef.current = {
+        fieldKey: selection.fieldKey,
+        start: applied.cursor,
+        end: applied.cursor,
+        target: "translation",
+      };
+
+      window.requestAnimationFrame(() => {
+        const target = document.querySelector<HTMLTextAreaElement>(
+          `textarea[data-translation-draft-field="${selection.fieldKey}"]`,
+        );
+        if (!target || target.disabled) return;
+        target.focus();
+        target.setSelectionRange(applied.cursor, applied.cursor);
+      });
+
+      return;
+    }
+
+    const current = getLessonFieldValue(selection.fieldKey);
+    const applied = applyCombiningMarkAtSelection(
+      current,
+      selection.start,
+      selection.end,
+      markValue,
+      replacementMarkValues,
+    );
+
+    if (!applied.ok) {
+      showMarkFailure(applied.reason);
+      return;
+    }
+
+    setLessonFieldValue(selection.fieldKey, applied.value);
+
+    fieldSelectionRef.current = {
+      fieldKey: selection.fieldKey,
+      start: applied.cursor,
+      end: applied.cursor,
+      target: "lesson",
+    };
+
+    window.requestAnimationFrame(() => {
+      const target = document.querySelector<HTMLTextAreaElement>(
+        `textarea[data-lesson-field="${selection.fieldKey}"]`,
+      );
+      if (!target || target.disabled) return;
+      target.focus();
+      target.setSelectionRange(applied.cursor, applied.cursor);
+    });
+  }
+  function getLessonFieldValue(fieldKey: LessonFieldKey) {
+    switch (fieldKey) {
+      case "lessonTitle":
+        return lessonTitle;
+      case "objectives":
+        return objectives;
+      case "priorKnowledge":
+        return priorKnowledge;
+      case "coreCompetencies":
+        return coreCompetencies;
+      case "keywords":
+        return keywords;
+      case "tlr":
+        return tlr;
+      case "intro":
+        return intro;
+      case "dev":
+        return dev;
+      case "concl":
+        return concl;
+      case "assessment":
+        return assessment;
+      case "homework":
+        return homework;
+      case "diff":
+        return diff;
+      case "refl":
+        return refl;
+    }
+  }
+
+  function setLessonFieldValue(fieldKey: LessonFieldKey, value: string) {
+    const normalized = normalizeEducationalText(value);
+
+    switch (fieldKey) {
+      case "lessonTitle":
+        setLessonTitle(normalized);
+        return;
+      case "objectives":
+        setObjectives(normalized);
+        return;
+      case "priorKnowledge":
+        setPriorKnowledge(normalized);
+        return;
+      case "coreCompetencies":
+        setCoreCompetencies(normalized);
+        return;
+      case "keywords":
+        setKeywords(normalized);
+        return;
+      case "tlr":
+        setTlr(normalized);
+        return;
+      case "intro":
+        setIntro(normalized);
+        return;
+      case "dev":
+        setDev(normalized);
+        return;
+      case "concl":
+        setConcl(normalized);
+        return;
+      case "assessment":
+        setAssessment(normalized);
+        return;
+      case "homework":
+        setHomework(normalized);
+        return;
+      case "diff":
+        setDiff(normalized);
+        return;
+      case "refl":
+        setRefl(normalized);
+        return;
+    }
+  }
+
+  async function runTranslation(fieldKey: LessonFieldKey) {
+    if (!note || locked || !translationEnabled || !lessonLanguage) return;
+
+    setPendingTargetLanguageConfirmations((prev) => {
+      if (!prev[fieldKey]) return prev;
+      const next = { ...prev };
+      delete next[fieldKey];
+      return next;
+    });
+
+    const sourceText = getLessonFieldValue(fieldKey);
+
+    if (!sourceText.trim()) {
+      pushToast({
+        tone: "info",
+        title: "Nothing to translate",
+        message: "Enter the English text for this field first.",
+      });
+      return;
+    }
+
+    const apiField = TRANSLATION_API_FIELD_BY_UI_FIELD[fieldKey];
+    const requestSeq = ++translationRequestSeqRef.current;
+
+    setTranslationLoadingField(fieldKey);
+    setTranslationErr(null);
+    setTranslationPreview(null);
+
+    try {
+      const data = await apiJson<TranslationApiResponse>("/api/teachers/lesson-notes/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lessonNoteId: note.id,
+          field: apiField,
+          sourceText,
+        }),
+      });
+
+      if (requestSeq !== translationRequestSeqRef.current) return;
+
+      if (
+        data.field !== apiField ||
+        data.language?.code !== lessonLanguage.code ||
+        data.language?.registryVersion !== lessonLanguage.registryVersion
+      ) {
+        throw new Error("Translation response did not match this Lesson Note field or frozen language authority.");
+      }
+
+      if (!data.suggestion?.trim() || !data.receipt || !data.receiptExpiresAt) {
+        throw new Error("Translation preview was incomplete. Please try again.");
+      }
+
+      const normalizedSuggestion =
+        normalizeEducationalText(data.suggestion);
+
+      setTranslationPreview({
+        fieldKey,
+        apiField,
+        sourceText,
+        suggestion: normalizedSuggestion,
+        draftText: normalizedSuggestion,
+        languageName: data.language.name || lessonLanguage.name,
+        receipt: data.receipt,
+        receiptExpiresAt: data.receiptExpiresAt,
+        provider: data.provenance?.provider ?? "",
+        modelId: data.provenance?.modelId ?? "",
+        modelRevision: data.provenance?.modelRevision ?? "",
+        protectedCount: Number(data.protectedValues?.count ?? 0),
+      });
+
+      pushToast({
+        tone: "info",
+        title: `${data.language.name || lessonLanguage.name} preview ready`,
+        message: "Review it first. Nothing has been saved or replaced.",
+      });
+    } catch (e: any) {
+      if (requestSeq !== translationRequestSeqRef.current) return;
+
+      setTranslationErr({
+        fieldKey,
+        message: e?.message || "Translation failed. Please try again.",
+      });
+    } finally {
+      if (requestSeq === translationRequestSeqRef.current) {
+        setTranslationLoadingField(null);
+      }
+    }
+  }
+
+  function dismissTranslationPreview(fieldKey: LessonFieldKey) {
+    if (translationPreview?.fieldKey === fieldKey) {
+      setTranslationPreview(null);
+    }
+
+    if (translationErr?.fieldKey === fieldKey) {
+      setTranslationErr(null);
+    }
+  }
+
+  function updateTranslationDraft(
+    fieldKey: LessonFieldKey,
+    value: string,
+  ) {
+    setTranslationPreview((preview) => {
+      if (!preview || preview.fieldKey !== fieldKey) {
+        return preview;
+      }
+
+      return {
+        ...preview,
+        draftText: value,
+      };
+    });
+  }
+
+  function applyTranslationPreview(fieldKey: LessonFieldKey) {
+    const preview = translationPreview;
+
+    if (!preview || preview.fieldKey !== fieldKey) return;
+
+    const currentText = getLessonFieldValue(fieldKey);
+
+    if (currentText !== preview.sourceText) {
+      setTranslationPreview(null);
+      pushToast({
+        tone: "warn",
+        title: "English changed",
+        message: "The English field changed after this translation was created. Translate the current English again before using it.",
+      });
+      return;
+    }
+
+    const reviewedTranslation =
+      normalizeEducationalText(
+        preview.draftText,
+      );
+
+    if (!reviewedTranslation.trim()) {
+      pushToast({
+        tone: "warn",
+        title: "Translation is empty",
+        message: `Correct the ${preview.languageName} translation before using it.`,
+      });
+      return;
+    }
+
+    setLessonFieldValue(
+      fieldKey,
+      reviewedTranslation,
+    );
+    setPendingTargetLanguageConfirmations((prev) => {
+      if (!prev[fieldKey]) return prev;
+      const next = { ...prev };
+      delete next[fieldKey];
+      return next;
+    });
+    setPendingTranslationReviews((prev) => ({
+      ...prev,
+      [fieldKey]: {
+        field: preview.apiField,
+        sourceText: preview.sourceText,
+        suggestedText: preview.suggestion,
+        receipt: preview.receipt,
+      },
+    }));
+    setTranslationGateFields((prev) => prev.filter((key) => key !== fieldKey));
+    setTranslationPreview(null);
+    setTranslationErr(null);
+
+    pushToast({
+      tone: "success",
+      title: `${preview.languageName} translation used`,
+      message: "Your reviewed translation is now in this field locally. Save draft only when you are satisfied.",
+    });
+  }
+
+  function confirmExistingTargetLanguage(fieldKey: LessonFieldKey) {
+    if (!translationCompletionRequired || !lessonLanguage) return;
+
+    if (translationLoadingField === fieldKey) {
+      pushToast({
+        tone: "warn",
+        title: "Translation in progress",
+        message: `Wait for the ${lessonLanguage.name} translation request to finish before confirming existing text.`,
+      });
+      return;
+    }
+
+    if (translationPreview?.fieldKey === fieldKey) {
+      pushToast({
+        tone: "warn",
+        title: "Translation review active",
+        message: `Finish or dismiss the ${lessonLanguage.name} translation preview before confirming existing text.`,
+      });
+      return;
+    }
+
+    const current = normalizeEducationalText(
+      getLessonFieldValue(fieldKey),
+    ).trim();
+
+    if (!current) {
+      pushToast({
+        tone: "warn",
+        title: "Add content first",
+        message: `Enter the ${lessonLanguage.name} content before confirming this field.`,
+      });
+      return;
+    }
+
+    setPendingTranslationReviews((prev) => {
+      if (!prev[fieldKey]) return prev;
+      const next = { ...prev };
+      delete next[fieldKey];
+      return next;
+    });
+    setPendingTargetLanguageConfirmations((prev) => ({
+      ...prev,
+      [fieldKey]: true,
+    }));
+    setTranslationGateFields((prev) =>
+      prev.filter((key) => key !== fieldKey),
+    );
+
+    if (translationPreview?.fieldKey === fieldKey) {
+      setTranslationPreview(null);
+    }
+    if (translationErr?.fieldKey === fieldKey) {
+      setTranslationErr(null);
+    }
+
+    pushToast({
+      tone: "success",
+      title: `Existing ${lessonLanguage.name} confirmed`,
+      message: "EduLife will record your teacher confirmation when you save the draft.",
+    });
+  }
+
+  function translationStateFor(fieldKey: LessonFieldKey): TranslationCompletionState | undefined {
+    if (!translationCompletionRequired) return undefined;
+
+    const current = normalizeEducationalText(getLessonFieldValue(fieldKey)).trim();
+
+    if (!current) {
+      return REQUIRED_TRANSLATION_UI_FIELDS.has(fieldKey)
+        ? "needs_content"
+        : undefined;
+    }
+
+    if (pendingTranslationReviews[fieldKey]) {
+      return "translated";
+    }
+
+    if (pendingTargetLanguageConfirmations[fieldKey]) {
+      return "translated";
+    }
+
+    if (persistedCompletedFields.includes(fieldKey)) {
+      return "translated";
+    }
+
+    return "review_language";
+  }
+
+  function collectTranslationGateFields() {
+    if (!translationCompletionRequired) return [] as LessonFieldKey[];
+
+    return (Object.keys(TRANSLATION_API_FIELD_BY_UI_FIELD) as LessonFieldKey[]).filter((fieldKey) => {
+      const state = translationStateFor(fieldKey);
+      return state === "needs_content" || state === "review_language";
+    });
+  }
+
+  function focusTranslationGateField(fieldKey: LessonFieldKey) {
+    window.requestAnimationFrame(() => {
+      const shell = document.querySelector<HTMLElement>(
+        `[data-translation-field-shell="${fieldKey}"]`,
+      );
+      const textarea = document.querySelector<HTMLTextAreaElement>(
+        `textarea[data-lesson-field="${fieldKey}"]`,
+      );
+
+      shell?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      textarea?.focus();
+    });
+  }
+
+  function translationUiFor(fieldKey: LessonFieldKey): FieldTranslationUi | undefined {
+    if (!translationEnabled || locked || !lessonLanguage) return undefined;
+
+    return {
+      enabled: true,
+      languageName: lessonLanguage.name,
+      onConfirmExisting: () => confirmExistingTargetLanguage(fieldKey),
+      loading: translationLoadingField === fieldKey,
+      error: translationErr?.fieldKey === fieldKey ? translationErr.message : null,
+      preview: translationPreview?.fieldKey === fieldKey ? translationPreview : null,
+      onTranslate: () => void runTranslation(fieldKey),
+      onDraftChange: (value) => updateTranslationDraft(fieldKey, value),
+      onDraftSelection: (start, end) =>
+        rememberTranslationDraftSelection(
+          fieldKey,
+          start,
+          end,
+        ),
+      onDraftActiveChange: (active) =>
+        setActiveLanguageField(
+          active ? fieldKey : null,
+        ),
+      onUse: () => applyTranslationPreview(fieldKey),
+      onDismiss: () => dismissTranslationPreview(fieldKey),
+    };
+  }
+
   const submitChecks = useMemo(() => {
     const hasUnit = Boolean(note?.schemeOfWorkItemId || note?.curriculumUnitId);
     const hasIndicator = Boolean(trimOrEmpty(note?.indicator));
@@ -546,7 +1468,11 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
     setLoading(true);
     setPageErr(null);
     try {
-      const data = await apiJson<{ ok: true; item: LessonNote }>(`/api/teachers/lesson-notes/item/${id}`);
+      const data = await apiJson<{
+        ok: true;
+        item: LessonNote;
+        translationCompletion?: TranslationCompletionApiState;
+      }>(`/api/teachers/lesson-notes/item/${id}`);
       setNote(data.item);
 
       const rawTitle = safeStr(data.item.lessonTitle);
@@ -558,6 +1484,9 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
 
       setLessonTitle(initialTitle);
       setObjectives(safeStr(data.item.objectives));
+      setPriorKnowledge(safeStr(data.item.priorKnowledge));
+      setCoreCompetencies(safeStr(data.item.coreCompetencies));
+      setKeywords(safeStr(data.item.keywords));
       setTlr(safeStr(data.item.teachingLearningResources));
       setIntro(safeStr(data.item.introduction));
       setDev(safeStr(data.item.lessonDevelopment));
@@ -570,6 +1499,9 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
       baselineRef.current = JSON.stringify({
         lessonTitle: initialTitle.trim(),
         objectives: safeStr(data.item.objectives).trim(),
+        priorKnowledge: safeStr(data.item.priorKnowledge).trim(),
+        coreCompetencies: safeStr(data.item.coreCompetencies).trim(),
+        keywords: safeStr(data.item.keywords).trim(),
         tlr: safeStr(data.item.teachingLearningResources).trim(),
         intro: safeStr(data.item.introduction).trim(),
         dev: safeStr(data.item.lessonDevelopment).trim(),
@@ -579,6 +1511,24 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
         diff: safeStr(data.item.differentiationNotes).trim(),
         refl: safeStr(data.item.reflectionNotes).trim(),
       });
+
+      const completedFields: LessonFieldKey[] = [];
+      for (const apiField of data.translationCompletion?.completedFields ?? []) {
+        const uiField = UI_FIELD_BY_TRANSLATION_API_FIELD[apiField];
+        if (!uiField) continue;
+        completedFields.push(uiField);
+      }
+
+      setTranslationCompletionRequired(Boolean(data.translationCompletion?.required));
+      setPersistedCompletedFields(completedFields);
+      setPendingTranslationReviews({});
+      setPendingTargetLanguageConfirmations({});
+      setTranslationGateFields([]);
+
+      translationRequestSeqRef.current += 1;
+      setTranslationLoadingField(null);
+      setTranslationErr(null);
+      setTranslationPreview(null);
     } catch (e: any) {
       setPageErr(e?.message || "Failed to load lesson note.");
     } finally {
@@ -611,7 +1561,7 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [locked, note, lessonTitle, objectives, tlr, intro, dev, concl, assessment, homework, diff, refl]);
+  }, [locked, note, lessonTitle, objectives, priorKnowledge, coreCompetencies, keywords, tlr, intro, dev, concl, assessment, homework, diff, refl, pendingTranslationReviews, pendingTargetLanguageConfirmations, translationCompletionRequired]);
 
   async function saveDraft() {
     if (!note) return;
@@ -621,15 +1571,34 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
     }
     if (saving) return;
 
+    const blockedFields = collectTranslationGateFields();
+    if (blockedFields.length > 0) {
+      setTranslationGateFields(blockedFields);
+      focusTranslationGateField(blockedFields[0]);
+      pushToast({
+        tone: "warn",
+        title: "Review the Ghanaian Language sections",
+        message: `${blockedFields.length} section${blockedFields.length === 1 ? "" : "s"} still need content or language review. Translate English sections, or confirm sections that are already good ${lessonLanguage?.name ?? "in the target language"}.`,
+      }, 5200);
+      return;
+    }
+
     setSaving(true);
     try {
-      const resp = await apiJson<{ ok: true; item: LessonNote }>(`/api/teachers/lesson-notes/upsert`, {
+      const resp = await apiJson<{
+        ok: true;
+        item: LessonNote;
+        translationCompletion?: TranslationCompletionApiState;
+      }>(`/api/teachers/lesson-notes/upsert`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           lessonNoteId: note.id,
           lessonTitle: lessonTitle.trim() ? lessonTitle : null,
           objectives,
+          priorKnowledge,
+          coreCompetencies,
+          keywords,
           teachingLearningResources: tlr,
           introduction: intro,
           lessonDevelopment: dev,
@@ -638,12 +1607,32 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
           homework,
           differentiationNotes: diff,
           reflectionNotes: refl,
+          translationReviews: Object.values(pendingTranslationReviews),
+          targetLanguageConfirmations: Object.keys(
+            pendingTargetLanguageConfirmations,
+          ).map(
+            (fieldKey) =>
+              TRANSLATION_API_FIELD_BY_UI_FIELD[fieldKey as LessonFieldKey],
+          ),
           status: "DRAFT",
         }),
       });
 
       setNote(resp.item);
       baselineRef.current = draftSnapshot;
+
+      const completedFields: LessonFieldKey[] = [];
+      for (const apiField of resp.translationCompletion?.completedFields ?? []) {
+        const uiField = UI_FIELD_BY_TRANSLATION_API_FIELD[apiField];
+        if (!uiField) continue;
+        completedFields.push(uiField);
+      }
+
+      setTranslationCompletionRequired(Boolean(resp.translationCompletion?.required));
+      setPersistedCompletedFields(completedFields);
+      setPendingTranslationReviews({});
+      setPendingTargetLanguageConfirmations({});
+      setTranslationGateFields([]);
 
       pushToast({ tone: "success", title: "Saved", message: "Draft saved successfully." });
     } catch (e: any) {
@@ -828,6 +1817,14 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
     }
     if (!objectives.trim() && aiFields.objectives) {
       setObjectives(aiFields.objectives);
+      applied++;
+    }
+    if (!coreCompetencies.trim() && aiFields.coreCompetencies) {
+      setCoreCompetencies(aiFields.coreCompetencies);
+      applied++;
+    }
+    if (!keywords.trim() && aiFields.keywords) {
+      setKeywords(aiFields.keywords);
       applied++;
     }
     if (!tlr.trim() && aiFields.teachingLearningResources) {
@@ -1268,15 +2265,37 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
                   mobileActive={Boolean(activeLanguageField)}
                   desktopCompact={desktopLanguageCompact}
                   onInsert={insertGhanaianCharacter}
+                  onApplyMark={(mark) =>
+                    insertGhanaianInputMark(
+                      mark.value,
+                      mark.label,
+                      mark.replacementGroup,
+                    )
+                  }
                 />
               </div>
             </>
           ) : null}
 
+          {translationEnabled && !locked ? (
+            <div className="mt-3 rounded-2xl border border-sky-300/20 bg-sky-400/10 px-4 py-3 text-xs leading-5 text-sky-100">
+              <span className="font-semibold">{lessonLanguage?.name} language review.</span>{" "}
+              For each populated field, confirm it if it is already good {lessonLanguage?.name}; otherwise translate the English source, review the editable draft, and choose <span className="font-semibold">Use translation</span>. Nothing is saved until you use the normal Save draft action.
+            </div>
+          ) : null}
+
+          {translationCompletionRequired && !locked ? (
+            <div className="mt-3 rounded-2xl border border-emerald-300/15 bg-emerald-400/[0.05] px-4 py-3 text-xs leading-5 text-[#DDE3EE]">
+              <span className="font-semibold text-emerald-100">Translation check:</span>{" "}
+              green fields are ready. Amber fields need content or a quick language review. Translate English sections, or confirm sections that are already good {lessonLanguage?.name}. Save highlights exactly what remains.
+            </div>
+          ) : null}
+
           <div className="mt-3 grid gap-3">
             <Field
               fieldKey="lessonTitle"
-              onSelection={rememberFieldSelection} onActiveChange={setActiveLanguageField}
+              onSelection={rememberFieldSelection}
+              onActiveChange={setActiveLanguageField}
               label="Lesson title"
               value={lessonTitle}
               onChange={setLessonTitle}
@@ -1284,16 +2303,169 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
               rows={2}
               placeholder={lessonTitlePlaceholder}
               hint="Leave blank until you link a unit. Title will auto-fill from Sub-strand."
+              translation={translationUiFor("lessonTitle")}
+              translationState={translationStateFor("lessonTitle")}
+              translationBlocked={translationGateFields.includes("lessonTitle")}
             />
-            <Field fieldKey="objectives" onSelection={rememberFieldSelection} onActiveChange={setActiveLanguageField} label="Objectives/Indicators" value={objectives} onChange={setObjectives} disabled={locked} rows={6} />
-            <Field fieldKey="tlr" onSelection={rememberFieldSelection} onActiveChange={setActiveLanguageField} label="Teaching & learning resources" value={tlr} onChange={setTlr} disabled={locked} rows={6} />
-            <Field fieldKey="intro" onSelection={rememberFieldSelection} onActiveChange={setActiveLanguageField} label="Introduction" value={intro} onChange={setIntro} disabled={locked} rows={5} />
-            <Field fieldKey="dev" onSelection={rememberFieldSelection} onActiveChange={setActiveLanguageField} label="Lesson development" value={dev} onChange={setDev} disabled={locked} rows={10} />
-            <Field fieldKey="concl" onSelection={rememberFieldSelection} onActiveChange={setActiveLanguageField} label="Conclusion" value={concl} onChange={setConcl} disabled={locked} rows={4} />
-            <Field fieldKey="assessment" onSelection={rememberFieldSelection} onActiveChange={setActiveLanguageField} label="Assessment" value={assessment} onChange={setAssessment} disabled={locked} rows={6} />
-            <Field fieldKey="homework" onSelection={rememberFieldSelection} onActiveChange={setActiveLanguageField} label="Homework" value={homework} onChange={setHomework} disabled={locked} rows={3} />
-            <Field fieldKey="diff" onSelection={rememberFieldSelection} onActiveChange={setActiveLanguageField} label="Differentiation notes" value={diff} onChange={setDiff} disabled={locked} rows={5} />
-            <Field fieldKey="refl" onSelection={rememberFieldSelection} onActiveChange={setActiveLanguageField} label="Reflection notes" value={refl} onChange={setRefl} disabled={locked} rows={4} />
+            <Field
+              fieldKey="objectives"
+              onSelection={rememberFieldSelection}
+              onActiveChange={setActiveLanguageField}
+              label="Objectives/Indicators"
+              value={objectives}
+              onChange={setObjectives}
+              disabled={locked}
+              rows={6}
+              translation={translationUiFor("objectives")}
+              translationState={translationStateFor("objectives")}
+              translationBlocked={translationGateFields.includes("objectives")}
+            />
+            <Field
+              fieldKey="priorKnowledge"
+              onSelection={rememberFieldSelection}
+              onActiveChange={setActiveLanguageField}
+              label="Prior knowledge"
+              value={priorKnowledge}
+              onChange={setPriorKnowledge}
+              disabled={locked}
+              rows={4}
+              hint="Required for Ghanaian Language notes. Add the learner's relevant prior knowledge, then translate it or confirm it is already in the frozen lesson language."
+              translation={translationUiFor("priorKnowledge")}
+              translationState={translationStateFor("priorKnowledge")}
+              translationBlocked={translationGateFields.includes("priorKnowledge")}
+            />
+            <Field
+              fieldKey="coreCompetencies"
+              onSelection={rememberFieldSelection}
+              onActiveChange={setActiveLanguageField}
+              label="Core competencies"
+              value={coreCompetencies}
+              onChange={setCoreCompetencies}
+              disabled={locked}
+              rows={4}
+              hint="Required for Ghanaian Language notes. Use the AI Co-Tutor to fill this English source, then translate it."
+              translation={translationUiFor("coreCompetencies")}
+              translationState={translationStateFor("coreCompetencies")}
+              translationBlocked={translationGateFields.includes("coreCompetencies")}
+            />
+            <Field
+              fieldKey="keywords"
+              onSelection={rememberFieldSelection}
+              onActiveChange={setActiveLanguageField}
+              label="Keywords"
+              value={keywords}
+              onChange={setKeywords}
+              disabled={locked}
+              rows={3}
+              hint="Required for Ghanaian Language notes. Keep the list short, then translate it into the frozen lesson language."
+              translation={translationUiFor("keywords")}
+              translationState={translationStateFor("keywords")}
+              translationBlocked={translationGateFields.includes("keywords")}
+            />
+            <Field
+              fieldKey="tlr"
+              onSelection={rememberFieldSelection}
+              onActiveChange={setActiveLanguageField}
+              label="Teaching & learning resources"
+              value={tlr}
+              onChange={setTlr}
+              disabled={locked}
+              rows={6}
+              translation={translationUiFor("tlr")}
+              translationState={translationStateFor("tlr")}
+              translationBlocked={translationGateFields.includes("tlr")}
+            />
+            <Field
+              fieldKey="intro"
+              onSelection={rememberFieldSelection}
+              onActiveChange={setActiveLanguageField}
+              label="Introduction"
+              value={intro}
+              onChange={setIntro}
+              disabled={locked}
+              rows={5}
+              translation={translationUiFor("intro")}
+              translationState={translationStateFor("intro")}
+              translationBlocked={translationGateFields.includes("intro")}
+            />
+            <Field
+              fieldKey="dev"
+              onSelection={rememberFieldSelection}
+              onActiveChange={setActiveLanguageField}
+              label="Lesson development"
+              value={dev}
+              onChange={setDev}
+              disabled={locked}
+              rows={10}
+              translation={translationUiFor("dev")}
+              translationState={translationStateFor("dev")}
+              translationBlocked={translationGateFields.includes("dev")}
+            />
+            <Field
+              fieldKey="concl"
+              onSelection={rememberFieldSelection}
+              onActiveChange={setActiveLanguageField}
+              label="Conclusion"
+              value={concl}
+              onChange={setConcl}
+              disabled={locked}
+              rows={4}
+              translation={translationUiFor("concl")}
+              translationState={translationStateFor("concl")}
+              translationBlocked={translationGateFields.includes("concl")}
+            />
+            <Field
+              fieldKey="assessment"
+              onSelection={rememberFieldSelection}
+              onActiveChange={setActiveLanguageField}
+              label="Assessment"
+              value={assessment}
+              onChange={setAssessment}
+              disabled={locked}
+              rows={6}
+              translation={translationUiFor("assessment")}
+              translationState={translationStateFor("assessment")}
+              translationBlocked={translationGateFields.includes("assessment")}
+            />
+            <Field
+              fieldKey="homework"
+              onSelection={rememberFieldSelection}
+              onActiveChange={setActiveLanguageField}
+              label="Homework"
+              value={homework}
+              onChange={setHomework}
+              disabled={locked}
+              rows={3}
+              translation={translationUiFor("homework")}
+              translationState={translationStateFor("homework")}
+              translationBlocked={translationGateFields.includes("homework")}
+            />
+            <Field
+              fieldKey="diff"
+              onSelection={rememberFieldSelection}
+              onActiveChange={setActiveLanguageField}
+              label="Differentiation notes"
+              value={diff}
+              onChange={setDiff}
+              disabled={locked}
+              rows={5}
+              translation={translationUiFor("diff")}
+              translationState={translationStateFor("diff")}
+              translationBlocked={translationGateFields.includes("diff")}
+            />
+            <Field
+              fieldKey="refl"
+              onSelection={rememberFieldSelection}
+              onActiveChange={setActiveLanguageField}
+              label="Reflection notes"
+              value={refl}
+              onChange={setRefl}
+              disabled={locked}
+              rows={4}
+              translation={translationUiFor("refl")}
+              translationState={translationStateFor("refl")}
+              translationBlocked={translationGateFields.includes("refl")}
+            />
           </div>
 
           <div className="mt-4 flex items-center justify-between flex-wrap gap-2">
@@ -1337,7 +2509,9 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
 
           {lessonLanguage ? (
             <div className="mt-3 rounded-2xl border border-sky-300/20 bg-sky-400/10 px-4 py-3 text-sm text-sky-100">
-              Co-Tutor remains the existing grounded English-first engine in GL-P1. Use its suggestion, then make native-language corrections with the {lessonLanguage.name} letter palette. Translation is not enabled yet.
+              {translationEnabled
+                ? `Co-Tutor remains the grounded English-first planning engine. English → ${lessonLanguage.name} translation is available field by field. Compare the English with the editable translation, correct it, then use it.`
+                : `Co-Tutor remains the grounded English-first planning engine. Translation for ${lessonLanguage.name} is not enabled yet; use the native-language letter palette for corrections.`}
             </div>
           ) : null}
 

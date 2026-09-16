@@ -2,6 +2,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
+import {
+  getCurrentCompletedTranslationFields,
+  translationCompletionApplies,
+} from "@/lib/lessonNotes/translationCompletion";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -61,6 +65,8 @@ const LESSON_NOTE_SELECT = {
 
   objectives: true,
   priorKnowledge: true,
+  coreCompetencies: true,
+  keywords: true,
   teachingLearningResources: true,
   introduction: true,
   lessonDevelopment: true,
@@ -128,9 +134,55 @@ export async function GET(_req: NextRequest, context: { params: Params } | { par
 
     if (!item) return jsonNoStore({ ok: false, error: "Lesson note not found." }, { status: 404 });
 
+    const completionRequired = translationCompletionApplies({
+      subject: item.subject,
+      languageCode: item.lessonLanguageCode,
+      registryVersion: item.languageRegistryVersion,
+    });
+
+    const completionRows = completionRequired
+      ? await prisma.lessonTranslationCompletion.findMany({
+          where: {
+            lessonNoteId: item.id,
+            tenantId: ctx.tenantId,
+            teacherUserId: ctx.userId,
+          },
+          select: {
+            fieldKey: true,
+            finalHash: true,
+            receiptId: true,
+          },
+        })
+      : [];
+
+    const completedFields = completionRequired
+      ? getCurrentCompletedTranslationFields({
+          values: {
+            lessonTitle: item.lessonTitle,
+            objectives: item.objectives,
+            priorKnowledge: item.priorKnowledge,
+            coreCompetencies: item.coreCompetencies,
+            keywords: item.keywords,
+            teachingLearningResources: item.teachingLearningResources,
+            introduction: item.introduction,
+            lessonDevelopment: item.lessonDevelopment,
+            conclusion: item.conclusion,
+            assessment: item.assessment,
+            homework: item.homework,
+            differentiationNotes: item.differentiationNotes,
+            reflectionNotes: item.reflectionNotes,
+          },
+          rows: completionRows,
+        })
+      : [];
+
     return jsonNoStore(
       {
         ok: true,
+        translationCompletion: {
+          required: completionRequired,
+          completedFields,
+        },
         item: {
           ...item,
           lessonDate: toIso(item.lessonDate),

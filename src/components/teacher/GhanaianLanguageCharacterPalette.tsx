@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { getGhanaianLanguage } from "@/lib/ghanaianLanguages/registry";
+import {
+  getGhanaianLanguage,
+  type GhanaianLanguageInputMark,
+} from "@/lib/ghanaianLanguages/registry";
 
 export default function GhanaianLanguageCharacterPalette(props: {
   languageCode: string;
@@ -10,6 +13,7 @@ export default function GhanaianLanguageCharacterPalette(props: {
   mobileActive?: boolean;
   desktopCompact?: boolean;
   onInsert: (character: string) => void;
+  onApplyMark: (mark: GhanaianLanguageInputMark) => void;
 }) {
   const [open, setOpen] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -44,7 +48,12 @@ export default function GhanaianLanguageCharacterPalette(props: {
     };
   }, []);
 
-  if (!language || language.keyboardCharacters.length === 0) return null;
+  if (
+    !language ||
+    (language.keyboardCharacters.length === 0 && (language.inputMarks?.length ?? 0) === 0)
+  ) {
+    return null;
+  }
 
   const characterButtons = (compact = false) =>
     language.keyboardCharacters.map((character) => (
@@ -65,6 +74,31 @@ export default function GhanaianLanguageCharacterPalette(props: {
       </button>
     ));
 
+  const markButtons = (compact = false) =>
+    (language.inputMarks ?? []).map((mark) => (
+      <button
+        key={mark.id}
+        type="button"
+        className={
+          compact
+            ? "flex min-h-10 min-w-14 shrink-0 flex-col items-center justify-center rounded-lg border border-amber-200/25 bg-amber-200/10 px-2 py-1 text-amber-50 active:bg-amber-200/20 disabled:opacity-60"
+            : "flex min-h-10 min-w-16 flex-col items-center justify-center rounded-xl border border-amber-200/25 bg-amber-200/10 px-3 py-1.5 text-amber-50 hover:bg-amber-200/15 disabled:opacity-60"
+        }
+        onPointerDown={(event) => event.preventDefault()}
+        onClick={() => props.onApplyMark(mark)}
+        disabled={props.disabled}
+        aria-label={`Apply ${mark.label} mark`}
+        title={`Apply ${mark.label} mark`}
+      >
+        <span className="text-lg font-semibold leading-none" aria-hidden="true">
+          {mark.display}
+        </span>
+        <span className={compact ? "mt-0.5 text-[8px] leading-none" : "mt-1 text-[9px] leading-none"}>
+          {mark.label}
+        </span>
+      </button>
+    ));
+
   return (
     <>
       <div className="hidden md:block">
@@ -77,6 +111,7 @@ export default function GhanaianLanguageCharacterPalette(props: {
             >
               <div className="flex max-w-full flex-wrap gap-1.5">
                 {characterButtons()}
+                {markButtons()}
               </div>
             </div>
           ) : (
@@ -96,7 +131,7 @@ export default function GhanaianLanguageCharacterPalette(props: {
               <div>
                 <div className="text-xs font-bold uppercase tracking-[0.08em]">{language.name} letters</div>
                 <div className="mt-0.5 text-[11px] leading-4 text-sky-100/80">
-                  Tap a special letter to insert it where you last placed the cursor. The letters stay with you while you scroll.
+                  Tap a special letter to insert it where you last placed the cursor. For a mark, place the cursor after a letter, then tap the mark. The palette stays with you while you scroll.
                 </div>
               </div>
               <button
@@ -113,6 +148,7 @@ export default function GhanaianLanguageCharacterPalette(props: {
             {open ? (
               <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label={`${language.name} special letters`}>
                 {characterButtons()}
+                {markButtons()}
               </div>
             ) : null}
           </div>
@@ -134,6 +170,7 @@ export default function GhanaianLanguageCharacterPalette(props: {
                   aria-label={`${language.name} mobile special letters`}
                 >
                   {characterButtons(true)}
+                  {markButtons(true)}
                 </div>
               </div>
             </div>,
